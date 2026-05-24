@@ -2,19 +2,21 @@
   description = "nput development environment";
 
   inputs = {
-    root = {
-      url = "path:../";
+    root.url = "path:../";
+    nixpkgs.follows = "root/nixpkgs";
+    flake-parts.follows = "root/flake-parts";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-parts.follows = "flake-parts";
     };
-
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-parts.url = "github:hercules-ci/flake-parts";
   };
 
   outputs =
     inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        inputs.treefmt-nix.flakeModule
+      ];
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -22,15 +24,21 @@
         "x86_64-darwin"
       ];
       perSystem =
-        { pkgs, ... }:
+        { config, pkgs, ... }:
         {
-          formatter = pkgs.nixfmt-rfc-style;
+          treefmt = {
+            projectRootFile = "flake.nix";
+            programs.nixfmt = {
+              enable = true;
+              package = pkgs.nixfmt;
+            };
+          };
 
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
-              nixfmt-rfc-style
               statix
               nixd
+              config.treefmt.build.wrapper
             ];
             shellHook = ''
               export REPO_ROOT=$(git rev-parse --show-superproject-working-tree --show-toplevel)
