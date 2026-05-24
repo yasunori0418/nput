@@ -59,14 +59,14 @@
           "root",
           "nixpkgs"
         ],
-        "root": "root_2",
-        "treefmt-nix": "treefmt-nix"
+        "root": "root_2"
       }
     },
     "root_2": {
       "inputs": {
         "flake-parts": "flake-parts",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "treefmt-nix": "treefmt-nix"
       },
       "locked": {
         "path": "../",
@@ -81,6 +81,7 @@
     "treefmt-nix": {
       "inputs": {
         "nixpkgs": [
+          "root",
           "nixpkgs"
         ]
       },
