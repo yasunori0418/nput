@@ -343,8 +343,10 @@ nput.lib.mkActivationScript {
 
 ## モジュール別動作仕様
 
-すべての層で nput エンジンが配置を実行する。各層は root と activation タイミングを供給するだけ（→ ADR-0003）。
-`systemd.tmpfiles` / `home.file` は明示的に採らない代替である。
+基本的な利用は standalone を中心に考える。モジュール対応は、他のモジュールシステムの switch と**一括で動いてほしい
+ユースケース**を拾うためだけに存在する。全モジュール（HM / NixOS / nix-darwin）は **一律「nput エンジンをキックするだけ」の
+ランチャー**であり、各層は root と activation タイミングを供給するだけ（→ ADR-0003）。
+`systemd.tmpfiles` / `home.file` へは翻訳しない（明示的に採らない代替）。配置・stale 除去は全層で同一の nput エンジン + store マニフェスト。
 
 ### home-manager モジュール
 
@@ -359,12 +361,9 @@ nput.lib.mkActivationScript {
 
 ### NixOS モジュール（将来拡張）
 
-- `system.activationScripts.nput` から nput エンジンを起動する。
+- `system.activationScripts.nput` から nput エンジンを起動する**ランチャー**に徹する。`systemd.tmpfiles` へは翻訳しない。
 - root は `config.users.users.${cfg.user}.home`。世代は nixos 世代に委譲。
-- **部分ハイブリッド（→ ADR-0003）**: root=`/` の system パスへの symlink のみ、nput エンジンの `ln` ではなく
-  `systemd.tmpfiles`（`L`/`L+` 型）を使い NixOS の宣言性・追跡に乗せる。
-  ただし tmpfiles `L` は規則消滅時に作成済み symlink を自動削除しないため、system パスの stale 除去・権限・`/etc` 処理順は
-  将来の NixOS 作業で解決する open 事項。$HOME レベル配置・copy・out-of-store は引き続き nput エンジンが担う。
+- 配置・stale 除去は他環境と同一の nput エンジン + store マニフェスト。OS の機構（tmpfiles 等）は nput の関心外（→ ADR-0003）。
 
 ### nix-darwin モジュール（将来拡張）
 

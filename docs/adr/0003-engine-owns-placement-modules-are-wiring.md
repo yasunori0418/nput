@@ -32,37 +32,40 @@ nput の本質は「テスト可能な純粋関数群で、ユーザーが配置
   「nput が配置した」と記録し、かつ現状もその記録通りを指す symlink のみ削除し、ユーザーの実ファイルや
   nput 非管理の link には触れない。配置・cleanup 機構は home-manager の `linkGeneration`/`cleanup` を参考に再実装する。
 
-## NixOS のシステムパスは tmpfiles を使う（部分ハイブリッド）
+## nput は OS のファイル管理機構とは別の機構である
 
-- **scoped 例外**: 将来拡張の NixOS 層で root=`/` の**システムパスへの symlink** を置く場合は、
-  nput エンジンの命令的 `ln` ではなく `systemd.tmpfiles.rules`（`L`/`L+` 型）を使う。
-  NixOS の宣言性・標準の追跡に乗せ、命令的 activation でシステムパスを直接変更する緊張を避けるため。
-- 適用範囲は **NixOS の system パス symlink に限る**。standalone / home-manager および $HOME レベルの配置、
-  copy（place-once）、out-of-store は引き続き nput エンジンが所有する（本 ADR の原則は維持）。
-- **留意（将来の NixOS 作業で解決すべき open 事項）**:
-  - `systemd.tmpfiles` の `L` 型は規則が消えても作成済み symlink を自動削除しない（NixOS 既知のギャップ）。
-    NixOS でも stale 除去の正確性には別途手当てが要る。
-  - copy をシステムパスで行う場合（`environment.etc` 相当か、エンジンか）、`/etc` の処理順・権限・所有者は未決。
-  - NixOS のシステム世代との整合（rollback 時の再現）の詳細も未決。
+nput は「nix store の物を配置・管理する、一つのことをうまくやる」純粋関数（UNIX 思想）である。
+`systemd.tmpfiles` / `environment.etc` などは **OS（NixOS）が自身の宣言的ファイル管理のために持つ別ツール**であり、
+nput の関心事ではない。nput を NixOS 上で使う ＝ ただ nput を実行するだけで、OS の機構には一切翻訳・委譲しない
+（stow や git を NixOS 上で動かすのに tmpfiles が関係ないのと同じ）。
+
+- したがって `systemd.tmpfiles`（`L` 型）への翻訳は **採らない**。配置は全環境で nput エンジン（`ln` / `rsync`）+
+  世代由来の store マニフェスト（ADR-0002）の一機構に統一する。
+- nput は NixOS-宣言的であろうとしないため、「NixOS の宣言性を放棄する」という懸念はそもそも成立しない
+  （放棄すべき宣言性を最初から負っていない）。
+- 将来 NixOS モジュールを設けるとしても、それは activation hook から nput エンジンを起動する**ランチャー**であり、
+  tmpfiles への翻訳ではない。
 
 ## 根拠
 
 - 配置の振る舞いが単一のコアに集約され、テスト可能性が上がる（純粋関数 + 1 本のエンジン）。
 - distro ビジョン（NixOS モジュール生態系から独立した配置機構）と整合する。
 - プラットフォーム横断で同一スキーマ・同一挙動を保証できる。
+- tmpfiles は「作成」しか宣言的に扱わず、規則消滅時の stale 除去をしない（NixOS 既知のギャップ）。
+  どのみち削除は nput が担う必要があり、tmpfiles を併用すると機構が二重化するだけで利点が薄い。
 
 ## 影響
 
-- ネイティブ統合の恩恵（プラットフォーム標準の追跡・GC、`home.file` の宣言性）は標準/HM/$HOME 配置では捨てる。
+- ネイティブ統合の恩恵（プラットフォーム標準の追跡・GC、`home.file` の宣言性）は全層で捨てる。
   **stale 除去は全層で nput が所有する**が、世代由来の store マニフェスト（ADR-0002）で home-manager 同等の
   正確性を担保する。
-- NixOS のシステムパス symlink のみ `systemd.tmpfiles` を使う（上記の部分ハイブリッド）。
-- design.md の「各統合層の変換先」テーブルを「nput エンジン起動」に書き換える（NixOS system パスは tmpfiles と注記）。
-  `home.file` は「明示的に採らない代替」として注記する。
-- spec.md の「モジュール別動作仕様」を全層エンジン起動に書き換える（NixOS system パスは tmpfiles 例外）。
+- design.md の「各統合層の変換先」テーブルを「nput エンジン起動」に書き換える。
+  `home.file` / `systemd.tmpfiles` は「明示的に採らない代替」として注記する。
+- spec.md の「モジュール別動作仕様」を全層エンジン起動に書き換える。
 
 ## 棄却した代替案
 
-- **完全ハイブリッド（standalone はエンジン、全モジュールはネイティブ翻訳）**: ネイティブ統合の恩恵は得られるが、
+- **ハイブリッド（standalone はエンジン、モジュールはネイティブ翻訳）**: ネイティブ統合の恩恵は得られるが、
   振る舞いが層ごとに二重化し、nput の「単一コア・ユーザー管理」方針と逆行する。
-  NixOS の system パス symlink のみ tmpfiles を使う部分例外に留める。
+- **NixOS の system パス symlink のみ tmpfiles を使う部分ハイブリッド**: tmpfiles は作成のみで stale 除去をせず、
+  結局 nput のマニフェスト削除が別途必要になり機構が二重化する。nput を「OS とは別の一機構」と割り切り、不採用。
