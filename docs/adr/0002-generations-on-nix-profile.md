@@ -1,4 +1,4 @@
-# ADR-0002: 世代管理を nix profile に乗せる（standalone 専用）
+# ADR-0002: 世代管理を nix profile に乗せる（全モード自前 profile / rollback は standalone 中心）
 
 - ステータス: 採用
 - 日付: 2026-06-07
@@ -18,9 +18,13 @@ GC root 登録・状態書き込み）を要するため、「純粋関数」と
   - 世代番号・GC root・ロールバックを Nix 標準機構から得る。
 - **純粋性と副作用の両立**: 純粋関数は「link farm derivation と activation スクリプトを生成するだけ」。
   実際の世代 swap は activation 実行時の副作用とする。
-- **standalone 専用。** HM / NixOS / nix-darwin モジュール時は nput 独自 profile を作らず、
-  ホストの世代システム（home-manager generations / nixos generations）に委譲する。
-  ロールバックはホスト世代が旧 config で nput エンジンを再実行することで担保する。
+- **nput は全モードで自前 profile を持つ（standalone / module 共通）。** 前世代マニフェストの出所を統一するため、
+  モジュール時もホストの世代に依存せず nput 自身の profile を保持する（home-manager が NixOS submodule でも自前 profile
+  `profiles/home-manager` を持つのと同じ）。host から要るのは「switch 時に nput を kick する」ことだけで、ホストの oldGenPath 配管は不要。
+  - **standalone**: profile はユーザー向け。`--rollback` / `--list-generations` を提供する。
+  - **module**: profile は**内部機構**（前世代マニフェスト + stale 追跡）に留める。ユーザー向けロールバックは host
+    （`home-manager --rollback` 等）に一本化し、`nput --rollback` は standalone 限定。host rollback は旧 config を再 activate
+    し nput を再 kick することで自動追従する（nput profile は前進のみ＝旧内容を持つ新世代を積む）。desync を避けるため module で独立 rollback は公開しない。
 - **粒度 = `mkActivationScript` 単位 = 1 profile。** 役割ごとの独立は別スクリプト＝別 profile で担保する。
   この決定に伴い `mkActivationScript` は profile を一意特定する `name` 引数を取る。
 - **standalone は世代を常時 ON。** profile が新しいデフォルトであり、世代なしモードは持たない（コードパスを 1 本にする）。
@@ -32,8 +36,8 @@ GC root 登録・状態書き込み）を要するため、「純粋関数」と
 - **out-of-store は世代追跡する**が、リンク先マッピングのみ版管理し、指す先の内容は設計上ライブで永遠にスナップショットしない。
 - **stale 除去は「世代由来の store マニフェスト」を diff して行う（home-manager 方式）。**
   「配置したもの」のマニフェストは link farm derivation の一部として **store 内に**埋め込む。可変 JSON ファイルは持たない。
-  - standalone: 自 profile の**前世代**の store マニフェストと新世代を diff する。
-  - モジュール時: ホスト世代が与える**旧世代パス（`$oldGenPath` 相当）**の store マニフェストと diff する。
+  - **全モード共通**: nput 自身の profile の**前世代**の store マニフェストと新世代を diff する（standalone も module も同一）。
+    ホストの oldGenPath には依存しない。
   - 記録は不変・GC-root 済み（世代に捕捉される）であり、rollback で記録も巻き戻る。
   - home.file モジュール自体は再利用しないが、配置・cleanup 機構は home-manager の `linkGeneration`/`cleanup` を参考に再実装する。
 - **削除の安全不変条件（保守的・HM 流）。** stale 除去で削除してよいのは、**前世代マニフェストが「nput が配置した」と記録し、
@@ -56,7 +60,11 @@ GC root 登録・状態書き込み）を要するため、「純粋関数」と
 - nix profile は profile symlink の差し替えだけで atomic な switch/rollback を実現し、GC root にもなる。
   「Nix エコシステムに則る」要求に最も合う。
 - 「任意パス配置 × 世代管理」を組合せた既存ツールは存在しない（調査確認済み）。この空白を埋める価値がある。
-- モジュール時に nput 独自 profile を作るとホスト世代と二系統になり、ロールバックが不整合になる。
+- nput が全モードで自前 profile を持つことで、前世代マニフェストの出所が「自 profile の前世代」に統一され、
+  ホストごとに異なる oldGenPath 配管を持たずに済む（「他モジュールの内部事情を考えない」方針と整合）。
+- module 時に nput profile と host 世代が併存しても不整合は起きない。host rollback は旧 config を再 activate し
+  nput を再 kick することで FS を自動収束させる（home-manager が NixOS submodule で自前 profile を持つのと同じ実績ある構図）。
+  desync は「ユーザーが module で独立 rollback を打つ」場合のみ起きるため、module では nput --rollback を公開しないことで排除する。
 
 ## 影響
 
@@ -72,7 +80,9 @@ GC root 登録・状態書き込み）を要するため、「純粋関数」と
 - **独自の軽量世代ログ**: nix profile 機構を再発明し、GC 安全性を自前担保する必要がある。
 - **世代を取らずバックアップのみ（.bak）**: 「世代管理もできる」要求に応えられない。
 - **世代を opt-in（デフォルト世代なし）**: stale 除去のため結局状態管理が要り、二重コードパスになる。
-- **全層で nput 独自世代**: ホスト世代と二重化し不整合。
+- **module 時は nput 独自 profile を作らずホスト世代に委譲**（当初案）: 前世代マニフェストの出所がホストごとに異なる
+  oldGenPath に依存し、配管が per-host で増える。「他モジュールの内部事情を考えない」方針と矛盾するため、全モード自前 profile に変更。
+- **module 時は stale 除去しない（previous を持たない）**: dangling link が残り standalone と振る舞いが不一致になる。
 - **stale 除去で新マニフェストに無い target を一律削除**: ユーザーが差し替えた実ファイルをクロバーするため、保守的削除を採用。
 - **copy も世代追跡（再マテリアライズ / target スナップショット）**: ユーザー管理の副作用という位置づけと矛盾し、
   store 外スナップショット管理が重い。

@@ -160,8 +160,10 @@ nput --list-generations # 世代一覧
 実行時:    activation スクリプトが profile を swap（副作用はここだけ）
 ```
 
-世代管理は **standalone 専用**である。home-manager / NixOS / nix-darwin モジュール時は
-nput 独自 profile を作らず、ホストの世代システムに委譲する。
+nput は **全モードで自前 profile を持つ**（前世代マニフェストの出所を統一するため。HM が NixOS submodule でも
+自前 profile を持つのと同じ）。standalone では profile をユーザー向け rollback に使う。home-manager / NixOS / nix-darwin
+モジュール時は profile を**内部機構**（stale 追跡）に留め、ユーザー向け rollback は host に一本化する
+（host rollback は旧 config の再 activate で nput が自動追従する）。
 
 | 配置種別 | 世代管理 | 備考 |
 |---|---|---|

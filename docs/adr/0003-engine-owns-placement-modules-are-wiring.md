@@ -24,8 +24,9 @@ nput の本質は「テスト可能な純粋関数群で、ユーザーが配置
 - **モジュール（HM / NixOS / nix-darwin）は薄い配線に徹する。** root（`$HOME` または
   `config.users.users.<user>.home`）と activation タイミング（`home.activation` /
   `system.activationScripts`）だけを供給し、nput エンジンを switch 時に起動する。
-- standalone は profile モード（ADR-0002）でエンジンを起動する。モジュールは plain モード
-  （独自 profile なし）でエンジンを起動し、ロールバックはホスト世代に委ねる。
+- standalone もモジュールも、エンジンは nput 自身の profile を使って起動する（ADR-0002：全モード自前 profile）。
+  standalone は profile をユーザー向け rollback に使い、モジュールは内部機構（前世代マニフェスト + stale 追跡）に留め、
+  ユーザー向けロールバックは host に一本化する。
 - これに伴い ADR-0001 で「各層が realize」とした out-of-store の実現も、HM ネイティブの
   `config.lib.file.mkOutOfStoreSymlink` へは委譲せず、nput エンジン自身の `ln -s` で行う。
 - **削除の安全不変条件**: エンジンが所有する stale 除去は保守的に行う。前世代の store マニフェスト（ADR-0002）が

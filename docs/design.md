@@ -132,19 +132,22 @@ mode = copy, source がファイル     → place-once: target 不在時のみ r
   「配置したもの」のマニフェストは link farm の一部として **store 内に**埋め込む（可変 JSON は持たない）。
 - activation スクリプトは:
   1. **前世代の store マニフェスト**と新世代を diff し、消えた entry の **symlink を除去**する（stale 除去）。
-     - standalone は自 profile の前世代、モジュール時はホスト世代の旧世代パス（`$oldGenPath` 相当）を参照する。
+     - 前世代は **全モード共通で nput 自身の profile の前世代**から読む（standalone も module も同一。ホストの oldGenPath には依存しない）。
      - 削除は保守的：前世代マニフェストが「nput が配置した」と記録し、かつ現状もその記録通りを指す symlink のみ。
        通常ファイル・nput 非管理の link には触れない。copy target は除去しない（orphan は警告）。初回は何も消さない。
   2. symlink / out-of-store / place-once copy を配置する。
-  3. **standalone のみ** `nix-env --profile <profileDir> --set <link-farm-drv>` で nix profile に登録する。
+  3. `nix-env --profile <profileDir> --set <link-farm-drv>` で nput の nix profile を更新する（全モード）。
 
 | 機構 | 役割 | 適用層 |
 |---|---|---|
 | 世代由来の store マニフェスト | stale 除去のための前回状態（不変・GC-root 済み）| 全層共通 |
-| nix profile | 世代番号・GC root・ロールバック | standalone 専用 |
+| nput の nix profile | 前世代の保持・世代番号・GC root | 全モード（standalone はユーザー向け rollback、module は内部機構）|
 
 - 配置・cleanup 機構は home-manager の `linkGeneration`/`cleanup` を参考に再実装する（`home.file` 自体は再利用しない）。
-- モジュール時は nput 独自 profile を作らず、ホストの世代システムに委譲する。
+- **nput は全モードで自前 profile を持つ**（→ ADR-0002）。module 時もホスト世代に依存せず自 profile を保持し、
+  前世代マニフェストの出所を統一する（HM が NixOS submodule で自前 profile を持つのと同じ）。
+  module 時の profile は内部機構（stale 追跡）に留め、ユーザー向け rollback は host に一本化する。
+  host rollback は旧 config を再 activate して nput を再 kick することで自動追従する。
 - **GC**: profile 世代は GC root。旧世代を `nix profile wipe-history` 等で間引き、`nix-collect-garbage` で
   無参照 store パスを解放する。可変 JSON 方式は GC root を作らず rollback が壊れうるため採らない（→ ADR-0002）。
 
@@ -196,12 +199,15 @@ home-manager と standalone は `$HOME` を直接参照するため不要。
 
 すべての層で **nput エンジン**が配置を実行する。各層は root と activation タイミングを供給するだけ。
 
-| 層 | エンジン起動方法 | root の解決 | 世代 |
-|---|---|---|---|
-| **standalone** | `nix run` でスクリプトを明示実行 | `$HOME`（実行時）| nix profile（あり）|
-| **home-manager** | `home.activation` から起動 | `$HOME`（HM が解決）| ホスト（HM）世代に委譲 |
-| **NixOS**（将来）| `system.activationScripts` から起動 | `config.users.users.<user>.home` | ホスト（nixos）世代に委譲 |
-| **nix-darwin**（将来）| `system.activationScripts` から起動 | `config.users.users.<user>.home` | ホスト世代に委譲 |
+いずれも nput 自身の profile を使う（→ ADR-0002）。standalone は profile をユーザー向け rollback に使い、
+module は内部機構に留め rollback は host に一本化する。
+
+| 層 | エンジン起動方法 | root の解決 | nput profile | ユーザー向け rollback |
+|---|---|---|---|---|
+| **standalone** | `nix run` でスクリプトを明示実行 | `$HOME`（実行時）| あり（ユーザー向け）| `nput --rollback` |
+| **home-manager** | `home.activation` から起動 | `$HOME`（HM が解決）| あり（内部）| host（`home-manager --rollback`）|
+| **NixOS**（将来）| `system.activationScripts` から起動 | `config.users.users.<user>.home` | あり（内部）| host（`nixos-rebuild` 世代）|
+| **nix-darwin**（将来）| `system.activationScripts` から起動 | `config.users.users.<user>.home` | あり（内部）| host 世代 |
 
 全モジュール（HM / NixOS / nix-darwin）は **一律「nput エンジンをキックするだけ」のランチャー**であり、
 プラットフォームごとのネイティブ機構（`home.file` / `systemd.tmpfiles`）へは翻訳しない。これらは**明示的に採らない代替**である。
@@ -277,7 +283,8 @@ nput = {
 ```
 
 HM モジュールは `home.activation` から nput エンジンを起動する。配置は nput 自身が行い、
-`home.file` には委譲しない。世代は HM のものに乗る（nput 独自 profile は作らない）。
+`home.file` には委譲しない。nput は自前 profile を**内部機構**として持つ（前世代マニフェスト + stale 追跡）が、
+ユーザー向け rollback は HM（`home-manager --rollback`）に一本化する。
 
 ---
 
