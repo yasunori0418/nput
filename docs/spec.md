@@ -235,25 +235,38 @@ source がファイルの場合:
 ### 機構
 
 - 純粋関数が **link farm derivation**（ストア内の symlink ツリー）を生成する。
+  「配置したもの」のマニフェストは link farm の一部として **store 内に**埋め込む（可変 JSON は持たない）。
 - activation スクリプトが副作用として:
-  1. **state マニフェスト**に「配置したもの」を記録（全層共通）
-  2. 新旧マニフェストを diff し、消えた entry の **symlink を除去**（stale 除去）
-  3. symlink / out-of-store / place-once copy を配置
-  4. **standalone のみ** `nix-env --profile <profileDir> --set <link-farm-drv>` で nix profile に登録
+  1. **前世代の store マニフェスト**と新世代を diff し、消えた entry の **symlink を除去**（stale 除去）
+     - standalone は自 profile の前世代、モジュール時はホスト世代の旧世代パス（`$oldGenPath` 相当）を参照する
+  2. symlink / out-of-store / place-once copy を配置
+  3. **standalone のみ** `nix-env --profile <profileDir> --set <link-farm-drv>` で nix profile に登録
+
+配置・cleanup 機構は home-manager の `linkGeneration`/`cleanup` を参考に再実装する（`home.file` 自体は再利用しない）。
 
 | 機構 | 役割 | 適用層 | 位置（推奨・未確定）|
 |---|---|---|---|
-| state マニフェスト | stale 除去のための前回状態 | 全層共通 | `<root>/.local/state/nput/<name>.json` |
+| 世代由来の store マニフェスト | stale 除去のための前回状態（不変・GC-root 済み）| 全層共通 | link farm derivation 内に埋め込み |
 | nix profile | 世代番号・GC root・ロールバック | standalone 専用 | `~/.local/state/nix/profiles/nput/<name>` |
 
-> profile / マニフェストの具体パスは推奨値であり、実装時に確定する。
+> profile の具体パスは推奨値であり、実装時に確定する。
 
-### stale 除去の対象
+### stale 除去の対象と安全不変条件
+
+削除は保守的に行う（→ ADR-0002）。前世代マニフェストが「nput が配置した」と記録し、
+**かつ現状もその記録通りの先（その世代の store パス／記録された out-of-store パス）を指す symlink** のみ削除する。
+通常ファイルや nput 非管理の link には触れない。記録と実体が不一致なら削除せず警告する。初回／記録なしは何も消さない。
 
 | 配置種別 | entry が消えたとき |
 |---|---|
-| symlink（store / out-of-store）| **除去する**（nput 管理ポインタ）|
+| symlink（store / out-of-store）| **除去する**（ただし上記の保守的不変条件を満たすもののみ）|
 | copy | **除去しない**（ユーザー所有データ）。ただし orphan を警告で通知する |
+
+### GC とストレージ解放
+
+profile の各世代は GC root。`nix profile wipe-history`／`nix-env --delete-generations` で旧世代を間引き、
+`nix-collect-garbage` で無参照になった store パスを解放する。
+（可変 JSON 方式は GC root を作らず参照中 store パスが GC で消えるため採らない。）
 
 ### ロールバック
 
@@ -348,6 +361,10 @@ nput.lib.mkActivationScript {
 
 - `system.activationScripts.nput` から nput エンジンを起動する。
 - root は `config.users.users.${cfg.user}.home`。世代は nixos 世代に委譲。
+- **部分ハイブリッド（→ ADR-0003）**: root=`/` の system パスへの symlink のみ、nput エンジンの `ln` ではなく
+  `systemd.tmpfiles`（`L`/`L+` 型）を使い NixOS の宣言性・追跡に乗せる。
+  ただし tmpfiles `L` は規則消滅時に作成済み symlink を自動削除しないため、system パスの stale 除去・権限・`/etc` 処理順は
+  将来の NixOS 作業で解決する open 事項。$HOME レベル配置・copy・out-of-store は引き続き nput エンジンが担う。
 
 ### nix-darwin モジュール（将来拡張）
 

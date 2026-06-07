@@ -247,7 +247,7 @@ lib（コア）は何にも依存しない（nixpkgs のみ）
 
 同じ設定を何度実行しても同じ結果になる。
 
-- symlink：state マニフェストの diff で、消えた entry の symlink を除去する（stale 除去）。
+- symlink：前世代の store マニフェストとの diff で、消えた entry の symlink を保守的に除去する（stale 除去、→ ADR-0002）。
   既存 symlink を置き換える。通常ファイル・ディレクトリがある場合はエラー停止
 - copy：place-once。target が在れば触らない
 - 世代（standalone）：適用のたびに新世代を作り、profile で atomic に切り替える

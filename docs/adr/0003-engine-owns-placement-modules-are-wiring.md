@@ -28,6 +28,22 @@ nput の本質は「テスト可能な純粋関数群で、ユーザーが配置
   （独自 profile なし）でエンジンを起動し、ロールバックはホスト世代に委ねる。
 - これに伴い ADR-0001 で「各層が realize」とした out-of-store の実現も、HM ネイティブの
   `config.lib.file.mkOutOfStoreSymlink` へは委譲せず、nput エンジン自身の `ln -s` で行う。
+- **削除の安全不変条件**: エンジンが所有する stale 除去は保守的に行う。前世代の store マニフェスト（ADR-0002）が
+  「nput が配置した」と記録し、かつ現状もその記録通りを指す symlink のみ削除し、ユーザーの実ファイルや
+  nput 非管理の link には触れない。配置・cleanup 機構は home-manager の `linkGeneration`/`cleanup` を参考に再実装する。
+
+## NixOS のシステムパスは tmpfiles を使う（部分ハイブリッド）
+
+- **scoped 例外**: 将来拡張の NixOS 層で root=`/` の**システムパスへの symlink** を置く場合は、
+  nput エンジンの命令的 `ln` ではなく `systemd.tmpfiles.rules`（`L`/`L+` 型）を使う。
+  NixOS の宣言性・標準の追跡に乗せ、命令的 activation でシステムパスを直接変更する緊張を避けるため。
+- 適用範囲は **NixOS の system パス symlink に限る**。standalone / home-manager および $HOME レベルの配置、
+  copy（place-once）、out-of-store は引き続き nput エンジンが所有する（本 ADR の原則は維持）。
+- **留意（将来の NixOS 作業で解決すべき open 事項）**:
+  - `systemd.tmpfiles` の `L` 型は規則が消えても作成済み symlink を自動削除しない（NixOS 既知のギャップ）。
+    NixOS でも stale 除去の正確性には別途手当てが要る。
+  - copy をシステムパスで行う場合（`environment.etc` 相当か、エンジンか）、`/etc` の処理順・権限・所有者は未決。
+  - NixOS のシステム世代との整合（rollback 時の再現）の詳細も未決。
 
 ## 根拠
 
@@ -37,13 +53,16 @@ nput の本質は「テスト可能な純粋関数群で、ユーザーが配置
 
 ## 影響
 
-- ネイティブ統合の恩恵（プラットフォーム標準の追跡・GC、`systemd.tmpfiles` の宣言性）は捨てる。
-  **stale 除去まで全層で nput が所有する**（ADR-0002 の state マニフェスト）。
-- design.md の「各統合層の変換先」テーブルを「nput エンジン起動」に全面書き換える。
-  `systemd.tmpfiles` / `home.file` は「明示的に採らない代替」として注記する。
-- spec.md の「モジュール別動作仕様」を全層エンジン起動に書き換える。
+- ネイティブ統合の恩恵（プラットフォーム標準の追跡・GC、`home.file` の宣言性）は標準/HM/$HOME 配置では捨てる。
+  **stale 除去は全層で nput が所有する**が、世代由来の store マニフェスト（ADR-0002）で home-manager 同等の
+  正確性を担保する。
+- NixOS のシステムパス symlink のみ `systemd.tmpfiles` を使う（上記の部分ハイブリッド）。
+- design.md の「各統合層の変換先」テーブルを「nput エンジン起動」に書き換える（NixOS system パスは tmpfiles と注記）。
+  `home.file` は「明示的に採らない代替」として注記する。
+- spec.md の「モジュール別動作仕様」を全層エンジン起動に書き換える（NixOS system パスは tmpfiles 例外）。
 
 ## 棄却した代替案
 
-- **ハイブリッド（standalone はエンジン、モジュールはネイティブ翻訳）**: ネイティブ統合の恩恵は得られるが、
+- **完全ハイブリッド（standalone はエンジン、全モジュールはネイティブ翻訳）**: ネイティブ統合の恩恵は得られるが、
   振る舞いが層ごとに二重化し、nput の「単一コア・ユーザー管理」方針と逆行する。
+  NixOS の system パス symlink のみ tmpfiles を使う部分例外に留める。
