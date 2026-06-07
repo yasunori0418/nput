@@ -1,0 +1,42 @@
+name: バグ報告
+description: 配置動作（store link / out-of-store / copy / 世代管理）の不具合を報告する
+labels: ["bug", "needs-triage"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: 何が起きているか。期待と実際のズレを一言で。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 再現手順
+      description: entries の定義・実行コマンド（nput / --rollback など）を含めて、最小再現を書く。
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Nix 環境
+      description: nix --version、対象 OS、standalone / home-manager / NixOS 等の利用形態。flake.lock の関連 input rev があれば。
+      render: shell
+    validations:
+      required: true
