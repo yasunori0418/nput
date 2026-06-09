@@ -1,0 +1,32 @@
+name: ドキュメント改善
+description: concept / design / spec / ADR / CONTEXT.md の誤り・不整合・分かりにくさ
+labels: ["documentation", "needs-triage"]
+body:
+  - type: dropdown
+    id: target
+    attributes:
+      label: 対象ドキュメント
+      multiple: true
+      options:
+        - docs/concept.md
+        - docs/design.md
+        - docs/spec.md
+        - docs/adr/
+        - CONTEXT.md
+        - その他
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 問題点
+      description: どこが誤っている / 不整合 / 分かりにくいか。該当箇所を引用すると早い。
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: 改善案
+      description: どう直すべきか。用語の揺れなら CONTEXT.md の正名と突き合わせて。
+    validations:
+      required: false

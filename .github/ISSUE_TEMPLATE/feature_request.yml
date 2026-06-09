@@ -1,0 +1,32 @@
+name: 機能要望
+description: 新しい配置プリミティブ・lib API 拡張・統合層などの提案
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 背景 / 解決したい課題
+      description: なぜこれが必要か。今の nput で何ができないか。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案
+      description: どう解決したいか。API 形・entries スキーマへの影響があれば具体的に。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 検討した代替案
+      description: 他の手段や、既存ツール（home-manager / system-manager 等）で代替できない理由。
+    validations:
+      required: false
+  - type: textarea
+    id: scope
+    attributes:
+      label: 方針・スコープへの影響
+      description: コンセプト（設定を生成しない / 純粋関数 / モジュールで隠さない）や既存 ADR との整合。ADR が必要そうなら触れる。
+    validations:
+      required: false
