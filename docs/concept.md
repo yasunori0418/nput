@@ -181,6 +181,39 @@ copy モードは「初回マテリアライズしたら以後 nput は触らな
 
 ---
 
+## プロジェクトに閉じた配置（project mode）
+
+root = `$HOME` の home mode に加え、**root = プロジェクトルート**の project mode を持つ（→ ADR-0005）。
+任意のプロジェクト内に nput を組み込み、repo 内の任意パスへ nix store の物を配置する用途のためのモード。
+具体例は「repo 内の `.claude/skills/` をチームで共有」「project-local な tool 設定・hook を nix store から配置」など。
+
+- **root の解決**: `root = nput.lib.projectRoot` で opt-in。実行時に git toplevel を root に解決する（`--root` で上書き可）。
+  config ファイル相対は Nix で store path 化して成立せず、CWD 相対は冪等性を壊すため採らない（→ ADR-0005）。
+- **主トリガは devShell**: `devShells.<name>` の `shellHook` から nput をキックする。`nix develop` / direnv で
+  プロジェクトに入った瞬間に配置される。devShell は HM モジュールと同型の「エンジンを起動する配線」（→ ADR-0003, ADR-0005）。
+- **ephemeral 配置**: project mode の配置物は per-clone で再生成される前提で、**プロジェクトにコミットされない**。
+  ゆえに activation は `.gitignore` に触れず git 状態に干渉しない。`.gitignore` に入れるべき target は専用コマンド
+  `nput gitignore`（stdout 出力のみ）で列挙し、プロジェクト管理者が一度登録する。
+- **世代は内部機構のみ**: profile は解決済み root でキーしてクローン間衝突を避け、stale 除去と世代スキップ判定に使う。
+  `--rollback` / `--list-generations` は公開しない（ephemeral な配置で rollback の意味が薄いため）。
+
+```nix
+devShells.default = pkgs.mkShell {
+  shellHook = ''
+    ${nput.lib.mkActivationScript {
+      inherit pkgs;
+      name = "skills";
+      root = nput.lib.projectRoot;
+      entries = [
+        { name = "nix-skills"; src = inputs.claude-skills; source = "skills/nix"; target = ".claude/skills/nix"; }
+      ];
+    }}/bin/nput
+  '';
+};
+```
+
+---
+
 ## north-star: 配置プリミティブから組むミニマル distro
 
 nput の長期的な狙いは、**nixpkgs のパッケージ群（＝ストアパス）を活かしつつ、配置だけをユーザーに操作させ、
@@ -302,6 +335,7 @@ nput は「任意パスへの粒度自由な配置プリミティブ」に徹す
 | 世代管理（ADR-0002）| 世代を取らない vs 取る | nix profile に乗せた standalone 世代管理を追加。copy は世代外 |
 | 層モデル（ADR-0003）| ネイティブ翻訳 vs エンジン所有 | 配置ロジックは全層 nput エンジンが所有、モジュールは配線に徹する |
 | 抽象（ADR-0004）| `$HOME` 固定 vs root 一般化 | root を一般化し配置プリミティブに。distro は純粋関数を合成して組む north-star |
+| project mode（ADR-0005）| root=`$HOME` 固定 vs プロジェクト相対 | root を公開引数へ昇格し git toplevel 相対の project mode を追加。配置物は ephemeral・主トリガは devShell |
 
 ---
 
@@ -314,3 +348,4 @@ nput は「任意パスへの粒度自由な配置プリミティブ」に徹す
 - 社内共有の設定リポジトリから個人環境用の設定を取り込む
 - 複数マシン（Linux / macOS）で同一のリポジトリ配置設定を共有する
 - 開発中の手元 dotfiles を `mkOutOfStoreSymlink` でライブ反映しながら編集する
+- プロジェクト repo 内に `.claude/skills` 等を nix store から配置し、devShell キックでチーム共有する（project mode）

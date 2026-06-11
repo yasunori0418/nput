@@ -83,9 +83,10 @@ outputs = { ... }: {
 
   # 関数呼び出し（モジュールシステム不使用）
   lib = import ./lib;
-  # lib.mkActivationScript    { pkgs, name, entries } → derivation
-  # lib.mkOutOfStoreSymlink   "/abs/path"             → marker（src に渡す）
-  # lib.listFilesInRepo       { src, dir? }           → attrset（builtins.readDir 互換）
+  # lib.mkActivationScript    { pkgs, name, entries, root? } → derivation
+  # lib.mkOutOfStoreSymlink   "/abs/path"                    → marker（src に渡す）
+  # lib.projectRoot                                          → marker（root に渡す: project mode）
+  # lib.listFilesInRepo       { src, dir? }                  → attrset（builtins.readDir 互換）
 };
 ```
 
@@ -150,6 +151,8 @@ mode = copy, source がファイル     → place-once: target 不在時のみ r
   host rollback は旧 config を再 activate して nput を再 kick することで自動追従する。
 - **GC**: profile 世代は GC root。旧世代を `nix profile wipe-history` 等で間引き、`nix-collect-garbage` で
   無参照 store パスを解放する。可変 JSON 方式は GC root を作らず rollback が壊れうるため採らない（→ ADR-0002）。
+- **project mode（→ ADR-0005）**: profile を解決済み root でキーし（クローン間衝突回避）、世代はユーザー非公開の内部機構に留める。
+  `shellHook` 高頻度実行に備え、新 derivation が前世代と同一なら新世代を積まない（世代スキップ）。home mode は従来通り毎回新世代。
 
 ### mkActivationScript の生成物
 
@@ -157,12 +160,13 @@ mode = copy, source がファイル     → place-once: target 不在時のみ r
 シェルスクリプトの derivation を返す。実行時にネットワークアクセスは発生しない。
 
 ```
-mkActivationScript :: { pkgs, name, entries } -> derivation
+mkActivationScript :: { pkgs, name, entries, root ? <$HOME> } -> derivation
 ```
 
 - `name`: profile を一意特定する配置単位名（→ ADR-0002）。`mkActivationScript` 1 呼び出し = 1 profile。
-- root は内部でパラメータ化するが、公開 API は当面 root = `$HOME` 固定。
-  root 差し替え（将来の system 配置, root = `/`）は**拡張 seam**として残し、安定公開引数にはしない（→ ADR-0004）。
+- `root`: 配置先の基準を選ぶ公開引数（→ ADR-0004 改訂, ADR-0005）。省略時は home mode（`$HOME`）。
+  `nput.lib.projectRoot` で project mode（実行時に git toplevel 解決、`--root` で上書き可）、絶対パス文字列で固定 root
+  （将来の system 配置 root = `/` の seam）。home mode と project mode は世代の扱いが異なる（後述）。
 
 CLI は最小とする。任意世代切替・世代 GC は標準の `nix profile` / `nix-collect-garbage` に委譲する。
 
@@ -206,8 +210,12 @@ module は内部機構に留め rollback は host に一本化する。
 |---|---|---|---|---|
 | **standalone** | `nix run` でスクリプトを明示実行 | `$HOME`（実行時）| あり（ユーザー向け）| `nput --rollback` |
 | **home-manager** | `home.activation` から起動 | `$HOME`（HM が解決）| あり（内部）| host（`home-manager --rollback`）|
+| **devShell**（→ ADR-0005）| `shellHook` から起動 | project mode: git toplevel（`--root` 可）| あり（内部・root でキー）| なし（ephemeral 配置）|
 | **NixOS**（将来）| `system.activationScripts` から起動 | `config.users.users.<user>.home` | あり（内部）| host（`nixos-rebuild` 世代）|
 | **nix-darwin**（将来）| `system.activationScripts` から起動 | `config.users.users.<user>.home` | あり（内部）| host 世代 |
+
+devShell は project mode（root = プロジェクトルート）の主トリガ。配置物は ephemeral でコミット対象外のため rollback は持たず、
+profile は解決済み root でキーしてクローン間衝突を避ける。`shellHook` の高頻度実行に備え、変更なしなら新世代を積まない世代スキップを必須とする（→ ADR-0005）。
 
 全モジュール（HM / NixOS / nix-darwin）は **一律「nput エンジンをキックするだけ」のランチャー**であり、
 プラットフォームごとのネイティブ機構（`home.file` / `systemd.tmpfiles`）へは翻訳しない。これらは**明示的に採らない代替**である。
@@ -285,6 +293,34 @@ nput = {
 HM モジュールは `home.activation` から nput エンジンを起動する。配置は nput 自身が行い、
 `home.file` には委譲しない。nput は自前 profile を**内部機構**として持つ（前世代マニフェスト + stale 追跡）が、
 ユーザー向け rollback は HM（`home-manager --rollback`）に一本化する。
+
+### パターン 3：project mode（プロジェクトに閉じた配置・→ ADR-0005）
+
+```nix
+# flake.nix — repo に入ると .claude/skills を nix store から配置する
+devShells.default = pkgs.mkShell {
+  shellHook = ''
+    ${nput.lib.mkActivationScript {
+      inherit pkgs;
+      name = "skills";
+      root = nput.lib.projectRoot;   # git toplevel を root に解決（project mode）
+      entries = [
+        { name = "nix-skills"; src = inputs.claude-skills; source = "skills/nix"; target = ".claude/skills/nix"; }
+      ];
+    }}/bin/nput
+  '';
+};
+```
+
+```bash
+# direnv (use flake) / nix develop でシェルに入ると配置される
+# .gitignore に入れるべき target を列挙（stdout 出力のみ・書き込みはしない）
+nix run .#skills -- gitignore
+```
+
+- root はプロジェクトルート（git toplevel）。`--root` で上書き可。
+- 配置物は ephemeral（コミット対象外）。`.gitignore` への登録は `nput gitignore` の出力を見てプロジェクト管理者が一度行う。
+- 世代は内部機構のみ（`--rollback` 非公開）。`shellHook` 高頻度実行に備え変更なしなら新世代を積まない。
 
 ---
 
