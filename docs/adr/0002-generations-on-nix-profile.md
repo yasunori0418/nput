@@ -1,8 +1,14 @@
 # ADR-0002: 世代管理を nix profile に乗せる（全モード自前 profile / rollback は standalone 中心）
 
-- ステータス: 採用
+- ステータス: 採用（2026-06-11 改訂: 実装機構を固定 Go エンジンに変更 → ADR-0006）
 - 日付: 2026-06-07
-- 関連: ADR-0001, ADR-0003, `docs/concept.md`, `docs/spec.md`（世代管理仕様）
+- 関連: ADR-0001, ADR-0003, ADR-0006, `docs/concept.md`, `docs/spec.md`（世代管理仕様）
+
+> **2026-06-11 改訂注記（ADR-0006）**: 本 ADR の profile / 世代 / store マニフェスト / 保守的 stale 除去という
+> **decision 自体は不変**。ただし実装機構は変わった——「activation スクリプト（生成 bash）」は**固定 Go エンジン
+> （`packages.nput`）**に置き換わり、`manifest.json` を入力に取る。フラグ式 CLI（`nput --rollback` 等）はサブコマンド体系
+> （`nput rollback` / `list-generations` / `gitignore`、dry-run は `--dryrun`）に置き換わる。以下の本文中の「activation スクリプト」は
+> Go エンジン、CLI はサブコマンド体系として読むこと。
 
 ## 背景
 
