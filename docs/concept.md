@@ -195,6 +195,7 @@ nput の**中心的な配置モード**が **root = プロジェクトルート*
   config ファイル相対は Nix で store path 化して成立せず、CWD 相対は冪等性を壊すため採らない（→ ADR-0005）。
 - **主トリガは devShell**: `devShells.<name>` の `shellHook` から nput をキックする。`nix develop` / direnv で
   プロジェクトに入った瞬間に配置される。devShell は HM モジュールと同型の「エンジンを起動する配線」（→ ADR-0003, ADR-0005）。
+  CLI 本体は devShell の `packages` に **pin 版 `nput` を同梱**するのが canonical（flake.lock 固定で CLI と lib が一致・→ ADR-0015）。
 - **ephemeral 配置**: project mode の配置物は per-clone で再生成される前提で、**プロジェクトにコミットされない**。
   ゆえに activation は `.gitignore` に触れず git 状態に干渉しない。`.gitignore` に入れるべき target は専用コマンド
   `nput gitignore`（stdout 出力のみ）で列挙し、プロジェクト管理者が一度登録する。
@@ -210,6 +211,7 @@ nput.${system}.skills = nput.lib.mkManifest {
   };
 };
 devShells.${system}.default = pkgs.mkShell {
+  packages  = [ nput.packages.${system}.nput ];   # pin 版 nput を PATH へ（project mode は同梱が canonical・→ ADR-0015）
   shellHook = "nput apply skills --no-wait";
 };
 ```
