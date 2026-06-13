@@ -31,6 +31,7 @@ nix run .#<script>       # activation スクリプト実行
 
 - `flake.nix` は `flake-parts.lib.mkFlake` ベース
 - `lib/` は nixpkgs のみに依存する。home-manager / NixOS / nix-darwin への依存を持ち込まない
+- ユーザーに確認・質問する際は、テキストで質問を投げず **AskUserQuestion ツールを積極的に使う**。設計判断の確認・曖昧な依頼の解釈確認・代替案の選択などで使い、各質問は推奨オプションを先頭に置く
 
 ## Agent skills
 
