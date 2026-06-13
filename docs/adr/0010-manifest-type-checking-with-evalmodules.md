@@ -5,6 +5,11 @@
 - 関連: ADR-0001（out-of-store を明示関数に降格）, ADR-0003（配置ロジックはエンジンが所有・モジュールは配線）, ADR-0006（lib は純データ生成・`manifest.json` 契約）, ADR-0007（root 明示必須・CLI 一次 UX）, ADR-0008（`src` / `subpath` 命名）, `docs/spec.md`, `docs/design.md`, `CONTEXT.md`
 - 起点: 「manifest 内にセットする各 attrset（entries / root）の型検査に、NixOS モジュールシステムの `lib.types` / `mkOption` を再利用できるか」という確認
 
+> **2026-06-14 改訂（ADR-0014）**: 本 ADR の以下の決定は ADR-0014 で反転した。検査機構（`mkManifest` 内で `evalModules`）・marker タグ方式・2 段分割・clean enum 契約・root 検査は不変。
+> - 「entries を `attrsOf (submodule …)` でモデル化」を棄却 → **採用**（キー = target の attrset に変更）。
+> - entry submodule の `name:str(必須)` フィールド → **廃止**（識別子は属性キー = target）。
+> - 重複 `name` の `lib.throwIf` チェック → **撤廃**（一意性は Nix attrset が native 担保）。copy+marker / systemRoot の throwIf（→ ADR-0013）は残る。
+
 ## 背景
 
 `lib.mkManifest { entries, root } -> derivation` は entries（配置定義のリスト）と root（配置先基準）を入力に取り、`manifest.json` + symlink farm を生成する純粋関数（→ ADR-0006）。この入力に対する型検査をどう実装するかが未決だった。
