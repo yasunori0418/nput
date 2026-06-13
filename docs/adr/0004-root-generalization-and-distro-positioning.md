@@ -1,8 +1,10 @@
 # ADR-0004: root 一般化と「純粋関数プリミティブ」としての positioning
 
-- ステータス: 採用（2026-06-11 改訂: root を公開引数へ昇格 → ADR-0005）
+- ステータス: 採用（2026-06-11 改訂: root を公開引数へ昇格 → ADR-0005／2026-06-13 改訂: root を明示必須・3 マーカー化 → ADR-0007）
 - 日付: 2026-06-07
-- 関連: ADR-0002, ADR-0003, ADR-0005, `docs/concept.md`, `docs/design.md`（mkActivationScript シグネチャ）
+- 関連: ADR-0002, ADR-0003, ADR-0005, ADR-0007, `docs/concept.md`, `docs/design.md`（mkActivationScript シグネチャ）
+
+> **2026-06-13 改訂（ADR-0007）**: 「当初は root = `$HOME` 固定／既定」という本 ADR の前提を撤回。root は**暗黙デフォルトを持たず明示必須**になり、`$HOME` は `homeRoot` マーカー、`/`（system seam）は `systemRoot` マーカーへ昇格した（`projectRoot` と合わせ 3 マーカー）。詳細は ADR-0007。
 
 ## 背景
 
