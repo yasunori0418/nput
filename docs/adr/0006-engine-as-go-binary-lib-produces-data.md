@@ -1,8 +1,14 @@
 # ADR-0006: エンジンを固定の Go バイナリにし、lib はデータ生成に徹する（生成 bash を廃する）
 
-- ステータス: 採用
+- ステータス: 採用（2026-06-13 一部改訂: 「nput の露出と環境セットアップ」節・実行フロー・該当棄却案を ADR-0007 が反転）
 - 日付: 2026-06-11
-- 関連: ADR-0002, ADR-0003, ADR-0005, `docs/concept.md`, `docs/design.md`, `docs/spec.md`
+- 関連: ADR-0002, ADR-0003, ADR-0005, ADR-0007, `docs/concept.md`, `docs/design.md`, `docs/spec.md`
+
+> **2026-06-13 改訂（ADR-0007）**: 本 ADR の以下の決定は ADR-0007 で反転した。
+> - 「エンジン `nput` は PATH に常駐せず per-config ラッパー（`nix run .#x`）経由」→ **汎用 `nput` CLI を PATH に常駐させ一次 UX に**。`mkActivationScript` ラッパーは廃止（`mkManifest` は存続）。
+> - 「グローバル `nput` に config 発見機構を足さない」「`nput init` スキャフォルドは採らない」（棄却案）→ **entrypoint ファイル発見（CWD / `-f`）と `nput init`（`nix flake init -t` ラッパー）を採用**。config を Nix で書き `nix build` で評価する thesis は維持。
+> - エンジンは Go ライブラリ化し、`cmd/nput` CLI が import する（`manifest.json` in 契約はライブラリ API として温存）。
+> 固定 Go エンジン・`manifest.json` 契約・profile / 世代 / 保守的 stale 除去・ネイティブ FS という他の決定は不変。
 
 ## 背景
 

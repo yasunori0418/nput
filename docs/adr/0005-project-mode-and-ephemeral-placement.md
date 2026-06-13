@@ -1,8 +1,10 @@
 # ADR-0005: project mode（プロジェクト相対配置）と ephemeral 配置原則
 
-- ステータス: 採用
+- ステータス: 採用（2026-06-13 改訂: 「既定 `$HOME`（home mode）」前提を撤回し root 明示必須へ → ADR-0007）
 - 日付: 2026-06-11
-- 関連: ADR-0002, ADR-0003, ADR-0004, `docs/concept.md`, `docs/design.md`, `docs/spec.md`
+- 関連: ADR-0002, ADR-0003, ADR-0004, ADR-0007, `docs/concept.md`, `docs/design.md`, `docs/spec.md`
+
+> **2026-06-13 改訂（ADR-0007）**: 本 ADR は「これまで root = `$HOME` 固定（home mode 既定）で、project mode を `projectRoot` で opt-in する」前提で書かれている。ADR-0007 で暗黙デフォルトを撤廃し、project mode は `projectRoot` / `homeRoot` / `systemRoot` の 3 マーカーの一つになった（home が既定でも project が既定でもない）。project mode の機構（git toplevel 解決・root キー profile・ephemeral・世代スキップ・非公開世代）自体は不変。
 
 ## 背景
 
