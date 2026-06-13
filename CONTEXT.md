@@ -13,8 +13,8 @@ nput のコア。「nix store のパスを root 相対の target に配置する
 _Avoid_: 「配置フレームワーク」「設定管理」（設定は生成しない）
 
 **engine (nput エンジン)**:
-配置（**ネイティブ FS 操作**）と stale 除去を一手に所有する**配置コア**。`manifest.json` を入力に取り `nix`（profile）/ `git`（toplevel）のみ叩く Go **ライブラリ**として実装し、**nput CLI** が import して駆動する（→ ADR-0003, ADR-0006, ADR-0007）。config ごとに bash を生成しない。
-_Avoid_: 「config ごとに生成される bash スクリプト」「各層がネイティブ機構へ翻訳する」「層ごとの配置ロジック」「CLI と一体の平らな単一実装」（エンジンは `manifest.json` in 契約を保つライブラリ層）
+配置（**ネイティブ FS 操作**）と stale 除去を一手に所有する**配置コア**。`manifest.json` を入力に取り `nix`（profile）/ `git`（toplevel）のみ叩く Go **ライブラリ**として実装し、**nput CLI** が import して駆動する（→ ADR-0003, ADR-0006, ADR-0007）。config ごとに bash を生成しない。「ライブラリ」は **`internal/` のバイナリ内層分離**であって公開 import 可能な再利用モジュールではない（安定面は `manifest.json` 契約に閉じる）。**stdlib-only 厳守**（`syscall.Flock` / `filepath.WalkDir` ベースのコピー / `encoding/json`）。CLI が link-farm を `nix build --out-link <profileDir>/.pending-<name>` で取得し、配置〜`nix-env --set` の **GC 窓**を indirect gcroot で塞ぐ（→ ADR-0011）。
+_Avoid_: 「config ごとに生成される bash スクリプト」「各層がネイティブ機構へ翻訳する」「層ごとの配置ロジック」「CLI と一体の平らな単一実装」「engine を公開 Go モジュールとして外部から import する」（エンジンは `manifest.json` in 契約を保つ `internal/` 層）
 
 **nput CLI**:
 ユーザーが叩く一次 UX。PATH に常駐する `packages.nput`。**entrypoint** を発見（CWD 既定 / `-f` で上書き）し、内部で `nix build` / `eval` を回して named manifest を得て **engine** に配置させる。`apply [<name>]`（省略時は `nput.default`）/ `apply --all` / `rollback`（home mode 限定）/ `list-generations`（home mode 限定）/ `gitignore` / `init` のサブコマンドを持つ。内部で叩く nix コマンドは `--help` で開示する（→ ADR-0007）。

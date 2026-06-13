@@ -235,7 +235,10 @@ nput init project      # nix flake init -t <nput>#project のラッパー（devS
 ```
 nput apply <name> [-f <ep>] [--root <p>]
   0. entrypoint 発見（-f 上書き）
-  1. nix build <ep>#nput.<system>.<name>（または -A nput.<name>）→ link-farm store path
+  1. nix build <ep>#nput.<system>.<name> --out-link <profileDir>/.pending-<name>
+     （legacy は nix-build <ep> -A nput.<name> --out-link <profileDir>/.pending-<name>）
+     → os.Readlink で link-farm store path を得る。out-link が indirect gcroot を張り
+       配置〜--set の GC 窓を塞ぐ（→ ADR-0011）
   2. engine を駆動:
      a. flock(profileDir) を try-lock（保持中ならスキップ）
      b. root 解決（manifest の kind: project=git rev-parse / home=$HOME / system=/ / 固定パス、--root 上書き）
@@ -243,7 +246,10 @@ nput apply <name> [-f <ep>] [--root <p>]
      d. project mode かつ新 link-farm が前世代と同一なら no-op で終了（世代スキップ）
      e. manifest.json を新旧 diff → 新規/張替を配置 → 保守的 stale 除去（ネイティブ FS）
      f. nix-env --profile <profileDir> --set <link-farm>（サブプロセス・コミット点）
+     g. --set 成功後に .pending-<name> を削除（世代リンクが gcroot を引き継ぐ・→ ADR-0011）
 ```
+
+- `--dryrun` は link-farm を build するが配置しない読み取り専用なので、pending gcroot（out-link）は張らない（→ ADR-0011）。
 
 ---
 
@@ -666,8 +672,8 @@ devShells.default = pkgs.mkShell {
 | `lib/`（`mkManifest` / マーカー群 / `listFilesInSrc`）| nixpkgs.lib のみ（純データ生成。`rsync` 不要）。型検査に `lib.types` / `mkOption` / `evalModules`（nixpkgs.lib のコア）を使う（→ ADR-0010）|
 | `lib/types.nix`（entry submodule / `srcType` / `rootType` / marker custom type）| nixpkgs.lib のみ（`modules/common.nix` と共有・→ ADR-0010）|
 | `lib/out-of-store.nix`（`mkOutOfStoreSymlink` / `projectRoot` / `homeRoot` / `systemRoot` マーカー）| なし（`_nputMarker` タグ付きマーカー構築子・→ ADR-0010）|
-| `internal/`（配置エンジン = Go ライブラリ）| Go 標準ライブラリ中心。`manifest.json` を入力に取り runtime に `nix`（profile）/ `git`（toplevel）をサブプロセスで要求（→ ADR-0006）|
-| `cmd/nput`（CLI = `packages.nput`）| 配置エンジンライブラリを import。entrypoint 発見と `nix`（build / eval）オーケストレーションを担う。`buildGoModule` でビルド（→ ADR-0007）|
+| `internal/`（配置エンジン = 内部層分離。公開モジュールではない・→ ADR-0011）| **stdlib-only 厳守**（第三者依存ゼロ）。`syscall.Flock`・`filepath.WalkDir`+`io.Copy`+`os.Chmod`・`encoding/json`・`fmt.Errorf`+`%w`。`manifest.json` を入力に取り runtime に `nix`（profile）/ `git`（toplevel）をサブプロセスで要求（→ ADR-0006, ADR-0011）|
+| `cmd/nput`（CLI = `packages.nput`）| 配置エンジンを import。最小依存を許可（**cobra** = サブコマンド / help、**fatih/color** = dryrun 色付け）。entrypoint 発見と `nix`（build / eval）オーケストレーションを担う。`buildGoModule` + **vendorHash 文字列**でビルド。Go は nixpkgs の go に pin し `toolchain` ディレクティブ不使用（→ ADR-0007, ADR-0011）|
 | `modules/common.nix` | nixpkgs.lib のみ |
 | `modules/home-manager.nix` | home-manager の module system（起動配線のみ）|
 | `modules/nixos.nix`（将来）| NixOS の module system（起動配線のみ）|
