@@ -115,9 +115,9 @@ outputs = { ... }: {
 
 ```nix
 # ユーザーの flake.nix
-outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = [ ... ]; };
+outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = { ... }; };
 # ユーザーの default.nix / shell.nix
-{ nput.<name> = nput.lib.mkManifest { root = ...; entries = [ ... ]; }; }
+{ nput.<name> = nput.lib.mkManifest { root = ...; entries = { ... }; }; }
 ```
 
 ---
@@ -127,14 +127,14 @@ outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = [ ...
 ### entries スキーマ
 
 各エントリは「どのリポジトリのどのパスを、どこへどのように置くか」という配置単位を表す。
-エントリは互いに独立しており、`name` で識別する。
+`entries` は **属性キー = target の attrset**で、**属性キーが識別子**になる（home-manager `home.file` 同型・→ ADR-0014）。エントリは互いに独立。
 
 | フィールド | 型 | デフォルト | 必須 | 説明 |
 |---|---|---|---|---|
-| `name` | string | — | ✓ | エントリ識別子 |
+| （属性キー）| string | — | ✓ | root 相対の target パス。識別子（= `target` の既定値）|
 | `src` | path \| set \| marker | — | ✓ | 配置元。デフォルトは store link。out-of-store はマーカー（下記）|
 | `subpath` | string | `"."` | — | リポジトリ内のパス（ファイル・ディレクトリ両対応）|
-| `target` | string | — | ✓ | root（`mkManifest` の `root` で明示選択）からの相対パス |
+| `target` | string | 属性キー | — | root（`mkManifest` の `root` で明示選択）からの相対パス。省略時は属性キー |
 | `mode` | enum | `"symlink"` | — | `"symlink"` または `"copy"` |
 
 `src` の型による挙動の違い（→ ADR-0001）:
@@ -229,7 +229,7 @@ nput init <template>    # nix flake init -t <nput>#<template> のラッパー
 # modules/common.nix（全モジュール共通）
 options.nput = {
   enable  = mkEnableOption "nput";
-  entries = mkOption { type = listOf ...; };
+  entries = mkOption { type = attrsOf (submodule ...); };  # 属性キー = target（→ ADR-0014）
 };
 
 # modules/nixos.nix, modules/nix-darwin.nix（将来拡張・各モジュール内で追加定義）
@@ -287,13 +287,13 @@ nput は「OS とは別の一機構」として、どの環境でも同じく振
 # flake.nix — repo に入ると .claude/skills を nix store から配置する
 outputs.nput.${system}.skills = nput.lib.mkManifest {
   root = nput.lib.projectRoot;   # git toplevel を root に解決（project mode）
-  entries = [
-    { name = "nix-skills"; src = inputs.claude-skills; subpath = "skills/nix"; target = ".claude/skills/nix"; }
-  ];
+  entries = {
+    ".claude/skills/nix" = { src = inputs.claude-skills; subpath = "skills/nix"; };
+  };
 };
 
 devShells.${system}.default = pkgs.mkShell {
-  shellHook = "nput apply skills";   # direnv / nix develop 入室で配置
+  shellHook = "nput apply skills --no-wait";   # direnv / nix develop 入室で配置
 };
 ```
 
@@ -313,18 +313,18 @@ nput gitignore skills
 outputs.nput.${system} = {
   vim-plugins = nput.lib.mkManifest {
     root = nput.lib.homeRoot;
-    entries = [
-      { name = "vim-foo"; src = inputs.vim-foo; target = ".local/share/nvim/site/pack/foo/start/foo"; }
-      { name = "vim-bar"; src = inputs.vim-bar; target = ".local/share/nvim/site/pack/bar/start/bar"; }
-    ];
+    entries = {
+      ".local/share/nvim/site/pack/foo/start/foo" = { src = inputs.vim-foo; };
+      ".local/share/nvim/site/pack/bar/start/bar" = { src = inputs.vim-bar; };
+    };
   };
 
   zsh-plugins = nput.lib.mkManifest {
     root = nput.lib.homeRoot;
-    entries = [
-      { name = "zsh-autosuggestions";     src = inputs.zsh-autosuggestions;     target = ".zsh/plugins/autosuggestions"; }
-      { name = "zsh-syntax-highlighting"; src = inputs.zsh-syntax-highlighting; target = ".zsh/plugins/syntax-highlighting"; }
-    ];
+    entries = {
+      ".zsh/plugins/autosuggestions"     = { src = inputs.zsh-autosuggestions; };
+      ".zsh/plugins/syntax-highlighting" = { src = inputs.zsh-syntax-highlighting; };
+    };
   };
 };
 ```
@@ -343,14 +343,14 @@ imports = [ inputs.nput.homeManagerModules.default ];
 
 nput = {
   enable = true;   # root は homeRoot を pin（再指定不要）
-  entries = [
+  entries = {
     # 外部リポジトリ（store link）
-    { name = "claude-skills"; src = inputs.skills-repo; subpath = "skills/nix"; target = ".claude/skills/nix"; }
+    ".claude/skills/nix" = { src = inputs.skills-repo; subpath = "skills/nix"; };
     # テーマを copy（place-once、以後ユーザー管理）
-    { name = "dark-theme";    src = inputs.themes;      subpath = "dark"; target = ".local/share/themes/dark"; mode = "copy"; }
+    ".local/share/themes/dark" = { src = inputs.themes; subpath = "dark"; mode = "copy"; };
     # 開発中の手元 dotfiles を out-of-store でライブ反映
-    { name = "nvim-config";   src = nput.lib.mkOutOfStoreSymlink "/home/me/dotfiles"; subpath = "home/.config/nvim"; target = ".config/nvim"; }
-  ];
+    ".config/nvim" = { src = nput.lib.mkOutOfStoreSymlink "/home/me/dotfiles"; subpath = "home/.config/nvim"; };
+  };
 };
 ```
 
@@ -374,9 +374,9 @@ NixOS VM テスト（`runNixOSTest`）はモジュール経路を実装する段
 
 ## 設計上の判断
 
-### name フィールドを必須にする理由
+### entries を target キーの attrset にする理由（ADR-0014）
 
-エントリを識別するため。自動生成（インデックスベース等）にすると並び替えで意図せず名前が変わる危険があるため、明示指定を必須とする。
+エントリの識別子を別フィールド（`name`）で手動定義させると、命名と一意性管理がユーザー負担になる。home-manager `home.file` 同型に **属性キー = target** とすることで、識別子を考える行為自体が消え、一意性は Nix の attrset キー重複不可で native に担保される。target は配置先として元々一意であるべき値で identity に過不足なく、順序非依存なので index ベース命名の「並び替えで名前が変わる」問題も起きない。`target` フィールドはキーから既定値を取り、キーを論理ラベルにして明示上書きする逃げ道も残す。
 
 ### 配置単位を `nput.<name>` = 1 profile とする理由（ADR-0002, ADR-0007）
 
