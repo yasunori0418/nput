@@ -312,6 +312,62 @@ subpath = "themes/dark.json";   # 単一ファイル
 | `"copy"` | path / set | place-once コピー（書き込み可・ユーザー管理）| **なし** |
 | `"copy"` | marker | 非推奨（out-of-store は symlink で使う）| — |
 
+### entries を動的に生成する（`subpath` / `target` の string interpolation）
+
+`entries` は素の Nix の list。`src` / `subpath` / `target` はいずれも通常の文字列・式なので、Nix の `map` / `listToAttrs` と string interpolation で動的に組み立てられる。`target` を `src` に対して動的に決めたい場合の定石を示す。
+
+#### 基本形：共有 name を補間する
+
+配置先ディレクトリ名を、`src` 選択と同じ name 変数から導く。`name` / `src` / `target` を 1 つの変数で串刺しにする。
+
+```nix
+# nvim プラグインを名前リストから一括生成
+let
+  plugins = [ "telescope" "treesitter" "cmp" ];
+in
+nput.lib.mkManifest {
+  root = nput.lib.homeRoot;
+  entries = map (n: {
+    name   = n;
+    src    = inputs.${n};
+    # subpath 省略 = リポジトリ全体
+    target = ".local/share/nvim/site/pack/plugins/start/${n}";
+  }) plugins;
+}
+```
+
+#### ⚠️ アンチパターン：`src` の store パスから名前を導く
+
+`baseNameOf src` で配置先名を作るのは**罠**。`src`（flake input / `fetchFromGitHub`）は `/nix/store/<hash>-source` のような **hash 前置の store 名**に解決されるため、`baseNameOf` は `<hash>-source` を返し target ディレクトリ名には使えない。
+
+```nix
+# NG: target が ".config/abcd1234...-source" のようになる
+{ name = "foo"; src = inputs.foo; target = ".config/${baseNameOf inputs.foo}"; }
+```
+
+配置先名は **`src` の store 名ではなく、ユーザーが制御する name 変数から導く**（上の基本形）。
+
+#### 応用：`listFilesInRepo` で subdir を列挙して展開する
+
+リポジトリ内の subdir を `listFilesInRepo` で走査し、各 subdir を 1 entry に展開する。`subpath` と `target` の両方を列挙した名前で補間する。
+
+```nix
+let
+  # claude-skills/skills 配下の dir 名を列挙
+  skills = nput.lib.listFilesInRepo { src = inputs.claude-skills; subpath = "skills"; };
+  names  = builtins.attrNames (nixpkgs.lib.filterAttrs (_: t: t == "directory") skills);
+in
+nput.lib.mkManifest {
+  root = nput.lib.homeRoot;
+  entries = map (n: {
+    name    = "skill-${n}";
+    src     = inputs.claude-skills;
+    subpath = "skills/${n}";       # 取り出す側も補間
+    target  = ".claude/skills/${n}";  # 配置先も同じ名前で補間
+  }) names;
+}
+```
+
 ---
 
 ## 配置動作仕様
