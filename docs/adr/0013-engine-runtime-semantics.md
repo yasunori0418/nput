@@ -1,9 +1,14 @@
 # ADR-0013: engine 実行時セマンティクスの細目を確定する（manifest v1 / flock / --all / copy+marker / systemRoot / gitignore / roothash）
 
-- ステータス: 採用
+- ステータス: 採用（2026-06-14 拡張: 配置セマンティクスに foreign symlink warning・祖先 symlink error を追加 → ADR-0015）
 - 日付: 2026-06-13
-- 関連: ADR-0002, ADR-0005, ADR-0006, ADR-0007, ADR-0010, ADR-0011, `docs/spec.md`, `docs/design.md`, `CONTEXT.md`
+- 関連: ADR-0002, ADR-0005, ADR-0006, ADR-0007, ADR-0010, ADR-0011, ADR-0015, `docs/spec.md`, `docs/design.md`, `CONTEXT.md`
 - 起点: ドキュメント計画段階のレビューで surfaced した「実装前に決めておくべき」細目の束
+
+> **2026-06-14 拡張（ADR-0015）**: 本 ADR の配置 / flock セマンティクスに次を追加した。(a) cross-config（別 profile）の同一 target は
+> 後勝ち維持だが、engine が **自身の前世代 manifest に記録の無い foreign symlink を上書きするときは warning** を出す。
+> (b) target の **祖先 component が symlink なら配置前に lstat walk で検出し error 停止**（`--dryrun` も conflict 扱い）。
+> 同一 profileDir 後勝ちポリシー（本 ADR §2）の cross-config / cross-tool への一般化（→ ADR-0015）。
 
 ## 背景
 

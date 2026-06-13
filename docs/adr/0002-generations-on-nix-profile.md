@@ -1,8 +1,15 @@
 # ADR-0002: 世代管理を nix profile に乗せる（全モード自前 profile / rollback は standalone 中心）
 
-- ステータス: 採用（2026-06-11 改訂: 実装機構を固定 Go エンジンに変更 → ADR-0006）
+- ステータス: 採用（2026-06-11 改訂: 実装機構を固定 Go エンジンに変更 → ADR-0006／2026-06-14 改訂: 世代操作 CLI を `nix-env` 系統一・rollback diff 基準を確定 → ADR-0015）
 - 日付: 2026-06-07
-- 関連: ADR-0001, ADR-0003, ADR-0006, `docs/concept.md`, `docs/spec.md`（世代管理仕様）
+- 関連: ADR-0001, ADR-0003, ADR-0006, ADR-0015, `docs/concept.md`, `docs/spec.md`（世代管理仕様）
+
+> **2026-06-14 改訂注記（ADR-0015）**: 本 ADR の profile / 世代 / 保守的 stale 除去という **decision 自体は不変**。
+> ただし世代操作の CLI は **`nix-env --profile <dir>` 系で統一**された——本文中の「任意世代切替・GC を `nix profile` /
+> `nix-collect-garbage` に委譲」「`nix profile wipe-history`／`nix-env --delete-generations`」は、`nix-env --profile <dir>`
+> 系（`--set` / `--rollback` / `--switch-generation` / `--list-generations` / `--delete-generations`）+ store GC は `nix-collect-garbage`、
+> と読むこと。新 `nix profile` は profile-manifest を要求し `nix-env --set` 製 profile では動かないため。
+> `nput rollback` の stale 除去は「baseline=離れる世代・ポインタ移動は最後」で行う（→ ADR-0015）。
 
 > **2026-06-11 改訂注記（ADR-0006）**: 本 ADR の profile / 世代 / store マニフェスト / 保守的 stale 除去という
 > **decision 自体は不変**。ただし実装機構は変わった——「activation スクリプト（生成 bash）」は**固定 Go エンジン

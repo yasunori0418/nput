@@ -1,10 +1,13 @@
 # ADR-0014: entries を target キーの attrset にし、手動 name と手動一意性チェックを廃する
 
-- ステータス: 採用
+- ステータス: 採用（2026-06-14 改訂: entry フィールド `mode` を `method` に改名 → ADR-0015）
 - 日付: 2026-06-14
-- 関連: ADR-0001, ADR-0008, ADR-0010, ADR-0013, `docs/spec.md`, `docs/design.md`, `docs/concept.md`, `CONTEXT.md`
+- 関連: ADR-0001, ADR-0008, ADR-0010, ADR-0013, ADR-0015, `docs/spec.md`, `docs/design.md`, `docs/concept.md`, `CONTEXT.md`
 - 改訂対象: **ADR-0010**「entries を `attrsOf (submodule …)` でモデル化」の棄却を反転。entry submodule の `name` 必須フィールドと重複 `name` の `lib.throwIf` を廃止
 - 参照: home-manager `modules/lib/file-type.nix`（`home.file` の識別子モデル）
+
+> **2026-06-14 改訂注記（ADR-0015）**: 本文中の entry フィールド `mode`（`"symlink"` | `"copy"`）は **`method` に改名**された
+> （unix file mode との誤読回避）。本文は当時の名のまま歴史的記録として残す（ADR-0008 の慣例）。現行スキーマは `method`（→ ADR-0015）。
 
 ## 背景
 

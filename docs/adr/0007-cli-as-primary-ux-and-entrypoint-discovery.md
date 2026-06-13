@@ -1,10 +1,15 @@
 # ADR-0007: 汎用 nput CLI を一次 UX に昇格し、entrypoint 発見＋root 明示モデルへ移行する
 
-- ステータス: 採用
+- ステータス: 採用（2026-06-14 追記: project mode の `nput` は devShell 同梱が canonical → ADR-0015）
 - 日付: 2026-06-13
-- 関連: ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, `docs/concept.md`, `docs/design.md`, `docs/spec.md`
+- 関連: ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0015, `docs/concept.md`, `docs/design.md`, `docs/spec.md`
 - 改訂対象: ADR-0006「nput の露出と環境セットアップ」節と棄却案（本 ADR が反転）、ADR-0004 / ADR-0005 の root モデル
 - 起点 Issue: #2（root デフォルト）, #3（CLI 化）, #4（flake.nix 以外の entrypoint）
+
+> **2026-06-14 追記（ADR-0015）**: 「`nput` を PATH に常駐させる」手段を具体化。**project mode は `templates/project` の
+> devShell に pin 版 `nput`（`packages = [ nput.packages.${system}.nput ]`）を同梱するのが canonical**。CLI と `nput.lib`
+> （manifest schemaVersion）が同一 flake 入力から来て一致する。グローバル install（`nix profile install`）は standalone
+> （home mode）の利便として残す（→ ADR-0015）。
 
 ## 背景
 

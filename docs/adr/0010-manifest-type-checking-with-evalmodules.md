@@ -9,6 +9,9 @@
 > - 「entries を `attrsOf (submodule …)` でモデル化」を棄却 → **採用**（キー = target の attrset に変更）。
 > - entry submodule の `name:str(必須)` フィールド → **廃止**（識別子は属性キー = target）。
 > - 重複 `name` の `lib.throwIf` チェック → **撤廃**（一意性は Nix attrset が native 担保）。copy+marker / systemRoot の throwIf（→ ADR-0013）は残る。
+>
+> **2026-06-14 改訂注記（ADR-0015）**: 本文中の entry submodule フィールド `mode:enum ["symlink" "copy"]` は **`method` に改名**された
+> （unix file mode との誤読回避）。本文は当時の名のまま残す。現行スキーマは `method`（→ ADR-0015）。
 
 ## 背景
 
