@@ -94,7 +94,7 @@ outputs = { ... }: {
 
   # 環境セットアップ（nput init = nix flake init -t のラッパー・nput はファイルを生成しない・→ ADR-0006, ADR-0007）
   templates.standalone = { path = ./templates/standalone; description = "..."; };
-  templates.project    = { path = ./templates/project;    description = "..."; };  # devShell 配線入り
+  templates.project    = { path = ./templates/project;    description = "..."; };  # devShell 配線（nput 同梱 + shellHook）入り・→ ADR-0015
 
   # モジュール統合
   homeManagerModules.default = ./modules/home-manager.nix;
@@ -120,6 +120,10 @@ outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = { ...
 { nput.<name> = nput.lib.mkManifest { root = ...; entries = { ... }; }; }
 ```
 
+> `nput.<system>.<name>` は `packages` を汚さない専用 namespace（→ ADR-0007）。`nix flake check` はこれを **unknown output として警告するが
+> exit 0・無害**で、配下の derivation は build / eval されない（`nput` 直下 attrset の eval だけは検査される）。警告は flake-parts 経由でも
+> 出力名変更でも消せない。成果物の主検証は `nix build .#nput.<system>.<name>` で行う（→ ADR-0015）。
+
 ---
 
 ## コアロジック設計（lib データ生成 + Go エンジン）
@@ -135,7 +139,7 @@ outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = { ...
 | `src` | path \| set \| marker | — | ✓ | 配置元。デフォルトは store link。out-of-store はマーカー（下記）|
 | `subpath` | string | `"."` | — | リポジトリ内のパス（ファイル・ディレクトリ両対応）|
 | `target` | string | 属性キー | — | root（`mkManifest` の `root` で明示選択）からの相対パス。省略時は属性キー |
-| `mode` | enum | `"symlink"` | — | `"symlink"` または `"copy"` |
+| `method` | enum | `"symlink"` | — | `"symlink"` または `"copy"`（旧名 `mode`・→ ADR-0015）|
 
 `src` の型による挙動の違い（→ ADR-0001）:
 
@@ -152,9 +156,9 @@ outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = { ...
 Go エンジンが実行時にパスの種別を判定し、適切な処理を**ネイティブ FS 操作**で選択する（`ln` / `rsync` は使わない）。
 
 ```
-mode = symlink, store/out-of-store → os.Symlink（ファイル・ディレクトリ問わず共通処理）
-mode = copy, subpath がディレクトリ → place-once: target 不在時のみネイティブ再帰コピー（mode 保存）
-mode = copy, subpath がファイル     → place-once: target 不在時のみネイティブコピー
+method = symlink, store/out-of-store → os.Symlink（ファイル・ディレクトリ問わず共通処理）
+method = copy, subpath がディレクトリ → place-once: target 不在時のみネイティブ再帰コピー（file mode 保存）
+method = copy, subpath がファイル     → place-once: target 不在時のみネイティブコピー
 ```
 
 ### 世代管理と state（→ ADR-0002）
@@ -293,7 +297,8 @@ outputs.nput.${system}.skills = nput.lib.mkManifest {
 };
 
 devShells.${system}.default = pkgs.mkShell {
-  shellHook = "nput apply skills --no-wait";   # direnv / nix develop 入室で配置
+  packages  = [ nput.packages.${system}.nput ];   # pin 版 nput を PATH へ（project mode は同梱が canonical・→ ADR-0015）
+  shellHook = "nput apply skills --no-wait";       # direnv / nix develop 入室で配置
 };
 ```
 
@@ -347,7 +352,7 @@ nput = {
     # 外部リポジトリ（store link）
     ".claude/skills/nix" = { src = inputs.skills-repo; subpath = "skills/nix"; };
     # テーマを copy（place-once、以後ユーザー管理）
-    ".local/share/themes/dark" = { src = inputs.themes; subpath = "dark"; mode = "copy"; };
+    ".local/share/themes/dark" = { src = inputs.themes; subpath = "dark"; method = "copy"; };
     # 開発中の手元 dotfiles を out-of-store でライブ反映
     ".config/nvim" = { src = nput.lib.mkOutOfStoreSymlink "/home/me/dotfiles"; subpath = "home/.config/nvim"; };
   };
