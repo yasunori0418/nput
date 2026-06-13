@@ -4,6 +4,7 @@
 - 日付: 2026-06-13
 - 関連: ADR-0001（marker パターンの起点）, ADR-0004 / ADR-0005 / ADR-0007（root マーカー）, ADR-0006（`manifest.json` 契約）, `docs/spec.md`, `docs/design.md`, `CONTEXT.md`
 - 起点: 「リポジトリ全体を示す文字列として `"."` 以外の表現は無いか」という問いの設計検討
+- 改訂注記: 本 ADR が `listFilesInRepo` と呼ぶ関数は ADR-0009 で `listFilesInSrc` に改名した（本文は当時の名のまま歴史的記録として残す）
 
 ## 背景
 
