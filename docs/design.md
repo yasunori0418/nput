@@ -107,7 +107,7 @@ outputs = { ... }: {
   # lib.projectRoot                             → marker（root に渡す: project mode / git toplevel）
   # lib.homeRoot                                → marker（root に渡す: home mode / $HOME）
   # lib.systemRoot                              → marker（root に渡す: system mode / / ・将来）
-  # lib.listFilesInRepo     { src, dir? }       → attrset（builtins.readDir 互換）
+  # lib.listFilesInRepo     { src, subpath? }       → attrset（builtins.readDir 互換）
 };
 ```
 
@@ -133,7 +133,7 @@ outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = [ ...
 |---|---|---|---|---|
 | `name` | string | — | ✓ | エントリ識別子 |
 | `src` | path \| set \| marker | — | ✓ | 配置元。デフォルトは store link。out-of-store はマーカー（下記）|
-| `source` | string | `"."` | — | リポジトリ内のパス（ファイル・ディレクトリ両対応）|
+| `subpath` | string | `"."` | — | リポジトリ内のパス（ファイル・ディレクトリ両対応）|
 | `target` | string | — | ✓ | root（`mkManifest` の `root` で明示選択）からの相対パス |
 | `mode` | enum | `"symlink"` | — | `"symlink"` または `"copy"` |
 
@@ -147,14 +147,14 @@ outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = [ ...
 
 `string` を直接渡して out-of-store にする暗黙分岐は廃止した。out-of-store は明示関数で opt-in する。
 
-### source の判別ロジック（Go エンジン・ネイティブ FS・→ ADR-0006）
+### subpath の判別ロジック（Go エンジン・ネイティブ FS・→ ADR-0006）
 
 Go エンジンが実行時にパスの種別を判定し、適切な処理を**ネイティブ FS 操作**で選択する（`ln` / `rsync` は使わない）。
 
 ```
 mode = symlink, store/out-of-store → os.Symlink（ファイル・ディレクトリ問わず共通処理）
-mode = copy, source がディレクトリ → place-once: target 不在時のみネイティブ再帰コピー（mode 保存）
-mode = copy, source がファイル     → place-once: target 不在時のみネイティブコピー
+mode = copy, subpath がディレクトリ → place-once: target 不在時のみネイティブ再帰コピー（mode 保存）
+mode = copy, subpath がファイル     → place-once: target 不在時のみネイティブコピー
 ```
 
 ### 世代管理と state（→ ADR-0002）
@@ -288,7 +288,7 @@ nput は「OS とは別の一機構」として、どの環境でも同じく振
 outputs.nput.${system}.skills = nput.lib.mkManifest {
   root = nput.lib.projectRoot;   # git toplevel を root に解決（project mode）
   entries = [
-    { name = "nix-skills"; src = inputs.claude-skills; source = "skills/nix"; target = ".claude/skills/nix"; }
+    { name = "nix-skills"; src = inputs.claude-skills; subpath = "skills/nix"; target = ".claude/skills/nix"; }
   ];
 };
 
@@ -345,11 +345,11 @@ nput = {
   enable = true;   # root は homeRoot を pin（再指定不要）
   entries = [
     # 外部リポジトリ（store link）
-    { name = "claude-skills"; src = inputs.skills-repo; source = "skills/nix"; target = ".claude/skills/nix"; }
+    { name = "claude-skills"; src = inputs.skills-repo; subpath = "skills/nix"; target = ".claude/skills/nix"; }
     # テーマを copy（place-once、以後ユーザー管理）
-    { name = "dark-theme";    src = inputs.themes;      source = "dark"; target = ".local/share/themes/dark"; mode = "copy"; }
+    { name = "dark-theme";    src = inputs.themes;      subpath = "dark"; target = ".local/share/themes/dark"; mode = "copy"; }
     # 開発中の手元 dotfiles を out-of-store でライブ反映
-    { name = "nvim-config";   src = nput.lib.mkOutOfStoreSymlink "/home/me/dotfiles"; source = "home/.config/nvim"; target = ".config/nvim"; }
+    { name = "nvim-config";   src = nput.lib.mkOutOfStoreSymlink "/home/me/dotfiles"; subpath = "home/.config/nvim"; target = ".config/nvim"; }
   ];
 };
 ```
