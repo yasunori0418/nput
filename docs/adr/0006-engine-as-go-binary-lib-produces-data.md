@@ -2,7 +2,11 @@
 
 - ステータス: 採用（2026-06-13 一部改訂: 「nput の露出と環境セットアップ」節・実行フロー・該当棄却案を ADR-0007 が反転）
 - 日付: 2026-06-11
-- 関連: ADR-0002, ADR-0003, ADR-0005, ADR-0007, `docs/concept.md`, `docs/design.md`, `docs/spec.md`
+- 関連: ADR-0002, ADR-0003, ADR-0005, ADR-0007, ADR-0012, ADR-0013, `docs/concept.md`, `docs/design.md`, `docs/spec.md`
+
+> **2026-06-13 精緻化（ADR-0012 / ADR-0013）**: 本 ADR の以下の記述は後続 ADR が具体化・上書きした。
+> - 「flock を try-lock（保持中ならスキップ）」（並行実行・実行フロー）→ ADR-0013 が **解決後 profileDir 単位** + **明示 apply=blocking wait / shellHook=try-lock skip**（衝突時は後勝ち）に精緻化。
+> - 「E2E は非 NixOS + nix の**コンテナ**で」→ ADR-0012 が **ubuntu-latest + `cachix/install-nix-action` の別ジョブ**に確定（dockerTools 自作イメージは過剰として棄却）。
 
 > **2026-06-13 改訂（ADR-0007）**: 本 ADR の以下の決定は ADR-0007 で反転した。
 > - 「エンジン `nput` は PATH に常駐せず per-config ラッパー（`nix run .#x`）経由」→ **汎用 `nput` CLI を PATH に常駐させ一次 UX に**。`mkActivationScript` ラッパーは廃止（`mkManifest` は存続）。
