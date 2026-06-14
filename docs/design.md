@@ -212,7 +212,7 @@ CLI はサブコマンド体系（→ ADR-0006, ADR-0007）。任意世代切替
 nput apply [<name>]     # 配置（name 省略時 nput.default）。--dryrun は副作用ゼロのプラン表示
 nput apply <name> --recopy     # copy target を src から無条件上書き再コピー（→ ADR-0020）
 nput apply --all        # entrypoint の nput.* を全適用
-nput reset <name> [target...]  # 配置物を無い状態へ戻す（symlink 保守的除去 + copy 削除・profile 不変・→ ADR-0020）
+nput reset <name> [target...]  # 配置物を無い状態へ戻す（symlink 保守的除去 + copy 削除・profile 不変・名指し必須・--dryrun 可・→ ADR-0020, ADR-0021）
 nput rollback <name>    # 前世代へ（home mode 限定）
 nput list-generations <name>   # 世代一覧（home mode 限定）
 nput gitignore <name>   # .gitignore 向け列挙（stdout のみ）
