@@ -199,7 +199,8 @@ nput の**中心的な配置モード**が **root = プロジェクトルート*
   CLI 本体は devShell の `packages` に **pin 版 `nput` を同梱**するのが canonical（flake.lock 固定で CLI と lib が一致・→ ADR-0015）。
 - **ephemeral 配置**: project mode の配置物は per-clone で再生成される前提で、**プロジェクトにコミットされない**。
   ゆえに activation は `.gitignore` に触れず git 状態に干渉しない。`.gitignore` に入れるべき target は専用コマンド
-  `nput gitignore`（stdout 出力のみ）で列挙し、プロジェクト管理者が一度登録する。
+  `nput gitignore`（stdout 出力のみ・method を区別せず copy target も含む）で列挙し、プロジェクト管理者が一度登録する。
+  copy target も ephemeral 扱いで、各 clone で place-once 再マテリアライズされ編集は clone local（→ ADR-0019）。
 - **世代は内部機構のみ**: profile は解決済み root でキーしてクローン間衝突を避け、stale 除去と世代スキップ判定に使う。
   `--rollback` / `--list-generations` は公開しない（ephemeral な配置で rollback の意味が薄いため）。
 
