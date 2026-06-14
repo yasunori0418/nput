@@ -1,0 +1,2 @@
+#json
+{"entries":[{"method":"symlink","src":"/nix/store/00000000000000000000000000000000-fake-src","srcKind":"store","subpath":"skills/nix","target":".claude/skills/nix"},{"method":"symlink","src":"/nix/store/11111111111111111111111111111111-other","srcKind":"store","subpath":".","target":".config/foo"}],"root":{"rootKind":"project"},"schemaVersion":1}
