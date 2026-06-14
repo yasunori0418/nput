@@ -203,7 +203,7 @@ nput apply <name> [-f <ep>] [--root <p>]
   2. 配置エンジン（import）を駆動: flock → ロック内で nix build --out-link → 前世代 diff → 配置 → stale 除去 → nix-env --set
 ```
 
-> 順序は **eval 先行 → flock → build**（→ ADR-0023）。profileDir は root 解決後にしか確定しない（project / `--root` 時は `<roothash>`）ため、`mkManifest` が passthru する `rootKind` を安価な `nix eval` で先取りし、flock を取ってから build をロック内で行う。これで profileDir 未確定の循環と、ロック外 build の `.pending-<name>` out-link 競合が同時に解消する。
+> 順序は **eval 先行 → flock → build**（→ ADR-0023）。profileDir は root 解決後にしか確定しない（project / `--root` / fixed 時は `<roothash>`・→ ADR-0024）ため、`mkManifest` が passthru する `rootKind` を安価な `nix eval` で先取りし、flock を取ってから build をロック内で行う。これで profileDir 未確定の循環と、ロック外 build の `.pending-<name>` out-link 競合が同時に解消する。**非 build コマンド（`reset` / `rollback` / `list-generations`）も profileDir 確定のため rootKind eval を先行する**。**`apply --all` は rootKind を 1 回の一括 eval（`--apply` で config 名 → rootKind マップ）で取り**、build だけ config ごとに回す（→ ADR-0024）。
 
 - `root` は `manifest.json` に記録された kind（project / home / system / 固定パス）をエンジンが実行時に解決する。マーカーは評価時にパスへ展開しない（→ ADR-0005, ADR-0007）。
 - `name` は entrypoint の `nput.<name>` 属性キーが供給する。`name` 省略時は `nput.default` を使う（flake の `default` 慣例。未定義ならエラー）。
@@ -262,7 +262,7 @@ module は内部機構に留め rollback は host に一本化する。
 | 層 | エンジン起動方法 | root の解決 | nput profile | ユーザー向け rollback |
 |---|---|---|---|---|
 | **standalone（CLI）** | `nput apply <name>` を明示実行 | マーカー（`homeRoot` / `projectRoot` 等）| あり（home はユーザー向け）| `nput rollback <name>`（home mode 限定）|
-| **home-manager** | `home.activation` から起動 | `$HOME`（`homeRoot` を pin）| あり（内部）| host（`home-manager --rollback`）|
+| **home-manager** | `home.activation` から起動 | `$HOME`（`homeRoot` を pin）| あり（内部・MVP は profile `<name>` = `default` 固定の 1 profile・→ ADR-0024）| host（`home-manager --rollback`）|
 | **devShell**（→ ADR-0005）| `shellHook` から `nput apply` | project mode: git toplevel（`--root` 可）| あり（内部・root でキー）| なし（ephemeral 配置）|
 | **NixOS**（将来）| `system.activationScripts` から起動 | `config.users.users.<user>.home` | あり（内部）| host（`nixos-rebuild` 世代）|
 | **nix-darwin**（将来）| `system.activationScripts` から起動 | `config.users.users.<user>.home` | あり（内部）| host 世代 |
@@ -293,6 +293,20 @@ nput は「OS とは別の一機構」として、どの環境でも同じく振
 ---
 
 ## 使用パターン
+
+### 既存プロジェクトへの組み込み（project-first の主経路・→ ADR-0024）
+
+`nput init` は `nix flake init -t` のラッパーで**新規プロジェクト作成向け**（既存ファイルは上書きしない）。既に `flake.nix` がある repo へ後付けする場合は、次の 4 ステップを手動で行う（CLI は flake を自動マージしない＝「設定を生成しない」thesis を維持）。
+
+1. **input に nput を追加**: `inputs.nput.url = "github:<owner>/nput";`
+2. **`nput.<name>` に manifest を公開**: `outputs.nput.<system>.<name> = nput.lib.mkManifest { root = nput.lib.projectRoot; entries = { ... }; };`
+3. **devShell に pin 版 nput を同梱**: `packages = [ nput.packages.${system}.nput ];`（CLI と `nput.lib` を同一入力で揃える・→ ADR-0015）
+4. **`shellHook` に名指し apply を配線**: `shellHook = "nput apply <name> --no-wait";`
+
+```bash
+# .gitignore に入れる target を列挙して管理者が一度追記
+nput gitignore <name> >> .gitignore
+```
 
 ### パターン 1：project mode（中心的な使い方・→ ADR-0005, ADR-0007）
 
