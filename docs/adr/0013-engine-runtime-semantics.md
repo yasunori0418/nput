@@ -13,6 +13,10 @@
 > **2026-06-14 改訂注記（ADR-0016）**: 本 ADR §3 の「`apply --all` は **定義順**」を **辞書順（キーソート・決定的）**へ訂正した。
 > `nput.*` は attrset で `builtins.attrNames` が辞書順を返すため定義順は保持されない。各 config は独立 profile で atomic なので
 > 適用順は結果に影響せず、決定的でありさえすればよい（→ ADR-0016）。
+>
+> **2026-06-14 改訂注記（ADR-0017）**: 本 ADR §3 の `apply --all` に **root モードフィルタ `--project-root` / `--home-root` / `--system-root`** を追加した。
+> 素の `--all` は全 config を適用（不変）だが、フィルタで該当 root モードの config のみに絞れる。home / project mode 混在 entrypoint で
+> devShell から `--all` を打つと home config も `$HOME` に配置される footgun を opt-in で回避する（→ ADR-0017）。
 
 ## 背景
 

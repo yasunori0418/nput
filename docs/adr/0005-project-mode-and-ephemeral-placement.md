@@ -5,6 +5,8 @@
 - 関連: ADR-0002, ADR-0003, ADR-0004, ADR-0007, `docs/concept.md`, `docs/design.md`, `docs/spec.md`
 
 > **2026-06-13 改訂（ADR-0007）**: 本 ADR は「これまで root = `$HOME` 固定（home mode 既定）で、project mode を `projectRoot` で opt-in する」前提で書かれている。ADR-0007 で暗黙デフォルトを撤廃し、project mode は `projectRoot` / `homeRoot` / `systemRoot` の 3 マーカーの一つになった（home が既定でも project が既定でもない）。project mode の機構（git toplevel 解決・root キー profile・ephemeral・世代スキップ・非公開世代）自体は不変。
+>
+> **2026-06-14 改訂注記（ADR-0017）**: 本 ADR の **世代スキップを「完全 no-op」→「lstat 検査 + 必要時のみ再張り」**へ精緻化した。新 link-farm が前世代と同一なら新世代は積まない（世代無限増殖の回避は不変）が、各 target を lstat 検査し foreign に書き換えられた / 消えた entry はその entry だけ再張りしてドリフトを収束させる（→ ADR-0017）。
 
 ## 背景
 
