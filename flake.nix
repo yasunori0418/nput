@@ -34,18 +34,19 @@
     let
       # flake output（lib）とテスト入力で同一実体を共有する（self 参照を避ける）。
       nputLib = import ./lib;
-    in
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [
-        inputs.treefmt-nix.flakeModule
-        inputs.nix-unit.modules.flake.default
-      ];
       systems = [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
         "x86_64-darwin"
       ];
+    in
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        inputs.treefmt-nix.flakeModule
+        inputs.nix-unit.modules.flake.default
+      ];
+      inherit systems;
       perSystem =
         {
           config,
@@ -54,42 +55,44 @@
           ...
         }:
         let
-          # Go ビルド・lint の入力（go.mod + internal/。docs 変更で再ビルドしないよう絞る）。
-          # CLI（cmd/）と go.sum（外部依存）は後続スライスで追加される（→ ADR-0011）。
+          # Go ビルド・lint の入力（go.mod + go.sum + internal/ + cmd/。docs 変更で再ビルドしないよう絞る）。
           goSrc = lib.fileset.toSource {
             root = ./.;
             fileset = lib.fileset.unions [
               ./go.mod
+              ./go.sum
               ./internal
+              ./cmd
             ];
           };
           # nix sandbox（ネットワーク遮断）で go ツールを回すための環境。
-          # stdlib-only なので GOPROXY=off で十分（外部 fetch ゼロ・→ ADR-0011）。
+          # CLI 層が cobra に依存するため（→ ADR-0011）、buildGoModule が固定 hash で取得した
+          # vendored deps（goModules）を vendor/ に展開し GOFLAGS=-mod=vendor でオフライン解決する。
           # build dir 直下は Go が temp root とみなし go.mod を無視するため、サブディレクトリで作業する。
           goToolEnv = ''
             export HOME="$TMPDIR"
             export GOCACHE="$TMPDIR/go-cache"
             export GOTOOLCHAIN=local
-            export GOFLAGS=-mod=mod
+            export GOFLAGS=-mod=vendor
             export GOPROXY=off
             mkdir -p build && cd build
             cp -r --no-preserve=mode ${goSrc}/. .
+            cp -r --no-preserve=mode ${config.packages.nput.goModules} vendor
           '';
         in
         {
-          # 配置エンジン（internal/）を含む Go モジュール（→ ADR-0006, ADR-0011）。
-          # stdlib-only ゆえ vendorHash = null（外部依存ゼロ）。cobra / fatih-color を足す
-          # CLI スライス（1c・cmd/）で vendorHash 文字列に切り替わる。本スライスは CLI を
-          # まだ持たないため internal/ をライブラリとしてビルドし doCheck で go test を回す。
+          # nput CLI（cmd/nput）+ 配置エンジン（internal/）を含む Go モジュール（→ ADR-0006, ADR-0011）。
+          # CLI 層が cobra に依存するため vendorHash 文字列を pin する（依存変更時に更新）。
+          # doCheck で go test（engine の unit + tmpdir 統合テスト）を回す。
           packages.nput = pkgs.buildGoModule {
             pname = "nput";
             version = "0.0.0";
             src = goSrc;
-            vendorHash = null;
+            vendorHash = "sha256-7K17JaXFsjf163g5PXCb5ng2gYdotnZ2IDKk8KFjNj0=";
             doCheck = true;
             env.GOTOOLCHAIN = "local";
             meta = {
-              description = "Place fetched git repositories at arbitrary paths via symlink or copy (engine).";
+              description = "Place fetched git repositories at arbitrary paths via symlink or copy.";
               mainProgram = "nput";
             };
           };
@@ -159,6 +162,23 @@
         };
       flake = {
         lib = nputLib;
+
+        # ドッグフーディング用の project mode config（→ Issue #7・AC e2e 経路）。
+        # `nput apply default` で git toplevel 配下の .nput-example/docs に
+        # 本 repo（self）の docs を store-symlink 配置する最小 example。
+        # `nput.<system>.<name>` は標準 flake output ではないため `nix flake check` で
+        # `warning: unknown flake output 'nput'`（exit 0・想定内）が出る（→ docs/spec.md）。
+        nput = inputs.nixpkgs.lib.genAttrs systems (system: {
+          default = nputLib.mkManifest {
+            pkgs = inputs.nixpkgs.legacyPackages.${system};
+            root = nputLib.projectRoot;
+            entries.".nput-example/docs" = {
+              src = inputs.self;
+              subpath = "docs";
+            };
+          };
+        });
+
         homeManagerModules.default = ./modules/home-manager.nix;
         nixosModules.default = ./modules/nixos.nix;
         darwinModules.default = ./modules/nix-darwin.nix;

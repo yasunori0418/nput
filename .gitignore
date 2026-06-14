@@ -1,2 +1,8 @@
 .agents/
 .claude/skills/*
+
+# nput ドッグフーディング配置物（nput apply default で生成・→ Issue #7）
+/.nput-example/
+
+# nix build の out-link
+/result
