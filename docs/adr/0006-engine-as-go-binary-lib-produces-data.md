@@ -14,6 +14,10 @@
 > - エンジンは Go ライブラリ化し、`cmd/nput` CLI が import する（`manifest.json` in 契約はライブラリ API として温存）。
 > 固定 Go エンジン・`manifest.json` 契約・profile / 世代 / 保守的 stale 除去・ネイティブ FS という他の決定は不変。
 
+> **2026-06-14 改訂注記（ADR-0019）**: 本 ADR の「GC アンカー = manifest + symlink farm」を精緻化した。**farm アンカーは `method = "symlink"` の
+> store-backed entry 限定**で、**`method = "copy"` entry は farm アンカーを持たない**（copy は place-once でマテリアライズ後は store から独立・世代外なので
+> store src を掴む必要がなく `nix-collect-garbage` で解放されてよい・→ ADR-0019）。
+
 ## 背景
 
 初期設計（ADR-0002）では `mkActivationScript` が `pkgs.writeShellApplication` で **config ごとに entries を埋め込んだ

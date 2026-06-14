@@ -12,6 +12,9 @@
 >
 > **2026-06-14 改訂注記（ADR-0015）**: 本文中の entry submodule フィールド `mode:enum ["symlink" "copy"]` は **`method` に改名**された
 > （unix file mode との誤読回避）。本文は当時の名のまま残す。現行スキーマは `method`（→ ADR-0015）。
+>
+> **2026-06-14 改訂注記（ADR-0019）**: `normalizeManifest` の検査に **target / subpath のパス安全性検査**を追加した。
+> 絶対パス（`/` 始まり）拒否・`filepath.Clean` 相当で正規化し `..` で root / src の外へ出るものを拒否する（root 外書き込み防止・→ ADR-0019）。
 
 ## 背景
 
