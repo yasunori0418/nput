@@ -24,6 +24,7 @@
               statix
               nixd
               inputs'.root.formatter
+              gopls
             ];
             shellHook = ''
               export REPO_ROOT=$(git rev-parse --show-superproject-working-tree --show-toplevel)
