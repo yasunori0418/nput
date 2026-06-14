@@ -307,9 +307,10 @@ devShells.${system}.default = pkgs.mkShell {
 nput gitignore skills
 ```
 
-- root はプロジェクトルート（git toplevel）。`--root` で上書き可。
+- root はプロジェクトルート（git toplevel）。`--root` で上書き可（全モード共通・→ ADR-0017）。
 - 配置物は ephemeral（コミット対象外）。`.gitignore` への登録は `nput gitignore` の出力を見てプロジェクト管理者が一度行う。
-- 世代は内部機構のみ（rollback 非公開）。`shellHook` 高頻度実行に備え変更なしなら新世代を積まない。
+- 世代は内部機構のみ（rollback 非公開）。`shellHook` 高頻度実行に備え変更なしなら新世代を積まない（ただし lstat 検査でドリフトした entry だけ再張り・→ ADR-0017）。
+- `shellHook` は **名指し apply（`nput apply skills`）か `nput apply --all --project-root`** を使う。素の `--all` は home mode config も `$HOME` に配置するため、混在 entrypoint では footgun になる（→ ADR-0017）。
 
 ### パターン 2：standalone CLI（home mode・役割ごとに分離して管理）
 
