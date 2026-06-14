@@ -157,8 +157,8 @@ Go エンジンが実行時にパスの種別を判定し、適切な処理を**
 
 ```
 method = symlink, store/out-of-store → os.Symlink（ファイル・ディレクトリ問わず共通処理）
-method = copy, subpath がディレクトリ → place-once: target 不在時のみネイティブ再帰コピー（file mode 保存）
-method = copy, subpath がファイル     → place-once: target 不在時のみネイティブコピー
+method = copy, subpath がディレクトリ → place-once: target 不在時のみネイティブ再帰コピー（mode 保存 + owner-write 付与・src 内 symlink は symlink 複製・→ ADR-0016）
+method = copy, subpath がファイル     → place-once: target 不在時のみネイティブコピー（mode 保存 + owner-write 付与）
 ```
 
 ### 世代管理と state（→ ADR-0002）
@@ -434,7 +434,7 @@ copy は元々再適用のたびに手編集を上書きしており、「ユー
 ### symlink と copy の両対応理由
 
 - symlink：ストアの更新が即座に反映される。読み取り専用。vim プラグイン等に向く。
-- copy：ファイルを直接編集したい場合（テーマ・設定の一時調整等）に必要。place-once でユーザーに委ねる。
+- copy：ファイルを直接編集したい場合（テーマ・設定の一時調整等）に必要。place-once でユーザーに委ねる。store の read-only mode はコピー後に owner-write を付与して編集可能にする（→ ADR-0016）。
 
 ### home-manager 非依存を優先する理由
 
