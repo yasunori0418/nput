@@ -24,6 +24,7 @@
               statix
               nixd
               inputs'.root.formatter
+              inputs'.root.packages.nput
               gopls
             ];
             shellHook = ''
