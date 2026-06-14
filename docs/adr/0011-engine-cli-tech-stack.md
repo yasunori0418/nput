@@ -5,6 +5,11 @@
 - 関連: ADR-0006, ADR-0007, ADR-0010, `docs/spec.md`, `docs/concept.md`
 - 改訂対象: ADR-0007「store path 取得」を out-link 方式に具体化。ADR-0006 / ADR-0007 の「Go ライブラリ」語を `internal/` 層分離と明文化
 
+> **2026-06-14 改訂注記（ADR-0016）**: 本 ADR の以下を拡張・具体化した。
+> - **再帰コピーの「mode 保存」→「mode 保存 + owner-write 付与」**。store の read-only mode（0444 / 0555）をそのまま保存するとコピー先が編集できず copy の用途に反するため、コピー後に owner-write を付与する（perm 相対構造は保持）。`os.CopyFS` 棄却理由（perm 非保存・symlink 非対応）は不変。
+> - **src ツリー内 symlink は symlink のまま複製**（deref しない）。store 内への絶対 symlink は store 依存が残る点を docs に明記。
+> - **symlink farm の GC アンカー名は `target` のハッシュ**（サニタイズだと別 target が同名衝突する）。
+
 ## 背景
 
 ADR-0006（言語 = Go・lib はデータ生成・固定エンジン）と ADR-0007（CLI を一次 UX に・engine をライブラリ化）で

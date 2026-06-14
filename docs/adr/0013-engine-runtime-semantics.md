@@ -9,6 +9,10 @@
 > 後勝ち維持だが、engine が **自身の前世代 manifest に記録の無い foreign symlink を上書きするときは warning** を出す。
 > (b) target の **祖先 component が symlink なら配置前に lstat walk で検出し error 停止**（`--dryrun` も conflict 扱い）。
 > 同一 profileDir 後勝ちポリシー（本 ADR §2）の cross-config / cross-tool への一般化（→ ADR-0015）。
+>
+> **2026-06-14 改訂注記（ADR-0016）**: 本 ADR §3 の「`apply --all` は **定義順**」を **辞書順（キーソート・決定的）**へ訂正した。
+> `nput.*` は attrset で `builtins.attrNames` が辞書順を返すため定義順は保持されない。各 config は独立 profile で atomic なので
+> 適用順は結果に影響せず、決定的でありさえすればよい（→ ADR-0016）。
 
 ## 背景
 
