@@ -50,7 +50,9 @@ standalone（home mode）では nix profile に乗せた世代管理（ロール
 ├── cmd/nput/              # nput CLI のエントリポイント（packages.nput・一次 UX・→ ADR-0007）
 │   └── main.go            # entrypoint 発見 + nix build/eval オーケストレーション + サブコマンド分岐（apply [--dryrun] / rollback / list-generations / gitignore / init）
 ├── internal/              # 配置・diff・保守的 stale 除去の純ロジック（Go ライブラリ・ユニットテスト対象・→ ADR-0006, ADR-0007）
-├── templates/             # nix flake init -t 用（standalone / project・nput init が叩く・→ ADR-0006, ADR-0007）
+├── templates/             # nix flake init -t 用（最小 + 手厚いコメント・1 config 例・→ ADR-0006, ADR-0007, ADR-0018）
+│   ├── standalone/        # flake.nix（homeRoot の 1 例 + バリエーションコメント）
+│   └── project/           # flake.nix（projectRoot の 1 例 + devShell〔nput 同梱 + 名指し shellHook〕）+ .gitignore（再生成ヘッダコメント付き）
 └── modules/
     ├── common.nix         # options 定義のみ（全モジュールが import）
     ├── home-manager.nix   # home.activation から nput エンジンを起動（root = homeRoot を pin）
