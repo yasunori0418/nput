@@ -21,8 +21,14 @@ import (
 
 // CommitFunc は配置成功後に世代を積むコミット点（→ ADR-0006, docs/spec.md 実行フロー f）。
 // 既定は nix-env --profile <profileLink> --set <linkFarm>。tmpdir テストはこれを
-// 差し替えて nix を呼ばずに検証する（commit の e2e は 1c・→ Issue #6）。
+// 差し替えて nix を呼ばずに検証する。
 type CommitFunc func(profileLink, linkFarm string) error
+
+// BuildFunc は flock 取得後・ロック内で link-farm を build するコールバック（→ docs/spec.md 実行フロー 2b・ADR-0011, ADR-0023）。
+// 引数 pending は out-link を張る先（<profileDir>/.pending）。返り値は build された link-farm の
+// store パス（os.Readlink の解決後）。CLI が `nix build <ep>#nput.<system>.<name> --out-link <pending>`
+// を差し込む。nil のときは opts.LinkFarm を既ビルド済みとして使う（tmpdir テスト経路）。
+type BuildFunc func(pending string) (linkFarm string, err error)
 
 // GitFunc は project mode の git toplevel 解決（→ ADR-0005）。既定は gitutil.Toplevel。
 type GitFunc func(dir string) (string, error)
@@ -30,10 +36,16 @@ type GitFunc func(dir string) (string, error)
 // Options は Apply の入力。
 type Options struct {
 	// LinkFarm は manifest.json と GC アンカー symlink farm を含む link-farm ディレクトリ。
-	// 実運用では CLI が `nix build --out-link <profileDir>/.pending` で得る（→ ADR-0011）。
+	// Build を渡さない経路（tmpdir テスト）でのみ使う既ビルド済み link-farm（→ ADR-0011）。
 	LinkFarm string
 	// Name は config 名（profile を一意特定する。entrypoint の nput.<name> 由来）。
 	Name string
+	// RootKind は eval 先取りで得た root kind（→ docs/spec.md 実行フロー 1・ADR-0023）。
+	// Build 経路では manifest 未ビルドのため必須。空のときは LinkFarm の manifest から得る。
+	RootKind string
+	// FixedRoot は rootKind=fixed のときの絶対パス（eval 先取りの passthru.root 由来）。
+	// 空かつ Build=nil のときは LinkFarm の manifest.Root.Root を使う。
+	FixedRoot string
 	// RootOverride は --root 上書き（空 = なし）。明示時は全モードで roothash キー（→ ADR-0023）。
 	RootOverride string
 	// WorkDir は project mode の git toplevel 解決の起点（空 = os.Getwd）。
@@ -43,6 +55,8 @@ type Options struct {
 	// NoWait は flock を try-lock にする（shellHook 経路・保持中なら ErrSkipped・→ ADR-0013）。
 	NoWait bool
 
+	// Build はロック内 build の差し替え（nil = opts.LinkFarm を既ビルド済みとして使う）。
+	Build BuildFunc
 	// Git は git toplevel 解決の差し替え（nil = gitutil.Toplevel）。
 	Git GitFunc
 	// Commit は世代コミットの差し替え（nil = nix-env --set）。
@@ -64,24 +78,39 @@ type Result struct {
 // ErrSkipped は NoWait 経路で他の apply が進行中のため skip したことを表す。
 var ErrSkipped = lock.ErrLocked
 
-// Apply は manifest.json を入力に project mode の store-symlink 配置を行い、
-// 成功後に世代をコミットする。docs/spec.md「実行フロー」の engine 駆動部に対応する
-// （eval 先行・build は CLI 責務でここでは LinkFarm を受け取る）。
+// Apply は project mode の store-symlink 配置を行い、成功後に世代をコミットする。
+// docs/spec.md「実行フロー」の engine 駆動部（2. engine を駆動）に対応し、
+// 「flock → ロック内 build → 配置 → --set → .pending 削除」の順を engine が所有する。
+// build は opts.Build（CLI が nix build を差し込む）にロック内で委譲し、未指定なら
+// opts.LinkFarm を既ビルド済みとして使う（tmpdir テスト経路）。
 func Apply(opts Options) (*Result, error) {
-	m, err := manifest.Load(opts.LinkFarm)
-	if err != nil {
-		return nil, err
-	}
-
-	a := &applier{opts: opts, manifest: m, result: &Result{}}
+	a := &applier{opts: opts, result: &Result{}}
 	if a.opts.Warnf == nil {
 		a.opts.Warnf = func(format string, args ...any) {
 			fmt.Fprintf(os.Stderr, format+"\n", args...)
 		}
 	}
 
+	// root kind: Build 経路では manifest 未ビルドのため eval 先取りの opts.RootKind を使う。
+	// 既ビルド済み LinkFarm 経路（テスト）では先に manifest を読んで rootKind を得る。
+	rootKind := opts.RootKind
+	fixedRoot := opts.FixedRoot
+	if opts.Build == nil {
+		m, err := manifest.Load(opts.LinkFarm)
+		if err != nil {
+			return nil, err
+		}
+		a.manifest = m
+		if rootKind == "" {
+			rootKind = m.Root.RootKind
+		}
+		if fixedRoot == "" {
+			fixedRoot = m.Root.Root
+		}
+	}
+
 	// 1. root 解決 → profileDir 確定（→ docs/spec.md「root の解決」）。
-	root, err := a.resolveRoot()
+	root, err := a.resolveRoot(rootKind, fixedRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +124,7 @@ func Apply(opts Options) (*Result, error) {
 			return nil, err
 		}
 	}
-	a.profile = paths.Resolve(stateDir, opts.Name, m.Root.RootKind, root, opts.RootOverride != "")
+	a.profile = paths.Resolve(stateDir, opts.Name, rootKind, root, opts.RootOverride != "")
 	a.result.ProfileDir = a.profile.Dir
 
 	// 2. profileDir / backref を用意（flock は profileDir を開くため先に作る）。
@@ -114,10 +143,25 @@ func Apply(opts Options) (*Result, error) {
 	}
 	defer func() { _ = l.Release() }()
 
-	// 4. 前世代 manifest を読む（無ければ初回 = stale 除去ゼロ）。
+	// 4. ロック内で link-farm を build する（→ docs/spec.md 実行フロー 2b・ADR-0023）。
+	//    build をロック内に閉じることで並行 apply の .pending 奪い合いが構造的に消える。
+	if opts.Build != nil {
+		linkFarm, err := opts.Build(a.profile.Pending)
+		if err != nil {
+			return nil, err
+		}
+		m, err := manifest.Load(linkFarm)
+		if err != nil {
+			return nil, err
+		}
+		a.opts.LinkFarm = linkFarm
+		a.manifest = m
+	}
+
+	// 5. 前世代 manifest を読む（無ければ初回 = stale 除去ゼロ）。
 	prev := a.loadPrevManifest()
 
-	// 5. 配置 → stale 除去（新規 / 張替を先に、stale 除去を最後に・→ ADR-0006）。
+	// 6. 配置 → stale 除去（新規 / 張替を先に、stale 除去を最後に・→ ADR-0006）。
 	if err := a.place(prev); err != nil {
 		return nil, err
 	}
@@ -125,13 +169,21 @@ func Apply(opts Options) (*Result, error) {
 		return nil, err
 	}
 
-	// 6. 世代コミット（commit の e2e は 1c・→ Issue #6）。
+	// 7. 世代コミット（→ docs/spec.md 実行フロー 2f）。
 	commit := opts.Commit
 	if commit == nil {
 		commit = nixEnvCommit
 	}
-	if err := commit(a.profile.Profile, opts.LinkFarm); err != nil {
+	if err := commit(a.profile.Profile, a.opts.LinkFarm); err != nil {
 		return nil, fmt.Errorf("nput: 世代コミット（nix-env --set）に失敗しました: %w", err)
+	}
+
+	// 8. --set 成功後に .pending を削除する（世代リンクが gcroot を引き継ぐ・→ ADR-0011, ADR-0025）。
+	//    build 経路でのみ pending を張るため、その経路でのみ削除する。
+	if opts.Build != nil {
+		if err := os.Remove(a.profile.Pending); err != nil && !os.IsNotExist(err) {
+			a.opts.Warnf("nput: .pending out-link を削除できませんでした (%s): %v", a.profile.Pending, err)
+		}
 	}
 
 	return a.result, nil
@@ -145,11 +197,11 @@ type applier struct {
 	result   *Result
 }
 
-func (a *applier) resolveRoot() (string, error) {
+func (a *applier) resolveRoot(rootKind, fixedRoot string) (string, error) {
 	if a.opts.RootOverride != "" {
 		return filepath.Abs(a.opts.RootOverride)
 	}
-	switch a.manifest.Root.RootKind {
+	switch rootKind {
 	case manifest.RootKindProject:
 		dir := a.opts.WorkDir
 		if dir == "" {
@@ -171,14 +223,16 @@ func (a *applier) resolveRoot() (string, error) {
 		}
 		return home, nil
 	case manifest.RootKindFixed:
-		if a.manifest.Root.Root == "" {
+		if fixedRoot == "" {
 			return "", fmt.Errorf("nput: rootKind=fixed なのに root パスがありません")
 		}
-		return filepath.Abs(a.manifest.Root.Root)
+		return filepath.Abs(fixedRoot)
 	case manifest.RootKindSystem:
 		return "", fmt.Errorf("nput: root = systemRoot (system mode) は未実装です（→ ADR-0013）")
+	case "":
+		return "", fmt.Errorf("nput: rootKind が未確定です（eval 先取りまたは manifest が必要）")
 	default:
-		return "", fmt.Errorf("nput: 未知の rootKind: %q", a.manifest.Root.RootKind)
+		return "", fmt.Errorf("nput: 未知の rootKind: %q", rootKind)
 	}
 }
 
