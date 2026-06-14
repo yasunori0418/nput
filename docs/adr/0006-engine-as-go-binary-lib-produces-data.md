@@ -18,6 +18,9 @@
 > store-backed entry 限定**で、**`method = "copy"` entry は farm アンカーを持たない**（copy は place-once でマテリアライズ後は store から独立・世代外なので
 > store src を掴む必要がなく `nix-collect-garbage` で解放されてよい・→ ADR-0019）。
 
+> **2026-06-14 改訂注記（ADR-0020）**: 本 ADR のサブコマンド体系に **`reset <name> [target...]`**（配置物の FS-only teardown）を追加し、
+> `apply` に **`--recopy`**（copy target を src から無条件上書き）、グローバルに **`--yes` / `-y`**（reset 確認スキップ）を追加した（→ ADR-0020）。
+
 ## 背景
 
 初期設計（ADR-0002）では `mkActivationScript` が `pkgs.writeShellApplication` で **config ごとに entries を埋め込んだ

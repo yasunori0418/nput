@@ -17,6 +17,10 @@
 > （`nput rollback` / `list-generations` / `gitignore`、dry-run は `--dryrun`）に置き換わる。以下の本文中の「activation スクリプト」は
 > Go エンジン、CLI はサブコマンド体系として読むこと。
 
+> **2026-06-14 改訂注記（ADR-0020）**: copy = place-once・世代外という**決定は既定として不変**だが、ユーザー責任で破る 2 経路を追加した。
+> **`apply --recopy`** は config 内の全 copy target を src から無条件上書き再コピーし（upstream 追従）、**`nput reset <name> [target...]`** は
+> 配置物を撤去する（symlink は保守的除去・copy は明示削除・profile / 世代は不変の FS-only teardown）。stale 除去が copy を消さない不変条件も維持（→ ADR-0020）。
+
 ## 背景
 
 初期方針は「世代管理をしない」だった（冪等な symlink/rsync のみの stateless スクリプト）。
