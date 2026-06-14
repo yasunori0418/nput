@@ -192,6 +192,7 @@ copy モードは「初回マテリアライズしたら以後 nput は触らな
 
 nput の**中心的な配置モード**が **root = プロジェクトルート**の project mode（→ ADR-0005, ADR-0007）。
 任意のプロジェクト内に nput を組み込み、repo 内の任意パスへ nix store の物を配置する用途のためのモード。
+新規は `nput init project`、既に `flake.nix` がある既存 repo への後付けは手動 4 ステップで組み込む（手順は `docs/design.md` の「既存プロジェクトへの組み込み」・→ ADR-0024）。
 具体例は「repo 内の `.claude/skills/` をチームで共有」「project-local な tool 設定・hook を nix store から配置」など。
 
 - **root の解決**: `root = nput.lib.projectRoot` で明示選択。実行時に git toplevel を root に解決する（`--root` で上書き可）。
