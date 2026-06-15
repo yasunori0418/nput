@@ -17,6 +17,7 @@ import (
 	"github.com/yasunori0418/nput/internal/lock"
 	"github.com/yasunori0418/nput/internal/manifest"
 	"github.com/yasunori0418/nput/internal/paths"
+	"github.com/yasunori0418/nput/internal/planner"
 )
 
 // CommitFunc は配置成功後に世代を積むコミット点（→ ADR-0006, docs/spec.md 実行フロー f）。
@@ -161,15 +162,26 @@ func Apply(opts Options) (*Result, error) {
 	// 5. 前世代 manifest を読む（無ければ初回 = stale 除去ゼロ）。
 	prev := a.loadPrevManifest()
 
-	// 6. 配置 → stale 除去（新規 / 張替を先に、stale 除去を最後に・→ ADR-0006）。
-	if err := a.place(prev); err != nil {
+	// 6. planner で place/replace/remove プランを算出する（純ロジック・→ internal/planner）。
+	plan, err := planner.Compute(prev, a.manifest, a.root, planner.OSFS)
+	if err != nil {
 		return nil, err
 	}
-	if err := a.removeStale(prev); err != nil {
+	if len(plan.Conflicts) > 0 {
+		c := plan.Conflicts[0]
+		return nil, fmt.Errorf("nput: %s (target: %s)", c.Reason, c.Entry.Target)
+	}
+	a.emitWarnings(plan.Warnings)
+
+	// 7. プランを実 FS に反映（新規 / 張替を先に、stale 除去を最後に・→ ADR-0006）。
+	if err := a.place(plan.Place); err != nil {
+		return nil, err
+	}
+	if err := a.removeStale(plan.Remove); err != nil {
 		return nil, err
 	}
 
-	// 7. 世代コミット（→ docs/spec.md 実行フロー 2f）。
+	// 8. 世代コミット（→ docs/spec.md 実行フロー 2f）。
 	commit := opts.Commit
 	if commit == nil {
 		commit = nixEnvCommit
@@ -178,7 +190,7 @@ func Apply(opts Options) (*Result, error) {
 		return nil, fmt.Errorf("nput: 世代コミット（nix-env --set）に失敗しました: %w", err)
 	}
 
-	// 8. --set 成功後に .pending を削除する（世代リンクが gcroot を引き継ぐ・→ ADR-0011, ADR-0025）。
+	// 9. --set 成功後に .pending を削除する（世代リンクが gcroot を引き継ぐ・→ ADR-0011, ADR-0025）。
 	//    build 経路でのみ pending を張るため、その経路でのみ削除する。
 	if opts.Build != nil {
 		if err := os.Remove(a.profile.Pending); err != nil && !os.IsNotExist(err) {
@@ -267,21 +279,19 @@ func (a *applier) loadPrevManifest() *manifest.Manifest {
 	return m
 }
 
-func byTarget(m *manifest.Manifest) map[string]manifest.Entry {
-	if m == nil {
-		return nil
+// emitWarnings は planner が算出した非致命 warning を stderr（opts.Warnf）へ出す。
+// warning は --quiet でも消えない（→ docs/spec.md ストリーム規律・ADR-0015, ADR-0024）。
+func (a *applier) emitWarnings(ws []planner.Warning) {
+	for _, w := range ws {
+		switch w.Kind {
+		case planner.WarnForeignReplace:
+			a.opts.Warnf("nput: 記録の無い symlink を上書きします (foreign・後勝ち): %s", w.Target)
+		case planner.WarnStaleMismatch:
+			a.opts.Warnf("nput: stale symlink が記録と不一致のため残します: %s", w.Target)
+		case planner.WarnStaleNonSymlink:
+			a.opts.Warnf("nput: stale target が symlink ではないため残します: %s", w.Target)
+		case planner.WarnCopyOrphan:
+			a.opts.Warnf("nput: copy entry が消えましたが target は削除しません（orphan・reset で撤去）: %s", w.Target)
+		}
 	}
-	out := make(map[string]manifest.Entry, len(m.Entries))
-	for _, e := range m.Entries {
-		out[e.Target] = e
-	}
-	return out
-}
-
-// linkDest は entry の symlink が指すべき先（<src>/<subpath>）を返す。
-func linkDest(e manifest.Entry) string {
-	if e.Subpath == "" || e.Subpath == "." {
-		return e.Src
-	}
-	return filepath.Join(e.Src, e.Subpath)
 }
