@@ -79,6 +79,10 @@ type Result struct {
 	Recopied   []string // --recopy で上書き再コピーした既存 copy target（→ ADR-0020）
 	Removed    []string // stale 除去した target
 	Skipped    bool     // try-lock 競合で skip した（NoWait 経路）
+	// GenerationSkipped は project mode の世代スキップで新世代を積まなかった（--set を省いた）
+	// ことを表す。新 link-farm が前世代と同一のため commit せず、ドリフトした entry だけ
+	// lstat 修復した経路（→ ADR-0005, ADR-0017, docs/spec.md 世代スキップ）。
+	GenerationSkipped bool
 }
 
 // ErrSkipped は NoWait 経路で他の apply が進行中のため skip したことを表す。
@@ -184,26 +188,39 @@ func Apply(opts Options) (*Result, error) {
 		return nil, err
 	}
 
-	// 7. プランを実 FS に反映（新規 / 張替を先に、stale 除去を最後に・→ ADR-0006）。
+	// 7. project mode の世代スキップ判定（新 link-farm derivation が前世代と同一か）。
+	//    同一なら新世代を積まず（--set を省く）、ドリフトした entry だけ lstat 修復して返す
+	//    （完全 no-op にしない）。home / fixed / system は対象外で毎回新世代を積む
+	//    （世代スキップは project mode 限定・→ ADR-0005, ADR-0017, docs/spec.md 世代スキップ）。
+	if rootKind == manifest.RootKindProject && prev != nil {
+		same, err := generationUnchanged(a.profile.Profile, a.opts.LinkFarm)
+		if err != nil {
+			// 前世代 link-farm を解決できないときは安全側に倒して通常 apply（新世代を積む）。
+			a.opts.Warnf("nput: 前世代 link-farm を解決できませんでした。世代スキップせず再コミットします: %v", err)
+		} else if same {
+			if err := a.repairDrift(plan, opts.Recopy); err != nil {
+				return nil, err
+			}
+			a.result.GenerationSkipped = true
+			a.cleanupPending()
+			return a.result, nil
+		}
+	}
+
+	// 8. プランを実 FS に反映（新規 / 張替を先に、stale 除去を最後に・→ ADR-0006）。
 	//    symlink は plan 駆動。copy は --recopy のとき全 copy target を無条件上書き、
 	//    通常は place-once（target 不在のみ新規コピー）に分岐する（→ ADR-0020）。
 	if err := a.place(plan.Place); err != nil {
 		return nil, err
 	}
-	if opts.Recopy {
-		if err := a.recopyAll(); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := a.placeCopies(plan.Copies); err != nil {
-			return nil, err
-		}
+	if err := a.materializeCopies(plan, opts.Recopy); err != nil {
+		return nil, err
 	}
 	if err := a.removeStale(plan.Remove); err != nil {
 		return nil, err
 	}
 
-	// 8. 世代コミット（→ docs/spec.md 実行フロー 2f）。
+	// 9. 世代コミット（→ docs/spec.md 実行フロー 2f）。
 	commit := opts.Commit
 	if commit == nil {
 		commit = nixEnvCommit
@@ -212,15 +229,21 @@ func Apply(opts Options) (*Result, error) {
 		return nil, fmt.Errorf("nput: 世代コミット（nix-env --set）に失敗しました: %w", err)
 	}
 
-	// 9. --set 成功後に .pending を削除する（世代リンクが gcroot を引き継ぐ・→ ADR-0011, ADR-0025）。
-	//    build 経路でのみ pending を張るため、その経路でのみ削除する。
-	if opts.Build != nil {
-		if err := os.Remove(a.profile.Pending); err != nil && !os.IsNotExist(err) {
-			a.opts.Warnf("nput: .pending out-link を削除できませんでした (%s): %v", a.profile.Pending, err)
-		}
-	}
+	// 10. --set 成功後に .pending を削除する（世代リンクが gcroot を引き継ぐ・→ ADR-0011, ADR-0025）。
+	a.cleanupPending()
 
 	return a.result, nil
+}
+
+// cleanupPending は --set 成功後（または世代スキップ後）に .pending out-link を削除する。
+// build 経路でのみ pending を張るため、その経路でのみ削除する（→ ADR-0011, ADR-0025）。
+func (a *applier) cleanupPending() {
+	if a.opts.Build == nil {
+		return
+	}
+	if err := os.Remove(a.profile.Pending); err != nil && !os.IsNotExist(err) {
+		a.opts.Warnf("nput: .pending out-link を削除できませんでした (%s): %v", a.profile.Pending, err)
+	}
 }
 
 type applier struct {
