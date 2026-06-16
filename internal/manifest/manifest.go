@@ -8,10 +8,15 @@ package manifest
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 )
+
+// ErrSchemaVersionUnsupported は engine の対応版（SchemaVersion）より新しい manifest を読んだことを表す。
+// CLI/flake pin 間の schemaVersion skew を上位（CLI）で errors.Is 判定し案内を補うための sentinel（→ ADR-0006）。
+var ErrSchemaVersionUnsupported = errors.New("nput: schemaVersion が engine の対応版より新しい")
 
 // SchemaVersion は engine が解釈できる manifest.json の最新版（→ ADR-0013）。
 // MVP は v1 のみを受理し、これより新しい版は拒否する（→ ADR-0006, ADR-0015）。
@@ -85,7 +90,7 @@ func LoadFile(path string) (*Manifest, error) {
 func (m *Manifest) validate() error {
 	// engine は自身の対応版より新しい schemaVersion を拒否する（→ ADR-0006）。
 	if m.SchemaVersion > SchemaVersion {
-		return fmt.Errorf("schemaVersion %d は未対応です（この engine は v%d まで対応）", m.SchemaVersion, SchemaVersion)
+		return fmt.Errorf("schemaVersion %d は未対応です（この engine は v%d まで対応）: %w", m.SchemaVersion, SchemaVersion, ErrSchemaVersionUnsupported)
 	}
 	if m.SchemaVersion < 1 {
 		return fmt.Errorf("schemaVersion %d は不正です", m.SchemaVersion)
