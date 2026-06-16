@@ -50,6 +50,8 @@ HM モジュールは `home.activation.nput`（`entryAfter ["writeBoundary"]`）
 
 `--manifest` は `--help` に載せる**公開フラグ**とし、`manifest.json` の schemaVersion と同じく **Nix↔CLI 契約面の一部**として安定させる（将来の engine も受理を継続）。位置づけは「host/module activation の seam（ビルド済み manifest を CI 等で直接適用する用途にも使える）」。将来の NixOS / nix-darwin モジュール（ADR-0004）も同じ seam で engine を kick する。
 
+> **engine kick は 2 クラスに分かれる**（→ docs/design.md「各統合層の動作」）。本 ADR の `--manifest` は **ビルド済み manifest クラス**（home-manager・将来 NixOS/darwin）であり、モジュール評価時に `mkManifest` でビルドした link-farm を entrypoint なしで適用する。一方 **standalone / devShell は entrypoint 駆動クラス**で、ユーザーが `nput.<system>.<name>` を flake に公開し `nput apply <name>` が build→配置する（`--manifest` は使わない）。devShell を「`--manifest` で kick する」と誤読しないこと。
+
 ## 根拠
 
 - §1 は ADR-0007 の entrypoint 駆動 UX を壊さず、engine が既に持つ `LinkFarm` seam を CLI へ素直に露出するだけの最小追加。配置の単一所有（ADR-0003）も保つ。

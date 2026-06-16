@@ -9,6 +9,10 @@
 > **固定 Go バイナリ（`packages.nput`）**で、配置は **ネイティブ FS 操作**で行う。本文中の「nput 自身の `ln` / `rsync`」は
 > ネイティブ FS 操作（`os.Symlink` / ネイティブコピー）として読むこと（`rsync` 依存は廃止、`nix` / `git` のみサブプロセス）。
 
+> **2026-06-17 改訂注記（ADR-0026）**: 「モジュールは配線に徹し switch 時に engine を起動する」とした**起動方法**を確定。
+> HM 等のモジュールは `home.activation` / `system.activationScripts` から **`nput apply --manifest <link-farm>`** で engine を
+> kick する（モジュール評価時に `mkManifest` でビルドした link-farm を渡す・entrypoint 駆動の standalone / devShell とは別クラス・→ ADR-0026）。
+
 ## 背景
 
 初期設計では、統合層が各プラットフォームのネイティブ機構へ「翻訳」する想定だった。

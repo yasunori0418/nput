@@ -25,7 +25,7 @@ nput CLI が読む nix の config ファイル。`flake.nix` / `shell.nix` / `de
 _Avoid_: 「nput が CWD から config 内容そのものを発見する」と説明すること（発見するのは entrypoint *ファイル*。config は Nix 評価で確定する）
 
 **module (モジュール / 配線)**:
-standalone・home-manager・将来の NixOS・devShell `shellHook` といった統合層。エンジンを起動する**配線**に徹し、自身では配置しない。`home.file` / `systemd.tmpfiles` へは翻訳しない（→ ADR-0003, ADR-0005）。HM モジュールは `home.activation` から **`nput apply --manifest <link-farm>`**（モジュール評価時に `mkManifest` でビルドした link-farm）で engine を kick する（→ ADR-0026）。HM モジュールは MVP では単一 `nput.entries` = 1 profile（固定名 `default`）で**役割分離は不可**。複数 profile（役割分離・個別 rollback）は standalone CLI の `nput.<name>` 経路のみで、HM の複数化は将来 seam（→ ADR-0024, ADR-0025）。
+standalone・home-manager・将来の NixOS・devShell `shellHook` といった統合層。エンジンを起動する**配線**に徹し、自身では配置しない。`home.file` / `systemd.tmpfiles` へは翻訳しない（→ ADR-0003, ADR-0005）。**kick 方法は 2 クラス**（→ ADR-0026）: **entrypoint 駆動**（standalone / devShell は `nput.<name>` を公開し `nput apply <name>` で build→配置）と、**ビルド済み manifest**（home-manager・将来 NixOS/darwin はモジュール評価時に `mkManifest` でビルドした link-farm を `nput apply --manifest <link-farm>` で配置）。配置〜世代コミットは両クラスで同一エンジン経路。HM モジュールは MVP では単一 `nput.entries` = 1 profile（固定名 `default`）で**役割分離は不可**。複数 profile（役割分離・個別 rollback）は standalone CLI の `nput.<name>` 経路のみで、HM の複数化は将来 seam（→ ADR-0024, ADR-0025）。
 _Avoid_: 「モジュールがファイルを配置する」「モジュールがネイティブ機構へ変換する」
 
 ### 配置の入出力

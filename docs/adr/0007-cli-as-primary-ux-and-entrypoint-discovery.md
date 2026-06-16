@@ -11,6 +11,11 @@
 > （manifest schemaVersion）が同一 flake 入力から来て一致する。グローバル install（`nix profile install`）は standalone
 > （home mode）の利便として残す（→ ADR-0015）。
 
+> **2026-06-17 追記（ADR-0026）**: 本 ADR の entrypoint 発見モデルは **entrypoint 駆動**の kick（standalone / devShell が
+> `nput.<name>` を公開し `nput apply <name>` で build→配置）を指す。これとは別に、HM 等の**モジュールはビルド済み manifest を
+> `nput apply --manifest <link-farm>` で kick する**（モジュール評価時に `mkManifest` でビルドし、entrypoint output を持たない）。
+> モジュールの engine kick invocation は ADR-0026 で確定（→ ADR-0026）。
+
 ## 背景
 
 ADR-0006 は次の露出モデルを決定していた。
