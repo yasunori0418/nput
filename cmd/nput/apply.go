@@ -46,7 +46,7 @@ func newApplyCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&flagDryrun, "dryrun", false,
 		"副作用ゼロで place/replace/remove/conflict/no-op を表示（conflict 検出時 exit 2・→ ADR-0006）")
 	cmd.Flags().StringVar(&flagManifest, "manifest", "",
-		"ビルド済み manifest（link-farm パス）を直接適用する（entrypoint 発見・nix eval/build を行わない・module activation 用）")
+		"ビルド済み manifest（link-farm パス）を直接適用する（host/module activation seam・entrypoint 発見・nix eval/build を行わない・→ ADR-0026）")
 	return cmd
 }
 
@@ -89,6 +89,11 @@ func runApplyManifest(name string) error {
 // （module activation 経路・→ docs/spec.md「モジュール別動作仕様」・ADR-0003, ADR-0007）。
 func runApply(name string) error {
 	if flagManifest != "" {
+		// --manifest は取得元を link-farm に固定するため、entrypoint 発見系フラグとは
+		// 意味が衝突する（位置引数 name は profile 選択として直交し両立する・→ ADR-0026）。
+		if flagFile != "" {
+			return errors.New("nput: --manifest と -f は併用できません（--manifest はビルド済み link-farm を取得元に固定します）")
+		}
 		return runApplyManifest(name)
 	}
 
