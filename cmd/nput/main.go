@@ -8,10 +8,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/yasunori0418/nput/internal/manifest"
 )
 
 // グローバルフラグ（→ docs/spec.md「グローバルフラグ」）。本スライスは apply に必要な範囲のみ。
@@ -40,12 +43,21 @@ func newRootCmd() *cobra.Command {
 	pf.BoolVar(&flagVerbose, "verbose", false, "内部実行する nix コマンド等の詳細を出力")
 
 	root.AddCommand(newApplyCmd())
+	root.AddCommand(newRollbackCmd())
+	root.AddCommand(newListGenerationsCmd())
 	return root
 }
 
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		// CLI/flake pin 間の schemaVersion skew は engine が拒否する（→ manifest.validate）。
+		// 上位で検知して原因と解消策を補う（→ docs/spec.md「manifest.json スキーマ」）。
+		if errors.Is(err, manifest.ErrSchemaVersionUnsupported) {
+			fmt.Fprintln(os.Stderr, "\nnput: CLI（engine）と flake が pin する nput のバージョンがずれている可能性があります。\n"+
+				"  flake の nput input が CLI より新しい manifest を生成しています。\n"+
+				"  CLI を更新するか、flake の nput input を CLI に合わせて下げて両者のバージョンを揃えてください。")
+		}
 		os.Exit(1)
 	}
 }
