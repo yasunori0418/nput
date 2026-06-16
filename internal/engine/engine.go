@@ -173,6 +173,12 @@ func Apply(opts Options) (*Result, error) {
 	}
 	a.emitWarnings(plan.Warnings)
 
+	// 6.5 out-of-store のリンク先存在を配置直前に検査（dangling 禁止・→ ADR-0001, ADR-0013）。
+	//     FS 変更前に閉じるため、不在なら何も配置せずエラー停止する。
+	if err := a.checkOutOfStore(); err != nil {
+		return nil, err
+	}
+
 	// 7. プランを実 FS に反映（新規 / 張替を先に、stale 除去を最後に・→ ADR-0006）。
 	if err := a.place(plan.Place); err != nil {
 		return nil, err
