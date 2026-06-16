@@ -176,7 +176,7 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	a := &applier{opts: Options{Warnf: warnf}, result: &Result{Root: root, ProfileDir: prof.Dir}}
 	a.profile = prof
 	a.root = root
-	a.emitWarnings(plan.Warnings, false) // rollback は recopy しない（copy foreign skip 抑制は無関係）
+	a.emitWarnings(plan.Warnings, false)
 	if err := a.place(plan.Place); err != nil {
 		return nil, err
 	}
