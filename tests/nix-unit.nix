@@ -250,6 +250,31 @@ in
     expectedError.msg = "src";
   };
 
+  # modules/common.nix が共有する entriesType（attrsOf (submodule entryModule)）を
+  # evalModules で直接検査する。common.nix は同じ lib/types.nix の entriesType を使うため、
+  # 未知キー（タイポ・旧名）はモジュール経路でも strict submodule で eval エラーになる
+  # （→ AC「common.nix の entry submodule が lib/types.nix と共有され未知キーが eval エラー」・ADR-0010, ADR-0014）。
+  testSharedEntriesTypeUnknownKey = {
+    expr =
+      let
+        t = import ../lib/types.nix lib;
+        evaluated = lib.evalModules {
+          modules = [
+            { options.entries = lib.mkOption { type = t.entriesType; }; }
+            {
+              entries.".config/x" = {
+                src = fakeSrc;
+                bogus = true; # 未知キー
+              };
+            }
+          ];
+        };
+      in
+      evaluated.config.entries;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "bogus";
+  };
+
   # ---- listFilesInSrc（→ ADR-0009, ADR-0023, ADR-0024）-----------------------
   # store パス src で readDir 互換の { filename = fileType; } を返す。型文字列が
   # regular / directory / symlink で builtins.readDir と同形式（subpath 省略 = ルート全体）。
