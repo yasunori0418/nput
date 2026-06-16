@@ -106,6 +106,26 @@ func outOfStoreEntry(src, subpath, target string) manifest.Entry {
 	}
 }
 
+func copyEntry(src, subpath, target string) manifest.Entry {
+	e := storeEntry(src, subpath, target)
+	e.Method = manifest.MethodCopy
+	return e
+}
+
+// makeROSrc は store 相当の read-only ファイル（0o444）を <subpath> に作って src dir を返す。
+// copy の mode 保存 + owner-write 付与（0444 → 0644）を検証するための src。
+func makeROSrc(t *testing.T, subpath, content string) string {
+	t.Helper()
+	src := realTempDir(t)
+	full := filepath.Join(src, subpath)
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(full, []byte(content), 0o444); err != nil {
+		t.Fatal(err)
+	}
+	return src
+}
 // --- tests -----------------------------------------------------------------
 
 func TestApplyFirstPlacementProjectMode(t *testing.T) {
@@ -564,18 +584,218 @@ func TestApplyOutOfStoreMissingPathError(t *testing.T) {
 	}
 }
 
-func TestApplyCopyMethodUnimplemented(t *testing.T) {
+func TestApplyCopyPlaceOnceFile(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
-	src := makeSrc(t, "x")
-	e := storeEntry(src, ".", ".config/foo")
-	e.Method = manifest.MethodCopy
-	lf := writeLinkFarm(t, projectManifest(e))
+	src := makeROSrc(t, "file.txt", "store-content")
+	lf := writeLinkFarm(t, projectManifest(copyEntry(src, "file.txt", ".config/foo")))
 
-	_, err := Apply(Options{
+	res, err := Apply(Options{
 		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
 	})
-	if err == nil {
-		t.Fatal("expected copy-unimplemented error, got nil")
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	target := filepath.Join(root, ".config", "foo")
+	// 内容がコピーされる（symlink ではなく実ファイル）。
+	fi, err := os.Lstat(target)
+	if err != nil {
+		t.Fatalf("Lstat target: %v", err)
+	}
+	if fi.Mode()&os.ModeSymlink != 0 {
+		t.Errorf("copy target should be a regular file, got symlink")
+	}
+	data, err := os.ReadFile(target)
+	if err != nil || string(data) != "store-content" {
+		t.Errorf("content = %q (err %v), want store-content", data, err)
+	}
+	// mode は保存しつつ owner-write を付与（0444 → 0644）。
+	if fi.Mode().Perm() != 0o644 {
+		t.Errorf("mode = %o, want 0644 (mode-preserve + owner-write)", fi.Mode().Perm())
+	}
+	if len(res.Copied) != 1 || res.Copied[0] != ".config/foo" {
+		t.Errorf("Copied = %v, want [.config/foo]", res.Copied)
+	}
+}
+
+func TestApplyCopyPlaceOnceKeepsExisting(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeROSrc(t, "file.txt", "store-content")
+	lf := writeLinkFarm(t, projectManifest(copyEntry(src, "file.txt", ".config/foo")))
+
+	// 1 回目: 新規コピー。
+	var commits [][2]string
+	if _, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+	// ユーザーが編集する。
+	target := filepath.Join(root, ".config", "foo")
+	if err := os.WriteFile(target, []byte("user-edit"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// 2 回目: place-once により target は触られない（編集が残る）。
+	res, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	})
+	if err != nil {
+		t.Fatalf("second Apply: %v", err)
+	}
+	data, _ := os.ReadFile(target)
+	if string(data) != "user-edit" {
+		t.Errorf("place-once should keep user edit, content = %q", data)
+	}
+	if len(res.Copied) != 0 {
+		t.Errorf("Copied = %v, want none (recorded place-once no-op)", res.Copied)
+	}
+}
+
+func TestApplyCopyForeignFileSkipsWithWarn(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeROSrc(t, "file.txt", "store-content")
+
+	// 記録の無い foreign 実ファイルを target に置く。
+	target := filepath.Join(root, ".config", "foo")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("foreign"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lf := writeLinkFarm(t, projectManifest(copyEntry(src, "file.txt", ".config/foo")))
+
+	var warns []string
+	res, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state,
+		Commit: fakeCommit(nil), Warnf: collectWarnings(&warns),
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	// place-once skip: foreign ファイルは上書きしない。
+	if data, _ := os.ReadFile(target); string(data) != "foreign" {
+		t.Errorf("foreign file should be kept, content = %q", data)
+	}
+	if len(res.Copied) != 0 {
+		t.Errorf("Copied = %v, want none (foreign skipped)", res.Copied)
+	}
+	if len(warns) == 0 {
+		t.Error("expected a copy foreign warning")
+	}
+}
+
+func TestApplyCopyDirRecursivePreservesSymlinks(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+
+	// src ツリー: ディレクトリ + ファイル + 内部 symlink。
+	src := realTempDir(t)
+	if err := os.MkdirAll(filepath.Join(src, "tree", "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "tree", "sub", "f.txt"), []byte("hi"), 0o444); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("sub/f.txt", filepath.Join(src, "tree", "link")); err != nil {
+		t.Fatal(err)
+	}
+	lf := writeLinkFarm(t, projectManifest(copyEntry(src, "tree", ".config/tree")))
+
+	if _, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
+	}); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	dst := filepath.Join(root, ".config", "tree")
+	if data, _ := os.ReadFile(filepath.Join(dst, "sub", "f.txt")); string(data) != "hi" {
+		t.Errorf("nested file content = %q, want hi", data)
+	}
+	// 内部 symlink は deref されず symlink のまま複製される。
+	li, err := os.Lstat(filepath.Join(dst, "link"))
+	if err != nil {
+		t.Fatalf("Lstat link: %v", err)
+	}
+	if li.Mode()&os.ModeSymlink == 0 {
+		t.Error("internal symlink should remain a symlink (no deref)")
+	}
+	if dest, _ := os.Readlink(filepath.Join(dst, "link")); dest != "sub/f.txt" {
+		t.Errorf("symlink dest = %q, want sub/f.txt", dest)
+	}
+}
+
+func TestApplyRecopyOverwrites(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeROSrc(t, "file.txt", "store-content")
+	lf := writeLinkFarm(t, projectManifest(copyEntry(src, "file.txt", ".config/foo")))
+
+	// 1 回目: 新規コピー。
+	var commits [][2]string
+	if _, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+	target := filepath.Join(root, ".config", "foo")
+	if err := os.WriteFile(target, []byte("user-edit"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// 2 回目: --recopy で無条件上書き → src 内容に戻る。
+	res, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state,
+		Recopy: true, Commit: fakeCommit(&commits),
+	})
+	if err != nil {
+		t.Fatalf("recopy Apply: %v", err)
+	}
+	if data, _ := os.ReadFile(target); string(data) != "store-content" {
+		t.Errorf("recopy should restore src content, got %q", data)
+	}
+	if len(res.Recopied) != 1 || res.Recopied[0] != ".config/foo" {
+		t.Errorf("Recopied = %v, want [.config/foo]", res.Recopied)
+	}
+}
+
+func TestApplyRecopyForeignFileOverwrites(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeROSrc(t, "file.txt", "store-content")
+
+	// 記録の無い foreign ファイル: 通常 apply なら skip だが --recopy は無条件上書き。
+	target := filepath.Join(root, ".config", "foo")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("foreign"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lf := writeLinkFarm(t, projectManifest(copyEntry(src, "file.txt", ".config/foo")))
+
+	var warns []string
+	res, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state,
+		Recopy: true, Commit: fakeCommit(nil), Warnf: collectWarnings(&warns),
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if data, _ := os.ReadFile(target); string(data) != "store-content" {
+		t.Errorf("recopy should overwrite foreign file, got %q", data)
+	}
+	if len(res.Recopied) != 1 {
+		t.Errorf("Recopied = %v, want 1", res.Recopied)
+	}
+	// recopy 経路では foreign skip 警告を出さない（上書きするため誤報）。
+	for _, w := range warns {
+		if strings.Contains(w, "スキップ") {
+			t.Errorf("unexpected copy foreign skip warning during recopy: %q", w)
+		}
 	}
 }

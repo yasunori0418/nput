@@ -21,6 +21,7 @@ var (
 	flagNoWait  bool   // --no-wait: flock 競合時に待たず skip（shellHook 用）
 	flagQuiet   bool   // --quiet: 進捗 / 配置レポートを抑制（warning / error は残す）
 	flagVerbose bool   // --verbose: 内部実行する nix コマンドを開示
+	flagRecopy  bool   // --recopy: apply 修飾。全 copy target を src から無条件上書き再コピー
 )
 
 func newRootCmd() *cobra.Command {
