@@ -11,6 +11,16 @@ import (
 	"github.com/yasunori0418/nput/internal/planner"
 )
 
+// materializeCopies は copy entry を実 FS に反映する分岐点。--recopy のときは全 copy target を
+// 無条件上書き（recopyAll）、通常は planner の place-once 分類（target 不在のみ新規コピー）に従う
+// （→ ADR-0020）。通常 apply と世代スキップ時のドリフト修復が共有する。
+func (a *applier) materializeCopies(plan planner.Plan, recopy bool) error {
+	if recopy {
+		return a.recopyAll()
+	}
+	return a.placeCopies(plan.Copies)
+}
+
 // placeCopies materializes the planner's place-once CopyActions（target 不在の copy のみ・
 // → ADR-0002, ADR-0016）。既存 target（記録あり / foreign）は planner が CopyAction を
 // 生まないため、ここは「新規コピー」だけを実 FS に反映する薄い executor に徹する。
