@@ -50,6 +50,40 @@ in
     };
   };
 
+  # out-of-store marker → clean enum 変換（→ ADR-0001, ADR-0010, ADR-0013）。
+  # srcKind = "outOfStore" / src = marker の絶対パスが記録され、_nputMarker は漏れない
+  # （expected は exact 一致なので余分なキーが残れば fail する）。
+  testOutOfStoreEntry = {
+    expr =
+      builtins.head
+        (norm nput.projectRoot {
+          ".config/nvim" = {
+            src = nput.mkOutOfStoreSymlink "/home/me/dotfiles/nvim";
+            subpath = "lua";
+          };
+        }).entries;
+    expected = {
+      srcKind = "outOfStore";
+      src = "/home/me/dotfiles/nvim";
+      subpath = "lua";
+      target = ".config/nvim";
+      method = "symlink";
+    };
+  };
+
+  # out-of-store entry に _nputMarker 判別タグが漏れていないことを明示アサートする。
+  testOutOfStoreMarkerNotLeaked = {
+    expr =
+      (builtins.head
+        (norm nput.projectRoot {
+          ".config/nvim" = {
+            src = nput.mkOutOfStoreSymlink "/home/me/dotfiles/nvim";
+          };
+        }).entries
+      ) ? _nputMarker;
+    expected = false;
+  };
+
   # ---- デフォルト適用（subpath="." / target=属性キー / method="symlink"）-----
   testDefaultsApplied = {
     expr =

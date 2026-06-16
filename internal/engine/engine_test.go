@@ -95,6 +95,17 @@ func storeEntry(src, subpath, target string) manifest.Entry {
 	}
 }
 
+// outOfStoreEntry は marker のローカル絶対パス（store 外）を指す out-of-store symlink entry。
+func outOfStoreEntry(src, subpath, target string) manifest.Entry {
+	return manifest.Entry{
+		SrcKind: manifest.SrcKindOutOfStore,
+		Src:     src,
+		Subpath: subpath,
+		Target:  target,
+		Method:  manifest.MethodSymlink,
+	}
+}
+
 // --- tests -----------------------------------------------------------------
 
 func TestApplyFirstPlacementProjectMode(t *testing.T) {
@@ -422,6 +433,134 @@ func TestApplyNoWaitSkipsWhenLocked(t *testing.T) {
 	// skip したので配置はされない。
 	if _, err := os.Lstat(filepath.Join(root, ".config", "foo")); !os.IsNotExist(err) {
 		t.Errorf("skip should not place: lstat err = %v", err)
+	}
+}
+
+func TestApplyOutOfStorePlacesLiveSymlink(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	// store 外のローカル実体を out-of-store のリンク先に使う。
+	src := makeSrc(t, "lua/init.lua")
+	lf := writeLinkFarm(t, projectManifest(outOfStoreEntry(src, "lua", ".config/nvim")))
+
+	res, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	target := filepath.Join(root, ".config", "nvim")
+	dest, err := os.Readlink(target)
+	if err != nil {
+		t.Fatalf("Readlink target: %v", err)
+	}
+	// live symlink は marker の絶対パス（<src>/<subpath>）を直接指す。
+	if want := filepath.Join(src, "lua"); dest != want {
+		t.Errorf("symlink dest = %q, want %q (local abs path)", dest, want)
+	}
+	// dangling でなく実体に解決できる。
+	if _, err := os.Stat(target); err != nil {
+		t.Errorf("symlink should resolve to a live path: %v", err)
+	}
+	if len(res.Placed) != 1 || res.Placed[0] != ".config/nvim" {
+		t.Errorf("Placed = %v", res.Placed)
+	}
+}
+
+func TestApplyOutOfStoreStaleRemoval(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "x")
+
+	// 1 回目: out-of-store entry を配置（manifest に marker の絶対パスが記録される）。
+	lf1 := writeLinkFarm(t, projectManifest(outOfStoreEntry(src, ".", ".config/nvim")))
+	var commits [][2]string
+	if _, err := Apply(Options{
+		LinkFarm: lf1, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+	tgt := filepath.Join(root, ".config", "nvim")
+	if dest, _ := os.Readlink(tgt); dest != src {
+		t.Fatalf("first apply dest = %q, want %q", dest, src)
+	}
+
+	// 2 回目: 空 manifest。記録された out-of-store パスを指す link なので保守的不変条件を満たし除去。
+	lf2 := writeLinkFarm(t, projectManifest())
+	res, err := Apply(Options{
+		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	})
+	if err != nil {
+		t.Fatalf("second Apply: %v", err)
+	}
+	if _, err := os.Lstat(tgt); !os.IsNotExist(err) {
+		t.Errorf("recorded out-of-store link should be removed: lstat err = %v", err)
+	}
+	if len(res.Removed) != 1 || res.Removed[0] != ".config/nvim" {
+		t.Errorf("Removed = %v, want [.config/nvim]", res.Removed)
+	}
+}
+
+func TestApplyOutOfStoreStaleKeepsMismatch(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "x")
+
+	lf1 := writeLinkFarm(t, projectManifest(outOfStoreEntry(src, ".", ".config/nvim")))
+	var commits [][2]string
+	if _, err := Apply(Options{
+		LinkFarm: lf1, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+
+	// ユーザーが target を別のローカル先へ差し替える（記録と不一致）→ stale 除去しない。
+	tgt := filepath.Join(root, ".config", "nvim")
+	_ = os.Remove(tgt)
+	if err := os.Symlink(realTempDir(t), tgt); err != nil {
+		t.Fatal(err)
+	}
+
+	lf2 := writeLinkFarm(t, projectManifest())
+	var warns []string
+	res, err := Apply(Options{
+		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state,
+		Commit: fakeCommit(&commits), Warnf: collectWarnings(&warns),
+	})
+	if err != nil {
+		t.Fatalf("second Apply: %v", err)
+	}
+	if len(res.Removed) != 0 {
+		t.Errorf("Removed = %v, want none (mismatch kept)", res.Removed)
+	}
+	if _, err := os.Lstat(tgt); err != nil {
+		t.Errorf("mismatched out-of-store link should be kept: %v", err)
+	}
+	if len(warns) == 0 {
+		t.Error("expected a mismatch warning")
+	}
+}
+
+func TestApplyOutOfStoreMissingPathError(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	// 存在しないローカルパスを out-of-store のリンク先にする。
+	missing := filepath.Join(realTempDir(t), "does-not-exist")
+	lf := writeLinkFarm(t, projectManifest(outOfStoreEntry(missing, ".", ".config/nvim")))
+
+	_, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
+	})
+	if err == nil {
+		t.Fatal("expected error for missing out-of-store path, got nil")
+	}
+	if !strings.Contains(err.Error(), "out-of-store") {
+		t.Errorf("error should mention out-of-store: %v", err)
+	}
+	// 不在検査は配置前に閉じるため target は作られない。
+	if _, err := os.Lstat(filepath.Join(root, ".config", "nvim")); !os.IsNotExist(err) {
+		t.Errorf("should not place on missing path: lstat err = %v", err)
 	}
 }
 
