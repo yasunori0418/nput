@@ -126,6 +126,7 @@ func makeROSrc(t *testing.T, subpath, content string) string {
 	}
 	return src
 }
+
 // --- tests -----------------------------------------------------------------
 
 func TestApplyFirstPlacementProjectMode(t *testing.T) {
