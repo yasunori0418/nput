@@ -125,6 +125,26 @@ func buildFunc(e *entrypoint, system, name string) func(pending string) (string,
 	}
 }
 
+// dryBuildFunc は --dryrun 用の build コールバックを返す（→ engine.BuildFunc）。通常 build と違い
+// `nix build --no-link --print-out-paths` で **gcroot（out-link）を張らずに** link-farm の store path を
+// 得る（dryrun は副作用ゼロ・pending out-link を作らない・→ ADR-0011, ADR-0023）。pending 引数は使わない。
+func dryBuildFunc(e *entrypoint, system, name string) func(pending string) (string, error) {
+	inst := e.installable(system, name)
+	return func(string) (string, error) {
+		out, err := runNixCapture("build", inst, "--no-link", "--print-out-paths")
+		if err != nil {
+			return "", err
+		}
+		store := strings.TrimSpace(out)
+		if store == "" {
+			return "", fmt.Errorf("nput: nix build --print-out-paths が空でした (%s)", inst)
+		}
+		// --print-out-paths は複数行を返し得る（multi-output）。link-farm は単一 output なので最終行を採る。
+		lines := strings.Split(store, "\n")
+		return strings.TrimSpace(lines[len(lines)-1]), nil
+	}
+}
+
 // runNixCapture は nix の stdout を捕捉して返す（eval 等の機械可読出力用）。
 func runNixCapture(args ...string) (string, error) {
 	if flagVerbose {

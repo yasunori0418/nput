@@ -25,7 +25,18 @@ var (
 	flagQuiet   bool   // --quiet: 進捗 / 配置レポートを抑制（warning / error は残す）
 	flagVerbose bool   // --verbose: 内部実行する nix コマンドを開示
 	flagRecopy  bool   // --recopy: apply 修飾。全 copy target を src から無条件上書き再コピー
+	flagYes     bool   // -y/--yes: reset の確認プロンプトをスキップ（スクリプト / CI 用）
+	flagDryrun  bool   // --dryrun: apply / reset 修飾。副作用ゼロで plan を表示
 )
+
+// exitError は cobra RunE が返す、特定の終了コードを伴うエラー（→ docs/spec.md 終了コード表）。
+// apply --dryrun の conflict は exit 2。msg が空なら main は追加出力せず code だけで終了する。
+type exitError struct {
+	code int
+	msg  string
+}
+
+func (e *exitError) Error() string { return e.msg }
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
@@ -41,8 +52,10 @@ func newRootCmd() *cobra.Command {
 	pf.BoolVar(&flagNoWait, "no-wait", false, "flock 競合時に待たず skip（shellHook 用）")
 	pf.BoolVar(&flagQuiet, "quiet", false, "進捗 / 配置レポートを抑制（warning / error は残す）")
 	pf.BoolVar(&flagVerbose, "verbose", false, "内部実行する nix コマンド等の詳細を出力")
+	pf.BoolVarP(&flagYes, "yes", "y", false, "reset の確認プロンプトをスキップ（スクリプト / CI 用）")
 
 	root.AddCommand(newApplyCmd())
+	root.AddCommand(newResetCmd())
 	root.AddCommand(newRollbackCmd())
 	root.AddCommand(newListGenerationsCmd())
 	return root
@@ -50,6 +63,16 @@ func newRootCmd() *cobra.Command {
 
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
+		// 終了コードを伴うエラー（apply --dryrun conflict=2 等）は code だけで終了する
+		// （plan は既に stdout に出力済み・→ docs/spec.md 終了コード表）。
+		var ee *exitError
+		if errors.As(err, &ee) {
+			if ee.msg != "" {
+				fmt.Fprintln(os.Stderr, ee.msg)
+			}
+			os.Exit(ee.code)
+		}
+
 		fmt.Fprintln(os.Stderr, err)
 		// CLI/flake pin 間の schemaVersion skew は engine が拒否する（→ manifest.validate）。
 		// 上位で検知して原因と解消策を補う（→ docs/spec.md「manifest.json スキーマ」）。
