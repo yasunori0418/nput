@@ -81,6 +81,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newResetCmd())
 	root.AddCommand(newRollbackCmd())
 	root.AddCommand(newListGenerationsCmd())
+	root.AddCommand(newGitignoreCmd())
 	return root
 }
 

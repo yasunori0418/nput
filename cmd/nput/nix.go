@@ -120,6 +120,21 @@ func evalAllRoots(e *entrypoint, system string) (map[string]rootInfo, error) {
 	return roots, nil
 }
 
+// buildManifestStorePath は config をビルドして link-farm の store パスを返す（read-only 経路）。
+// gitignore は配置をしないため out-link gcroot を張らず `--no-link --print-out-paths` で store パスだけ得る。
+// 進捗は stderr、store パスは stdout に出る（→ docs/spec.md 出力ストリーム規律）。
+func buildManifestStorePath(e *entrypoint, system, name string) (string, error) {
+	out, err := runNixCapture("build", e.installable(system, name), "--no-link", "--print-out-paths")
+	if err != nil {
+		return "", err
+	}
+	store := strings.TrimSpace(out)
+	if store == "" {
+		return "", fmt.Errorf("nput: nput.%s.%s の build 成果物パスを取得できません", system, name)
+	}
+	return store, nil
+}
+
 // evalRoot は build 前に rootKind（+ fixed root のときは絶対パス）を安価な nix eval で先取りする
 // （→ docs/spec.md 実行フロー 1・ADR-0023）。これで profileDir を確定し flock → build の順を成立させる。
 func evalRoot(e *entrypoint, system, name string) (rootKind, fixedRoot string, err error) {
