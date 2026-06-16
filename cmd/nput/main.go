@@ -17,16 +17,19 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
-// グローバルフラグ（→ docs/spec.md「グローバルフラグ」）。本スライスは apply に必要な範囲のみ。
+// グローバルフラグ（→ docs/spec.md「グローバルフラグ」）。
 var (
-	flagFile    string // -f/--file: entrypoint 明示
-	flagRoot    string // --root: 解決 root の明示上書き
-	flagNoWait  bool   // --no-wait: flock 競合時に待たず skip（shellHook 用）
-	flagQuiet   bool   // --quiet: 進捗 / 配置レポートを抑制（warning / error は残す）
-	flagVerbose bool   // --verbose: 内部実行する nix コマンドを開示
-	flagRecopy  bool   // --recopy: apply 修飾。全 copy target を src から無条件上書き再コピー
-	flagYes     bool   // -y/--yes: reset の確認プロンプトをスキップ（スクリプト / CI 用）
-	flagDryrun  bool   // --dryrun: apply / reset 修飾。副作用ゼロで plan を表示
+	flagFile        string // -f/--file: entrypoint 明示
+	flagRoot        string // --root: 解決 root の明示上書き
+	flagNoWait      bool   // --no-wait: flock 競合時に待たず skip（shellHook 用）
+	flagQuiet       bool   // --quiet: 進捗 / 配置レポートを抑制（warning / error は残す）
+	flagVerbose     bool   // --verbose: 内部実行する nix コマンドを開示
+	flagRecopy      bool   // --recopy: apply 修飾。全 copy target を src から無条件上書き再コピー
+	flagYes         bool   // -y/--yes: reset の確認プロンプトをスキップ（スクリプト / CI 用）
+	flagDryrun      bool   // --dryrun: apply / reset 修飾。副作用ゼロで plan を表示
+	flagProjectRoot bool   // --project-root: apply --all の修飾。projectRoot の config のみ適用
+	flagHomeRoot    bool   // --home-root: apply --all の修飾。homeRoot の config のみ適用
+	flagSystemRoot  bool   // --system-root: apply --all の修飾。systemRoot の config のみ適用（将来 seam）
 )
 
 // exitError は cobra RunE が返す、特定の終了コードを伴うエラー（→ docs/spec.md 終了コード表）。
@@ -38,10 +41,27 @@ type exitError struct {
 
 func (e *exitError) Error() string { return e.msg }
 
+// rootCmdLong は --help で内部実行する nix コマンドを開示する（透明性・選択的に手で実行可能・→ ADR-0007）。
+const rootCmdLong = `nput はフェッチ済み git リポジトリをユーザー環境の任意パスへ symlink / copy で配置する。
+config 生成は行わない（config は Nix で書き nix build で評価される）。
+
+内部で実行する nix コマンド（透明性のため開示・選択的に手で実行できる）:
+  apply <name>      nix eval <ep>#nput.<system>.<name>.rootKind --raw
+                    nix build <ep>#nput.<system>.<name> --out-link <profileDir>/.pending
+  apply --all       nix eval <ep>#nput.<system> --apply '<rootKind マップ>' --json
+                    nix build <ep>#nput.<system>.<name>（config ごと）
+  gitignore <name>  nix eval <ep>#nput.<system>.<name>.rootKind --raw
+                    nix build <ep>#nput.<system>.<name> --no-link --print-out-paths
+  rollback /        nix eval <ep>#nput.<system>.<name>.rootKind --raw
+  list-generations
+
+--verbose を付けると実行時に実際の nix コマンドを stderr へ逐次表示する。`
+
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "nput",
 		Short: "Place fetched git repositories at arbitrary paths via symlink or copy.",
+		Long:  rootCmdLong,
 		// エラーは main で 1 度だけ出すため cobra の usage/error 自動表示は抑制する。
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -53,6 +73,9 @@ func newRootCmd() *cobra.Command {
 	pf.BoolVar(&flagQuiet, "quiet", false, "進捗 / 配置レポートを抑制（warning / error は残す）")
 	pf.BoolVar(&flagVerbose, "verbose", false, "内部実行する nix コマンド等の詳細を出力")
 	pf.BoolVarP(&flagYes, "yes", "y", false, "reset の確認プロンプトをスキップ（スクリプト / CI 用）")
+	pf.BoolVar(&flagProjectRoot, "project-root", false, "apply --all の修飾。projectRoot の config のみ適用")
+	pf.BoolVar(&flagHomeRoot, "home-root", false, "apply --all の修飾。homeRoot の config のみ適用")
+	pf.BoolVar(&flagSystemRoot, "system-root", false, "apply --all の修飾。systemRoot の config のみ適用（system mode は未実装）")
 
 	root.AddCommand(newApplyCmd())
 	root.AddCommand(newResetCmd())
@@ -60,6 +83,18 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newListGenerationsCmd())
 	return root
 }
+
+// exitCodeX は終了コードを運ぶエラーが満たすインターフェース（apply --all の集約終了コード等）。
+type exitCodeX interface{ ExitCode() int }
+
+// exitCodeError は終了コードを明示的に運ぶエラー（→ docs/spec.md「終了コード」）。
+type exitCodeError struct {
+	code int
+	msg  string
+}
+
+func (e *exitCodeError) Error() string { return e.msg }
+func (e *exitCodeError) ExitCode() int { return e.code }
 
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
@@ -80,6 +115,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "\nnput: CLI（engine）と flake が pin する nput のバージョンがずれている可能性があります。\n"+
 				"  flake の nput input が CLI より新しい manifest を生成しています。\n"+
 				"  CLI を更新するか、flake の nput input を CLI に合わせて下げて両者のバージョンを揃えてください。")
+		}
+		// 終了コードを運ぶエラー（apply --all の集約等）はその code で終了する（→ docs/spec.md・ADR-0024）。
+		var ec exitCodeX
+		if errors.As(err, &ec) {
+			os.Exit(ec.ExitCode())
 		}
 		os.Exit(1)
 	}
