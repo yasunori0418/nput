@@ -55,6 +55,9 @@ type Options struct {
 	StateDir string
 	// NoWait は flock を try-lock にする（shellHook 経路・保持中なら ErrSkipped・→ ADR-0013）。
 	NoWait bool
+	// Recopy は apply --recopy 修飾（config 内の全 copy target を src から無条件上書き再コピー・→ ADR-0020）。
+	// place-once を破る opt-in 経路。symlink 部の通常 apply（stale 除去 + 世代コミット）は不変。
+	Recopy bool
 
 	// Build はロック内 build の差し替え（nil = opts.LinkFarm を既ビルド済みとして使う）。
 	Build BuildFunc
@@ -70,8 +73,10 @@ type Options struct {
 type Result struct {
 	Root       string   // 解決後の絶対 root パス
 	ProfileDir string   // 確定した profileDir
-	Placed     []string // 新規配置した target
+	Placed     []string // 新規配置した symlink target
 	Replaced   []string // 既存 symlink を張り替えた target
+	Copied     []string // place-once で新規コピーした copy target
+	Recopied   []string // --recopy で上書き再コピーした既存 copy target（→ ADR-0020）
 	Removed    []string // stale 除去した target
 	Skipped    bool     // try-lock 競合で skip した（NoWait 経路）
 }
@@ -171,7 +176,7 @@ func Apply(opts Options) (*Result, error) {
 		c := plan.Conflicts[0]
 		return nil, fmt.Errorf("nput: %s (target: %s)", c.Reason, c.Entry.Target)
 	}
-	a.emitWarnings(plan.Warnings)
+	a.emitWarnings(plan.Warnings, opts.Recopy)
 
 	// 6.5 out-of-store のリンク先存在を配置直前に検査（dangling 禁止・→ ADR-0001, ADR-0013）。
 	//     FS 変更前に閉じるため、不在なら何も配置せずエラー停止する。
@@ -180,8 +185,19 @@ func Apply(opts Options) (*Result, error) {
 	}
 
 	// 7. プランを実 FS に反映（新規 / 張替を先に、stale 除去を最後に・→ ADR-0006）。
+	//    symlink は plan 駆動。copy は --recopy のとき全 copy target を無条件上書き、
+	//    通常は place-once（target 不在のみ新規コピー）に分岐する（→ ADR-0020）。
 	if err := a.place(plan.Place); err != nil {
 		return nil, err
+	}
+	if opts.Recopy {
+		if err := a.recopyAll(); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := a.placeCopies(plan.Copies); err != nil {
+			return nil, err
+		}
 	}
 	if err := a.removeStale(plan.Remove); err != nil {
 		return nil, err
@@ -287,7 +303,9 @@ func (a *applier) loadPrevManifest() *manifest.Manifest {
 
 // emitWarnings は planner が算出した非致命 warning を stderr（opts.Warnf）へ出す。
 // warning は --quiet でも消えない（→ docs/spec.md ストリーム規律・ADR-0015, ADR-0024）。
-func (a *applier) emitWarnings(ws []planner.Warning) {
+// recopy=true のときは copy foreign skip 警告を抑制する（recopy は foreign も上書きするため
+// 「skip した」は誤報になる・→ ADR-0020）。
+func (a *applier) emitWarnings(ws []planner.Warning, recopy bool) {
 	for _, w := range ws {
 		switch w.Kind {
 		case planner.WarnForeignReplace:
@@ -298,6 +316,11 @@ func (a *applier) emitWarnings(ws []planner.Warning) {
 			a.opts.Warnf("nput: stale target が symlink ではないため残します: %s", w.Target)
 		case planner.WarnCopyOrphan:
 			a.opts.Warnf("nput: copy entry が消えましたが target は削除しません（orphan・reset で撤去）: %s", w.Target)
+		case planner.WarnCopyForeign:
+			if recopy {
+				continue
+			}
+			a.opts.Warnf("nput: copy target に既存の実ファイルがあるため copy をスキップしました（foreign・place-once）: %s", w.Target)
 		}
 	}
 }
