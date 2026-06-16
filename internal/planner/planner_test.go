@@ -84,6 +84,7 @@ type want struct {
 	placeNew     []string
 	placeReplace []string
 	placeForeign []string
+	copies       []string
 	remove       []string
 	warns        []WarnKind
 	conflicts    int
@@ -102,6 +103,14 @@ func placeTargets(p Plan, kind PlaceKind) []string {
 func removeTargets(p Plan) []string {
 	var out []string
 	for _, a := range p.Remove {
+		out = append(out, a.Entry.Target)
+	}
+	return out
+}
+
+func copyTargets(p Plan) []string {
+	var out []string
+	for _, a := range p.Copies {
 		out = append(out, a.Entry.Target)
 	}
 	return out
@@ -259,6 +268,54 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{warns: []WarnKind{WarnCopyOrphan}},
 		},
 		{
+			// copy target 不在: place-once で新規コピー。
+			name: "copy target absent → place-once copy",
+			prev: nil,
+			next: mani(cp(srcA, ".config/foo")),
+			fs:   fakeFS{},
+			want: want{copies: []string{".config/foo"}},
+		},
+		{
+			// copy 既存・記録あり（前世代も copy）: place-once で no-op。
+			name: "copy recorded → no-op",
+			prev: mani(cp(srcA, ".config/foo")),
+			next: mani(cp(srcA, ".config/foo")),
+			fs:   fakeFS{srcA: reg(), abs(".config/foo"): reg()},
+			want: want{},
+		},
+		{
+			// copy 既存・記録なし（foreign 実ファイル）: skip + warning。
+			name: "copy foreign file → skip + warn",
+			prev: nil,
+			next: mani(cp(srcA, ".config/foo")),
+			fs:   fakeFS{srcA: reg(), abs(".config/foo"): reg()},
+			want: want{warns: []WarnKind{WarnCopyForeign}},
+		},
+		{
+			// 構造不一致（src dir × target file）: conflict。
+			name: "copy structure mismatch (src dir, target file) → conflict",
+			prev: nil,
+			next: mani(cp(srcA, ".config/foo")),
+			fs:   fakeFS{srcA: dir(), abs(".config/foo"): reg()},
+			want: want{conflicts: 1},
+		},
+		{
+			// 構造不一致（src file × target dir）: conflict。
+			name: "copy structure mismatch (src file, target dir) → conflict",
+			prev: nil,
+			next: mani(cp(srcA, ".config/foo")),
+			fs:   fakeFS{srcA: reg(), abs(".config/foo"): dir()},
+			want: want{conflicts: 1},
+		},
+		{
+			// copy 既存・記録あり・dir/dir 一致: no-op。
+			name: "copy recorded dir → no-op",
+			prev: mani(cp(srcA, ".config/foo")),
+			next: mani(cp(srcA, ".config/foo")),
+			fs:   fakeFS{srcA: dir(), abs(".config/foo"): dir()},
+			want: want{},
+		},
+		{
 			// 複合: 新規 + silent 張替 + foreign 警告 + stale 除去 + mismatch 残し。
 			name: "mixed plan",
 			prev: mani(sl(srcA, "keep"), sl(srcA, "drop"), sl(srcA, "mism")),
@@ -289,21 +346,13 @@ func TestComputeTableDriven(t *testing.T) {
 			sortedEq(t, "placeNew", placeTargets(plan, PlaceNew), tt.want.placeNew)
 			sortedEq(t, "placeReplace", placeTargets(plan, PlaceReplace), tt.want.placeReplace)
 			sortedEq(t, "placeForeign", placeTargets(plan, PlaceForeign), tt.want.placeForeign)
+			sortedEq(t, "copies", copyTargets(plan), tt.want.copies)
 			sortedEq(t, "remove", removeTargets(plan), tt.want.remove)
 			warnEq(t, warnKinds(plan), tt.want.warns)
 			if len(plan.Conflicts) != tt.want.conflicts {
 				t.Errorf("conflicts = %d, want %d (%v)", len(plan.Conflicts), tt.want.conflicts, plan.Conflicts)
 			}
 		})
-	}
-}
-
-// TestComputeCopyInNextErrors は新世代に copy entry があると未実装エラーになることを検証する
-// （本スライスは symlink のみ・→ Issue #6）。
-func TestComputeCopyInNextErrors(t *testing.T) {
-	_, err := Compute(nil, mani(cp("/nix/store/x", ".config/foo")), root, fakeFS{})
-	if err == nil {
-		t.Fatal("expected error for copy entry in next manifest, got nil")
 	}
 }
 

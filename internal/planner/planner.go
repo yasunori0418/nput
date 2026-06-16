@@ -61,6 +61,15 @@ type PlaceAction struct {
 	Kind      PlaceKind
 }
 
+// CopyAction is a place-once copy to materialize: copy Src (= <src>/<subpath>)
+// into TargetAbs（target 不在のときのみ・place-once・→ ADR-0002, ADR-0016）。
+// 既存 target（記録あり / foreign）は触らないため CopyAction を生まない。
+type CopyAction struct {
+	Entry     manifest.Entry
+	TargetAbs string
+	Src       string // LinkDest(Entry): <src>/<subpath>（コピー元）
+}
+
 // RemoveAction is a stale symlink that satisfies the conservative invariant at
 // plan time (recorded by prev AND on-disk points to the recorded dest). The
 // stale-remover re-verifies this against the real FS before unlinking.
@@ -89,6 +98,9 @@ const (
 	WarnStaleNonSymlink
 	// WarnCopyOrphan は消えた copy entry の orphan（削除はしない・reset で撤去・→ ADR-0020）。
 	WarnCopyOrphan
+	// WarnCopyForeign は copy target に記録の無い実ファイルがあり place-once で skip する
+	// （上書きしない・masking 防止に可視化・symlink の foreign 警告と対称・→ ADR-0022）。
+	WarnCopyForeign
 )
 
 // Warning is a non-fatal condition surfaced to the user for a given target.
@@ -98,10 +110,11 @@ type Warning struct {
 }
 
 // Plan is the computed place/replace/remove plan plus non-fatal warnings and
-// fatal conflicts. The engine executes Place then Remove (「新規/張替を先に、stale
-// 除去を最後に」・→ ADR-0006); a non-empty Conflicts means apply must stop.
+// fatal conflicts. The engine executes Place / Copies then Remove (「新規/張替を先に、
+// stale 除去を最後に」・→ ADR-0006); a non-empty Conflicts means apply must stop.
 type Plan struct {
 	Place     []PlaceAction
+	Copies    []CopyAction
 	Remove    []RemoveAction
 	Conflicts []Conflict
 	Warnings  []Warning
@@ -124,18 +137,9 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 	// --- place / replace 側: 新世代の各 entry を現 FS に照らして分類する ---
 	prevByTarget := byTarget(prev)
 	for _, e := range entriesOf(next) {
-		switch e.Method {
-		case manifest.MethodSymlink:
-			// 本スライスは symlink のみ対応。
-		case manifest.MethodCopy:
-			return Plan{}, fmt.Errorf("nput: method=copy は本スライスでは未実装です (target: %s)", e.Target)
-		default:
-			return Plan{}, fmt.Errorf("nput: 未知の method: %q (target: %s)", e.Method, e.Target)
-		}
-
 		targetAbs := filepath.Join(root, filepath.Clean(e.Target))
 
-		// 祖先 component が symlink ならネスト不可で conflict（→ ADR-0015）。
+		// 祖先 component が symlink ならネスト不可で conflict（全 method 共通・→ ADR-0015）。
 		offender, err := ancestorSymlink(root, e.Target, fs)
 		if err != nil {
 			return Plan{}, err
@@ -147,6 +151,17 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 				Reason:    fmt.Sprintf("祖先 %q が symlink です。配下にネストできません (→ ADR-0015)", offender),
 			})
 			continue
+		}
+
+		// method ごとに place-once / 張替の分類を分岐する。
+		if e.Method == manifest.MethodCopy {
+			if err := classifyCopy(&plan, e, targetAbs, prevByTarget, fs); err != nil {
+				return Plan{}, err
+			}
+			continue
+		}
+		if e.Method != manifest.MethodSymlink {
+			return Plan{}, fmt.Errorf("nput: 未知の method: %q (target: %s)", e.Method, e.Target)
 		}
 
 		info, err := fs.Lstat(targetAbs)
@@ -244,6 +259,58 @@ func recordedLink(target, targetAbs string, prevByTarget map[string]manifest.Ent
 		return false
 	}
 	return onDisk == LinkDest(pe)
+}
+
+// classifyCopy は copy entry を place-once 意味論で分類する（→ ADR-0002, ADR-0016, ADR-0022,
+// docs/spec.md「copy モード」）。
+//
+//	target 不在            → CopyAction（新規 place-once コピー）
+//	target 既存・構造不一致 → conflict（subpath dir × target file / subpath file × target dir）
+//	target 既存・記録あり   → no-op（nput が前世代で配置済み・place-once で触らない）
+//	target 既存・foreign    → skip + WarnCopyForeign（記録の無い実ファイル・masking 防止）
+//
+// recopy（apply --recopy）は place-once を破る別経路で、engine 側が manifest の copy entry を
+// 直接上書きする。planner は通常の place-once 分類のみを行う（→ ADR-0020）。
+func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget map[string]manifest.Entry, fs FS) error {
+	info, err := fs.Lstat(targetAbs)
+	switch {
+	case err == nil:
+		// target 既存: まず src 構造と種別が一致するか検査する。
+		mismatch, err := copyStructureMismatch(e, info, fs)
+		if err != nil {
+			return err
+		}
+		if mismatch {
+			plan.Conflicts = append(plan.Conflicts, Conflict{
+				Entry:     e,
+				TargetAbs: targetAbs,
+				Reason:    "copy の src 構造と target の種別が不一致です（dir↔file・上書きしません）",
+			})
+			return nil
+		}
+		// place-once: 前世代が記録した copy なら触らない。記録の無い実ファイルは foreign 警告。
+		if pe, ok := prevByTarget[e.Target]; ok && pe.Method == manifest.MethodCopy {
+			return nil
+		}
+		plan.Warnings = append(plan.Warnings, Warning{Kind: WarnCopyForeign, Target: e.Target})
+		return nil
+	case os.IsNotExist(err):
+		plan.Copies = append(plan.Copies, CopyAction{Entry: e, TargetAbs: targetAbs, Src: LinkDest(e)})
+		return nil
+	default:
+		return fmt.Errorf("nput: copy target を lstat できません (%s): %w", targetAbs, err)
+	}
+}
+
+// copyStructureMismatch は src（<src>/<subpath>）の dir/file 種別と既存 target の種別が
+// 食い違うか判定する（subpath dir × target file / subpath file × target dir・→ docs/spec.md）。
+// symlink target は IsDir()=false で「file 側」として扱う。
+func copyStructureMismatch(e manifest.Entry, targetInfo os.FileInfo, fs FS) (bool, error) {
+	srcInfo, err := fs.Lstat(LinkDest(e))
+	if err != nil {
+		return false, fmt.Errorf("nput: copy src を lstat できません (%s): %w", LinkDest(e), err)
+	}
+	return srcInfo.IsDir() != targetInfo.IsDir(), nil
 }
 
 // ancestorSymlink walks the target's ancestor components under root and returns
