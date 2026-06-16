@@ -11,7 +11,7 @@ import (
 )
 
 func newApplyCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "apply [name]",
 		Short: "nput.<name> をビルドし新世代を作って適用（name 省略時は nput.default）",
 		Long: "entrypoint の nput.<name> をビルドして配置する。" +
@@ -25,6 +25,9 @@ func newApplyCmd() *cobra.Command {
 			return runApply(name)
 		},
 	}
+	cmd.Flags().BoolVar(&flagRecopy, "recopy", false,
+		"config 内の全 copy target を src から無条件上書き再コピー（ローカル編集は破棄・→ ADR-0020）")
+	return cmd
 }
 
 // runApply は docs/spec.md「実行フロー」を駆動する:
@@ -52,6 +55,7 @@ func runApply(name string) error {
 		FixedRoot:    fixedRoot,
 		RootOverride: flagRoot,
 		NoWait:       flagNoWait,
+		Recopy:       flagRecopy,
 		Build:        buildFunc(ep, system, name),
 	})
 	if err != nil {
@@ -80,10 +84,16 @@ func reportResult(res *engine.Result, name string) {
 	for _, t := range res.Replaced {
 		fmt.Fprintf(os.Stderr, "  replaced %s\n", t)
 	}
+	for _, t := range res.Copied {
+		fmt.Fprintf(os.Stderr, "  copied   %s\n", t)
+	}
+	for _, t := range res.Recopied {
+		fmt.Fprintf(os.Stderr, "  recopied %s\n", t)
+	}
 	for _, t := range res.Removed {
 		fmt.Fprintf(os.Stderr, "  removed  %s\n", t)
 	}
-	if len(res.Placed)+len(res.Replaced)+len(res.Removed) == 0 {
+	if len(res.Placed)+len(res.Replaced)+len(res.Copied)+len(res.Recopied)+len(res.Removed) == 0 {
 		fmt.Fprintln(os.Stderr, "  no-op")
 	}
 }
