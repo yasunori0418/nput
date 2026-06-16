@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -46,8 +47,13 @@ func TestLoadValid(t *testing.T) {
 
 func TestLoadRejectsNewerSchema(t *testing.T) {
 	dir := writeManifest(t, `{ "schemaVersion": 2, "root": { "rootKind": "project" }, "entries": [] }`)
-	if _, err := Load(dir); err == nil {
+	_, err := Load(dir)
+	if err == nil {
 		t.Fatal("expected error for schemaVersion 2, got nil")
+	}
+	// CLI が skew 案内を補えるよう sentinel を errors.Is で判定できること（→ docs/spec.md）。
+	if !errors.Is(err, ErrSchemaVersionUnsupported) {
+		t.Errorf("error should wrap ErrSchemaVersionUnsupported, got %v", err)
 	}
 }
 

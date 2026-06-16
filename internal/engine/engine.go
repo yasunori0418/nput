@@ -232,12 +232,19 @@ type applier struct {
 }
 
 func (a *applier) resolveRoot(rootKind, fixedRoot string) (string, error) {
-	if a.opts.RootOverride != "" {
-		return filepath.Abs(a.opts.RootOverride)
+	return resolveRoot(rootKind, fixedRoot, a.opts.RootOverride, a.opts.WorkDir, a.opts.Git)
+}
+
+// resolveRoot は rootKind（+ fixed root のときは絶対パス）から配置先の絶対 root を解決する
+// （→ docs/spec.md「root の解決」）。Apply / Rollback / ProfileFor が共有する純解決ロジックで、
+// `--root` 上書き時は kind に依らず上書きパスを使う。
+func resolveRoot(rootKind, fixedRoot, rootOverride, workDir string, git GitFunc) (string, error) {
+	if rootOverride != "" {
+		return filepath.Abs(rootOverride)
 	}
 	switch rootKind {
 	case manifest.RootKindProject:
-		dir := a.opts.WorkDir
+		dir := workDir
 		if dir == "" {
 			cwd, err := os.Getwd()
 			if err != nil {
@@ -245,7 +252,6 @@ func (a *applier) resolveRoot(rootKind, fixedRoot string) (string, error) {
 			}
 			dir = cwd
 		}
-		git := a.opts.Git
 		if git == nil {
 			git = gitutil.Toplevel
 		}
