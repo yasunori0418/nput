@@ -13,6 +13,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # HM モジュール統合の評価テスト専用（→ Issue #17・checks.hm-module）。
+    # lib/ は home-manager に依存しない（→ ADR-0006）。本 input は checks でのみ使う。
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # lib 評価テスト（→ ADR-0006, ADR-0012）。
     nix-unit = {
       url = "github:nix-community/nix-unit";
@@ -159,6 +166,59 @@
               nput = nputLib;
             };
           }) (pkgs.runCommandLocal "nput-namaka-snapshots" { } "touch \"$out\"");
+
+          # HM モジュール統合の評価アサート（→ Issue #17 AC・NixOS VM / 実 activate は #19 E2E）。
+          # standalone な homeManagerConfiguration を評価し、(1) activation が home.file へ翻訳せず
+          # `nput apply --manifest` で engine を起動する配線であること、(2) 渡す manifest が
+          # root=homeRoot を pin すること、(3) nput.entries が manifest に流れることをアサートする。
+          # 実 activate（nix-env --set・FS 配置）は build sandbox では行えないため E2E（#19）へ回す。
+          checks.hm-module =
+            let
+              # store hash 揺れを避ける fake な flake-input 相当（nix-unit / namaka と同じ test double）。
+              fakeSrc = {
+                outPath = "/nix/store/00000000000000000000000000000000-fake-src";
+              };
+              hm = inputs.home-manager.lib.homeManagerConfiguration {
+                inherit pkgs;
+                modules = [
+                  ./modules/home-manager.nix
+                  {
+                    # ラッパー（flake.homeManagerModules.default）と同じく pin 版 nput を注入する。
+                    _module.args.nputPackage = config.packages.nput;
+                    home.username = "nput-test";
+                    home.homeDirectory = "/home/nput-test";
+                    home.stateVersion = "24.05";
+                    nput.enable = true;
+                    nput.entries.".claude/skills/nix" = {
+                      src = fakeSrc;
+                      subpath = "skills/nix";
+                    };
+                  }
+                ];
+              };
+              # home.activation の dag entry の生スクリプト。
+              activationScript = pkgs.writeText "nput-activation" hm.config.home.activation.nput.data;
+            in
+            pkgs.runCommandLocal "nput-hm-module-check" { } ''
+              script=${activationScript}
+
+              # (1) home.file へ翻訳せず engine を --manifest 経路で起動する配線であること。
+              grep -q 'apply --manifest /nix/store/' "$script" \
+                || { echo "FAIL: activation が nput apply --manifest を起動していません"; cat "$script"; exit 1; }
+
+              # (2) 渡す manifest が root=homeRoot を pin していること（mkManifest が記録）。
+              manifest=$(grep -oE '/nix/store/[a-z0-9]+-nput-manifest' "$script" | head -n1)
+              test -n "$manifest" || { echo "FAIL: manifest の store パスを抽出できません"; cat "$script"; exit 1; }
+              test -f "$manifest/manifest.json" || { echo "FAIL: $manifest/manifest.json がありません"; exit 1; }
+              grep -q '"rootKind":"home"' "$manifest/manifest.json" \
+                || { echo "FAIL: manifest が homeRoot を pin していません"; cat "$manifest/manifest.json"; exit 1; }
+
+              # (3) nput.entries が manifest に流れていること（target = 属性キー）。
+              grep -q '".claude/skills/nix"' "$manifest/manifest.json" \
+                || { echo "FAIL: nput.entries が manifest に反映されていません"; cat "$manifest/manifest.json"; exit 1; }
+
+              touch "$out"
+            '';
         };
       flake = {
         lib = nputLib;
@@ -179,7 +239,15 @@
           };
         });
 
-        homeManagerModules.default = ./modules/home-manager.nix;
+        # HM モジュール本体（modules/home-manager.nix）は engine をキックするのに pin 版 nput
+        # CLI を要する。利用者システムの packages.nput を _module.args として注入する薄い
+        # ラッパーで包む（利用者は import するだけ・→ ADR-0007, modules/home-manager.nix）。
+        homeManagerModules.default =
+          { pkgs, ... }:
+          {
+            imports = [ ./modules/home-manager.nix ];
+            _module.args.nputPackage = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.nput;
+          };
         nixosModules.default = ./modules/nixos.nix;
         darwinModules.default = ./modules/nix-darwin.nix;
       };
