@@ -384,8 +384,9 @@ nput = {
 };
 ```
 
-HM モジュールは `home.activation` から nput エンジンを起動する。配置は nput 自身が行い、
-`home.file` には委譲しない。nput は自前 profile を**内部機構**として持つ（前世代マニフェスト + stale 追跡）が、
+HM モジュールは `home.activation` から nput エンジンを起動する。起動は **`nput apply --manifest <link-farm>`**（→ ADR-0026）で行い、
+モジュール評価時に `nput.entries` から `mkManifest` でビルドした link-farm を渡す（activation 内で `nix build` / `eval` はしない・entrypoint 経路ではない）。
+配置は nput 自身が行い、`home.file` には委譲しない。nput は自前 profile を**内部機構**として持つ（前世代マニフェスト + stale 追跡）が、
 ユーザー向け rollback は HM（`home-manager --rollback`）に一本化する。
 
 ---
