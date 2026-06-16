@@ -39,6 +39,18 @@ func RootHash(absRoot string) string {
 	return hex.EncodeToString(sum[:])[:rootHashLen]
 }
 
+// Base は profile 群の基底 <state>/nix/profiles/nput を返す。home（--root なし）の
+// profileDir はこの直下の <name>、roothash 系列は <roothash>/<name>（→ ADR-0024）。
+func Base(stateDir string) string {
+	return filepath.Join(stateDir, "nix", "profiles", "nput")
+}
+
+// GenerationLink は profile リンクの兄弟として nix-env が作る世代リンク
+// <profileDir>/profile-<gen>-link のパスを返す（→ docs/spec.md オンディスクレイアウト・ADR-0025）。
+func GenerationLink(profileLink string, gen int) string {
+	return fmt.Sprintf("%s-%d-link", profileLink, gen)
+}
+
 // Profile は 1 config 分の profile レイアウトのパス一式。
 type Profile struct {
 	// Dir は profileDir（config 専用ディレクトリ・flock キー）。
@@ -60,7 +72,7 @@ type Profile struct {
 //   - project / fixed / --root 上書き : <state>/nix/profiles/nput/<roothash>/<name>
 //     （backref .root は <roothash> 階層）
 func Resolve(stateDir, name, rootKind, absRoot string, rootOverride bool) Profile {
-	base := filepath.Join(stateDir, "nix", "profiles", "nput")
+	base := Base(stateDir)
 
 	// home（--root なし）のみ <name> 直キー。それ以外は root ごとに独立系列へ分離する。
 	if rootKind == manifest.RootKindHome && !rootOverride {
