@@ -30,6 +30,7 @@ var (
 	flagProjectRoot bool   // --project-root: apply --all の修飾。projectRoot の config のみ適用
 	flagHomeRoot    bool   // --home-root: apply --all の修飾。homeRoot の config のみ適用
 	flagSystemRoot  bool   // --system-root: apply --all の修飾。systemRoot の config のみ適用（将来 seam）
+	flagManifest    string // --manifest: ビルド済み manifest（link-farm）を直接適用（module activation 用）
 )
 
 // exitError は cobra RunE が返す、特定の終了コードを伴うエラー（→ docs/spec.md 終了コード表）。

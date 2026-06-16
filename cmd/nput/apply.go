@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 
 	"github.com/spf13/cobra"
@@ -44,12 +45,53 @@ func newApplyCmd() *cobra.Command {
 		"config 内の全 copy target を src から無条件上書き再コピー（ローカル編集は破棄・→ ADR-0020）")
 	cmd.Flags().BoolVar(&flagDryrun, "dryrun", false,
 		"副作用ゼロで place/replace/remove/conflict/no-op を表示（conflict 検出時 exit 2・→ ADR-0006）")
+	cmd.Flags().StringVar(&flagManifest, "manifest", "",
+		"ビルド済み manifest（link-farm パス）を直接適用する（entrypoint 発見・nix eval/build を行わない・module activation 用）")
 	return cmd
+}
+
+// runApplyManifest は --manifest で渡されたビルド済み link-farm を engine へ直接適用する
+// （module activation 経路）。entrypoint 発見・rootKind 先取り eval・nix build は行わず、
+// rootKind は manifest.json から engine が読む（HM モジュールは homeRoot を pin するため home）。
+// engine.Apply の Build=nil 経路（既ビルド済み LinkFarm）を CLI から駆動する（→ engine.Options）。
+func runApplyManifest(name string) error {
+	linkFarm, err := filepath.Abs(flagManifest)
+	if err != nil {
+		return fmt.Errorf("nput: --manifest のパスを解決できません (%s): %w", flagManifest, err)
+	}
+
+	res, err := engine.Apply(engine.Options{
+		Name:         name,
+		LinkFarm:     linkFarm,
+		RootOverride: flagRoot,
+		NoWait:       flagNoWait,
+		Recopy:       flagRecopy,
+	})
+	if err != nil {
+		if errors.Is(err, engine.ErrSkipped) {
+			if !flagQuiet {
+				fmt.Fprintln(os.Stderr, "nput: 別の apply が進行中のためスキップしました（手動で nput apply を実行してください）")
+			}
+			return nil
+		}
+		return err
+	}
+
+	if !flagQuiet {
+		reportResult(res, name)
+	}
+	return nil
 }
 
 // runApply は docs/spec.md「実行フロー」を駆動する:
 // entrypoint 発見 → rootKind 先取り eval → engine.Apply（flock → ロック内 build → 配置 → --set → .pending 削除）。
+// --manifest 指定時は entrypoint 発見・nix eval/build を行わず、ビルド済み link-farm を engine へ直接渡す
+// （module activation 経路・→ docs/spec.md「モジュール別動作仕様」・ADR-0003, ADR-0007）。
 func runApply(name string) error {
+	if flagManifest != "" {
+		return runApplyManifest(name)
+	}
+
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
