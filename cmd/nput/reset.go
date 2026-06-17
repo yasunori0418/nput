@@ -64,15 +64,15 @@ func runReset(name string, targets []string, dryrun bool) error {
 		return nil
 	}
 
-	// 非 dryrun は破壊的操作。非 TTY かつ --yes 無しは即エラー停止する（ハングと誤削除を防ぐ・→ ADR-0025 §5）。
-	if !flagYes && !isInteractive() {
-		return errors.New("nput: 非対話環境では --yes なしの破壊的 reset を拒否します " +
-			"(refusing destructive reset without --yes in non-interactive context)")
+	// 非 dryrun は破壊的操作。確認方針（スキップ / プロンプト / 拒否）を --yes と TTY 状態から決める。
+	needPrompt, err := confirmPolicy(flagYes, isInteractive())
+	if err != nil {
+		return err
 	}
 
-	// --yes 未指定（= TTY）のときだけ確認プロンプトを出す。プロンプトは算出済みプランを表示する。
+	// プロンプトが要るときだけ confirm を渡す。プロンプトは算出済みプランを表示する。
 	var confirm func(*engine.ResetResult) (bool, error)
-	if !flagYes {
+	if needPrompt {
 		confirm = func(res *engine.ResetResult) (bool, error) {
 			reportResetTargets(res, name)
 			return promptYesNo("上記を削除します。続行しますか？")
@@ -149,6 +149,23 @@ func reportResetResult(res *engine.ResetResult, name string) {
 	if len(res.RemovedSymlinks)+len(res.RemovedCopies) == 0 {
 		fmt.Fprintln(os.Stderr, "  no-op")
 	}
+}
+
+// confirmPolicy は破壊的 reset の確認方針を --yes と TTY 状態から決める（→ ADR-0025 §5）。
+//   - --yes: 確認スキップ（needPrompt=false・err=nil）
+//   - --yes 無し + 対話環境: 確認プロンプト要求（needPrompt=true）
+//   - --yes 無し + 非対話環境: ハング / 空入力誤削除を防ぐため即エラー（refuse）
+//
+// runReset から isInteractive() の結果を渡して使う（nix 非依存で単体テスト可能な seam）。
+func confirmPolicy(yes, interactive bool) (needPrompt bool, err error) {
+	if yes {
+		return false, nil
+	}
+	if !interactive {
+		return false, errors.New("nput: 非対話環境では --yes なしの破壊的 reset を拒否します " +
+			"(refusing destructive reset without --yes in non-interactive context)")
+	}
+	return true, nil
 }
 
 // isInteractive は stdin が TTY か（端末に接続されているか）を返す（→ ADR-0025 §5）。
