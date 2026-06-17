@@ -230,6 +230,13 @@ func runApplyAll() error {
 		return nil
 	}
 
+	// 2.5 --dryrun は副作用ゼロのプレビュー（flock / --set / pending gcroot を取らず build だけ
+	//     read-only で回す）。選んだ各 config の plan を stdout へ集約し、終了コードは
+	//     error(1) > conflict(2) > 0 の優先で決める（→ docs/spec.md・ADR-0024）。
+	if flagDryrun {
+		return runApplyAllDryRun(ep, system, selected, roots)
+	}
+
 	// 3. 各 config を独立に適用する。一部失敗しても続行し、失敗を集約する（各 config は独立 atomic）。
 	var failures, skipped, applied int
 	for _, name := range selected {
@@ -265,6 +272,50 @@ func runApplyAll() error {
 		return nil
 	}
 	return &exitCodeError{code: code, msg: fmt.Sprintf("nput: apply --all: %d 件の config が失敗しました", failures)}
+}
+
+// runApplyAllDryRun は apply --all --dryrun を駆動する。選んだ各 config を読み取り専用で build し
+// plan を stdout へ集約出力する（FS 書込・flock・--set・pending gcroot いずれも取らない・→ ADR-0023）。
+// 終了コードは error(1) > conflict(2) > 0 の優先（→ docs/spec.md・ADR-0024）で決め、empty msg の
+// exitError で運ぶ（単体 apply --dryrun の conflict=2 と対称・main は code だけで終了する）。
+func runApplyAllDryRun(ep *entrypoint, system string, selected []string, roots map[string]rootInfo) error {
+	code := aggregateDryRun(selected, func(name string) (*engine.Result, error) {
+		ri := roots[name]
+		return engine.Apply(engine.Options{
+			Name:         name,
+			RootKind:     ri.RootKind,
+			FixedRoot:    ri.Root,
+			RootOverride: flagRoot,
+			Recopy:       flagRecopy,
+			DryRun:       true,
+			Build:        dryBuildFunc(ep, system, name),
+		})
+	})
+	if code == 0 {
+		return nil
+	}
+	return &exitError{code: code}
+}
+
+// aggregateDryRun は selected 各 config を applyDry で読み取り専用に回し、plan を stdout へ出して
+// error / conflict を集約し終了コードを返す（apply 実体を注入してテスト可能にする seam）。
+// 一部 config の build / eval 失敗（error）は握り潰さず stderr に出して続行し、最終コードへ反映する。
+func aggregateDryRun(selected []string, applyDry func(name string) (*engine.Result, error)) int {
+	var anyError, anyConflict bool
+	for _, name := range selected {
+		res, err := applyDry(name)
+		if err != nil {
+			anyError = true
+			// 部分失敗は握り潰さず stderr に出して続行する（→ docs/spec.md「一部失敗しても続行」）。
+			fmt.Fprintf(os.Stderr, "nput: apply %s --dryrun に失敗しました: %v\n", name, err)
+			continue
+		}
+		printApplyPlan(res)
+		if len(res.Conflicts) > 0 {
+			anyConflict = true
+		}
+	}
+	return applyAllExitCode(anyError, anyConflict)
 }
 
 // applyAllExitCode は apply --all の終了コードを priority error(1) > conflict(2) > 0 で決める
