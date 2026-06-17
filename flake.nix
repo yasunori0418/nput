@@ -188,6 +188,9 @@
                     home.username = "nput-test";
                     home.homeDirectory = "/home/nput-test";
                     home.stateVersion = "24.05";
+                    # nixpkgs=unstable と HM=master の release 文字列ずれによる無害な
+                    # warning を抑制する（packages は nixpkgs follows で一致・→ #17 レビュー）。
+                    home.enableNixpkgsReleaseCheck = false;
                     nput.enable = true;
                     nput.entries.".claude/skills/nix" = {
                       src = fakeSrc;

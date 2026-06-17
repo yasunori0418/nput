@@ -1,8 +1,37 @@
+# ---- Go ----
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# nput バイナリ（`go build` / `go build ./...` がリポジトリ直下に生成する）
+/nput
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories（vendoring する場合はコメントアウト）
+# vendor/
+
+# ---- Nix ----
+# nix build の out-link
+/result
+result-*
+
+# ---- Project ----
 .agents/
 .claude/skills/*
 
 # nput ドッグフーディング配置物（nput apply default で生成・→ Issue #7）
 /.nput-example/
-
-# nix build の out-link
-/result
