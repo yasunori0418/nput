@@ -137,10 +137,10 @@ func withStdin(t *testing.T, input string) func() {
 	}
 	go func() {
 		_, _ = io.WriteString(w, input)
-		w.Close()
+		_ = w.Close()
 	}()
 	os.Stdin = r
-	return func() { os.Stdin = old; r.Close() }
+	return func() { os.Stdin = old; _ = r.Close() }
 }
 
 // captureOutErr は f 実行中の stdout / stderr を捕捉して返す（ストリーム規律の検証用）。
@@ -160,8 +160,8 @@ func captureOutErr(t *testing.T, f func()) (stdout, stderr string) {
 	go func() { b, _ := io.ReadAll(rOut); outCh <- string(b) }()
 	go func() { b, _ := io.ReadAll(rErr); errCh <- string(b) }()
 	f()
-	wOut.Close()
-	wErr.Close()
+	_ = wOut.Close()
+	_ = wErr.Close()
 	os.Stdout, os.Stderr = oldOut, oldErr
 	return <-outCh, <-errCh
 }
