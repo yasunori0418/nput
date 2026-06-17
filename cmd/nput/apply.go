@@ -27,6 +27,8 @@ func newApplyCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&flagRecopy, "recopy", false,
 		"config 内の全 copy target を src から無条件上書き再コピー（ローカル編集は破棄・→ ADR-0020）")
+	cmd.Flags().BoolVar(&flagDryrun, "dryrun", false,
+		"副作用ゼロで place/replace/remove/conflict/no-op を表示（conflict 検出時 exit 2・→ ADR-0006）")
 	return cmd
 }
 
@@ -46,6 +48,28 @@ func runApply(name string) error {
 	rootKind, fixedRoot, err := evalRoot(ep, system, name)
 	if err != nil {
 		return err
+	}
+
+	// 1.5 --dryrun は副作用ゼロのプレビュー（flock / pending gcroot を取らず build だけ read-only で回す・→ ADR-0023）。
+	if flagDryrun {
+		res, err := engine.Apply(engine.Options{
+			Name:         name,
+			RootKind:     rootKind,
+			FixedRoot:    fixedRoot,
+			RootOverride: flagRoot,
+			Recopy:       flagRecopy,
+			DryRun:       true,
+			Build:        dryBuildFunc(ep, system, name),
+		})
+		if err != nil {
+			return err
+		}
+		printApplyPlan(res)
+		// conflict があれば exit 2（CI の事前 gate・→ docs/spec.md 終了コード表）。
+		if len(res.Conflicts) > 0 {
+			return &exitError{code: 2}
+		}
+		return nil
 	}
 
 	// 2. engine を駆動する（flock 取得・ロック内 build・配置・コミット・.pending 削除は engine が所有）。
@@ -73,6 +97,27 @@ func runApply(name string) error {
 		reportResult(res, name)
 	}
 	return nil
+}
+
+// printApplyPlan は apply --dryrun のプランを stdout に出す（機械可読出力を専有・1 行 1 アクション・
+// → docs/spec.md ストリーム規律・ADR-0023, ADR-0024）。--quiet 下でも抑制しない（stdout 専有原則）。
+// conflict 行も plan の一部として stdout に載せ、終了コード（exit 2）が機械判別を補う。
+func printApplyPlan(res *engine.Result) {
+	for _, t := range res.Placed {
+		fmt.Printf("place\t%s\n", t)
+	}
+	for _, t := range res.Replaced {
+		fmt.Printf("replace\t%s\n", t)
+	}
+	for _, t := range res.Copied {
+		fmt.Printf("copy\t%s\n", t)
+	}
+	for _, t := range res.Removed {
+		fmt.Printf("remove\t%s\n", t)
+	}
+	for _, c := range res.Conflicts {
+		fmt.Printf("conflict\t%s\n", c)
+	}
 }
 
 // reportResult は配置レポートを stderr に出す（stdout は機械可読出力に専有・→ ADR-0023）。

@@ -58,6 +58,10 @@ type Options struct {
 	// Recopy は apply --recopy 修飾（config 内の全 copy target を src から無条件上書き再コピー・→ ADR-0020）。
 	// place-once を破る opt-in 経路。symlink 部の通常 apply（stale 除去 + 世代コミット）は不変。
 	Recopy bool
+	// DryRun は副作用ゼロの読み取り専用プレビュー（apply --dryrun・→ ADR-0006, ADR-0023）。
+	// true のとき planner を読み取り専用で回して plan を Result に詰めて return し、
+	// FS 書込・--set・flock・pending gcroot いずれも取らない。build（src 解決）はするが配置しない。
+	DryRun bool
 
 	// Build はロック内 build の差し替え（nil = opts.LinkFarm を既ビルド済みとして使う）。
 	Build BuildFunc
@@ -79,6 +83,8 @@ type Result struct {
 	Recopied   []string // --recopy で上書き再コピーした既存 copy target（→ ADR-0020）
 	Removed    []string // stale 除去した target
 	Skipped    bool     // try-lock 競合で skip した（NoWait 経路）
+	DryRun     bool     // 読み取り専用プレビュー（Placed 等は「これから配置する」予定・→ ADR-0023）
+	Conflicts  []string // dryrun で検出した conflict（"target: reason"・CLI が exit 2 判定に使う・→ ADR-0006）
 	// GenerationSkipped は project mode の世代スキップで新世代を積まなかった（--set を省いた）
 	// ことを表す。新 link-farm が前世代と同一のため commit せず、ドリフトした entry だけ
 	// lstat 修復した経路（→ ADR-0005, ADR-0017, docs/spec.md 世代スキップ）。
@@ -136,6 +142,13 @@ func Apply(opts Options) (*Result, error) {
 	}
 	a.profile = paths.Resolve(stateDir, opts.Name, rootKind, root, opts.RootOverride != "")
 	a.result.ProfileDir = a.profile.Dir
+
+	// 1.5 dryrun は副作用ゼロの読み取り専用短絡（→ ADR-0006, ADR-0023, docs/spec.md 実行フロー）。
+	//     profileDir 確定までは apply と共通だが、ここから先（mkdir / flock / 配置 / --set /
+	//     pending gcroot）は一切行わず、planner を read-only で回して plan を Result に詰めて返す。
+	if opts.DryRun {
+		return a.dryRun()
+	}
 
 	// 2. profileDir / backref を用意（flock は profileDir を開くため先に作る）。
 	if err := a.ensureProfileDir(); err != nil {
@@ -252,6 +265,54 @@ type applier struct {
 	profile  paths.Profile
 	root     string
 	result   *Result
+}
+
+// dryRun は apply --dryrun の読み取り専用短絡（→ ADR-0006, ADR-0023）。manifest を build で
+// 解決（src 解決のため build はするが配置しない・pending gcroot は張らない）し、前世代 manifest
+// と planner.Compute で place/replace/remove/conflict を算出して Result に詰めて返す。flock /
+// FS 書込 / --set は一切行わない。conflict があっても error にせず Result.Conflicts に載せ、
+// CLI が exit 2 を判定する（→ docs/spec.md 終了コード表）。
+func (a *applier) dryRun() (*Result, error) {
+	// build 経路（CLI）は manifest 未取得なので read-only build で src を解決する。
+	// CLI は dryrun では `nix build --no-link --print-out-paths`（gcroot なし）を差し込む。
+	if a.opts.Build != nil {
+		linkFarm, err := a.opts.Build(a.profile.Pending)
+		if err != nil {
+			return nil, err
+		}
+		m, err := manifest.Load(linkFarm)
+		if err != nil {
+			return nil, err
+		}
+		a.opts.LinkFarm = linkFarm
+		a.manifest = m
+	}
+
+	prev := a.loadPrevManifest()
+	plan, err := planner.Compute(prev, a.manifest, a.root, planner.OSFS)
+	if err != nil {
+		return nil, err
+	}
+	a.emitWarnings(plan.Warnings, a.opts.Recopy)
+
+	a.result.DryRun = true
+	for _, p := range plan.Place {
+		if p.Kind == planner.PlaceNew {
+			a.result.Placed = append(a.result.Placed, p.Entry.Target)
+		} else {
+			a.result.Replaced = append(a.result.Replaced, p.Entry.Target)
+		}
+	}
+	for _, c := range plan.Copies {
+		a.result.Copied = append(a.result.Copied, c.Entry.Target)
+	}
+	for _, r := range plan.Remove {
+		a.result.Removed = append(a.result.Removed, r.Entry.Target)
+	}
+	for _, c := range plan.Conflicts {
+		a.result.Conflicts = append(a.result.Conflicts, fmt.Sprintf("%s: %s", c.Entry.Target, c.Reason))
+	}
+	return a.result, nil
 }
 
 func (a *applier) resolveRoot(rootKind, fixedRoot string) (string, error) {
