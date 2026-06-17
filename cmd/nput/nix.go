@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -88,6 +89,50 @@ func currentSystem() (string, error) {
 // installable は `nix build`/`nix eval` に渡す `<flakeRef>#nput.<system>.<name>` を組む。
 func (e *entrypoint) installable(system, name string) string {
 	return fmt.Sprintf("%s#nput.%s.%s", e.flakeRef, system, name)
+}
+
+// namespace は config 名を伴わない `<flakeRef>#nput.<system>`（config 集合）を組む。
+// apply --all / gitignore --all の一括 eval（config 名→rootKind マップ）に使う（→ ADR-0024）。
+func (e *entrypoint) namespace(system string) string {
+	return fmt.Sprintf("%s#nput.%s", e.flakeRef, system)
+}
+
+// rootInfo は config 1 件の root 情報（一括 eval の値）。fixed のときのみ Root を持つ。
+type rootInfo struct {
+	RootKind string `json:"rootKind"`
+	Root     string `json:"root"`
+}
+
+// evalAllRoots は `apply --all` / `gitignore --all` 用に config 名→rootInfo マップを
+// 1 回の `nix eval` で取得する（eval プロセス起動を N→1 に固定・→ docs/spec.md 実行フロー・ADR-0024）。
+// build はせず passthru の rootKind（+ fixed の root）だけを読む安価な eval。
+func evalAllRoots(e *entrypoint, system string) (map[string]rootInfo, error) {
+	// nput.<system> 配下の各 config から rootKind（+ fixed なら root）だけを抜き出す。
+	apply := `cs: builtins.mapAttrs (_: c: { rootKind = c.rootKind; } // (if c ? root then { root = c.root; } else {})) cs`
+	out, err := runNixCapture("eval", e.namespace(system), "--apply", apply, "--json")
+	if err != nil {
+		return nil, wrapEvalAllErr(err, system)
+	}
+	var roots map[string]rootInfo
+	if err := json.Unmarshal([]byte(out), &roots); err != nil {
+		return nil, fmt.Errorf("nput: nput.%s の一括 eval 結果を解析できません: %w", system, err)
+	}
+	return roots, nil
+}
+
+// buildManifestStorePath は config をビルドして link-farm の store パスを返す（read-only 経路）。
+// gitignore は配置をしないため out-link gcroot を張らず `--no-link --print-out-paths` で store パスだけ得る。
+// 進捗は stderr、store パスは stdout に出る（→ docs/spec.md 出力ストリーム規律）。
+func buildManifestStorePath(e *entrypoint, system, name string) (string, error) {
+	out, err := runNixCapture("build", e.installable(system, name), "--no-link", "--print-out-paths")
+	if err != nil {
+		return "", err
+	}
+	store := strings.TrimSpace(out)
+	if store == "" {
+		return "", fmt.Errorf("nput: nput.%s.%s の build 成果物パスを取得できません", system, name)
+	}
+	return store, nil
 }
 
 // evalRoot は build 前に rootKind（+ fixed root のときは絶対パス）を安価な nix eval で先取りする
@@ -221,6 +266,16 @@ func wrapEvalErr(err error, system, name string) error {
 	if strings.Contains(msg, "does not provide attribute") ||
 		(strings.Contains(msg, "attribute") && strings.Contains(msg, "missing")) {
 		return fmt.Errorf("nput: entrypoint に nput.%s.%s が見つかりません（config 名と system を確認してください）\n%s", system, name, msg)
+	}
+	return err
+}
+
+// wrapEvalAllErr は一括 eval の失敗のうち「nput.<system> が無い」ケースを分かりやすくする。
+func wrapEvalAllErr(err error, system string) error {
+	msg := err.Error()
+	if strings.Contains(msg, "does not provide attribute") ||
+		(strings.Contains(msg, "attribute") && strings.Contains(msg, "missing")) {
+		return fmt.Errorf("nput: entrypoint に nput.%s が見つかりません（この system 向けの config がありません）\n%s", system, msg)
 	}
 	return err
 }
