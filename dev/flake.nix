@@ -79,6 +79,22 @@
               nput apply skills -f "$REPO_ROOT/dev" --no-wait --quiet
             '';
           };
+
+          # 非 NixOS E2E ハーネス（tests/e2e/run.sh）専用の最小 CI シェル（→ ADR-0012 §2）。
+          # dev 専用ツール（statix / nixd / gopls 等）と dogfood の shellHook を持たず、
+          # ハーネスが要する nput バイナリ + bash / git / jq / coreutils だけを提供する。
+          # nix / nix-env は install-nix-action が入れた ambient nix を使う（pkgs.nix を載せて
+          # 上書きしない）。TERM=dumb で対話 UI を抑える。
+          devShells.ci = pkgs.mkShell {
+            packages = with pkgs; [
+              inputs'.root.packages.nput
+              bash
+              git
+              jq
+              coreutils
+            ];
+            env.TERM = "dumb";
+          };
         };
 
       # nput の project mode config（dogfood）。

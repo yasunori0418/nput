@@ -3,6 +3,17 @@ name: Test
 on:
   workflow_dispatch:
   pull_request:
+    # nix / Go / CI 定義の変更時のみ実行する。docs のみの変更で flake check を回さない。
+    # paths は workflow 単位（全 job 共通）。手動再実行は workflow_dispatch で担保。
+    paths:
+      - "**.nix"
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "flake.lock"
+      - "dev/flake.lock"
+      - ".github/workflows/**"
+      - ".github/actions/**"
 
 jobs:
   flake-check:
@@ -27,3 +38,18 @@ jobs:
 
       - name: Run nix flake check
         run: nix flake check -L
+
+  e2e:
+    # 非 NixOS（ubuntu-latest）E2E。「nix さえあれば動く」主張を実 nix で検証する（→ ADR-0012）。
+    # ci devShell（nput / git / jq / coreutils）の中で tests/e2e/run.sh を回す。
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
+        with:
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Run E2E harness
+        run: nix develop '.?dir=dev#ci' -c tests/e2e/run.sh
