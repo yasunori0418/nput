@@ -80,6 +80,8 @@
             export HOME="$TMPDIR"
             export GOCACHE="$TMPDIR/go-cache"
             export GOTOOLCHAIN=local
+            # cgo 未使用。サンドボックスに C コンパイラを持ち込まずピュア Go で検査する。
+            export CGO_ENABLED=0
             export GOFLAGS=-mod=vendor
             export GOPROXY=off
             mkdir -p build && cd build
