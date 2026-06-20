@@ -408,6 +408,8 @@ NixOS VM テスト（`runNixOSTest`）はモジュール経路を実装する段
 
 **整形 / 静的解析**（→ ADR-0025）: `treefmt` に `gofmt`（既存 nixfmt と併存）、`nix flake check` に `go vet` + `golangci-lint` の check derivation を採用する（nix 側 `deadnix` / `statix` は任意）。stdlib-only 厳守（ADR-0011）で依存検出は軽い。**実体の設定追加は第一スライス PR で行う**（整形対象の Go コードが入る段で導入し、空設定を先置きしない）。
 
+**CI 実行**（→ ADR-0012, ADR-0027）: 上記のうち `nix flake check` 集約分（lib の nix-unit / namaka、engine の Go ユニット + tmpdir、treefmt / go-vet / golangci-lint）を GitHub Actions で **os×system の3環境マトリクス**（`ubuntu-latest`=x86_64-linux / `ubuntu-24.04-arm`=aarch64-linux / `macos-latest`=aarch64-darwin）に対し実行する。x86_64-darwin は GitHub ホストの標準 x86_64 macOS ランナーが乏しいため CI 対象外（perSystem 定義には残す）。トリガは `pull_request` + `workflow_dispatch`（push トリガは採らない・PR ゲート前提）。nix は `.github/actions/setup-nix` composite（`cachix/install-nix-action` + cachix `yasunori0418`、各 SHA pin）で導入。go-vet / golangci-lint の check は `CGO_ENABLED=0` のピュア Go で評価する（cgo 未使用・ADR-0011）。E2E は同 composite を使う `ubuntu-latest` の別ジョブ（サンドボックス外）。
+
 ---
 
 ## 設計上の判断
