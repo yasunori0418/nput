@@ -30,6 +30,7 @@ fixture flake は `nput` を `path:<repo>` input で参照し、`nixpkgs` / `hom
 | `03-stale`   | stale 除去。entry を config から削除 → 再 apply で旧 symlink が消える（保守的不変条件） |
 | `04-copy`    | copy place-once / out-of-store。copy が通常ファイル（書込可）・place-once 冪等（ローカル編集を破棄しない）・out-of-store の live symlink |
 | `05-hm`      | HM module。home-manager standalone configuration を非 NixOS で評価・activate し、activation が engine を起動して配置すること |
+| `06-init-templates` | init + templates。`nput init <t>` で standalone / project テンプレを展開し、展開後 flake が `nix flake check`（nput を局所 override）を通ること |
 
 ## 将来拡張
 
