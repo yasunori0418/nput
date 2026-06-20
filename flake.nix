@@ -244,6 +244,20 @@
       flake = {
         lib = nputLib;
 
+        # `nput init <template>` / `nix flake init -t <ref>#<template>` で展開する starter テンプレ。
+        # default = project（spec が project mode を canonical と明記・最も完備した例を渡す）。
+        templates = {
+          standalone = {
+            path = ./templates/standalone;
+            description = "nput standalone config（homeRoot 例 + バリエーションコメント）";
+          };
+          project = {
+            path = ./templates/project;
+            description = "nput project config（projectRoot + devShell + shellHook + .gitignore）";
+          };
+          default = inputs.self.templates.project;
+        };
+
         # ドッグフーディング用の project mode config（→ Issue #7・AC e2e 経路）。
         # `nput apply default` で git toplevel 配下の .nput-example/docs に
         # 本 repo（self）の docs を store-symlink 配置する最小 example。
