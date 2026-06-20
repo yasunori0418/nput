@@ -1,0 +1,41 @@
+name: Cachix Push
+
+on:
+  push:
+    branches:
+      - main
+    # nput バイナリの内容を決める入力（nix 定義 + Go ソース）の変更時のみ投入する。
+    paths:
+      - "**.nix"
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "flake.lock"
+      - "dev/flake.lock"
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            system: x86_64-linux
+          - os: ubuntu-24.04-arm
+            system: aarch64-linux
+          - os: macos-latest
+            system: aarch64-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
+        with:
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      # nput は単一パッケージなので os マトリクスで各 system をネイティブビルドするだけ。
+      # cachix-action が authToken 指定でビルド生成パスを自動 push する（cachix yasunori0418）。
+      - name: Build and push nput (${{ matrix.system }})
+        run: nix build ".#packages.${{ matrix.system }}.nput" --print-build-logs

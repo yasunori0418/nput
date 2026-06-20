@@ -1,6 +1,22 @@
 {
   description = "Place fetched git repositories at arbitrary paths via symlink or copy.";
 
+  # nput 自体を clone して nix develop / build / flake check する際に cachix からビルド済み
+  # バイナリを引くための設定（trusted-user / accept-flake-config 前提）。flake の nixConfig は
+  # input に伝播しないため、nput を flake input として消費する側のキャッシュ取得には効かない。
+  nixConfig = {
+    extra-substituters = [
+      "https://cache.nixos.org/"
+      "https://nix-community.cachix.org"
+      "https://yasunori0418.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "yasunori0418.cachix.org-1:mC1j+M5A6063OHaOB5bH2nS0BiCW/BJsSRiOWjLeV9o="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts = {
