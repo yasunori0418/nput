@@ -23,7 +23,6 @@ let
     "engineering/to-issues"
     "engineering/to-prd"
     "engineering/triage"
-    "productivity/grill-me"
     "productivity/grilling"
     "productivity/handoff"
   ];
