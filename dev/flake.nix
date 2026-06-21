@@ -31,7 +31,6 @@
       # 本ブランチ未実装のため、現行運用（skills-lock.json）の skill 集合を明示列挙して
       # 忠実に再現する。skills-lock.json は vercel skills 用に残置（両者は別経路）。
       skillSubpaths = [
-        "engineering/diagnose"
         "engineering/grill-with-docs"
         "engineering/improve-codebase-architecture"
         "engineering/prototype"
@@ -40,11 +39,9 @@
         "engineering/to-issues"
         "engineering/to-prd"
         "engineering/triage"
-        "engineering/zoom-out"
-        "productivity/caveman"
         "productivity/grill-me"
+        "productivity/grilling"
         "productivity/handoff"
-        "productivity/write-a-skill"
       ];
 
       # skill ごとに { ".claude/skills/<name>" = entry; } を組む。
