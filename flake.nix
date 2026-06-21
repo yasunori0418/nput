@@ -68,6 +68,10 @@
       imports = [
         inputs.treefmt-nix.flakeModule
         inputs.nix-unit.modules.flake.default
+        # nput output を perSystem へ集約する flake-parts module（→ ADR-0029）。
+        # 循環参照回避のため、公開（flake.flakeModules.default）も import も同一パスを参照する。
+        # self.flakeModules.default 経由の self-import にはしない（ADR 決定4）。
+        ./modules/flake-parts.nix
       ];
       inherit systems;
       perSystem =
@@ -119,6 +123,22 @@
             meta = {
               description = "Place fetched git repositories at arbitrary paths via symlink or copy.";
               mainProgram = "nput";
+            };
+          };
+
+          # ドッグフーディング用の project mode config（→ Issue #7・AC e2e 経路・ADR-0029）。
+          # `nput apply default` で git toplevel 配下の .nput-example/docs に本 repo（self）の
+          # docs を store-symlink 配置する最小 example。flake-parts module（imports）が
+          # perSystem.nput.default を flake.nput.<system>.default へ転置する。pkgs は perSystem
+          # 由来になり packages.nput と一貫する（legacyPackages.${system} 直書きの二重解決が消える）。
+          # `nput.<system>.<name>` は標準 flake output ではないため `nix flake check` で
+          # `warning: unknown flake output 'nput'`（exit 0・想定内）が残る（→ docs/spec.md, ADR-0029 影響節）。
+          nput.default = nputLib.mkManifest {
+            inherit pkgs;
+            root = nputLib.projectRoot;
+            entries.".nput-example/docs" = {
+              src = inputs.self;
+              subpath = "docs";
             };
           };
 
@@ -258,21 +278,10 @@
           default = inputs.self.templates.project;
         };
 
-        # ドッグフーディング用の project mode config（→ Issue #7・AC e2e 経路）。
-        # `nput apply default` で git toplevel 配下の .nput-example/docs に
-        # 本 repo（self）の docs を store-symlink 配置する最小 example。
-        # `nput.<system>.<name>` は標準 flake output ではないため `nix flake check` で
-        # `warning: unknown flake output 'nput'`（exit 0・想定内）が出る（→ docs/spec.md）。
-        nput = inputs.nixpkgs.lib.genAttrs systems (system: {
-          default = nputLib.mkManifest {
-            pkgs = inputs.nixpkgs.legacyPackages.${system};
-            root = nputLib.projectRoot;
-            entries.".nput-example/docs" = {
-              src = inputs.self;
-              subpath = "docs";
-            };
-          };
-        });
+        # flake-parts module を consumer 向けに公開する（→ ADR-0029）。flake-parts を使う repo は
+        # `imports = [ inputs.nput.flakeModules.default ]` してから `perSystem.nput.<name> = ...` を書ける。
+        # 循環参照回避のため、公開も import（上の imports）も同一パスを参照する（ADR 決定4）。
+        flakeModules.default = ./modules/flake-parts.nix;
 
         # HM モジュール本体（modules/home-manager.nix）は engine をキックするのに pin 版 nput
         # CLI を要する。利用者システムの packages.nput を _module.args として注入する薄い
