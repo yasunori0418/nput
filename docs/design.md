@@ -55,6 +55,7 @@ standalone（home mode）では nix profile に乗せた世代管理（ロール
 │   └── project/           # flake.nix（projectRoot の 1 例 + devShell〔nput 同梱 + 名指し shellHook〕）+ .gitignore（再生成ヘッダコメント付き）
 └── modules/
     ├── common.nix         # options 定義のみ（全モジュールが import）
+    ├── flake-parts.nix    # flake-parts module（perSystem.nput を flake.nput.<system> へ transpose・flakeModules.default で公開・→ ADR-0029）
     ├── home-manager.nix   # home.activation から nput エンジンを起動（root = homeRoot を pin）
     ├── nixos.nix          # （将来拡張）system.activationScripts から nput エンジンを起動
     └── nix-darwin.nix     # （将来拡張）system.activationScripts から nput エンジンを起動
@@ -102,6 +103,10 @@ outputs = { ... }: {
   homeManagerModules.default = ./modules/home-manager.nix;
   # nixosModules / darwinModules は将来拡張（ADR-0004）
 
+  # flake-parts module（perSystem.nput を flake.nput.<system> へ transpose・→ ADR-0029）。
+  # consumer が flake-parts を使う場合に import すると perSystem.nput.<name> を書ける。
+  flakeModules.default = ./modules/flake-parts.nix;
+
   # 関数呼び出し（モジュールシステム不使用）
   lib = import ./lib;
   # lib.mkManifest          { entries, root }   → derivation（manifest.json + symlink farm・純データ。root は必須）
@@ -114,18 +119,28 @@ outputs = { ... }: {
 };
 ```
 
-ユーザーの entrypoint 側は `nput.<name>` に named manifest を公開する（→ ADR-0007）。
+ユーザーの entrypoint 側は `nput.<name>` に named manifest を公開する（→ ADR-0007）。直書きと flake-parts module の 2 経路があり、**いずれも同一の `flake.nput.<system>.<name>`（`mkManifest` の derivation）を生む**。CLI のアドレッシング（`nix build .#nput.<system>.<name>`）は両形で同一（→ ADR-0029）。
 
 ```nix
+# 直書き（plain flake / default.nix / shell.nix の canonical・→ ADR-0007）
 # ユーザーの flake.nix
 outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = { ... }; };
 # ユーザーの default.nix / shell.nix
 { nput.<name> = nput.lib.mkManifest { root = ...; entries = { ... }; }; }
+
+# flake-parts module 経由（flake-parts 利用者の canonical・→ ADR-0029）
+# imports = [ inputs.nput.flakeModules.default ];
+# perSystem = { pkgs, ... }: {
+#   nput.<name> = inputs.nput.lib.mkManifest { inherit pkgs; root = ...; entries = { ... }; };
+# };
+# → flake-parts が flake.nput.<system>.<name> へ transpose する。pkgs は perSystem 由来で
+#   packages.nput と一貫（将来の overlay / config も含む・二重解決なし）。
 ```
 
 > `nput.<system>.<name>` は `packages` を汚さない専用 namespace（→ ADR-0007）。`nix flake check` はこれを **unknown output として警告するが
-> exit 0・無害**で、配下の derivation は build / eval されない（`nput` 直下 attrset の eval だけは検査される）。警告は flake-parts 経由でも
-> 出力名変更でも消せない。成果物の主検証は `nix build .#nput.<system>.<name>` で行う（→ ADR-0015）。
+> exit 0・無害**で、配下の derivation は build / eval されない（`nput` 直下 attrset の eval だけは検査される）。**flake-parts module で transpose しても
+> この警告は消えない**（nix 本体が known-output を hardcode するため・→ ADR-0029）。警告は出力名変更でも消せない。成果物の主検証は
+> `nix build .#nput.<system>.<name>` で行う（→ ADR-0015）。
 
 ---
 
@@ -312,6 +327,21 @@ nput は「OS とは別の一機構」として、どの環境でも同じく振
 ```bash
 # .gitignore に入れる target を列挙して管理者が一度追記
 nput gitignore <name> >> .gitignore
+```
+
+repo が **flake-parts** を使う場合は、ステップ 2 を直書きではなく flakeModule 経由で書くのが canonical（pkgs を perSystem と一貫させる・→ ADR-0029）。
+
+```nix
+# imports に nput の flakeModule を加える
+imports = [ inputs.nput.flakeModules.default ];
+# perSystem で nput.<name> を宣言 → flake.nput.<system>.<name> へ自動 transpose
+perSystem = { pkgs, ... }: {
+  nput.<name> = inputs.nput.lib.mkManifest {
+    inherit pkgs;
+    root = inputs.nput.lib.projectRoot;
+    entries = { ... };
+  };
+};
 ```
 
 ### パターン 1：project mode（中心的な使い方・→ ADR-0005, ADR-0007）
