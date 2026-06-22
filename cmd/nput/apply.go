@@ -77,7 +77,7 @@ func runApplyManifest(name string) error {
 		return err
 	}
 
-	if !flagQuiet {
+	if flagVerbose {
 		reportResult(res, name)
 	}
 	return nil
@@ -147,14 +147,14 @@ func runApply(name string) error {
 		return err
 	}
 
-	if !flagQuiet {
+	if flagVerbose {
 		reportResult(res, name)
 	}
 	return nil
 }
 
 // printApplyPlan は apply --dryrun のプランを stdout に出す（機械可読出力を専有・1 行 1 アクション・
-// → docs/spec.md ストリーム規律・ADR-0023, ADR-0024）。--quiet 下でも抑制しない（stdout 専有原則）。
+// → docs/spec.md ストリーム規律・ADR-0023, ADR-0024）。成功時沈黙でも抑制しない（stdout 専有原則・→ ADR-0031）。
 // conflict 行も plan の一部として stdout に載せ、終了コード（exit 2）が機械判別を補う。
 func printApplyPlan(res *engine.Result) {
 	for _, t := range res.Placed {
@@ -262,7 +262,7 @@ func runApplyAll() error {
 	}
 
 	// 4. 集約表示と終了コード（error(1) > conflict(2) > 0 の優先・→ docs/spec.md・ADR-0024）。
-	if !flagQuiet {
+	if flagVerbose {
 		fmt.Fprintf(os.Stderr, "nput: apply --all 完了 (適用 %d / スキップ %d / 失敗 %d / 対象 %d)\n",
 			applied, skipped, failures, len(selected))
 	}

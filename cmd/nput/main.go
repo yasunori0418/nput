@@ -22,7 +22,6 @@ var (
 	flagFile        string // -f/--file: entrypoint 明示
 	flagRoot        string // --root: 解決 root の明示上書き
 	flagNoWait      bool   // --no-wait: flock 競合時に待たず skip（shellHook 用）
-	flagQuiet       bool   // --quiet: 廃止予定（現在 no-op）。既定で沈黙し配置レポートは -v で opt-in（→ ADR-0031）
 	flagVerbose     bool   // -v/--verbose: 配置レポート（サマリ + per-target 行）を出力（既定は成功時沈黙・→ ADR-0031）
 	flagDebug       bool   // --debug: 内部実行する nix コマンドを stderr に開示（→ ADR-0031）
 	flagRecopy      bool   // --recopy: apply 修飾。全 copy target を src から無条件上書き再コピー
@@ -73,7 +72,6 @@ func newRootCmd() *cobra.Command {
 	pf.StringVarP(&flagFile, "file", "f", "", "entrypoint を明示（自動探索を上書き）")
 	pf.StringVar(&flagRoot, "root", "", "解決 root を明示上書き（全モード共通）")
 	pf.BoolVar(&flagNoWait, "no-wait", false, "flock 競合時に待たず skip（shellHook 用）")
-	pf.BoolVar(&flagQuiet, "quiet", false, "廃止予定（現在 no-op）。既定で沈黙するため抑制対象がない（→ ADR-0031）")
 	pf.BoolVarP(&flagVerbose, "verbose", "v", false, "配置レポート（サマリ + per-target 行）を出力（既定は成功時沈黙・→ ADR-0031）")
 	pf.BoolVar(&flagDebug, "debug", false, "内部実行する nix コマンドを stderr に開示（→ ADR-0031）")
 	pf.BoolVarP(&flagYes, "yes", "y", false, "reset の確認プロンプトをスキップ（スクリプト / CI 用）")
