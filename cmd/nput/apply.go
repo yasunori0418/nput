@@ -69,7 +69,7 @@ func runApplyManifest(name string) error {
 	})
 	if err != nil {
 		if errors.Is(err, engine.ErrSkipped) {
-			if !flagQuiet {
+			if flagVerbose {
 				fmt.Fprintln(os.Stderr, "nput: 別の apply が進行中のためスキップしました（手動で nput apply を実行してください）")
 			}
 			return nil
@@ -139,7 +139,7 @@ func runApply(name string) error {
 	if err != nil {
 		if errors.Is(err, engine.ErrSkipped) {
 			// try-lock skip は正常スキップ（exit 0・→ docs/spec.md 終了コード表）。
-			if !flagQuiet {
+			if flagVerbose {
 				fmt.Fprintln(os.Stderr, "nput: 別の apply が進行中のためスキップしました（手動で nput apply を実行してください）")
 			}
 			return nil
@@ -224,7 +224,7 @@ func runApplyAll() error {
 		}
 	}
 	if len(selected) == 0 {
-		if !flagQuiet {
+		if flagVerbose {
 			fmt.Fprintln(os.Stderr, "nput: apply --all: 対象の config がありません")
 		}
 		return nil
@@ -245,7 +245,7 @@ func runApplyAll() error {
 		if err != nil {
 			if errors.Is(err, engine.ErrSkipped) {
 				skipped++
-				if !flagQuiet {
+				if flagVerbose {
 					fmt.Fprintf(os.Stderr, "nput: apply %s をスキップしました（別の apply が進行中）\n", name)
 				}
 				continue
@@ -256,7 +256,7 @@ func runApplyAll() error {
 			continue
 		}
 		applied++
-		if !flagQuiet {
+		if flagVerbose {
 			reportResult(res, name)
 		}
 	}

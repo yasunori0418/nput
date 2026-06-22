@@ -53,7 +53,7 @@ func runRollback(name string) error {
 		return err
 	}
 
-	if !flagQuiet {
+	if flagVerbose {
 		reportRollback(res, name)
 	}
 	return nil

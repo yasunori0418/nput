@@ -94,7 +94,7 @@ func runReset(name string, targets []string, dryrun bool) error {
 		fmt.Fprintln(os.Stderr, "nput: reset を中止しました")
 		return nil
 	}
-	if !flagQuiet {
+	if flagVerbose {
 		reportResetResult(res, name)
 	}
 	return nil
