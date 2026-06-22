@@ -49,7 +49,7 @@ func runInit(template string) error {
 	}
 
 	args := flakeInitArgs(template, ref)
-	if flagVerbose {
+	if flagDebug {
 		fmt.Fprintf(os.Stderr, "nput: + nix %s\n", strings.Join(args, " "))
 	}
 
