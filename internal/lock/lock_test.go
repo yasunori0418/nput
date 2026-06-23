@@ -14,7 +14,7 @@ func TestTryLockConflict(t *testing.T) {
 	}
 	defer func() { _ = l1.Release() }()
 
-	// 保持中の try-lock は ErrLocked。
+	// A try-lock while held returns ErrLocked.
 	if _, err := Acquire(dir, false); err != ErrLocked {
 		t.Fatalf("try-lock while held: got %v, want ErrLocked", err)
 	}
@@ -48,7 +48,7 @@ func TestBlockingWaitsForRelease(t *testing.T) {
 
 	acquired := make(chan struct{})
 	go func() {
-		l2, err := Acquire(dir, true) // blocking: 取得まで待つ。
+		l2, err := Acquire(dir, true) // blocking: wait until acquired.
 		if err != nil {
 			t.Errorf("blocking Acquire: %v", err)
 			close(acquired)
@@ -62,7 +62,7 @@ func TestBlockingWaitsForRelease(t *testing.T) {
 	case <-acquired:
 		t.Fatal("blocking Acquire returned before lock was released")
 	case <-time.After(100 * time.Millisecond):
-		// まだ取得できていない = blocking が効いている。
+		// Still not acquired = blocking is in effect.
 	}
 
 	if err := l1.Release(); err != nil {
@@ -70,7 +70,7 @@ func TestBlockingWaitsForRelease(t *testing.T) {
 	}
 	select {
 	case <-acquired:
-		// 解放後に取得できた。
+		// Acquired after release.
 	case <-time.After(2 * time.Second):
 		t.Fatal("blocking Acquire did not proceed after release")
 	}
