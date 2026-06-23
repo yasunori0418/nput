@@ -4,14 +4,14 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    # nput ライブラリ・CLI。nixpkgs を follows させて mkManifest が使う pkgs を揃える。
+    # The nput library / CLI. Make nixpkgs follow to align the pkgs that mkManifest uses.
     nput = {
       url = "github:yasunori0418/nput";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # 実用では「配置したい git リポジトリ」を flake = false の input として宣言し、
-    # 下の entries の src をこの input へ差し替える（add me）:
+    # In practice, declare the "git repository you want to place" as a flake = false input,
+    # and swap the src of the entries below to this input (add me):
     #   my-repo = {
     #     url = "github:you/your-repo";
     #     flake = false;
@@ -26,7 +26,7 @@
       ...
     }:
     let
-      # 4 system に同じ config を展開するヘルパ（flake-parts は starter には過剰なので不使用）。
+      # Helper to expand the same config over 4 systems (flake-parts is overkill for a starter, so unused).
       forAllSystems = nixpkgs.lib.genAttrs [
         "x86_64-linux"
         "aarch64-linux"
@@ -35,52 +35,52 @@
       ];
     in
     {
-      # nput.<system>.<name> namespace。`nput apply <name>` がこの config をビルドして配置する。
-      # 標準 flake output ではないため `nix flake check` で
-      # `warning: unknown flake output 'nput'`（exit 0・無害）が出る。
+      # nput.<system>.<name> namespace. `nput apply <name>` builds and places this config.
+      # Since it is not a standard flake output, `nix flake check` emits
+      # `warning: unknown flake output 'nput'` (exit 0, harmless).
       nput = forAllSystems (
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
-          # config 名 example は "rename me" の合図。`nput apply example` で配置する。
+          # The config name example signals "rename me". Place it with `nput apply example`.
           example = nput.lib.mkManifest {
             inherit pkgs;
 
-            # home 配下を root に取る（target は $HOME 相対）。
+            # Take the home tree as root (target is relative to $HOME).
             root = nput.lib.homeRoot;
 
-            # 属性キー = 配置先（root 相対 target）。ここでは nput 自身の docs/ を例示する。
-            # 実用では src を上の my-repo input へ、subpath を配置したいサブディレクトリへ差し替える。
+            # Attribute key = placement target (root-relative target). Here, nput's own docs/ is shown as an example.
+            # In practice, swap src to the my-repo input above and subpath to the subdirectory you want to place.
             entries.".config/nput-docs" = {
               src = nput;
               subpath = "docs";
             };
 
-            # ---- バリエーション例 ------------------------------------------------
+            # ---- Variation examples ------------------------------------------------
             #
-            # subpath 省略 = リポジトリ全体を配置:
+            # Omitting subpath = place the whole repository:
             #   entries.".config/my-repo" = { src = my-repo; };
             #
-            # method = "copy" = symlink ではなく通常ファイルとして配置（書込可・place-once）:
+            # method = "copy" = place as a regular file instead of a symlink (writable, place-once):
             #   entries.".config/editable" = {
             #     src = my-repo;
             #     subpath = "config";
             #     method = "copy";
             #   };
             #
-            # out-of-store symlink = store ではなくローカルの絶対パスへ直接 symlink:
+            # out-of-store symlink = symlink directly to a local absolute path instead of the store:
             #   entries.".config/live" = {
             #     src = nput.lib.mkOutOfStoreSymlink "/abs/path/to/dir";
             #   };
             #
-            # 複数 entry = 属性をそのまま増やす:
+            # Multiple entries = just add more attributes:
             #   entries.".config/a" = { src = my-repo; subpath = "a"; };
             #   entries.".config/b" = { src = my-repo; subpath = "b"; };
             #
-            # 動的 entry 化 = 既 realise の store パス / flake input を builtins.readDir で
-            # 走査して entry を組む（IFD 回避のため生 derivation / out-of-store marker は readDir 不可）:
+            # Dynamic entries = scan an already-realised store path / flake input with builtins.readDir
+            # to build entries (a raw derivation / out-of-store marker cannot be readDir'd, to avoid IFD):
             #   entries = builtins.mapAttrs
             #     (name: _: { src = my-repo; subpath = "skills/${name}"; })
             #     (builtins.readDir "${my-repo}/skills");
