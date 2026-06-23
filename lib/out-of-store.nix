@@ -1,20 +1,20 @@
-# マーカー構築子（→ ADR-0001, ADR-0004, ADR-0005, ADR-0007, ADR-0010）。
+# Marker constructors (→ ADR-0001, ADR-0004, ADR-0005, ADR-0007, ADR-0010).
 #
-# マーカーは「実行時解決の種別を運ぶ入れ物」であり、パス文字列を返す糖衣ではない。
-# `src`（derivation）も marker もどちらも attrset で構造判別できないため、marker には
-# `_nputMarker` 判別タグを持たせ、`lib/types.nix` の custom optionType の `check` が判別する。
-# `_nputMarker` は Nix 評価内で完結させ `manifest.json` には漏らさない（Go 契約は clean enum・→ ADR-0010）。
+# A marker is a "container that carries the kind for runtime resolution", not syntactic sugar that returns a path string.
+# Since both `src` (a derivation) and a marker are attrsets and cannot be distinguished structurally, a marker
+# carries a `_nputMarker` discriminator tag, and the `check` of the custom optionType in `lib/types.nix` distinguishes them.
+# `_nputMarker` stays within Nix evaluation and is never leaked into `manifest.json` (the Go contract is a clean enum・→ ADR-0010).
 #
-# 依存なし（nixpkgs.lib すら要らない純 attrset 構築子）。
+# No dependencies (pure attrset constructors that do not even require nixpkgs.lib).
 {
-  # ローカルパスへの out-of-store symlink を表すマーカー（→ ADR-0001）。
-  # 引数は Nix 評価時に確定する絶対パスの文字列。実際の link 生成は engine の実行時責務。
+  # Marker representing an out-of-store symlink to a local path (→ ADR-0001).
+  # The argument is an absolute path string fixed at Nix eval time. Actual link creation is the engine's runtime responsibility.
   mkOutOfStoreSymlink = path: {
     _nputMarker = "outOfStore";
     inherit path;
   };
 
-  # root マーカー（→ ADR-0004 改訂, ADR-0005, ADR-0007）。kind を運ぶだけで、実体パス解決は engine の実行時責務。
+  # root markers (→ ADR-0004 revised, ADR-0005, ADR-0007). They merely carry kind; concrete path resolution is the engine's runtime responsibility.
   projectRoot = {
     _nputMarker = "root";
     kind = "project";
