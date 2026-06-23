@@ -5,12 +5,12 @@ import (
 	"testing"
 )
 
-// gitignoreAnchor は root 相対 target を /-anchor 形式（先頭 /・末尾 / なし）に整える（→ ADR-0013）。
+// gitignoreAnchor normalizes a root-relative target into /-anchor form (leading /, no trailing /; → ADR-0013).
 func TestGitignoreAnchor(t *testing.T) {
 	cases := map[string]string{
 		".claude/skills/nix": "/.claude/skills/nix",
 		".config/nvim":       "/.config/nvim",
-		"dir/":               "/dir", // 末尾 / は付けない
+		"dir/":               "/dir", // no trailing / is added
 		"/already/anchored":  "/already/anchored",
 		"file.txt":           "/file.txt",
 	}

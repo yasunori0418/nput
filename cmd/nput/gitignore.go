@@ -37,8 +37,8 @@ func newGitignoreCmd() *cobra.Command {
 	return cmd
 }
 
-// runGitignore は単体 config の配置 target を列挙する。project mode 限定で、
-// 非 project config（home / fixed）を指定したらエラー停止する（アンカー形式が git toplevel を前提とするため・→ ADR-0023）。
+// runGitignore lists a single config's placement targets. project mode only;
+// it errors out if a non-project config (home / fixed) is given (because the anchor form presupposes the git toplevel; → ADR-0023).
 func runGitignore(name string) error {
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
@@ -49,7 +49,7 @@ func runGitignore(name string) error {
 		return err
 	}
 
-	// rootKind 先取り eval で project mode を確認する（build より先に安価に弾く）。
+	// Confirm project mode via rootKind pre-resolution eval (rejecting cheaply before build).
 	rootKind, _, err := evalRoot(ep, system, name)
 	if err != nil {
 		return err
@@ -66,9 +66,9 @@ func runGitignore(name string) error {
 	return nil
 }
 
-// runGitignoreAll は projectRoot の全 config の target をソート + 重複除去して列挙する
-// （repo の .gitignore は 1 つなので一括列挙が自然・→ docs/spec.md・ADR-0018）。
-// 非 project config は対象から除外する（--all は projectRoot の config のみ拾う）。
+// runGitignoreAll lists the targets of all projectRoot configs, sorted and de-duplicated
+// (a repo has a single .gitignore, so listing them together is natural; → docs/spec.md, ADR-0018).
+// Non-project configs are excluded (--all picks up only projectRoot configs).
 func runGitignoreAll() error {
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
@@ -104,8 +104,8 @@ func runGitignoreAll() error {
 	return nil
 }
 
-// configTargets は config をビルドして manifest.json を読み、配置 target を列挙する
-// （method を区別せず全 entry・→ ADR-0019）。
+// configTargets builds the config, reads manifest.json, and lists the placement targets
+// (all entries regardless of method; → ADR-0019).
 func configTargets(ep *entrypoint, system, name string) ([]string, error) {
 	store, err := buildManifestStorePath(ep, system, name)
 	if err != nil {
@@ -122,7 +122,7 @@ func configTargets(ep *entrypoint, system, name string) ([]string, error) {
 	return targets, nil
 }
 
-// dedupeSorted はソート + 重複除去する（--all の一括列挙用）。
+// dedupeSorted sorts and de-duplicates (for --all's combined listing).
 func dedupeSorted(in []string) []string {
 	sort.Strings(in)
 	out := in[:0]
@@ -136,16 +136,16 @@ func dedupeSorted(in []string) []string {
 	return out
 }
 
-// printGitignore は target を /-anchor 形式（先頭 /・末尾 / なし）で stdout へ 1 行 1 件出力する
-// （→ docs/spec.md・ADR-0013）。stdout 専有原則のためパイプ安全（`nput gitignore <name> >> .gitignore`）。
+// printGitignore prints targets to stdout in /-anchor form (leading /, no trailing /), one per line
+// (→ docs/spec.md, ADR-0013). It is pipe-safe by the stdout-ownership principle (`nput gitignore <name> >> .gitignore`).
 func printGitignore(targets []string) {
 	for _, t := range targets {
 		fmt.Println(gitignoreAnchor(t))
 	}
 }
 
-// gitignoreAnchor は root 相対 target を /-anchor 形式に整える。target は eval で絶対パス / 末尾 / を
-// 持たないが、防御的に整形する（→ ADR-0013: 先頭 / でアンカー・ディレクトリ / ファイルとも末尾 / なし）。
+// gitignoreAnchor normalizes a root-relative target into /-anchor form. By eval the target has no absolute path
+// and no trailing /, but it normalizes defensively (→ ADR-0013: anchor with a leading /, no trailing / for either directory or file).
 func gitignoreAnchor(target string) string {
 	t := strings.TrimSuffix(target, "/")
 	t = strings.TrimPrefix(t, "/")

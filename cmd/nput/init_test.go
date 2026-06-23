@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// flakeInitArgs は `nix flake init -t <ref>#<template>` の argv を組む（→ 計画 6）。
+// flakeInitArgs builds the argv for `nix flake init -t <ref>#<template>` (→ plan 6).
 func TestFlakeInitArgs(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -41,7 +41,7 @@ func TestFlakeInitArgs(t *testing.T) {
 	}
 }
 
-// isValidTemplate は受理するテンプレ名のみ true（不正値は拒否して exit 1 経路へ）。
+// isValidTemplate is true only for accepted template names (rejects invalid values, sending them to the exit 1 path).
 func TestIsValidTemplate(t *testing.T) {
 	valid := []string{"standalone", "project"}
 	for _, v := range valid {

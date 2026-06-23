@@ -13,7 +13,7 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
-var flagApplyAll bool // --all: nput.* を辞書順に全適用（root filter で絞り込み可）
+var flagApplyAll bool // --all: apply all of nput.* in lexical order (narrowable by root filter)
 
 func newApplyCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -50,10 +50,10 @@ func newApplyCmd() *cobra.Command {
 	return cmd
 }
 
-// runApplyManifest は --manifest で渡されたビルド済み link-farm を engine へ直接適用する
-// （module activation 経路）。entrypoint 発見・rootKind 先取り eval・nix build は行わず、
-// rootKind は manifest.json から engine が読む（HM モジュールは homeRoot を pin するため home）。
-// engine.Apply の Build=nil 経路（既ビルド済み LinkFarm）を CLI から駆動する（→ engine.Options）。
+// runApplyManifest applies the pre-built link-farm passed via --manifest directly to the engine
+// (the module activation path). It does no entrypoint discovery, no rootKind pre-resolution eval,
+// and no nix build; the engine reads rootKind from manifest.json (an HM module pins homeRoot, so home).
+// It drives engine.Apply's Build=nil path (a pre-built LinkFarm) from the CLI (→ engine.Options).
 func runApplyManifest(name string) error {
 	linkFarm, err := filepath.Abs(flagManifest)
 	if err != nil {
@@ -83,14 +83,14 @@ func runApplyManifest(name string) error {
 	return nil
 }
 
-// runApply は docs/spec.md「実行フロー」を駆動する:
-// entrypoint 発見 → rootKind 先取り eval → engine.Apply（flock → ロック内 build → 配置 → --set → .pending 削除）。
-// --manifest 指定時は entrypoint 発見・nix eval/build を行わず、ビルド済み link-farm を engine へ直接渡す
-// （module activation 経路・→ docs/spec.md「モジュール別動作仕様」・ADR-0003, ADR-0007）。
+// runApply drives the "execution flow" in docs/spec.md:
+// entrypoint discovery → rootKind pre-resolution eval → engine.Apply (flock → in-lock build → place → --set → remove .pending).
+// When --manifest is given it does no entrypoint discovery and no nix eval/build, passing the pre-built link-farm
+// directly to the engine (the module activation path; → docs/spec.md "per-module behavior spec", ADR-0003, ADR-0007).
 func runApply(name string) error {
 	if flagManifest != "" {
-		// --manifest は取得元を link-farm に固定するため、entrypoint 発見系フラグとは
-		// 意味が衝突する（位置引数 name は profile 選択として直交し両立する・→ ADR-0026）。
+		// --manifest fixes the source to a link-farm, so it conflicts in meaning with the
+		// entrypoint discovery flags (the positional name is orthogonal as a profile selector and coexists; → ADR-0026).
 		if flagFile != "" {
 			return errors.New("nput: --manifest cannot be combined with -f (--manifest fixes the source to a pre-built link-farm)")
 		}
@@ -106,13 +106,13 @@ func runApply(name string) error {
 		return err
 	}
 
-	// 1. rootKind を build 前に先取りする（profileDir 確定 → flock → build の順を成立させる・→ ADR-0023）。
+	// 1. Pre-resolve rootKind before build (to establish the order profileDir resolution → flock → build; → ADR-0023).
 	rootKind, fixedRoot, err := evalRoot(ep, system, name)
 	if err != nil {
 		return err
 	}
 
-	// 1.5 --dryrun は副作用ゼロのプレビュー（flock / pending gcroot を取らず build だけ read-only で回す・→ ADR-0023）。
+	// 1.5 --dryrun is a side-effect-free preview (takes no flock / pending gcroot; runs only build read-only; → ADR-0023).
 	if flagDryrun {
 		res, err := engine.Apply(engine.Options{
 			Name:         name,
@@ -127,18 +127,18 @@ func runApply(name string) error {
 			return err
 		}
 		printApplyPlan(res)
-		// conflict があれば exit 2（CI の事前 gate・→ docs/spec.md 終了コード表）。
+		// exit 2 if there are conflicts (a pre-gate for CI; → docs/spec.md exit code table).
 		if len(res.Conflicts) > 0 {
 			return &exitError{code: 2}
 		}
 		return nil
 	}
 
-	// 2. engine を駆動する（flock 取得・ロック内 build・配置・コミット・.pending 削除は engine が所有）。
+	// 2. Drive the engine (flock acquisition, in-lock build, placement, commit, and .pending removal are owned by the engine).
 	res, err := applyOne(ep, system, name, rootKind, fixedRoot)
 	if err != nil {
 		if errors.Is(err, engine.ErrSkipped) {
-			// try-lock skip は正常スキップ（exit 0・→ docs/spec.md 終了コード表）。
+			// A try-lock skip is a normal skip (exit 0; → docs/spec.md exit code table).
 			if flagVerbose {
 				fmt.Fprintln(os.Stderr, "nput: skipped because another apply is in progress (run nput apply manually)")
 			}
@@ -153,9 +153,9 @@ func runApply(name string) error {
 	return nil
 }
 
-// printApplyPlan は apply --dryrun のプランを stdout に出す（機械可読出力を専有・1 行 1 アクション・
-// → docs/spec.md ストリーム規律・ADR-0023, ADR-0024）。成功時沈黙でも抑制しない（stdout 専有原則・→ ADR-0031）。
-// conflict 行も plan の一部として stdout に載せ、終了コード（exit 2）が機械判別を補う。
+// printApplyPlan prints the apply --dryrun plan to stdout (it owns the machine-readable output; one action per line;
+// → docs/spec.md stream discipline, ADR-0023, ADR-0024). It is not suppressed even under silent-on-success (the stdout-ownership principle; → ADR-0031).
+// conflict lines are also put on stdout as part of the plan, with the exit code (exit 2) complementing machine discrimination.
 func printApplyPlan(res *engine.Result) {
 	for _, t := range res.Placed {
 		fmt.Printf("place\t%s\n", t)
@@ -174,8 +174,8 @@ func printApplyPlan(res *engine.Result) {
 	}
 }
 
-// applyOne は 1 config に engine.Apply を回す（runApply / runApplyAll が共有）。rootKind / fixedRoot は
-// 単体は evalRoot 先取り、--all は一括 eval（evalAllRoots）から渡す。build だけは config ごとに行う。
+// applyOne runs engine.Apply for one config (shared by runApply / runApplyAll). rootKind / fixedRoot
+// come from evalRoot pre-resolution for the single case and from the batch eval (evalAllRoots) for --all. Only build is done per config.
 func applyOne(ep *entrypoint, system, name, rootKind, fixedRoot string) (*engine.Result, error) {
 	return engine.Apply(engine.Options{
 		Name:         name,
@@ -188,9 +188,9 @@ func applyOne(ep *entrypoint, system, name, rootKind, fixedRoot string) (*engine
 	})
 }
 
-// runApplyAll は entrypoint の nput.* を辞書順に全適用する（→ docs/spec.md 実行フロー・ADR-0016, ADR-0024）。
-// rootKind は 1 回の一括 eval で取り（プロセス起動を N→1）、build は atomic 性のため config ごと。
-// 一部失敗しても残りを続行し、最後に集約表示・1 つでも失敗なら非ゼロ終了する。
+// runApplyAll applies all of the entrypoint's nput.* in lexical order (→ docs/spec.md execution flow, ADR-0016, ADR-0024).
+// rootKind is taken in a single batch eval (collapsing process launches N→1); build is per config for atomicity.
+// It continues with the rest on a partial failure, shows an aggregate at the end, and exits non-zero if any one fails.
 func runApplyAll() error {
 	filter, err := selectedRootFilter()
 	if err != nil {
@@ -205,13 +205,13 @@ func runApplyAll() error {
 		return err
 	}
 
-	// 1. rootKind を 1 回の一括 eval で取得する（config 名→rootInfo マップ・→ ADR-0024）。
+	// 1. Get rootKind in a single batch eval (config name → rootInfo map; → ADR-0024).
 	roots, err := evalAllRoots(ep, system)
 	if err != nil {
 		return err
 	}
 
-	// 2. 辞書順に並べ、root filter（--project-root 等）が指定されていれば該当モードだけに絞る。
+	// 2. Sort lexically and, if a root filter (--project-root etc.) is given, narrow to that mode only.
 	names := make([]string, 0, len(roots))
 	for name := range roots {
 		names = append(names, name)
@@ -230,14 +230,14 @@ func runApplyAll() error {
 		return nil
 	}
 
-	// 2.5 --dryrun は副作用ゼロのプレビュー（flock / --set / pending gcroot を取らず build だけ
-	//     read-only で回す）。選んだ各 config の plan を stdout へ集約し、終了コードは
-	//     error(1) > conflict(2) > 0 の優先で決める（→ docs/spec.md・ADR-0024）。
+	// 2.5 --dryrun is a side-effect-free preview (takes no flock / --set / pending gcroot; runs only build
+	//     read-only). It aggregates each selected config's plan to stdout and decides the exit code by
+	//     priority error(1) > conflict(2) > 0 (→ docs/spec.md, ADR-0024).
 	if flagDryrun {
 		return runApplyAllDryRun(ep, system, selected, roots)
 	}
 
-	// 3. 各 config を独立に適用する。一部失敗しても続行し、失敗を集約する（各 config は独立 atomic）。
+	// 3. Apply each config independently. Continue on partial failure and aggregate failures (each config is independently atomic).
 	var failures, skipped, applied int
 	for _, name := range selected {
 		ri := roots[name]
@@ -251,7 +251,7 @@ func runApplyAll() error {
 				continue
 			}
 			failures++
-			// 部分失敗は握り潰さず stderr に出して続行する（→ docs/spec.md「一部失敗しても続行」）。
+			// Do not swallow partial failures; print to stderr and continue (→ docs/spec.md "continue on partial failure").
 			fmt.Fprintf(os.Stderr, "nput: apply %s failed: %v\n", name, err)
 			continue
 		}
@@ -261,12 +261,12 @@ func runApplyAll() error {
 		}
 	}
 
-	// 4. 集約表示と終了コード（error(1) > conflict(2) > 0 の優先・→ docs/spec.md・ADR-0024）。
+	// 4. Aggregate report and exit code (priority error(1) > conflict(2) > 0; → docs/spec.md, ADR-0024).
 	if flagVerbose {
 		fmt.Fprintf(os.Stderr, "nput: apply --all done (applied %d / skipped %d / failed %d / selected %d)\n",
 			applied, skipped, failures, len(selected))
 	}
-	// conflict(2) は --dryrun（#13）の読み取り専用経路でのみ生じる。非 dryrun の --all は error/0 のみ。
+	// conflict(2) arises only on the --dryrun (#13) read-only path. Non-dryrun --all yields only error/0.
 	code := applyAllExitCode(failures > 0, false)
 	if code == 0 {
 		return nil
@@ -274,10 +274,10 @@ func runApplyAll() error {
 	return &exitCodeError{code: code, msg: fmt.Sprintf("nput: apply --all: %d config(s) failed", failures)}
 }
 
-// runApplyAllDryRun は apply --all --dryrun を駆動する。選んだ各 config を読み取り専用で build し
-// plan を stdout へ集約出力する（FS 書込・flock・--set・pending gcroot いずれも取らない・→ ADR-0023）。
-// 終了コードは error(1) > conflict(2) > 0 の優先（→ docs/spec.md・ADR-0024）で決め、empty msg の
-// exitError で運ぶ（単体 apply --dryrun の conflict=2 と対称・main は code だけで終了する）。
+// runApplyAllDryRun drives apply --all --dryrun. It builds each selected config read-only and
+// aggregates the plan to stdout (taking none of FS writes / flock / --set / pending gcroot; → ADR-0023).
+// It decides the exit code by priority error(1) > conflict(2) > 0 (→ docs/spec.md, ADR-0024) and carries it in an
+// empty-msg exitError (symmetric with the single apply --dryrun conflict=2; main exits with the code alone).
 func runApplyAllDryRun(ep *entrypoint, system string, selected []string, roots map[string]rootInfo) error {
 	code := aggregateDryRun(selected, func(name string) (*engine.Result, error) {
 		ri := roots[name]
@@ -297,16 +297,16 @@ func runApplyAllDryRun(ep *entrypoint, system string, selected []string, roots m
 	return &exitError{code: code}
 }
 
-// aggregateDryRun は selected 各 config を applyDry で読み取り専用に回し、plan を stdout へ出して
-// error / conflict を集約し終了コードを返す（apply 実体を注入してテスト可能にする seam）。
-// 一部 config の build / eval 失敗（error）は握り潰さず stderr に出して続行し、最終コードへ反映する。
+// aggregateDryRun runs each selected config read-only via applyDry, prints the plan to stdout,
+// aggregates error / conflict, and returns the exit code (a seam that injects the apply implementation for testability).
+// It does not swallow a config's build / eval failure (error); it prints to stderr, continues, and reflects it in the final code.
 func aggregateDryRun(selected []string, applyDry func(name string) (*engine.Result, error)) int {
 	var anyError, anyConflict bool
 	for _, name := range selected {
 		res, err := applyDry(name)
 		if err != nil {
 			anyError = true
-			// 部分失敗は握り潰さず stderr に出して続行する（→ docs/spec.md「一部失敗しても続行」）。
+			// Do not swallow partial failures; print to stderr and continue (→ docs/spec.md "continue on partial failure").
 			fmt.Fprintf(os.Stderr, "nput: apply %s --dryrun failed: %v\n", name, err)
 			continue
 		}
@@ -318,9 +318,9 @@ func aggregateDryRun(selected []string, applyDry func(name string) (*engine.Resu
 	return applyAllExitCode(anyError, anyConflict)
 }
 
-// applyAllExitCode は apply --all の終了コードを priority error(1) > conflict(2) > 0 で決める
-// （→ docs/spec.md「出力ストリームと終了コード」・ADR-0024）。単純な最大値（2 > 1）は採らない
-// （conflict が深刻な eval / engine error を CI で隠すため）。conflict は --dryrun 経路でのみ生じる。
+// applyAllExitCode decides apply --all's exit code by priority error(1) > conflict(2) > 0
+// (→ docs/spec.md "output streams and exit codes", ADR-0024). It does not take the plain maximum (2 > 1)
+// (because a conflict would hide serious eval / engine errors in CI). conflict arises only on the --dryrun path.
 func applyAllExitCode(anyError, anyConflict bool) int {
 	switch {
 	case anyError:
@@ -332,8 +332,8 @@ func applyAllExitCode(anyError, anyConflict bool) int {
 	}
 }
 
-// selectedRootFilter は --project-root / --home-root / --system-root から root モードフィルタを返す
-// （未指定は ""・複数指定はエラー・→ ADR-0017）。返り値は manifest.RootKind* 文字列。
+// selectedRootFilter returns the root mode filter from --project-root / --home-root / --system-root
+// (none gives ""; specifying more than one is an error; → ADR-0017). The return value is a manifest.RootKind* string.
 func selectedRootFilter() (string, error) {
 	var modes []string
 	if flagProjectRoot {
@@ -354,8 +354,8 @@ func selectedRootFilter() (string, error) {
 	return modes[0], nil
 }
 
-// ensureNoRootFilter は root filter が --all 以外で使われたときにエラーにする
-// （フィルタは --all の修飾で、名指し apply では <name> が 1 config を pin するため無意味・→ ADR-0017）。
+// ensureNoRootFilter errors when a root filter is used outside --all
+// (the filter is a modifier for --all; in a named apply <name> pins a single config, so it is meaningless; → ADR-0017).
 func ensureNoRootFilter(modifier string) error {
 	if flagProjectRoot || flagHomeRoot || flagSystemRoot {
 		return fmt.Errorf("nput: --project-root / --home-root / --system-root are modifiers for %s", modifier)
@@ -363,7 +363,7 @@ func ensureNoRootFilter(modifier string) error {
 	return nil
 }
 
-// reportResult は配置レポートを stderr に出す（stdout は機械可読出力に専有・→ ADR-0023）。
+// reportResult prints the placement report to stderr (stdout is reserved for machine-readable output; → ADR-0023).
 func reportResult(res *engine.Result, name string) {
 	fmt.Fprintf(os.Stderr, "nput: apply %s done (root=%s)\n", name, res.Root)
 	for _, t := range res.Placed {

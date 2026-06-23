@@ -37,7 +37,7 @@ func newListGenerationsCmd() *cobra.Command {
 	return cmd
 }
 
-// runListGenerations は eval 先取りで rootKind を確認（home mode 限定）し、profileDir を確定して世代一覧を出す。
+// runListGenerations confirms rootKind via eval pre-resolution (home mode only), resolves profileDir, and lists generations.
 func runListGenerations(name string) error {
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
@@ -73,9 +73,9 @@ func runListGenerations(name string) error {
 	return nil
 }
 
-// runListAllGenerations は <state>/nix/profiles/nput 直下の home profile（直下に profile リンクを持つ
-// <name> ディレクトリ）を走査して各 config の世代を一覧する。entrypoint eval は不要（ディスク走査のみ）。
-// roothash 系列（project / fixed / --root）は <roothash>/<name> 構造で直下に profile を持たないため自然に除外される。
+// runListAllGenerations scans the home profiles directly under <state>/nix/profiles/nput (the <name>
+// directories that hold a profile link directly under them) and lists each config's generations. No entrypoint eval is needed (disk scan only).
+// The roothash family (project / fixed / --root) has a <roothash>/<name> structure with no profile directly under it, so it is naturally excluded.
 func runListAllGenerations() error {
 	stateDir, err := paths.StateDir()
 	if err != nil {
@@ -85,7 +85,7 @@ func runListAllGenerations() error {
 	dents, err := os.ReadDir(base)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil // profile 未作成 = 一覧ゼロ。
+			return nil // no profile created yet = empty listing.
 		}
 		return fmt.Errorf("nput: cannot read the profile base (%s): %w", base, err)
 	}
@@ -97,7 +97,7 @@ func runListAllGenerations() error {
 		}
 		prof := paths.Resolve(stateDir, d.Name(), manifest.RootKindHome, "", false)
 		if _, err := os.Lstat(prof.Profile); err != nil {
-			continue // 直下に profile が無い = roothash 系列 / 空ディレクトリ。
+			continue // no profile directly under it = roothash family / empty directory.
 		}
 		names = append(names, d.Name())
 	}
@@ -118,7 +118,7 @@ func runListAllGenerations() error {
 	return nil
 }
 
-// printGenerations は世代一覧を stdout に出す（読み取りコマンドの一次出力・→ ADR-0023）。
+// printGenerations prints the generation list to stdout (the primary output of a read-only command; → ADR-0023).
 func printGenerations(gens []engine.Generation) {
 	for _, g := range gens {
 		marker := ""

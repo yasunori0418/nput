@@ -9,7 +9,7 @@ import (
 	"github.com/yasunori0418/nput/internal/engine"
 )
 
-// applyAllExitCode は priority error(1) > conflict(2) > 0（単純な最大値ではない・→ ADR-0024）。
+// applyAllExitCode follows priority error(1) > conflict(2) > 0 (not the plain maximum; → ADR-0024).
 func TestApplyAllExitCode(t *testing.T) {
 	cases := []struct {
 		name              string
@@ -19,7 +19,7 @@ func TestApplyAllExitCode(t *testing.T) {
 		{"none", false, false, 0},
 		{"error only", true, false, 1},
 		{"conflict only", false, true, 2},
-		{"error wins over conflict", true, true, 1}, // 最大値なら 2 だが error を隠さない
+		{"error wins over conflict", true, true, 1}, // the maximum would be 2, but do not hide error
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -30,7 +30,7 @@ func TestApplyAllExitCode(t *testing.T) {
 	}
 }
 
-// captureStdout は f 実行中の stdout を捕捉して返す（dryrun plan が stdout 専有か検証する）。
+// captureStdout captures and returns stdout produced while f runs (verifies that the dryrun plan owns stdout).
 func captureStdout(t *testing.T, f func()) string {
 	t.Helper()
 	old := os.Stdout
@@ -50,8 +50,8 @@ func captureStdout(t *testing.T, f func()) string {
 	return <-done
 }
 
-// aggregateDryRun の集約終了コードと plan 出力（stdout 専有）を、apply 実体を注入して
-// nix 無しで検証する。これが #14 AC-4「error(1) > conflict(2) > 0」の実経路の回帰防止。
+// Verifies aggregateDryRun's aggregate exit code and plan output (stdout ownership) by injecting the apply
+// implementation, without nix. This is the regression guard for the real path of #14 AC-4 "error(1) > conflict(2) > 0".
 func TestAggregateDryRun(t *testing.T) {
 	clean := func(name string) (*engine.Result, error) {
 		return &engine.Result{Placed: []string{"/p/" + name}}, nil
@@ -99,7 +99,7 @@ func TestAggregateDryRun(t *testing.T) {
 			if got != c.wantCode {
 				t.Errorf("aggregateDryRun code = %d, want %d", got, c.wantCode)
 			}
-			// 成功 config の plan は stdout に出る（機械可読出力を専有・→ ADR-0023）。
+			// A successful config's plan goes to stdout (owns the machine-readable output; → ADR-0023).
 			if strings.Contains(c.name, "all clean") && !strings.Contains(out, "place\t/p/a") {
 				t.Errorf("stdout に plan が出ていない: %q", out)
 			}

@@ -12,15 +12,15 @@ import (
 	"strings"
 )
 
-// entrypoint は発見した flake entrypoint。本スライスは flake.nix のみ対応する
-// （legacy shell.nix / default.nix は将来スライス・→ ADR-0007, ADR-0023 §4）。
+// entrypoint is a discovered flake entrypoint. This slice supports only flake.nix
+// (legacy shell.nix / default.nix are a future slice; → ADR-0007, ADR-0023 §4).
 type entrypoint struct {
-	// flakeRef は `nix build`/`nix eval` に渡す flake ref（flake.nix を含むディレクトリの絶対パス）。
+	// flakeRef is the flake ref passed to `nix build`/`nix eval` (the absolute path of the directory containing flake.nix).
 	flakeRef string
 }
 
-// discoverEntrypoint は -f 明示 → CWD 自動探索の順で entrypoint を発見する
-// （→ docs/spec.md「entrypoint の発見」）。本スライスは flake.nix のみ受理する。
+// discoverEntrypoint discovers the entrypoint in the order -f explicit → CWD autodiscovery
+// (→ docs/spec.md "entrypoint discovery"). This slice accepts only flake.nix.
 func discoverEntrypoint(fileFlag string) (*entrypoint, error) {
 	if fileFlag != "" {
 		abs, err := filepath.Abs(fileFlag)
@@ -52,7 +52,7 @@ func discoverEntrypoint(fileFlag string) (*entrypoint, error) {
 	if fileExists(filepath.Join(cwd, "flake.nix")) {
 		return &entrypoint{flakeRef: cwd}, nil
 	}
-	// legacy entrypoint を見つけたら未対応である旨を明示して停止する。
+	// If a legacy entrypoint is found, stop and make clear it is unsupported.
 	for _, legacy := range []string{"shell.nix", "default.nix"} {
 		if fileExists(filepath.Join(cwd, legacy)) {
 			return nil, fmt.Errorf("nput: %s is not supported in this slice (only flake.nix is supported; pass a flake with -f)", legacy)
@@ -66,8 +66,8 @@ func fileExists(p string) bool {
 	return err == nil
 }
 
-// currentSystem は実行環境の nix system 名（例: aarch64-darwin）を返す。
-// flake は `nput.<system>.<name>` で system 次元を持つため CLI が現行 system を差し込む（→ ADR-0007）。
+// currentSystem returns the nix system name of the runtime environment (e.g. aarch64-darwin).
+// Because the flake has a system dimension in `nput.<system>.<name>`, the CLI injects the current system (→ ADR-0007).
 func currentSystem() (string, error) {
 	var arch string
 	switch runtime.GOARCH {
@@ -86,28 +86,28 @@ func currentSystem() (string, error) {
 	}
 }
 
-// installable は `nix build`/`nix eval` に渡す `<flakeRef>#nput.<system>.<name>` を組む。
+// installable builds the `<flakeRef>#nput.<system>.<name>` passed to `nix build`/`nix eval`.
 func (e *entrypoint) installable(system, name string) string {
 	return fmt.Sprintf("%s#nput.%s.%s", e.flakeRef, system, name)
 }
 
-// namespace は config 名を伴わない `<flakeRef>#nput.<system>`（config 集合）を組む。
-// apply --all / gitignore --all の一括 eval（config 名→rootKind マップ）に使う（→ ADR-0024）。
+// namespace builds `<flakeRef>#nput.<system>` (the config set) without a config name.
+// It is used for the batch eval of apply --all / gitignore --all (config name → rootKind map; → ADR-0024).
 func (e *entrypoint) namespace(system string) string {
 	return fmt.Sprintf("%s#nput.%s", e.flakeRef, system)
 }
 
-// rootInfo は config 1 件の root 情報（一括 eval の値）。fixed のときのみ Root を持つ。
+// rootInfo is one config's root info (the value from the batch eval). It has Root only when fixed.
 type rootInfo struct {
 	RootKind string `json:"rootKind"`
 	Root     string `json:"root"`
 }
 
-// evalAllRoots は `apply --all` / `gitignore --all` 用に config 名→rootInfo マップを
-// 1 回の `nix eval` で取得する（eval プロセス起動を N→1 に固定・→ docs/spec.md 実行フロー・ADR-0024）。
-// build はせず passthru の rootKind（+ fixed の root）だけを読む安価な eval。
+// evalAllRoots gets the config name → rootInfo map for `apply --all` / `gitignore --all`
+// in a single `nix eval` (fixing eval process launches at N→1; → docs/spec.md execution flow, ADR-0024).
+// It is a cheap eval that does no build and reads only the passthru rootKind (+ root for fixed).
 func evalAllRoots(e *entrypoint, system string) (map[string]rootInfo, error) {
-	// nput.<system> 配下の各 config から rootKind（+ fixed なら root）だけを抜き出す。
+	// Extract only rootKind (+ root if fixed) from each config under nput.<system>.
 	apply := `cs: builtins.mapAttrs (_: c: { rootKind = c.rootKind; } // (if c ? root then { root = c.root; } else {})) cs`
 	out, err := runNixCapture("eval", e.namespace(system), "--apply", apply, "--json")
 	if err != nil {
@@ -120,9 +120,9 @@ func evalAllRoots(e *entrypoint, system string) (map[string]rootInfo, error) {
 	return roots, nil
 }
 
-// buildManifestStorePath は config をビルドして link-farm の store パスを返す（read-only 経路）。
-// gitignore は配置をしないため out-link gcroot を張らず `--no-link --print-out-paths` で store パスだけ得る。
-// 進捗は stderr、store パスは stdout に出る（→ docs/spec.md 出力ストリーム規律）。
+// buildManifestStorePath builds the config and returns the link-farm's store path (a read-only path).
+// Because gitignore does no placement, it gets only the store path via `--no-link --print-out-paths` without laying down an out-link gcroot.
+// Progress goes to stderr and the store path to stdout (→ docs/spec.md output stream discipline).
 func buildManifestStorePath(e *entrypoint, system, name string) (string, error) {
 	out, err := runNixCapture("build", e.installable(system, name), "--no-link", "--print-out-paths")
 	if err != nil {
@@ -135,8 +135,8 @@ func buildManifestStorePath(e *entrypoint, system, name string) (string, error) 
 	return store, nil
 }
 
-// evalRoot は build 前に rootKind（+ fixed root のときは絶対パス）を安価な nix eval で先取りする
-// （→ docs/spec.md 実行フロー 1・ADR-0023）。これで profileDir を確定し flock → build の順を成立させる。
+// evalRoot pre-resolves rootKind (+ the absolute path when fixed root) via a cheap nix eval before build
+// (→ docs/spec.md execution flow 1, ADR-0023). This resolves profileDir and establishes the order flock → build.
 func evalRoot(e *entrypoint, system, name string) (rootKind, fixedRoot string, err error) {
 	inst := e.installable(system, name)
 	out, err := runNixCapture("eval", inst+".rootKind", "--raw")
@@ -154,8 +154,8 @@ func evalRoot(e *entrypoint, system, name string) (rootKind, fixedRoot string, e
 	return rootKind, fixedRoot, nil
 }
 
-// buildFunc は engine に注入する build コールバックを返す（→ engine.BuildFunc）。
-// ロック内で `nix build <installable> --out-link <pending>` を実行し、out-link を読んで store path を返す。
+// buildFunc returns the build callback injected into the engine (→ engine.BuildFunc).
+// Inside the lock it runs `nix build <installable> --out-link <pending>`, reads the out-link, and returns the store path.
 func buildFunc(e *entrypoint, system, name string) func(pending string) (string, error) {
 	inst := e.installable(system, name)
 	return func(pending string) (string, error) {
@@ -170,9 +170,9 @@ func buildFunc(e *entrypoint, system, name string) func(pending string) (string,
 	}
 }
 
-// dryBuildFunc は --dryrun 用の build コールバックを返す（→ engine.BuildFunc）。通常 build と違い
-// `nix build --no-link --print-out-paths` で **gcroot（out-link）を張らずに** link-farm の store path を
-// 得る（dryrun は副作用ゼロ・pending out-link を作らない・→ ADR-0011, ADR-0023）。pending 引数は使わない。
+// dryBuildFunc returns the build callback for --dryrun (→ engine.BuildFunc). Unlike a normal build,
+// it gets the link-farm's store path via `nix build --no-link --print-out-paths` **without laying down a gcroot (out-link)**
+// (dryrun is side-effect-free and creates no pending out-link; → ADR-0011, ADR-0023). The pending argument is unused.
 func dryBuildFunc(e *entrypoint, system, name string) func(pending string) (string, error) {
 	inst := e.installable(system, name)
 	return func(string) (string, error) {
@@ -184,13 +184,13 @@ func dryBuildFunc(e *entrypoint, system, name string) func(pending string) (stri
 		if store == "" {
 			return "", fmt.Errorf("nput: nix build --print-out-paths was empty (%s)", inst)
 		}
-		// --print-out-paths は複数行を返し得る（multi-output）。link-farm は単一 output なので最終行を採る。
+		// --print-out-paths may return multiple lines (multi-output). The link-farm is a single output, so take the last line.
 		lines := strings.Split(store, "\n")
 		return strings.TrimSpace(lines[len(lines)-1]), nil
 	}
 }
 
-// runNixCapture は nix の stdout を捕捉して返す（eval 等の機械可読出力用）。
+// runNixCapture captures and returns nix's stdout (for machine-readable output such as eval).
 func runNixCapture(args ...string) (string, error) {
 	if flagDebug {
 		fmt.Fprintf(os.Stderr, "nput: + nix %s\n", strings.Join(args, " "))
@@ -205,8 +205,8 @@ func runNixCapture(args ...string) (string, error) {
 	return stdout.String(), nil
 }
 
-// runNixStream は nix の出力を stderr へ流す（build 進捗用。stdout は機械可読出力に専有・→ ADR-0023）。
-// build 前に eval が成功している＝nix-command/flakes は有効化済みなので experimental 検出は不要。
+// runNixStream streams nix's output to stderr (for build progress; stdout is reserved for machine-readable output; → ADR-0023).
+// eval succeeded before build = nix-command/flakes are already enabled, so experimental detection is unnecessary.
 func runNixStream(args ...string) error {
 	if flagDebug {
 		fmt.Fprintf(os.Stderr, "nput: + nix %s\n", strings.Join(args, " "))
@@ -220,8 +220,8 @@ func runNixStream(args ...string) error {
 	return nil
 }
 
-// nixError は nix の失敗を分類する。experimental-features 未有効は前提条件を案内し、
-// それ以外は生の nix stderr を握り潰さず添えて返す（→ ADR-0025 §1）。
+// nixError classifies a nix failure. For experimental-features not enabled it guides the prerequisites,
+// and otherwise it returns the raw nix stderr attached without swallowing it (→ ADR-0025 §1).
 func nixError(args []string, stderr string, runErr error) error {
 	if isExperimentalDisabled(stderr) {
 		return experimentalGuidance(stderr)
@@ -233,15 +233,15 @@ func nixError(args []string, stderr string, runErr error) error {
 	return fmt.Errorf("nput: nix %s failed:\n%s", args[0], trimmed)
 }
 
-// isExperimentalDisabled は nix-command / flakes 未有効エラーを検出する（→ ADR-0025 §1）。
+// isExperimentalDisabled detects the nix-command / flakes not-enabled error (→ ADR-0025 §1).
 func isExperimentalDisabled(stderr string) bool {
 	return strings.Contains(stderr, "experimental Nix feature") ||
 		strings.Contains(stderr, "experimental-features") ||
 		(strings.Contains(stderr, "flakes") && strings.Contains(stderr, "disabled"))
 }
 
-// experimentalGuidance は前提条件と有効化方法を案内するエラーを組む（生の nix エラーも添える）。
-// CLI は --extra-experimental-features を自動付与しない（環境設定を黙って上書きしない・→ ADR-0025 §1）。
+// experimentalGuidance builds an error that guides the prerequisites and how to enable them (attaching the raw nix error too).
+// The CLI does not add --extra-experimental-features automatically (it will not silently override environment settings; → ADR-0025 §1).
 func experimentalGuidance(stderr string) error {
 	return fmt.Errorf(`nput: nix's experimental-features are not enabled.
 This command internally uses `+"`nix eval`"+` / `+"`nix build`"+` (the new CLI) and flakes,
@@ -259,8 +259,8 @@ Original nix error:
 %s`, strings.TrimSpace(stderr))
 }
 
-// wrapEvalErr は eval の失敗のうち「nput.<name> が無い」ケースを分かりやすくする
-// （experimental 等はそのまま）（→ docs/spec.md エラー仕様）。
+// wrapEvalErr makes the "nput.<name> does not exist" case of an eval failure clearer
+// (experimental etc. are passed through as-is) (→ docs/spec.md error spec).
 func wrapEvalErr(err error, system, name string) error {
 	msg := err.Error()
 	if strings.Contains(msg, "does not provide attribute") ||
@@ -270,7 +270,7 @@ func wrapEvalErr(err error, system, name string) error {
 	return err
 }
 
-// wrapEvalAllErr は一括 eval の失敗のうち「nput.<system> が無い」ケースを分かりやすくする。
+// wrapEvalAllErr makes the "nput.<system> does not exist" case of a batch eval failure clearer.
 func wrapEvalAllErr(err error, system string) error {
 	msg := err.Error()
 	if strings.Contains(msg, "does not provide attribute") ||

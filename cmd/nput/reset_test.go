@@ -9,8 +9,8 @@ import (
 	"github.com/yasunori0418/nput/internal/engine"
 )
 
-// confirmPolicy は --yes / TTY 状態から確認方針を決める（→ ADR-0025 §5）。
-// 非対話 + --yes 無しの破壊的 reset 拒否（#13 AC-5）の回帰防止。
+// confirmPolicy decides the confirmation policy from --yes / TTY state (→ ADR-0025 §5).
+// Regression guard for refusing a destructive reset when non-interactive without --yes (#13 AC-5).
 func TestConfirmPolicy(t *testing.T) {
 	cases := []struct {
 		name        string
@@ -37,7 +37,7 @@ func TestConfirmPolicy(t *testing.T) {
 	}
 }
 
-// promptYesNo は yes 系入力のときだけ true を返す（既定 No）。stdin を差し替えて検証する。
+// promptYesNo returns true only for yes-type input (default No). Verified by swapping out stdin.
 func TestPromptYesNo(t *testing.T) {
 	cases := []struct {
 		input string
@@ -48,9 +48,9 @@ func TestPromptYesNo(t *testing.T) {
 		{"Y\n", true},
 		{"YES\n", true},
 		{"n\n", false},
-		{"\n", false},      // 既定 No
-		{"maybe\n", false}, // 不明な入力は No
-		{"", false},        // EOF（パイプ閉じ）も No
+		{"\n", false},      // default No
+		{"maybe\n", false}, // unknown input is No
+		{"", false},        // EOF (pipe closed) is also No
 	}
 	for _, c := range cases {
 		t.Run(strings.TrimSpace(c.input)+"->"+boolStr(c.want), func(t *testing.T) {
@@ -67,8 +67,8 @@ func TestPromptYesNo(t *testing.T) {
 	}
 }
 
-// isInteractive はパイプ / リダイレクト stdin では false を返す（非 TTY 経路・→ ADR-0025 §5）。
-// TTY=true 経路は実端末が要るため CI では検証できず、false 経路のみ検証する。
+// isInteractive returns false for pipe / redirect stdin (the non-TTY path; → ADR-0025 §5).
+// The TTY=true path needs a real terminal and cannot be verified in CI, so only the false path is verified.
 func TestIsInteractiveNonTTY(t *testing.T) {
 	restore := withStdin(t, "")
 	defer restore()
@@ -77,8 +77,8 @@ func TestIsInteractiveNonTTY(t *testing.T) {
 	}
 }
 
-// reset の出力ストリーム規律（#13 AC-9）: dryrun plan は stdout 専有、
-// 削除予定 / 結果レポートは stderr。
+// reset's output stream discipline (#13 AC-9): the dryrun plan owns stdout,
+// while the planned removals / result report go to stderr.
 func TestResetOutputStreams(t *testing.T) {
 	res := &engine.ResetResult{
 		Root:            "/root",
@@ -127,7 +127,7 @@ func boolStr(b bool) string {
 	return "false"
 }
 
-// withStdin は os.Stdin を input を返すパイプに差し替え、復元する関数を返す。
+// withStdin replaces os.Stdin with a pipe that returns input, and returns a function that restores it.
 func withStdin(t *testing.T, input string) func() {
 	t.Helper()
 	old := os.Stdin
@@ -143,7 +143,7 @@ func withStdin(t *testing.T, input string) func() {
 	return func() { os.Stdin = old; _ = r.Close() }
 }
 
-// captureOutErr は f 実行中の stdout / stderr を捕捉して返す（ストリーム規律の検証用）。
+// captureOutErr captures and returns stdout / stderr produced while f runs (for verifying stream discipline).
 func captureOutErr(t *testing.T, f func()) (stdout, stderr string) {
 	t.Helper()
 	oldOut, oldErr := os.Stdout, os.Stderr

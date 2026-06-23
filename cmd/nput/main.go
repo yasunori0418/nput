@@ -1,10 +1,10 @@
-// Command nput は配置エンジン（internal/engine）を駆動する一次 UX の CLI（→ ADR-0007, ADR-0011）。
+// Command nput is the primary-UX CLI that drives the placement engine (internal/engine) (→ ADR-0007, ADR-0011).
 //
-// 本スライス（#7）のスコープは project mode の `nput apply [<name>]` を flake entrypoint で
-// end-to-end に通すことに絞る。実行順は docs/spec.md「実行フロー」の
-// 「eval 先行（rootKind） → flock → ロック内 build → 配置 → --set → .pending 削除」に従い、
-// flock〜build〜配置〜commit は engine が所有し、CLI は entrypoint 発見・nix eval/build の
-// オーケストレーションを担う（→ ADR-0023, ADR-0025）。
+// This slice (#7) is scoped to getting project mode's `nput apply [<name>]` end-to-end through a flake
+// entrypoint. The execution order follows docs/spec.md "execution flow":
+// "eval first (rootKind) → flock → in-lock build → place → --set → remove .pending"; the engine owns
+// flock through build, placement, and commit, while the CLI handles the orchestration of entrypoint
+// discovery and nix eval/build (→ ADR-0023, ADR-0025).
 package main
 
 import (
@@ -17,24 +17,24 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
-// グローバルフラグ（→ docs/spec.md「グローバルフラグ」）。
+// Global flags (→ docs/spec.md "global flags").
 var (
-	flagFile        string // -f/--file: entrypoint 明示
-	flagRoot        string // --root: 解決 root の明示上書き
-	flagNoWait      bool   // --no-wait: flock 競合時に待たず skip（shellHook 用）
-	flagVerbose     bool   // -v/--verbose: 配置レポート（サマリ + per-target 行）を出力（既定は成功時沈黙・→ ADR-0031）
-	flagDebug       bool   // --debug: 内部実行する nix コマンドを stderr に開示（→ ADR-0031）
-	flagRecopy      bool   // --recopy: apply 修飾。全 copy target を src から無条件上書き再コピー
-	flagYes         bool   // -y/--yes: reset の確認プロンプトをスキップ（スクリプト / CI 用）
-	flagDryrun      bool   // --dryrun: apply / reset 修飾。副作用ゼロで plan を表示
-	flagProjectRoot bool   // --project-root: apply --all の修飾。projectRoot の config のみ適用
-	flagHomeRoot    bool   // --home-root: apply --all の修飾。homeRoot の config のみ適用
-	flagSystemRoot  bool   // --system-root: apply --all の修飾。systemRoot の config のみ適用（将来 seam）
-	flagManifest    string // --manifest: ビルド済み manifest（link-farm）を直接適用（module activation 用）
+	flagFile        string // -f/--file: specify the entrypoint explicitly
+	flagRoot        string // --root: explicitly override the resolved root
+	flagNoWait      bool   // --no-wait: skip without waiting on flock contention (for shellHook)
+	flagVerbose     bool   // -v/--verbose: print the placement report (summary + per-target lines); silent on success by default (→ ADR-0031)
+	flagDebug       bool   // --debug: disclose the internally run nix commands on stderr (→ ADR-0031)
+	flagRecopy      bool   // --recopy: apply modifier; unconditionally re-copy every copy target from src, overwriting
+	flagYes         bool   // -y/--yes: skip reset's confirmation prompt (for scripts / CI)
+	flagDryrun      bool   // --dryrun: apply / reset modifier; show the plan with zero side effects
+	flagProjectRoot bool   // --project-root: apply --all modifier; apply only projectRoot configs
+	flagHomeRoot    bool   // --home-root: apply --all modifier; apply only homeRoot configs
+	flagSystemRoot  bool   // --system-root: apply --all modifier; apply only systemRoot configs (future seam)
+	flagManifest    string // --manifest: apply a pre-built manifest (link-farm) directly (for module activation)
 )
 
-// exitError は cobra RunE が返す、特定の終了コードを伴うエラー（→ docs/spec.md 終了コード表）。
-// apply --dryrun の conflict は exit 2。msg が空なら main は追加出力せず code だけで終了する。
+// exitError is an error carrying a specific exit code that cobra RunE returns (→ docs/spec.md exit code table).
+// apply --dryrun's conflict is exit 2. If msg is empty, main exits with the code alone and emits no extra output.
 type exitError struct {
 	code int
 	msg  string
@@ -42,7 +42,7 @@ type exitError struct {
 
 func (e *exitError) Error() string { return e.msg }
 
-// rootCmdLong は --help で内部実行する nix コマンドを開示する（透明性・選択的に手で実行可能・→ ADR-0007）。
+// rootCmdLong discloses the internally run nix commands in --help (for transparency; selectively runnable by hand; → ADR-0007).
 const rootCmdLong = `nput places fetched git repositories at arbitrary paths in your environment via symlink or copy.
 It does not generate configuration (configuration is written in Nix and evaluated by nix build).
 
@@ -64,7 +64,7 @@ func newRootCmd() *cobra.Command {
 		Use:   "nput",
 		Short: "Place fetched git repositories at arbitrary paths via symlink or copy.",
 		Long:  rootCmdLong,
-		// エラーは main で 1 度だけ出すため cobra の usage/error 自動表示は抑制する。
+		// Errors are printed exactly once in main, so suppress cobra's automatic usage/error display.
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
@@ -88,10 +88,10 @@ func newRootCmd() *cobra.Command {
 	return root
 }
 
-// exitCodeX は終了コードを運ぶエラーが満たすインターフェース（apply --all の集約終了コード等）。
+// exitCodeX is the interface satisfied by errors that carry an exit code (such as apply --all's aggregate exit code).
 type exitCodeX interface{ ExitCode() int }
 
-// exitCodeError は終了コードを明示的に運ぶエラー（→ docs/spec.md「終了コード」）。
+// exitCodeError is an error that explicitly carries an exit code (→ docs/spec.md "exit codes").
 type exitCodeError struct {
 	code int
 	msg  string
@@ -102,8 +102,8 @@ func (e *exitCodeError) ExitCode() int { return e.code }
 
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
-		// 終了コードを伴うエラー（apply --dryrun conflict=2 等）は code だけで終了する
-		// （plan は既に stdout に出力済み・→ docs/spec.md 終了コード表）。
+		// An error carrying an exit code (such as apply --dryrun conflict=2) exits with the code alone
+		// (the plan was already written to stdout; → docs/spec.md exit code table).
 		var ee *exitError
 		if errors.As(err, &ee) {
 			if ee.msg != "" {
@@ -113,14 +113,14 @@ func main() {
 		}
 
 		fmt.Fprintln(os.Stderr, err)
-		// CLI/flake pin 間の schemaVersion skew は engine が拒否する（→ manifest.validate）。
-		// 上位で検知して原因と解消策を補う（→ docs/spec.md「manifest.json スキーマ」）。
+		// The engine rejects a schemaVersion skew between the CLI and the flake pin (→ manifest.validate).
+		// Detect it at the top level and supplement the cause and the fix (→ docs/spec.md "manifest.json schema").
 		if errors.Is(err, manifest.ErrSchemaVersionUnsupported) {
 			fmt.Fprintln(os.Stderr, "\nnput: the nput version pinned by the CLI (engine) and by the flake may be out of sync.\n"+
 				"  The flake's nput input is generating a manifest newer than the CLI.\n"+
 				"  Update the CLI, or lower the flake's nput input to match the CLI so both versions align.")
 		}
-		// 終了コードを運ぶエラー（apply --all の集約等）はその code で終了する（→ docs/spec.md・ADR-0024）。
+		// An error carrying an exit code (such as apply --all's aggregate) exits with that code (→ docs/spec.md, ADR-0024).
 		var ec exitCodeX
 		if errors.As(err, &ec) {
 			os.Exit(ec.ExitCode())
