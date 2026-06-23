@@ -1,16 +1,16 @@
-# 全モジュール共通の nput オプション定義（→ ADR-0003, ADR-0007, ADR-0010, ADR-0014）。
+# nput option definitions common to all modules (→ ADR-0003, ADR-0007, ADR-0010, ADR-0014).
 #
-# HM / NixOS / nix-darwin が import する共通の options。配置ロジックは持たず、
-# 「何を・どこへ・どう置くか」のデータ（entries）だけを宣言させる。各モジュールは
-# 自分の性質で root を pin する（HM → homeRoot）ため、利用者は root を再指定しない。
+# The common options imported by HM / NixOS / nix-darwin. They hold no placement logic and
+# only let the user declare the data (entries) of "what, where, and how to place". Each module
+# pins root according to its own nature (HM → homeRoot), so the user does not re-specify root.
 #
-# entry submodule の型は lib/types.nix と共有する（mkManifest の evalModules と同一の
-# entriesType）。これにより未知キー（タイポ・旧名）は strict submodule で eval エラーに
-# なり、検査の二重定義を避ける（→ ADR-0010, docs/spec.md「モジュールオプション仕様」）。
+# The entry submodule type is shared with lib/types.nix (the same entriesType as mkManifest's
+# evalModules). This way, unknown keys (typos, old names) become eval errors via the strict submodule,
+# avoiding a duplicate definition of validation (→ ADR-0010, docs/spec.md "module option spec").
 #
-# > HM モジュール経由は MVP で単一 nput.entries = 1 profile（固定名 default）に限り、
-# > role 分離（複数 profile）はできない。役割分離が要るユーザーは standalone CLI 経路
-# > （entrypoint の nput.<name>）を使う。複数 profile 化は将来 seam（→ ADR-0024, ADR-0025）。
+# > Via the HM module, the MVP is limited to a single nput.entries = 1 profile (fixed name default),
+# > and role separation (multiple profiles) is not possible. Users who need role separation use the
+# > standalone CLI path (entrypoint's nput.<name>). Multiple profiles are a future seam (→ ADR-0024, ADR-0025).
 { lib, ... }:
 let
   nputTypes = import ../lib/types.nix lib;

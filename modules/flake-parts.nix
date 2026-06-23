@@ -1,14 +1,14 @@
-# flake-parts module: perSystem.nput.<name> を flake.nput.<system>.<name> へ転置する（→ ADR-0029）。
-# flake-parts 公式の mkTransposedPerSystemModule（packages / legacyPackages と同じ転置機構）を流用し、
-# 自前の mkPerSystemOption + transposition は手書きしない（ADR-0029 残作業1）。
+# flake-parts module: transpose perSystem.nput.<name> to flake.nput.<system>.<name> (→ ADR-0029).
+# Reuse flake-parts' official mkTransposedPerSystemModule (the same transposition mechanism as packages / legacyPackages),
+# rather than hand-writing our own mkPerSystemOption + transposition (ADR-0029 remaining task 1).
 #
-# option は lazyAttrsOf package。consumer は perSystem で
+# The option is lazyAttrsOf package. The consumer writes, in perSystem,
 #   nput.<name> = inputs.nput.lib.mkManifest { inherit pkgs; root = ...; entries = { ... }; };
-# と書く。転置先 flake.nput.<system>.<name> は CLI が `nix build .#nput.<system>.<name>` で叩く
-# build 可能な derivation でなければならない（mkManifest の結果＝derivation を格納する・ADR 決定2）。
+# The transposition target flake.nput.<system>.<name> must be a buildable derivation that the CLI invokes
+# via `nix build .#nput.<system>.<name>` (it stores the result of mkManifest = a derivation・ADR decision 2).
 #
-# module は純粋な transposition のみ。mkManifest やマーカー群を perSystem 引数に注入しない
-# （ADR 決定5）。consumer は同じ input の nput.lib を直接参照する。
+# The module does pure transposition only. It does not inject mkManifest or the markers into perSystem arguments
+# (ADR decision 5). The consumer references nput.lib of the same input directly.
 { lib, flake-parts-lib, ... }:
 let
   inherit (lib)
