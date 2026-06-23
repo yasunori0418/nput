@@ -11,10 +11,10 @@ import (
 )
 
 // ErrNotInRepo is returned when dir is outside a git repository and the toplevel cannot be resolved.
-var ErrNotInRepo = errors.New("nput: git リポジトリ外です（--root で root を明示してください）")
+var ErrNotInRepo = errors.New("nput: outside a git repository (pass --root to set root explicitly)")
 
 // ErrGitNotFound is returned when git is not on PATH.
-var ErrGitNotFound = errors.New("nput: git が PATH にありません")
+var ErrGitNotFound = errors.New("nput: git is not on PATH")
 
 // Toplevel runs `git rev-parse --show-toplevel` rooted at dir and returns the
 // resolved absolute root path (→ ADR-0005). It resolves to the same root no matter
@@ -35,7 +35,7 @@ func Toplevel(dir string) (string, error) {
 			// git started but exited non-zero; the representative case is being outside a repository.
 			return "", fmt.Errorf("%w: %s", ErrNotInRepo, strings.TrimSpace(stderr.String()))
 		}
-		return "", fmt.Errorf("nput: git rev-parse の実行に失敗しました: %w", err)
+		return "", fmt.Errorf("nput: failed to run git rev-parse: %w", err)
 	}
 
 	top := strings.TrimSpace(stdout.String())
