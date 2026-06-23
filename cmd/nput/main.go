@@ -43,21 +43,21 @@ type exitError struct {
 func (e *exitError) Error() string { return e.msg }
 
 // rootCmdLong は --help で内部実行する nix コマンドを開示する（透明性・選択的に手で実行可能・→ ADR-0007）。
-const rootCmdLong = `nput はフェッチ済み git リポジトリをユーザー環境の任意パスへ symlink / copy で配置する。
-config 生成は行わない（config は Nix で書き nix build で評価される）。
+const rootCmdLong = `nput places fetched git repositories at arbitrary paths in your environment via symlink or copy.
+It does not generate configuration (configuration is written in Nix and evaluated by nix build).
 
-内部で実行する nix コマンド（透明性のため開示・選択的に手で実行できる）:
+Internal nix commands (disclosed for transparency; you can run them by hand selectively):
   init <template>   nix flake init -t <ref>#<template>
   apply <name>      nix eval <ep>#nput.<system>.<name>.rootKind --raw
                     nix build <ep>#nput.<system>.<name> --out-link <profileDir>/.pending
-  apply --all       nix eval <ep>#nput.<system> --apply '<rootKind マップ>' --json
-                    nix build <ep>#nput.<system>.<name>（config ごと）
+  apply --all       nix eval <ep>#nput.<system> --apply '<rootKind map>' --json
+                    nix build <ep>#nput.<system>.<name> (per config)
   gitignore <name>  nix eval <ep>#nput.<system>.<name>.rootKind --raw
                     nix build <ep>#nput.<system>.<name> --no-link --print-out-paths
   rollback /        nix eval <ep>#nput.<system>.<name>.rootKind --raw
   list-generations
 
---debug を付けると実行時に実際の nix コマンドを stderr へ逐次表示する。`
+Pass --debug to print the actual nix commands to stderr as they run.`
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
@@ -69,15 +69,15 @@ func newRootCmd() *cobra.Command {
 		SilenceErrors: true,
 	}
 	pf := root.PersistentFlags()
-	pf.StringVarP(&flagFile, "file", "f", "", "entrypoint を明示（自動探索を上書き）")
-	pf.StringVar(&flagRoot, "root", "", "解決 root を明示上書き（全モード共通）")
-	pf.BoolVar(&flagNoWait, "no-wait", false, "flock 競合時に待たず skip（shellHook 用）")
-	pf.BoolVarP(&flagVerbose, "verbose", "v", false, "配置レポート（サマリ + per-target 行）を出力（既定は成功時沈黙・→ ADR-0031）")
-	pf.BoolVar(&flagDebug, "debug", false, "内部実行する nix コマンドを stderr に開示（→ ADR-0031）")
-	pf.BoolVarP(&flagYes, "yes", "y", false, "reset の確認プロンプトをスキップ（スクリプト / CI 用）")
-	pf.BoolVar(&flagProjectRoot, "project-root", false, "apply --all の修飾。projectRoot の config のみ適用")
-	pf.BoolVar(&flagHomeRoot, "home-root", false, "apply --all の修飾。homeRoot の config のみ適用")
-	pf.BoolVar(&flagSystemRoot, "system-root", false, "apply --all の修飾。systemRoot の config のみ適用（system mode は未実装）")
+	pf.StringVarP(&flagFile, "file", "f", "", "Specify the entrypoint explicitly (overrides autodiscovery)")
+	pf.StringVar(&flagRoot, "root", "", "Override the resolved root explicitly (all modes)")
+	pf.BoolVar(&flagNoWait, "no-wait", false, "Skip without waiting on flock contention (for shellHook)")
+	pf.BoolVarP(&flagVerbose, "verbose", "v", false, "Print the placement report (summary + per-target lines); silent on success by default (see ADR-0031)")
+	pf.BoolVar(&flagDebug, "debug", false, "Disclose the internal nix commands on stderr (see ADR-0031)")
+	pf.BoolVarP(&flagYes, "yes", "y", false, "Skip reset's confirmation prompt (for scripts / CI)")
+	pf.BoolVar(&flagProjectRoot, "project-root", false, "Modifier for apply --all: apply only projectRoot configs")
+	pf.BoolVar(&flagHomeRoot, "home-root", false, "Modifier for apply --all: apply only homeRoot configs")
+	pf.BoolVar(&flagSystemRoot, "system-root", false, "Modifier for apply --all: apply only systemRoot configs (system mode not yet implemented)")
 
 	root.AddCommand(newInitCmd())
 	root.AddCommand(newApplyCmd())
@@ -116,9 +116,9 @@ func main() {
 		// CLI/flake pin 間の schemaVersion skew は engine が拒否する（→ manifest.validate）。
 		// 上位で検知して原因と解消策を補う（→ docs/spec.md「manifest.json スキーマ」）。
 		if errors.Is(err, manifest.ErrSchemaVersionUnsupported) {
-			fmt.Fprintln(os.Stderr, "\nnput: CLI（engine）と flake が pin する nput のバージョンがずれている可能性があります。\n"+
-				"  flake の nput input が CLI より新しい manifest を生成しています。\n"+
-				"  CLI を更新するか、flake の nput input を CLI に合わせて下げて両者のバージョンを揃えてください。")
+			fmt.Fprintln(os.Stderr, "\nnput: the nput version pinned by the CLI (engine) and by the flake may be out of sync.\n"+
+				"  The flake's nput input is generating a manifest newer than the CLI.\n"+
+				"  Update the CLI, or lower the flake's nput input to match the CLI so both versions align.")
 		}
 		// 終了コードを運ぶエラー（apply --all の集約等）はその code で終了する（→ docs/spec.md・ADR-0024）。
 		var ec exitCodeX

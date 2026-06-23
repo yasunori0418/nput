@@ -16,18 +16,18 @@ import (
 func newResetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reset <name> [target...]",
-		Short: "配置物を無い状態へ戻す（FS-only teardown・名指し必須・--all 非対応）",
-		Long: "nput.<name> の配置物を無い状態へ戻す teardown。target 省略で全 entry、target 指定でその entry のみ撤去する。" +
-			"symlink は保守的不変条件（nput 管理・記録通りのみ）で除去し foreign は残す。copy target は削除する（データ損失リスクのため確認）。" +
-			"profile / 世代は触らない（FS-only）。名指し必須（--all 非対応）。" +
-			"--dryrun は副作用ゼロで削除対象を表示して exit する（confirm / flock なし）。",
+		Short: "Tear placements back down to nothing (FS-only teardown; name required; no --all)",
+		Long: "Teardown that returns nput.<name>'s placements to nothing. Omitting target tears down every entry; specifying targets tears down only those entries. " +
+			"Symlinks are removed under the conservative invariant (only nput-managed, only as recorded) and foreign ones are kept. copy targets are deleted (confirmed due to the data-loss risk). " +
+			"It does not touch the profile or generations (FS-only). A name is required (no --all). " +
+			"--dryrun shows the removal targets with zero side effects and exits (no confirm / flock).",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runReset(args[0], args[1:], flagDryrun)
 		},
 	}
 	cmd.Flags().BoolVar(&flagDryrun, "dryrun", false,
-		"副作用ゼロで削除対象（symlink / copy target）を表示して exit（confirm / flock なし・→ ADR-0021）")
+		"Show the removal targets (symlink / copy target) with zero side effects and exit (no confirm / flock; see ADR-0021)")
 	return cmd
 }
 
@@ -75,7 +75,7 @@ func runReset(name string, targets []string, dryrun bool) error {
 	if needPrompt {
 		confirm = func(res *engine.ResetResult) (bool, error) {
 			reportResetTargets(res, name)
-			return promptYesNo("上記を削除します。続行しますか？")
+			return promptYesNo("This will remove the above. Continue?")
 		}
 	}
 
@@ -91,7 +91,7 @@ func runReset(name string, targets []string, dryrun bool) error {
 		return err
 	}
 	if res.Aborted {
-		fmt.Fprintln(os.Stderr, "nput: reset を中止しました")
+		fmt.Fprintln(os.Stderr, "nput: reset aborted")
 		return nil
 	}
 	if flagVerbose {
@@ -113,13 +113,13 @@ func printResetPlan(res *engine.ResetResult) {
 		fmt.Printf("keep-foreign\t%s\n", t)
 	}
 	if len(res.RemovedSymlinks)+len(res.RemovedCopies)+len(res.KeptForeign) == 0 {
-		fmt.Fprintln(os.Stderr, "nput: reset --dryrun: 削除対象はありません")
+		fmt.Fprintln(os.Stderr, "nput: reset --dryrun: nothing to remove")
 	}
 }
 
 // reportResetTargets は確認プロンプト前に削除予定を stderr に出す（進捗扱い・stdout は機械可読専有）。
 func reportResetTargets(res *engine.ResetResult, name string) {
-	fmt.Fprintf(os.Stderr, "nput: reset %s 削除対象 (root=%s):\n", name, res.Root)
+	fmt.Fprintf(os.Stderr, "nput: reset %s removal targets (root=%s):\n", name, res.Root)
 	for _, t := range res.RemovedSymlinks {
 		fmt.Fprintf(os.Stderr, "  symlink %s\n", t)
 	}
@@ -127,16 +127,16 @@ func reportResetTargets(res *engine.ResetResult, name string) {
 		fmt.Fprintf(os.Stderr, "  copy    %s\n", t)
 	}
 	for _, t := range res.KeptForeign {
-		fmt.Fprintf(os.Stderr, "  keep    %s (foreign / 記録不一致のため残します)\n", t)
+		fmt.Fprintf(os.Stderr, "  keep    %s (foreign / record mismatch; kept)\n", t)
 	}
 	if len(res.RemovedSymlinks)+len(res.RemovedCopies) == 0 {
-		fmt.Fprintln(os.Stderr, "  （削除対象なし）")
+		fmt.Fprintln(os.Stderr, "  (nothing to remove)")
 	}
 }
 
 // reportResetResult は実削除結果を stderr に出す（stdout は機械可読出力に専有・→ ADR-0023）。
 func reportResetResult(res *engine.ResetResult, name string) {
-	fmt.Fprintf(os.Stderr, "nput: reset %s 完了 (root=%s)\n", name, res.Root)
+	fmt.Fprintf(os.Stderr, "nput: reset %s done (root=%s)\n", name, res.Root)
 	for _, t := range res.RemovedSymlinks {
 		fmt.Fprintf(os.Stderr, "  removed-symlink %s\n", t)
 	}
@@ -144,7 +144,7 @@ func reportResetResult(res *engine.ResetResult, name string) {
 		fmt.Fprintf(os.Stderr, "  removed-copy    %s\n", t)
 	}
 	for _, t := range res.KeptForeign {
-		fmt.Fprintf(os.Stderr, "  kept            %s (foreign / 記録不一致)\n", t)
+		fmt.Fprintf(os.Stderr, "  kept            %s (foreign / record mismatch)\n", t)
 	}
 	if len(res.RemovedSymlinks)+len(res.RemovedCopies) == 0 {
 		fmt.Fprintln(os.Stderr, "  no-op")
@@ -162,8 +162,7 @@ func confirmPolicy(yes, interactive bool) (needPrompt bool, err error) {
 		return false, nil
 	}
 	if !interactive {
-		return false, errors.New("nput: 非対話環境では --yes なしの破壊的 reset を拒否します " +
-			"(refusing destructive reset without --yes in non-interactive context)")
+		return false, errors.New("nput: refusing destructive reset without --yes in a non-interactive context")
 	}
 	return true, nil
 }

@@ -25,29 +25,29 @@ func discoverEntrypoint(fileFlag string) (*entrypoint, error) {
 	if fileFlag != "" {
 		abs, err := filepath.Abs(fileFlag)
 		if err != nil {
-			return nil, fmt.Errorf("nput: -f のパスを解決できません (%s): %w", fileFlag, err)
+			return nil, fmt.Errorf("nput: cannot resolve the -f path (%s): %w", fileFlag, err)
 		}
 		info, err := os.Stat(abs)
 		if err != nil {
-			return nil, fmt.Errorf("nput: -f のパスが見つかりません (%s): %w", fileFlag, err)
+			return nil, fmt.Errorf("nput: -f path not found (%s): %w", fileFlag, err)
 		}
 		if info.IsDir() {
 			if fileExists(filepath.Join(abs, "flake.nix")) {
 				return &entrypoint{flakeRef: abs}, nil
 			}
-			return nil, fmt.Errorf("nput: -f ディレクトリに flake.nix がありません (%s)。本スライスは flake entrypoint のみ対応します", abs)
+			return nil, fmt.Errorf("nput: no flake.nix in the -f directory (%s). This slice supports only a flake entrypoint", abs)
 		}
 		switch filepath.Base(abs) {
 		case "flake.nix":
 			return &entrypoint{flakeRef: filepath.Dir(abs)}, nil
 		default:
-			return nil, fmt.Errorf("nput: -f は flake.nix を指してください (%s)。shell.nix / default.nix は本スライス未対応です", abs)
+			return nil, fmt.Errorf("nput: -f must point to a flake.nix (%s). shell.nix / default.nix are not supported in this slice", abs)
 		}
 	}
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("nput: cwd を取得できません: %w", err)
+		return nil, fmt.Errorf("nput: cannot get the current working directory: %w", err)
 	}
 	if fileExists(filepath.Join(cwd, "flake.nix")) {
 		return &entrypoint{flakeRef: cwd}, nil
@@ -55,10 +55,10 @@ func discoverEntrypoint(fileFlag string) (*entrypoint, error) {
 	// legacy entrypoint を見つけたら未対応である旨を明示して停止する。
 	for _, legacy := range []string{"shell.nix", "default.nix"} {
 		if fileExists(filepath.Join(cwd, legacy)) {
-			return nil, fmt.Errorf("nput: %s は本スライス未対応です（flake.nix のみ対応・-f で flake を指定してください）", legacy)
+			return nil, fmt.Errorf("nput: %s is not supported in this slice (only flake.nix is supported; pass a flake with -f)", legacy)
 		}
 	}
-	return nil, errors.New("nput: entrypoint が見つかりません（CWD に flake.nix がありません。-f で指定してください）")
+	return nil, errors.New("nput: no entrypoint found (no flake.nix in the CWD; specify one with -f)")
 }
 
 func fileExists(p string) bool {
@@ -76,13 +76,13 @@ func currentSystem() (string, error) {
 	case "arm64":
 		arch = "aarch64"
 	default:
-		return "", fmt.Errorf("nput: 未対応の GOARCH です: %s", runtime.GOARCH)
+		return "", fmt.Errorf("nput: unsupported GOARCH: %s", runtime.GOARCH)
 	}
 	switch runtime.GOOS {
 	case "linux", "darwin":
 		return arch + "-" + runtime.GOOS, nil
 	default:
-		return "", fmt.Errorf("nput: 未対応の GOOS です: %s", runtime.GOOS)
+		return "", fmt.Errorf("nput: unsupported GOOS: %s", runtime.GOOS)
 	}
 }
 
@@ -115,7 +115,7 @@ func evalAllRoots(e *entrypoint, system string) (map[string]rootInfo, error) {
 	}
 	var roots map[string]rootInfo
 	if err := json.Unmarshal([]byte(out), &roots); err != nil {
-		return nil, fmt.Errorf("nput: nput.%s の一括 eval 結果を解析できません: %w", system, err)
+		return nil, fmt.Errorf("nput: cannot parse the batch eval result for nput.%s: %w", system, err)
 	}
 	return roots, nil
 }
@@ -130,7 +130,7 @@ func buildManifestStorePath(e *entrypoint, system, name string) (string, error) 
 	}
 	store := strings.TrimSpace(out)
 	if store == "" {
-		return "", fmt.Errorf("nput: nput.%s.%s の build 成果物パスを取得できません", system, name)
+		return "", fmt.Errorf("nput: cannot obtain the build output path for nput.%s.%s", system, name)
 	}
 	return store, nil
 }
@@ -164,7 +164,7 @@ func buildFunc(e *entrypoint, system, name string) func(pending string) (string,
 		}
 		store, err := os.Readlink(pending)
 		if err != nil {
-			return "", fmt.Errorf("nput: build 成果物の out-link を読めません (%s): %w", pending, err)
+			return "", fmt.Errorf("nput: cannot read the build output out-link (%s): %w", pending, err)
 		}
 		return store, nil
 	}
@@ -182,7 +182,7 @@ func dryBuildFunc(e *entrypoint, system, name string) func(pending string) (stri
 		}
 		store := strings.TrimSpace(out)
 		if store == "" {
-			return "", fmt.Errorf("nput: nix build --print-out-paths が空でした (%s)", inst)
+			return "", fmt.Errorf("nput: nix build --print-out-paths was empty (%s)", inst)
 		}
 		// --print-out-paths は複数行を返し得る（multi-output）。link-farm は単一 output なので最終行を採る。
 		lines := strings.Split(store, "\n")
@@ -215,7 +215,7 @@ func runNixStream(args ...string) error {
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("nput: nix %s に失敗しました: %w", args[0], err)
+		return fmt.Errorf("nput: nix %s failed: %w", args[0], err)
 	}
 	return nil
 }
@@ -228,9 +228,9 @@ func nixError(args []string, stderr string, runErr error) error {
 	}
 	trimmed := strings.TrimSpace(stderr)
 	if trimmed == "" {
-		return fmt.Errorf("nput: nix %s に失敗しました: %w", args[0], runErr)
+		return fmt.Errorf("nput: nix %s failed: %w", args[0], runErr)
 	}
-	return fmt.Errorf("nput: nix %s に失敗しました:\n%s", args[0], trimmed)
+	return fmt.Errorf("nput: nix %s failed:\n%s", args[0], trimmed)
 }
 
 // isExperimentalDisabled は nix-command / flakes 未有効エラーを検出する（→ ADR-0025 §1）。
@@ -243,19 +243,19 @@ func isExperimentalDisabled(stderr string) bool {
 // experimentalGuidance は前提条件と有効化方法を案内するエラーを組む（生の nix エラーも添える）。
 // CLI は --extra-experimental-features を自動付与しない（環境設定を黙って上書きしない・→ ADR-0025 §1）。
 func experimentalGuidance(stderr string) error {
-	return fmt.Errorf(`nput: nix の experimental-features が有効化されていません。
-本コマンドは内部で `+"`nix eval`"+` / `+"`nix build`"+`（新 CLI）と flake を使うため、
-experimental-features = nix-command flakes が必要です。
+	return fmt.Errorf(`nput: nix's experimental-features are not enabled.
+This command internally uses `+"`nix eval`"+` / `+"`nix build`"+` (the new CLI) and flakes,
+so experimental-features = nix-command flakes is required.
 
-有効化方法（いずれか）:
-  - ~/.config/nix/nix.conf または /etc/nix/nix.conf に追記:
+How to enable (either one):
+  - Append to ~/.config/nix/nix.conf or /etc/nix/nix.conf:
       experimental-features = nix-command flakes
-  - 一時的に環境変数で:
+  - Temporarily via an environment variable:
       export NIX_CONFIG="experimental-features = nix-command flakes"
 
-nput は --extra-experimental-features を自動付与しません（環境設定を上書きしないため）。
+nput does not add --extra-experimental-features automatically (it will not override your environment settings).
 
-元の nix エラー:
+Original nix error:
 %s`, strings.TrimSpace(stderr))
 }
 
@@ -265,7 +265,7 @@ func wrapEvalErr(err error, system, name string) error {
 	msg := err.Error()
 	if strings.Contains(msg, "does not provide attribute") ||
 		(strings.Contains(msg, "attribute") && strings.Contains(msg, "missing")) {
-		return fmt.Errorf("nput: entrypoint に nput.%s.%s が見つかりません（config 名と system を確認してください）\n%s", system, name, msg)
+		return fmt.Errorf("nput: nput.%s.%s not found in the entrypoint (check the config name and system)\n%s", system, name, msg)
 	}
 	return err
 }
@@ -275,7 +275,7 @@ func wrapEvalAllErr(err error, system string) error {
 	msg := err.Error()
 	if strings.Contains(msg, "does not provide attribute") ||
 		(strings.Contains(msg, "attribute") && strings.Contains(msg, "missing")) {
-		return fmt.Errorf("nput: entrypoint に nput.%s が見つかりません（この system 向けの config がありません）\n%s", system, msg)
+		return fmt.Errorf("nput: nput.%s not found in the entrypoint (no configs for this system)\n%s", system, msg)
 	}
 	return err
 }
