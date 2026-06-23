@@ -101,7 +101,7 @@ func TestAggregateDryRun(t *testing.T) {
 			}
 			// A successful config's plan goes to stdout (owns the machine-readable output; → ADR-0023).
 			if strings.Contains(c.name, "all clean") && !strings.Contains(out, "place\t/p/a") {
-				t.Errorf("stdout に plan が出ていない: %q", out)
+				t.Errorf("plan not emitted to stdout: %q", out)
 			}
 		})
 	}
@@ -127,7 +127,7 @@ func TestSelectedRootFilter(t *testing.T) {
 	t.Run("multiple → error", func(t *testing.T) {
 		flagProjectRoot, flagHomeRoot, flagSystemRoot = true, true, false
 		if _, err := selectedRootFilter(); err == nil {
-			t.Fatal("複数指定はエラーになるべき")
+			t.Fatal("specifying multiple should be an error")
 		}
 	})
 }

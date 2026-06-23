@@ -26,7 +26,7 @@ func TestFlakeInitArgs(t *testing.T) {
 			want:     []string{"flake", "init", "-t", "github:yasunori0418/nput#standalone"},
 		},
 		{
-			name:     "env override ref（path: 局所参照）",
+			name:     "env override ref (path: local reference)",
 			template: "project",
 			ref:      "path:/tmp/nput",
 			want:     []string{"flake", "init", "-t", "path:/tmp/nput#project"},
