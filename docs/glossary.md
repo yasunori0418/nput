@@ -2,7 +2,7 @@
 
 Canonical English terms for nput. This is the authoritative spelling reference for README text, code comments, and command output. When a concept appears in prose or output, use the **canonical term** defined here and avoid the listed alternatives so wording stays consistent across the project.
 
-Each entry fixes one canonical spelling. Definitions are intentionally short; for full rationale see `docs/spec.md` (specification) and `docs/adr/` (design decisions). The Japanese-language counterpart lives in `CONTEXT.md`.
+Each entry fixes one canonical spelling. Definitions are intentionally short; for full rationale see `docs/spec.md` (specification) and `docs/adr/` (design decisions). The Japanese-language counterpart lives in `docs/glossary.ja.md`.
 
 ## Core placement abstraction
 
