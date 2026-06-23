@@ -114,7 +114,7 @@ func TestResetOutputStreams(t *testing.T) {
 		if out != "" {
 			t.Errorf("確認表示が stdout を汚している: %q", out)
 		}
-		if !strings.Contains(errOut, "削除対象") {
+		if !strings.Contains(errOut, "removal targets") {
 			t.Errorf("確認表示が stderr に出ていない: %q", errOut)
 		}
 	})

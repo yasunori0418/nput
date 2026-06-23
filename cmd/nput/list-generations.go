@@ -16,24 +16,24 @@ func newListGenerationsCmd() *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
 		Use:   "list-generations [name]",
-		Short: "世代一覧を表示（home mode 限定）",
-		Long: "home mode の profile の世代一覧を表示する読み取り専用コマンド。" +
-			"<name> でその config を、--all で home mode の全 config を一覧する。",
+		Short: "List generations (home mode only)",
+		Long: "A read-only command that lists the generations of the home mode profile. " +
+			"Pass <name> for that config, or --all to list every home mode config.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if all {
 				if len(args) > 0 {
-					return fmt.Errorf("nput: list-generations は <name> と --all を併用できません")
+					return fmt.Errorf("nput: list-generations cannot combine <name> with --all")
 				}
 				return runListAllGenerations()
 			}
 			if len(args) != 1 {
-				return fmt.Errorf("nput: list-generations は <name> または --all が必要です")
+				return fmt.Errorf("nput: list-generations requires <name> or --all")
 			}
 			return runListGenerations(args[0])
 		},
 	}
-	cmd.Flags().BoolVar(&all, "all", false, "home mode の全 config の世代を一覧")
+	cmd.Flags().BoolVar(&all, "all", false, "List generations for every home mode config")
 	return cmd
 }
 
@@ -53,7 +53,7 @@ func runListGenerations(name string) error {
 		return err
 	}
 	if rootKind != manifest.RootKindHome {
-		return fmt.Errorf("nput: list-generations は home mode 限定です（nput.%s は rootKind=%q）", name, rootKind)
+		return fmt.Errorf("nput: list-generations is home mode only (nput.%s has rootKind=%q)", name, rootKind)
 	}
 
 	prof, _, err := engine.ProfileFor(engine.ProfileOptions{
@@ -87,7 +87,7 @@ func runListAllGenerations() error {
 		if os.IsNotExist(err) {
 			return nil // profile 未作成 = 一覧ゼロ。
 		}
-		return fmt.Errorf("nput: profile 基底を読めません (%s): %w", base, err)
+		return fmt.Errorf("nput: cannot read the profile base (%s): %w", base, err)
 	}
 
 	var names []string

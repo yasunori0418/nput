@@ -21,14 +21,14 @@ var initTemplates = []string{"standalone", "project"}
 func newInitCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init <template>",
-		Short: "starter テンプレを nix flake init で CWD に展開（standalone / project）",
-		Long: "nput init <template> は `nix flake init -t <ref>#<template>` の透明ラッパー。" +
-			"CWD に starter flake を展開する（nput はファイルを generate せず展開は nix の templates 機構が担う）。\n\n" +
+		Short: "Expand a starter template into the CWD via nix flake init (standalone / project)",
+		Long: "nput init <template> is a transparent wrapper around `nix flake init -t <ref>#<template>`. " +
+			"It expands a starter flake into the CWD (nput generates no files; the nix templates mechanism handles expansion).\n\n" +
 			"template:\n" +
-			"  standalone  homeRoot 例（$HOME 配下へ配置）\n" +
-			"  project     projectRoot 例 + devShell + shellHook + .gitignore\n\n" +
-			"テンプレ参照は固定 ref（" + defaultTemplateRef + "）。NPUT_TEMPLATE_REF で上書き可能。\n" +
-			"既存ファイルは上書きしない（nix flake init の挙動を継承）。",
+			"  standalone  homeRoot example (places under $HOME)\n" +
+			"  project     projectRoot example + devShell + shellHook + .gitignore\n\n" +
+			"The template reference is a fixed ref (" + defaultTemplateRef + "). Override it with NPUT_TEMPLATE_REF.\n" +
+			"Existing files are not overwritten (inherits nix flake init's behavior).",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInit(args[0])
@@ -40,7 +40,7 @@ func newInitCmd() *cobra.Command {
 // 新規 flake 生成のため entrypoint 探索（discoverEntrypoint）は通さない（→ 計画 8）。
 func runInit(template string) error {
 	if !isValidTemplate(template) {
-		return fmt.Errorf("nput: 未知のテンプレートです: %q（有効値: %s）", template, strings.Join(initTemplates, " / "))
+		return fmt.Errorf("nput: unknown template: %q (valid values: %s)", template, strings.Join(initTemplates, " / "))
 	}
 
 	ref := defaultTemplateRef

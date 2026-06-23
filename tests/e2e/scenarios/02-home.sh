@@ -44,13 +44,13 @@ e2e_step "成功時はデフォルト沈黙 / -v で配置レポート（→ ADR
 # 同一世代への再 apply（no-op）。nput 自身の配置レポート行は既定で出さず、-v で出す。
 # （nix 自体の dirty-tree warning 等は通るため、nput の "完了" マーカー有無で判定する。）
 silent_err="$(nput apply home 2>&1 >/dev/null || true)"
-if printf '%s' "$silent_err" | grep -q 'nput: apply home 完了'; then
+if printf '%s' "$silent_err" | grep -q 'nput: apply home done'; then
 	e2e_fail "成功時に配置レポートが出てはいけない（既定は沈黙）: '$silent_err'"
 else
 	e2e_pass "成功時は配置レポート無し（既定沈黙）"
 fi
 verbose_err="$(nput apply home -v 2>&1 >/dev/null || true)"
-if printf '%s' "$verbose_err" | grep -q 'nput: apply home 完了'; then
+if printf '%s' "$verbose_err" | grep -q 'nput: apply home done'; then
 	e2e_pass "-v で配置レポートが出る"
 else
 	e2e_fail "-v で配置レポートが出るべき: '$verbose_err'"

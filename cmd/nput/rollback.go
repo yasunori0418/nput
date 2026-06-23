@@ -13,10 +13,10 @@ import (
 func newRollbackCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "rollback <name>",
-		Short: "nput.<name> を前世代へ戻す（home mode 限定・名指し必須）",
-		Long: "home mode の profile を 1 世代前へ戻す。profile ポインタ移動だけでは任意 root の FS は変わらないため、" +
-			"現世代 N を baseline・前世代 N-1 を target として FS を再収束（N∖N-1 を保守的 stale 除去・N-1 を再配置）してから" +
-			"profile ポインタを移す。名指し必須（--all 非対応）・前世代が無ければエラー停止。",
+		Short: "Roll nput.<name> back to the previous generation (home mode only; name required)",
+		Long: "Roll the home mode profile back one generation. Because moving the profile pointer alone does not change the FS at an arbitrary root, " +
+			"it re-converges the FS (treating current generation N as baseline and previous generation N-1 as target: conservatively stale-removes N∖N-1 and re-places N-1) " +
+			"before moving the profile pointer. A name is required (no --all); errors out if there is no previous generation.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRollback(args[0])
@@ -40,7 +40,7 @@ func runRollback(name string) error {
 		return err
 	}
 	if rootKind != manifest.RootKindHome {
-		return fmt.Errorf("nput: rollback は home mode 限定です（nput.%s は rootKind=%q・project / fixed は世代を公開しません）", name, rootKind)
+		return fmt.Errorf("nput: rollback is home mode only (nput.%s has rootKind=%q; project / fixed do not expose generations)", name, rootKind)
 	}
 
 	res, err := engine.Rollback(engine.RollbackOptions{
@@ -61,7 +61,7 @@ func runRollback(name string) error {
 
 // reportRollback は世代遷移と配置差分を stderr に出す（stdout は機械可読出力に専有・→ ADR-0023）。
 func reportRollback(res *engine.RollbackResult, name string) {
-	fmt.Fprintf(os.Stderr, "nput: rollback %s 完了 (世代 %d → %d, root=%s)\n", name, res.From, res.To, res.Root)
+	fmt.Fprintf(os.Stderr, "nput: rollback %s done (generation %d → %d, root=%s)\n", name, res.From, res.To, res.Root)
 	for _, t := range res.Placed {
 		fmt.Fprintf(os.Stderr, "  placed   %s\n", t)
 	}

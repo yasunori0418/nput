@@ -14,26 +14,26 @@ func newGitignoreCmd() *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
 		Use:   "gitignore [name]",
-		Short: "配置 target を .gitignore 向けに stdout 出力（project mode 限定・書き込みなし）",
-		Long: "nput.<name> の配置 target を .gitignore 向けに stdout へ列挙する（ファイルは書き込まない）。" +
-			"出力は root 相対 target に先頭 / を付けたアンカー形式（例: /.claude/skills/nix）で 1 行 1 件、" +
-			"method（symlink / copy）を区別せず全 target を対象とする。project mode 限定で、" +
-			"--all は projectRoot の全 config の target をソート + 重複除去して出力する。",
+		Short: "Print placement targets for .gitignore to stdout (project mode only; no writes)",
+		Long: "List the placement targets of nput.<name> for .gitignore on stdout (writes no file). " +
+			"Output is the root-relative target with a leading / in anchor form (e.g. /.claude/skills/nix), one per line, " +
+			"covering every target regardless of method (symlink / copy). project mode only; " +
+			"--all sorts and de-duplicates the targets of all projectRoot configs.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if all {
 				if len(args) > 0 {
-					return fmt.Errorf("nput: gitignore は <name> と --all を併用できません")
+					return fmt.Errorf("nput: gitignore cannot combine <name> with --all")
 				}
 				return runGitignoreAll()
 			}
 			if len(args) != 1 {
-				return fmt.Errorf("nput: gitignore は <name> または --all が必要です")
+				return fmt.Errorf("nput: gitignore requires <name> or --all")
 			}
 			return runGitignore(args[0])
 		},
 	}
-	cmd.Flags().BoolVar(&all, "all", false, "projectRoot の全 config の target をソート + 重複除去して出力")
+	cmd.Flags().BoolVar(&all, "all", false, "Sort and de-duplicate the targets of all projectRoot configs")
 	return cmd
 }
 
@@ -55,7 +55,7 @@ func runGitignore(name string) error {
 		return err
 	}
 	if rootKind != manifest.RootKindProject {
-		return fmt.Errorf("nput: gitignore は project mode 限定です（nput.%s は rootKind=%q・home / fixed では .gitignore のアンカーが意味を成しません）", name, rootKind)
+		return fmt.Errorf("nput: gitignore is project mode only (nput.%s has rootKind=%q; the .gitignore anchor is meaningless for home / fixed)", name, rootKind)
 	}
 
 	targets, err := configTargets(ep, system, name)
