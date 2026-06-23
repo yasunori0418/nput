@@ -1,5 +1,5 @@
 {
-  description = "nput standalone config: フェッチ済み git リポジトリを home 配下へ symlink / copy 配置する";
+  description = "nput standalone config: symlink / copy fetched git repositories under home";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

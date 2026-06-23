@@ -1,5 +1,5 @@
 {
-  description = "nput project config: フェッチ済み git リポジトリを repo 配下へ symlink / copy 配置する";
+  description = "nput project config: symlink / copy fetched git repositories under the repo";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
