@@ -6,7 +6,7 @@
 // link still points to the recorded destination. Regular files, foreign links,
 // and record/reality mismatches are never removed; copy entries are never
 // removed (orphan warning only); the first apply (no previous manifest) removes
-// nothing (→ ADR-0002, ADR-0006, ADR-0015, docs/spec.md「stale 除去の対象と安全不変条件」).
+// nothing (→ ADR-0002, ADR-0006, ADR-0015, docs/spec.md "targets and safety invariant of stale removal").
 //
 // The plan is computed without mutating the filesystem. The engine consumes the
 // plan: it materializes Place actions and hands Remove actions to the
@@ -26,7 +26,7 @@ import (
 // FS abstracts the lstat/readlink probes the planner needs, so diff
 // classification is a pure function over (manifests, FS state) and can be
 // table-tested with a fake FS without touching the real filesystem
-// (→ ADR-0006, docs/spec.md「stale 除去の対象と安全不変条件」).
+// (→ ADR-0006, docs/spec.md "targets and safety invariant of stale removal").
 type FS interface {
 	Lstat(path string) (os.FileInfo, error)
 	Readlink(path string) (string, error)
@@ -45,11 +45,11 @@ var OSFS FS = osFS{}
 type PlaceKind int
 
 const (
-	// PlaceNew は target が不在で新規 symlink を作る。
+	// PlaceNew creates a new symlink when target is absent.
 	PlaceNew PlaceKind = iota
-	// PlaceReplace は自身の前世代 manifest が記録した symlink を silent に張り替える。
+	// PlaceReplace silently re-links a symlink recorded by this profile's own previous-generation manifest.
 	PlaceReplace
-	// PlaceForeign は記録の無い symlink（foreign）を warning 付きで後勝ち置換する（→ ADR-0015）。
+	// PlaceForeign last-wins replaces an unrecorded symlink (foreign) with a warning (→ ADR-0015).
 	PlaceForeign
 )
 
@@ -62,12 +62,12 @@ type PlaceAction struct {
 }
 
 // CopyAction is a place-once copy to materialize: copy Src (= <src>/<subpath>)
-// into TargetAbs（target 不在のときのみ・place-once・→ ADR-0002, ADR-0016）。
-// 既存 target（記録あり / foreign）は触らないため CopyAction を生まない。
+// into TargetAbs (only when target is absent; place-once; → ADR-0002, ADR-0016).
+// An existing target (recorded / foreign) is left untouched, so no CopyAction is emitted for it.
 type CopyAction struct {
 	Entry     manifest.Entry
 	TargetAbs string
-	Src       string // LinkDest(Entry): <src>/<subpath>（コピー元）
+	Src       string // LinkDest(Entry): <src>/<subpath> (copy source)
 }
 
 // RemoveAction is a stale symlink that satisfies the conservative invariant at
@@ -90,16 +90,16 @@ type Conflict struct {
 type WarnKind int
 
 const (
-	// WarnForeignReplace は記録の無い symlink を上書きする（place・後勝ち・→ ADR-0015）。
+	// WarnForeignReplace overwrites an unrecorded symlink (place; last-wins; → ADR-0015).
 	WarnForeignReplace WarnKind = iota
-	// WarnStaleMismatch は stale target が記録と不一致な symlink のため残す（→ ADR-0002）。
+	// WarnStaleMismatch keeps a stale target because its symlink mismatches the record (→ ADR-0002).
 	WarnStaleMismatch
-	// WarnStaleNonSymlink は stale target が symlink でない（通常ファイル等）ため残す。
+	// WarnStaleNonSymlink keeps a stale target because it is not a symlink (regular file, etc.).
 	WarnStaleNonSymlink
-	// WarnCopyOrphan は消えた copy entry の orphan（削除はしない・reset で撤去・→ ADR-0020）。
+	// WarnCopyOrphan is the orphan of a vanished copy entry (not removed; cleared by reset; → ADR-0020).
 	WarnCopyOrphan
-	// WarnCopyForeign は copy target に記録の無い実ファイルがあり place-once で skip する
-	// （上書きしない・masking 防止に可視化・symlink の foreign 警告と対称・→ ADR-0022）。
+	// WarnCopyForeign skips a copy target under place-once because an unrecorded real file exists there
+	// (no overwrite; surfaced to prevent masking; symmetric with the symlink foreign warning; → ADR-0022).
 	WarnCopyForeign
 )
 
@@ -110,8 +110,8 @@ type Warning struct {
 }
 
 // Plan is the computed place/replace/remove plan plus non-fatal warnings and
-// fatal conflicts. The engine executes Place / Copies then Remove (「新規/張替を先に、
-// stale 除去を最後に」・→ ADR-0006); a non-empty Conflicts means apply must stop.
+// fatal conflicts. The engine executes Place / Copies then Remove ("new/re-link
+// first, stale removal last"; → ADR-0006); a non-empty Conflicts means apply must stop.
 type Plan struct {
 	Place     []PlaceAction
 	Copies    []CopyAction
@@ -120,7 +120,7 @@ type Plan struct {
 	Warnings  []Warning
 }
 
-// LinkDest は entry の symlink が指すべき先（<src>/<subpath>）を返す。
+// LinkDest returns the destination the entry's symlink should point to (<src>/<subpath>).
 func LinkDest(e manifest.Entry) string {
 	if e.Subpath == "" || e.Subpath == "." {
 		return e.Src
@@ -128,18 +128,19 @@ func LinkDest(e manifest.Entry) string {
 	return filepath.Join(e.Src, e.Subpath)
 }
 
-// Compute は前世代 manifest（prev・nil なら初回）と新 manifest（next）を root と FS
-// 状態に照らして diff し、place/replace/remove プランを算出する純ロジック。
-// 副作用は持たず、FS への反映は engine（place + stale-remover）が行う。
+// Compute diffs the previous-generation manifest (prev; nil means first apply)
+// against the new manifest (next), relative to root and FS state, and computes
+// the place/replace/remove plan as pure logic. It has no side effects; the FS
+// changes are applied by the engine (place + stale-remover).
 func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 	var plan Plan
 
-	// --- place / replace 側: 新世代の各 entry を現 FS に照らして分類する ---
+	// --- place / replace side: classify each new-generation entry against the current FS ---
 	prevByTarget := byTarget(prev)
 	for _, e := range entriesOf(next) {
 		targetAbs := filepath.Join(root, filepath.Clean(e.Target))
 
-		// 祖先 component が symlink ならネスト不可で conflict（全 method 共通・→ ADR-0015）。
+		// If an ancestor component is a symlink, nesting is forbidden: conflict (common to all methods; → ADR-0015).
 		offender, err := ancestorSymlink(root, e.Target, fs)
 		if err != nil {
 			return Plan{}, err
@@ -153,7 +154,7 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			continue
 		}
 
-		// method ごとに place-once / 張替の分類を分岐する。
+		// Branch the place-once / re-link classification per method.
 		if e.Method == manifest.MethodCopy {
 			if err := classifyCopy(&plan, e, targetAbs, prevByTarget, fs); err != nil {
 				return Plan{}, err
@@ -175,7 +176,7 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			}
 			plan.Place = append(plan.Place, PlaceAction{Entry: e, TargetAbs: targetAbs, Dest: LinkDest(e), Kind: kind})
 		case err == nil:
-			// 通常ファイル / ディレクトリは上書きしない（→ docs/spec.md エラー仕様）。
+			// A regular file / directory is not overwritten (→ docs/spec.md error spec).
 			plan.Conflicts = append(plan.Conflicts, Conflict{
 				Entry:     e,
 				TargetAbs: targetAbs,
@@ -188,8 +189,8 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 		}
 	}
 
-	// --- remove 側: stale entry（prev ∖ next）を保守的不変条件下で算出する ---
-	// 初回（prev == nil）は何も消さない（→ ADR-0006）。
+	// --- remove side: compute stale entries (prev ∖ next) under the conservative invariant ---
+	// On first apply (prev == nil) nothing is removed (→ ADR-0006).
 	if prev != nil {
 		nextByTarget := byTarget(next)
 		for _, pe := range prev.Entries {
@@ -197,7 +198,7 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 				continue
 			}
 			if pe.Method == manifest.MethodCopy {
-				// copy はユーザー所有データ。削除せず orphan を警告（→ ADR-0002, ADR-0020）。
+				// copy is user-owned data: not removed, warn as orphan (→ ADR-0002, ADR-0020).
 				plan.Warnings = append(plan.Warnings, Warning{Kind: WarnCopyOrphan, Target: pe.Target})
 				continue
 			}
@@ -206,18 +207,18 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			info, err := fs.Lstat(targetAbs)
 			switch {
 			case err != nil && os.IsNotExist(err):
-				continue // 既に無い = no-op（警告なし）。
+				continue // already gone = no-op (no warning).
 			case err != nil:
 				return Plan{}, fmt.Errorf("nput: stale target を lstat できません (%s): %w", targetAbs, err)
 			case info.Mode()&os.ModeSymlink == 0:
-				// 通常ファイル / ディレクトリには触れない（→ docs/spec.md 安全不変条件）。
+				// A regular file / directory is left untouched (→ docs/spec.md safety invariant).
 				plan.Warnings = append(plan.Warnings, Warning{Kind: WarnStaleNonSymlink, Target: pe.Target})
 				continue
 			}
 
 			onDisk, err := fs.Readlink(targetAbs)
 			if err != nil || onDisk != LinkDest(pe) {
-				// 記録と実体が不一致（foreign / ユーザー差し替え）→ 削除せず警告（→ ADR-0002）。
+				// Record and reality mismatch (foreign / user-replaced) → not removed, warn (→ ADR-0002).
 				plan.Warnings = append(plan.Warnings, Warning{Kind: WarnStaleMismatch, Target: pe.Target})
 				continue
 			}
@@ -246,9 +247,10 @@ func byTarget(m *manifest.Manifest) map[string]manifest.Entry {
 	return out
 }
 
-// recordedLink は target が「自身の前世代 manifest が記録した symlink」かを判定する。
-// 前世代に同 target の entry があり、かつ実体の symlink が記録通りの先を指すときのみ true
-// （保守的不変条件・→ ADR-0002, ADR-0015）。
+// recordedLink reports whether target is "a symlink recorded by this profile's
+// own previous-generation manifest". True only when the previous generation has
+// an entry for the same target AND the on-disk symlink points to the recorded
+// destination (conservative invariant; → ADR-0002, ADR-0015).
 func recordedLink(target, targetAbs string, prevByTarget map[string]manifest.Entry, fs FS) bool {
 	pe, ok := prevByTarget[target]
 	if !ok {
@@ -261,21 +263,22 @@ func recordedLink(target, targetAbs string, prevByTarget map[string]manifest.Ent
 	return onDisk == LinkDest(pe)
 }
 
-// classifyCopy は copy entry を place-once 意味論で分類する（→ ADR-0002, ADR-0016, ADR-0022,
-// docs/spec.md「copy モード」）。
+// classifyCopy classifies a copy entry under place-once semantics (→ ADR-0002,
+// ADR-0016, ADR-0022, docs/spec.md "copy mode").
 //
-//	target 不在            → CopyAction（新規 place-once コピー）
-//	target 既存・構造不一致 → conflict（subpath dir × target file / subpath file × target dir）
-//	target 既存・記録あり   → no-op（nput が前世代で配置済み・place-once で触らない）
-//	target 既存・foreign    → skip + WarnCopyForeign（記録の無い実ファイル・masking 防止）
+//	target absent              → CopyAction (new place-once copy)
+//	target exists, structure mismatch → conflict (subpath dir × target file / subpath file × target dir)
+//	target exists, recorded    → no-op (placed by nput in a previous generation; place-once leaves it untouched)
+//	target exists, foreign     → skip + WarnCopyForeign (unrecorded real file; masking prevention)
 //
-// recopy（apply --recopy）は place-once を破る別経路で、engine 側が manifest の copy entry を
-// 直接上書きする。planner は通常の place-once 分類のみを行う（→ ADR-0020）。
+// recopy (apply --recopy) is a separate path that breaks place-once: the engine
+// overwrites the manifest's copy entry directly. The planner only does the
+// normal place-once classification (→ ADR-0020).
 func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget map[string]manifest.Entry, fs FS) error {
 	info, err := fs.Lstat(targetAbs)
 	switch {
 	case err == nil:
-		// target 既存: まず src 構造と種別が一致するか検査する。
+		// target exists: first check whether the src structure and kind match.
 		mismatch, err := copyStructureMismatch(e, info, fs)
 		if err != nil {
 			return err
@@ -288,7 +291,7 @@ func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget m
 			})
 			return nil
 		}
-		// place-once: 前世代が記録した copy なら触らない。記録の無い実ファイルは foreign 警告。
+		// place-once: leave a copy recorded by the previous generation untouched. An unrecorded real file gets a foreign warning.
 		if pe, ok := prevByTarget[e.Target]; ok && pe.Method == manifest.MethodCopy {
 			return nil
 		}
@@ -302,9 +305,10 @@ func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget m
 	}
 }
 
-// copyStructureMismatch は src（<src>/<subpath>）の dir/file 種別と既存 target の種別が
-// 食い違うか判定する（subpath dir × target file / subpath file × target dir・→ docs/spec.md）。
-// symlink target は IsDir()=false で「file 側」として扱う。
+// copyStructureMismatch reports whether the dir/file kind of src (<src>/<subpath>)
+// disagrees with the kind of the existing target (subpath dir × target file /
+// subpath file × target dir; → docs/spec.md). A symlink target has IsDir()=false
+// and is treated as the "file side".
 func copyStructureMismatch(e manifest.Entry, targetInfo os.FileInfo, fs FS) (bool, error) {
 	srcInfo, err := fs.Lstat(LinkDest(e))
 	if err != nil {
@@ -314,8 +318,8 @@ func copyStructureMismatch(e manifest.Entry, targetInfo os.FileInfo, fs FS) (boo
 }
 
 // ancestorSymlink walks the target's ancestor components under root and returns
-// the first existing ancestor that is a symlink (全体 symlink 配置の配下にネスト不可・
-// → ADR-0015). A non-existent ancestor stops the walk (its descendants don't exist
+// the first existing ancestor that is a symlink (cannot nest under a whole-tree
+// symlink placement; → ADR-0015). A non-existent ancestor stops the walk (its descendants don't exist
 // either), returning "" with no error.
 func ancestorSymlink(root, target string, fs FS) (string, error) {
 	clean := filepath.Clean(target)
