@@ -11,9 +11,9 @@ let
   nputLib = inputs.root.lib;
 
   # 展開する skill を明示列挙する（mattpocock/skills の skills/ 配下の相対パス）。
-  # 本来は skills/<category> を lib.listFilesInSrc で動的列挙したいが、その API は
-  # 本ブランチ未実装のため、現行運用（skills-lock.json）の skill 集合を明示列挙して
-  # 忠実に再現する。skills-lock.json は vercel skills 用に残置（両者は別経路）。
+  # 本来は skills/<category> を builtins.readDir で動的列挙したい（既 realise の store パス /
+  # flake input の readDir は IFD を起こさない）が、現行運用（skills-lock.json）の skill 集合を
+  # 明示列挙して忠実に再現する。skills-lock.json は vercel skills 用に残置（両者は別経路）。
   skillSubpaths = [
     "engineering/grill-with-docs"
     "engineering/improve-codebase-architecture"

@@ -10,10 +10,6 @@ let
   };
   norm = root: entries: nput.normalizeManifest { inherit lib root entries; };
 
-  # listFilesInSrc の検証は既知構造の fixture を store パスとして渡す。
-  # regular.txt = regular / subdir = directory / link -> regular.txt = symlink（subdir/.keep で空 dir を回避）。
-  listFilesFixture = ./fixtures/list-files;
-
   basic = norm nput.projectRoot {
     ".claude/skills/nix" = {
       src = fakeSrc;
@@ -273,60 +269,5 @@ in
       evaluated.config.entries;
     expectedError.type = "ThrownError";
     expectedError.msg = "bogus";
-  };
-
-  # ---- listFilesInSrc（→ ADR-0009, ADR-0023, ADR-0024）-----------------------
-  # store パス src で readDir 互換の { filename = fileType; } を返す。型文字列が
-  # regular / directory / symlink で builtins.readDir と同形式（subpath 省略 = ルート全体）。
-  testListFilesRoot = {
-    expr = nput.listFilesInSrc { src = listFilesFixture; };
-    expected = {
-      "regular.txt" = "regular";
-      "subdir" = "directory";
-      "link" = "symlink";
-    };
-  };
-
-  # subpath 指定で当該 dir のみを走査する（subpath 外は走査しない）。
-  testListFilesSubpath = {
-    expr = nput.listFilesInSrc {
-      src = listFilesFixture;
-      subpath = "subdir";
-    };
-    expected = {
-      ".keep" = "regular";
-    };
-  };
-
-  # out-of-store marker は eval 時にパス展開できないため弾く（path 限定・→ ADR-0023）。
-  testListFilesMarkerRejected = {
-    expr = nput.listFilesInSrc {
-      src = nput.mkOutOfStoreSymlink "/home/me/dots";
-    };
-    expectedError.type = "ThrownError";
-    expectedError.msg = "out-of-store marker";
-  };
-
-  # set（生 derivation）は readDir が IFD を誘発するため弾く（→ ADR-0024）。
-  # 早期 throw を検証するため fake derivation（type = "derivation"）を使い実 build を起こさない。
-  testListFilesDerivationRejected = {
-    expr = nput.listFilesInSrc {
-      src = {
-        type = "derivation";
-        outPath = "/nix/store/00000000000000000000000000000000-fake-drv";
-      };
-    };
-    expectedError.type = "ThrownError";
-    expectedError.msg = "IFD";
-  };
-
-  # subpath が非ディレクトリ（regular file）のときエラー（dir 限定）。
-  testListFilesNonDirRejected = {
-    expr = nput.listFilesInSrc {
-      src = listFilesFixture;
-      subpath = "regular.txt";
-    };
-    expectedError.type = "ThrownError";
-    expectedError.msg = "ディレクトリ限定";
   };
 }

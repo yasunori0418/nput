@@ -79,10 +79,11 @@
             #   entries.".config/a" = { src = my-repo; subpath = "a"; };
             #   entries.".config/b" = { src = my-repo; subpath = "b"; };
             #
-            # listFilesInSrc = src 直下のファイル / ディレクトリを動的に entry 化:
+            # 動的 entry 化 = 既 realise の store パス / flake input を builtins.readDir で
+            # 走査して entry を組む（IFD 回避のため生 derivation / out-of-store marker は readDir 不可）:
             #   entries = builtins.mapAttrs
             #     (name: _: { src = my-repo; subpath = "skills/${name}"; })
-            #     (nput.lib.listFilesInSrc { src = ./skills; });
+            #     (builtins.readDir "${my-repo}/skills");
           };
         }
       );

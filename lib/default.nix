@@ -11,10 +11,6 @@ in
   # lib.mkManifest { pkgs, root, entries } -> derivation（manifest.json + symlink farm・→ ADR-0006, ADR-0023）
   inherit (manifest) mkManifest;
 
-  # lib.listFilesInSrc { src, subpath ? "." } -> { filename = fileType; }（→ ADR-0009, ADR-0023, ADR-0024）
-  # src 配下 subpath の readDir 互換一覧。src は path 限定（marker / 生 derivation を IFD 回避で弾く）。
-  listFilesInSrc = import ./list-files.nix;
-
   # 検査・正規化の純データ関数。nix-unit / namaka の単体対象 + 将来 modules から再利用（→ ADR-0010）。
   # normalizeManifest { lib, root, entries } -> attrset
   inherit (manifest) normalizeManifest;

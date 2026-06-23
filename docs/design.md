@@ -43,7 +43,7 @@ standalone（home mode）では nix profile に乗せた世代管理（ロール
 ├── flake.nix              # エントリポイント。outputs を定義（packages.nput / lib / templates / modules）
 ├── flake.lock             # flake 入力のロック
 ├── lib/                   # 純データ生成（nixpkgs.lib のみ依存・→ ADR-0006）
-│   ├── default.nix        # 公開 API のまとめ（mkManifest / mkOutOfStoreSymlink / projectRoot / homeRoot / systemRoot / listFilesInSrc）
+│   ├── default.nix        # 公開 API のまとめ（mkManifest / mkOutOfStoreSymlink / projectRoot / homeRoot / systemRoot）
 │   ├── types.nix          # entries の型定義（各モジュールで共有）
 │   ├── manifest.nix       # mkManifest（manifest.json + symlink farm derivation を生成する純粋関数）
 │   └── out-of-store.nix   # mkOutOfStoreSymlink / projectRoot / homeRoot / systemRoot（マーカー構築子）
@@ -115,7 +115,7 @@ outputs = { ... }: {
   # lib.projectRoot                             → marker（root に渡す: project mode / git toplevel）
   # lib.homeRoot                                → marker（root に渡す: home mode / $HOME）
   # lib.systemRoot                              → marker（root に渡す: system mode / / ・将来）
-  # lib.listFilesInSrc     { src, subpath? }       → attrset（builtins.readDir 互換）
+  # 動的 entry 生成は lib に頼らず、既 realise の store パス / flake input を builtins.readDir する idiom で行う（IFD 回避・→ docs/spec.md 応用節）
 };
 ```
 
