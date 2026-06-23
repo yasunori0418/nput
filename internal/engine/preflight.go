@@ -25,9 +25,9 @@ func (a *applier) checkOutOfStore() error {
 		dest := planner.LinkDest(e)
 		if _, err := os.Lstat(dest); err != nil {
 			if os.IsNotExist(err) {
-				return fmt.Errorf("nput: out-of-store のリンク先が存在しません (target: %s -> %s)。dangling symlink は張りません（→ ADR-0001）", e.Target, dest)
+				return fmt.Errorf("nput: out-of-store link target does not exist (target: %s -> %s); will not create a dangling symlink (→ ADR-0001)", e.Target, dest)
 			}
-			return fmt.Errorf("nput: out-of-store のリンク先を確認できません (target: %s -> %s): %w", e.Target, dest, err)
+			return fmt.Errorf("nput: cannot check out-of-store link target (target: %s -> %s): %w", e.Target, dest, err)
 		}
 	}
 	return nil

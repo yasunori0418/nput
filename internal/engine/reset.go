@@ -90,7 +90,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		if os.IsNotExist(err) {
 			return res, nil
 		}
-		return nil, fmt.Errorf("nput: profile を確認できません (%s): %w", prof.Profile, err)
+		return nil, fmt.Errorf("nput: cannot check profile (%s): %w", prof.Profile, err)
 	}
 
 	// 2. at run time, serialize with concurrent apply / reset via a blocking flock (→ ADR-0013, ADR-0021).
@@ -98,7 +98,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	if !opts.DryRun {
 		l, err := lock.Acquire(prof.Dir, true)
 		if err != nil {
-			return nil, fmt.Errorf("nput: flock の取得に失敗しました (%s): %w", prof.Dir, err)
+			return nil, fmt.Errorf("nput: failed to acquire flock (%s): %w", prof.Dir, err)
 		}
 		defer func() { _ = l.Release() }()
 	}
@@ -137,7 +137,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 			copyTargets = append(copyTargets, targetAbs)
 			res.RemovedCopies = append(res.RemovedCopies, e.Target)
 		} else if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("nput: copy target を lstat できません (%s): %w", targetAbs, err)
+			return nil, fmt.Errorf("nput: cannot lstat copy target (%s): %w", targetAbs, err)
 		}
 	}
 
@@ -182,7 +182,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	removedCopies := make([]string, 0, len(copyTargets))
 	for i, targetAbs := range copyTargets {
 		if err := os.RemoveAll(targetAbs); err != nil {
-			return nil, fmt.Errorf("nput: copy target を削除できません (%s): %w", targetAbs, err)
+			return nil, fmt.Errorf("nput: cannot remove copy target (%s): %w", targetAbs, err)
 		}
 		removedCopies = append(removedCopies, res.RemovedCopies[i])
 	}
@@ -213,7 +213,7 @@ func selectResetEntries(entries []manifest.Entry, targets []string) ([]manifest.
 		out = append(out, e)
 	}
 	if len(unknown) > 0 {
-		return nil, fmt.Errorf("nput: reset 対象が前世代 manifest に見つかりません（nput が配置した target ではありません）: %v", unknown)
+		return nil, fmt.Errorf("nput: reset target not found in the previous generation's manifest (not a target nput placed): %v", unknown)
 	}
 	return out, nil
 }

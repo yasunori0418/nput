@@ -29,10 +29,10 @@ func (a *applier) materializeCopies(plan planner.Plan, recopy bool) error {
 func (a *applier) placeCopies(actions []planner.CopyAction) error {
 	for _, act := range actions {
 		if err := os.MkdirAll(filepath.Dir(act.TargetAbs), 0o755); err != nil {
-			return fmt.Errorf("nput: 親ディレクトリを作成できません (%s): %w", filepath.Dir(act.TargetAbs), err)
+			return fmt.Errorf("nput: cannot create parent directory (%s): %w", filepath.Dir(act.TargetAbs), err)
 		}
 		if err := copyTree(act.Src, act.TargetAbs); err != nil {
-			return fmt.Errorf("nput: copy 配置に失敗しました (%s -> %s): %w", act.Src, act.TargetAbs, err)
+			return fmt.Errorf("nput: copy placement failed (%s -> %s): %w", act.Src, act.TargetAbs, err)
 		}
 		a.result.Copied = append(a.result.Copied, act.Entry.Target)
 	}
@@ -54,17 +54,17 @@ func (a *applier) recopyAll() error {
 		if _, err := os.Lstat(targetAbs); err == nil {
 			existed = true
 			if err := os.RemoveAll(targetAbs); err != nil {
-				return fmt.Errorf("nput: recopy 対象を削除できません (%s): %w", targetAbs, err)
+				return fmt.Errorf("nput: cannot remove recopy target (%s): %w", targetAbs, err)
 			}
 		} else if !os.IsNotExist(err) {
-			return fmt.Errorf("nput: recopy target を lstat できません (%s): %w", targetAbs, err)
+			return fmt.Errorf("nput: cannot lstat recopy target (%s): %w", targetAbs, err)
 		}
 
 		if err := os.MkdirAll(filepath.Dir(targetAbs), 0o755); err != nil {
-			return fmt.Errorf("nput: 親ディレクトリを作成できません (%s): %w", filepath.Dir(targetAbs), err)
+			return fmt.Errorf("nput: cannot create parent directory (%s): %w", filepath.Dir(targetAbs), err)
 		}
 		if err := copyTree(planner.LinkDest(e), targetAbs); err != nil {
-			return fmt.Errorf("nput: recopy に失敗しました (%s -> %s): %w", planner.LinkDest(e), targetAbs, err)
+			return fmt.Errorf("nput: recopy failed (%s -> %s): %w", planner.LinkDest(e), targetAbs, err)
 		}
 		if existed {
 			a.result.Recopied = append(a.result.Recopied, e.Target)
@@ -84,7 +84,7 @@ func (a *applier) recopyAll() error {
 func copyTree(src, dst string) error {
 	info, err := os.Lstat(src)
 	if err != nil {
-		return fmt.Errorf("copy src を lstat できません (%s): %w", src, err)
+		return fmt.Errorf("cannot lstat copy src (%s): %w", src, err)
 	}
 	switch {
 	case info.Mode()&os.ModeSymlink != 0:
