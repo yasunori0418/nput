@@ -17,7 +17,7 @@ import (
 
 // ErrSchemaVersionUnsupported indicates that a manifest newer than the engine's supported version (SchemaVersion) was read.
 // A sentinel so the caller (CLI) can detect schemaVersion skew between CLI/flake pin via errors.Is and add guidance (→ ADR-0006).
-var ErrSchemaVersionUnsupported = errors.New("nput: schemaVersion が engine の対応版より新しい")
+var ErrSchemaVersionUnsupported = errors.New("nput: schemaVersion is newer than the engine supports")
 
 // SchemaVersion is the latest manifest.json version the engine can interpret (→ ADR-0013).
 // The MVP accepts only v1 and rejects any newer version (→ ADR-0006, ADR-0015).
@@ -73,18 +73,18 @@ func Load(linkFarm string) (*Manifest, error) {
 func LoadFile(path string) (*Manifest, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("nput: manifest.json を読めません: %w", err)
+		return nil, fmt.Errorf("nput: cannot read manifest.json: %w", err)
 	}
 
 	var m Manifest
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&m); err != nil {
-		return nil, fmt.Errorf("nput: manifest.json を解析できません (%s): %w", path, err)
+		return nil, fmt.Errorf("nput: cannot parse manifest.json (%s): %w", path, err)
 	}
 
 	if err := m.validate(); err != nil {
-		return nil, fmt.Errorf("nput: manifest.json が不正です (%s): %w", path, err)
+		return nil, fmt.Errorf("nput: invalid manifest.json (%s): %w", path, err)
 	}
 	return &m, nil
 }
@@ -92,13 +92,13 @@ func LoadFile(path string) (*Manifest, error) {
 func (m *Manifest) validate() error {
 	// The engine rejects any schemaVersion newer than the version it supports (→ ADR-0006).
 	if m.SchemaVersion > SchemaVersion {
-		return fmt.Errorf("schemaVersion %d は未対応です（この engine は v%d まで対応）: %w", m.SchemaVersion, SchemaVersion, ErrSchemaVersionUnsupported)
+		return fmt.Errorf("schemaVersion %d is unsupported (this engine supports up to v%d): %w", m.SchemaVersion, SchemaVersion, ErrSchemaVersionUnsupported)
 	}
 	if m.SchemaVersion < 1 {
-		return fmt.Errorf("schemaVersion %d は不正です", m.SchemaVersion)
+		return fmt.Errorf("schemaVersion %d is invalid", m.SchemaVersion)
 	}
 	if m.Root.RootKind == "" {
-		return fmt.Errorf("root.rootKind が空です")
+		return fmt.Errorf("root.rootKind is empty")
 	}
 	return nil
 }
