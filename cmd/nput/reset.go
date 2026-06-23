@@ -94,14 +94,14 @@ func runReset(name string, targets []string, dryrun bool) error {
 		fmt.Fprintln(os.Stderr, "nput: reset を中止しました")
 		return nil
 	}
-	if !flagQuiet {
+	if flagVerbose {
 		reportResetResult(res, name)
 	}
 	return nil
 }
 
 // printResetPlan は reset --dryrun の削除対象を stdout に出す（機械可読出力を専有・1 行 1 件・
-// → docs/spec.md ストリーム規律・ADR-0023）。--quiet 下でも抑制しない。
+// → docs/spec.md ストリーム規律・ADR-0023）。成功時沈黙でも抑制しない（stdout 専有原則・→ ADR-0031）。
 func printResetPlan(res *engine.ResetResult) {
 	for _, t := range res.RemovedSymlinks {
 		fmt.Printf("remove-symlink\t%s\n", t)

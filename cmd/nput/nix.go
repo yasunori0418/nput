@@ -192,7 +192,7 @@ func dryBuildFunc(e *entrypoint, system, name string) func(pending string) (stri
 
 // runNixCapture は nix の stdout を捕捉して返す（eval 等の機械可読出力用）。
 func runNixCapture(args ...string) (string, error) {
-	if flagVerbose {
+	if flagDebug {
 		fmt.Fprintf(os.Stderr, "nput: + nix %s\n", strings.Join(args, " "))
 	}
 	cmd := exec.Command("nix", args...)
@@ -208,7 +208,7 @@ func runNixCapture(args ...string) (string, error) {
 // runNixStream は nix の出力を stderr へ流す（build 進捗用。stdout は機械可読出力に専有・→ ADR-0023）。
 // build 前に eval が成功している＝nix-command/flakes は有効化済みなので experimental 検出は不要。
 func runNixStream(args ...string) error {
-	if flagVerbose {
+	if flagDebug {
 		fmt.Fprintf(os.Stderr, "nput: + nix %s\n", strings.Join(args, " "))
 	}
 	cmd := exec.Command("nix", args...)

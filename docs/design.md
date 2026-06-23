@@ -240,7 +240,7 @@ nput init <template>    # nix flake init -t github:yasunori0418/nput#<template> 
 `--only`（一部 entry だけ適用）は profile 世代の atomic 性と衝突するため提供しない。
 選択的更新は「役割ごとに別 config（`nput.<name>`）に分ける」ことで担保する。
 
-出力・終了コード規約（→ ADR-0023）: **stdout は機械可読出力専有**（`gitignore` / `--dryrun` プラン）、**進捗 / レポート / warning / skip 通知は stderr**。終了コードは `0`（成功 / no-op / `--no-wait` skip）/ `1`（一般エラー・`--all` 部分失敗）/ `2`（`--dryrun` で conflict）。`--quiet`（進捗抑制・shellHook 向き）/ `--verbose`（nix コマンド詳細）を持つ。`--json` は将来送り。`gitignore` は project mode 限定。`--root` 明示時は全モードで profileDir を `<roothash>` キーにする。
+出力・終了コード規約（→ ADR-0023, ADR-0031）: **stdout は機械可読出力専有**（`gitignore` / `--dryrun` プラン）、**warning / error は stderr**。**成功時はデフォルト沈黙**（沈黙は金）で配置レポート / skip 通知は出さず、`-v` / `--verbose` で opt-in 表示する。内部 nix コマンドの開示は `--debug`。終了コードは `0`（成功 / no-op / `--no-wait` skip）/ `1`（一般エラー・`--all` 部分失敗）/ `2`（`--dryrun` で conflict）。`--json` は将来送り。`gitignore` は project mode 限定。`--root` 明示時は全モードで profileDir を `<roothash>` キーにする。
 
 ### 再現性スタンス（→ ADR-0007）
 
