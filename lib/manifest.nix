@@ -114,21 +114,23 @@ let
         # systemRoot is not implemented (→ ADR-0013).
         (lib.optional (
           rootInfo.rootKind == "system"
-        ) "nput: root = systemRoot (system mode) は未実装です（→ ADR-0013）")
+        ) "nput: root = systemRoot (system mode) is not implemented (→ ADR-0013)")
         # method = "copy" combined with an out-of-store marker is a contradiction of intent (→ ADR-0013).
         (map (
-          e: "nput: method = \"copy\" と out-of-store marker は同時指定できません（target: ${e.target}・→ ADR-0013）"
+          e:
+          "nput: method = \"copy\" cannot be combined with an out-of-store marker (target: ${e.target}; → ADR-0013)"
         ) (lib.filter (e: e.method == "copy" && e.srcKind == "outOfStore") normEntries))
         # Collision from explicitly overriding target to the same value under a different key (→ ADR-0024).
         (lib.optional (
           lib.length targets != lib.length (lib.unique targets)
-        ) "nput: 複数 entry が同一 target に解決されました（→ ADR-0024）")
+        ) "nput: multiple entries resolve to the same target (→ ADR-0024)")
         # Reject absolute paths / `..` escapes in target / subpath (→ ADR-0019).
-        (map (e: "nput: target が不正です（絶対パスまたは `..` で root の外）: ${e.target}（→ ADR-0019）") (
-          lib.filter (e: checks.isUnsafe e.target) normEntries
-        ))
         (map (
-          e: "nput: subpath が不正です（絶対パスまたは `..` で src の外）: ${e.subpath}（target: ${e.target}・→ ADR-0019）"
+          e: "nput: invalid target (absolute path or escapes root via `..`): ${e.target} (→ ADR-0019)"
+        ) (lib.filter (e: checks.isUnsafe e.target) normEntries))
+        (map (
+          e:
+          "nput: invalid subpath (absolute path or escapes src via `..`): ${e.subpath} (target: ${e.target}; → ADR-0019)"
         ) (lib.filter (e: checks.isUnsafe e.subpath) normEntries))
       ];
 

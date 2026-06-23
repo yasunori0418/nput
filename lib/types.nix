@@ -45,19 +45,19 @@ let
       options = {
         src = mkOption {
           type = srcType;
-          description = "配置元。store-backed（path / set）または out-of-store marker。";
+          description = "Placement source. A store-backed value (path / set) or an out-of-store marker.";
         };
         subpath = mkOption {
           type = types.str;
           default = ".";
-          description = "src 内の相対パス。省略 = リポジトリ全体（→ ADR-0008）。";
+          description = "Relative path inside src. Omitted = the whole repository (→ ADR-0008).";
         };
         target = mkOption {
           type = types.str;
           # Default = attribute key (→ ADR-0014).
           default = name;
-          defaultText = "属性キー";
-          description = "root 相対の配置先。省略時は属性キー。";
+          defaultText = "attribute key";
+          description = "Placement target relative to root. Defaults to the attribute key when omitted.";
         };
         method = mkOption {
           type = types.enum [
@@ -65,7 +65,7 @@ let
             "copy"
           ];
           default = "symlink";
-          description = "配置方法（旧名 mode・→ ADR-0015）。";
+          description = "Placement method (formerly named mode; → ADR-0015).";
         };
       };
     };

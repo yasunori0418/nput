@@ -218,7 +218,7 @@ in
         };
       }).entries;
     expectedError.type = "ThrownError";
-    expectedError.msg = "同一 target";
+    expectedError.msg = "same target";
   };
 
   # 未知キー（タイポ / 旧名）は submodule strict で弾く（→ ADR-0008, ADR-0010）。
