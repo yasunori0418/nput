@@ -24,7 +24,7 @@ in
       default = { };
       example = lib.literalExpression ''
         {
-          # 属性キー = root 相対 target（識別子・→ ADR-0014）
+          # attribute key = root-relative target (identifier; → ADR-0014)
           ".claude/skills/nix" = {
             src = inputs.claude-skills;
             subpath = "skills/nix";
