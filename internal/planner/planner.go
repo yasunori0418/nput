@@ -149,7 +149,7 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			plan.Conflicts = append(plan.Conflicts, Conflict{
 				Entry:     e,
 				TargetAbs: targetAbs,
-				Reason:    fmt.Sprintf("祖先 %q が symlink です。配下にネストできません (→ ADR-0015)", offender),
+				Reason:    fmt.Sprintf("ancestor %q is a symlink; cannot nest beneath it (→ ADR-0015)", offender),
 			})
 			continue
 		}
@@ -162,7 +162,7 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			continue
 		}
 		if e.Method != manifest.MethodSymlink {
-			return Plan{}, fmt.Errorf("nput: 未知の method: %q (target: %s)", e.Method, e.Target)
+			return Plan{}, fmt.Errorf("nput: unknown method: %q (target: %s)", e.Method, e.Target)
 		}
 
 		info, err := fs.Lstat(targetAbs)
@@ -180,12 +180,12 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			plan.Conflicts = append(plan.Conflicts, Conflict{
 				Entry:     e,
 				TargetAbs: targetAbs,
-				Reason:    "target に既存のファイル/ディレクトリがあります（上書きしません）",
+				Reason:    "target already has an existing file/directory (will not overwrite)",
 			})
 		case os.IsNotExist(err):
 			plan.Place = append(plan.Place, PlaceAction{Entry: e, TargetAbs: targetAbs, Dest: LinkDest(e), Kind: PlaceNew})
 		default:
-			return Plan{}, fmt.Errorf("nput: target を lstat できません (%s): %w", targetAbs, err)
+			return Plan{}, fmt.Errorf("nput: cannot lstat target (%s): %w", targetAbs, err)
 		}
 	}
 
@@ -209,7 +209,7 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			case err != nil && os.IsNotExist(err):
 				continue // already gone = no-op (no warning).
 			case err != nil:
-				return Plan{}, fmt.Errorf("nput: stale target を lstat できません (%s): %w", targetAbs, err)
+				return Plan{}, fmt.Errorf("nput: cannot lstat stale target (%s): %w", targetAbs, err)
 			case info.Mode()&os.ModeSymlink == 0:
 				// A regular file / directory is left untouched (→ docs/spec.md safety invariant).
 				plan.Warnings = append(plan.Warnings, Warning{Kind: WarnStaleNonSymlink, Target: pe.Target})
@@ -287,7 +287,7 @@ func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget m
 			plan.Conflicts = append(plan.Conflicts, Conflict{
 				Entry:     e,
 				TargetAbs: targetAbs,
-				Reason:    "copy の src 構造と target の種別が不一致です（dir↔file・上書きしません）",
+				Reason:    "copy src structure and target kind mismatch (dir↔file; will not overwrite)",
 			})
 			return nil
 		}
@@ -301,7 +301,7 @@ func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget m
 		plan.Copies = append(plan.Copies, CopyAction{Entry: e, TargetAbs: targetAbs, Src: LinkDest(e)})
 		return nil
 	default:
-		return fmt.Errorf("nput: copy target を lstat できません (%s): %w", targetAbs, err)
+		return fmt.Errorf("nput: cannot lstat copy target (%s): %w", targetAbs, err)
 	}
 }
 
@@ -312,7 +312,7 @@ func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget m
 func copyStructureMismatch(e manifest.Entry, targetInfo os.FileInfo, fs FS) (bool, error) {
 	srcInfo, err := fs.Lstat(LinkDest(e))
 	if err != nil {
-		return false, fmt.Errorf("nput: copy src を lstat できません (%s): %w", LinkDest(e), err)
+		return false, fmt.Errorf("nput: cannot lstat copy src (%s): %w", LinkDest(e), err)
 	}
 	return srcInfo.IsDir() != targetInfo.IsDir(), nil
 }
@@ -335,7 +335,7 @@ func ancestorSymlink(root, target string, fs FS) (string, error) {
 			if os.IsNotExist(err) {
 				return "", nil
 			}
-			return "", fmt.Errorf("nput: 祖先を lstat できません (%s): %w", cur, err)
+			return "", fmt.Errorf("nput: cannot lstat ancestor (%s): %w", cur, err)
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
 			return cur, nil
