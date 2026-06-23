@@ -167,7 +167,7 @@ func Apply(opts Options) (*Result, error) {
 			a.result.Skipped = true
 			return a.result, ErrSkipped
 		}
-		return nil, fmt.Errorf("nput: flock の取得に失敗しました (%s): %w", a.profile.Dir, err)
+		return nil, fmt.Errorf("nput: failed to acquire flock (%s): %w", a.profile.Dir, err)
 	}
 	defer func() { _ = l.Release() }()
 
@@ -214,7 +214,7 @@ func Apply(opts Options) (*Result, error) {
 		same, err := generationUnchanged(a.profile.Profile, a.opts.LinkFarm)
 		if err != nil {
 			// When the previous generation's link-farm cannot be resolved, fall back to the safe side: normal apply (commit a new generation).
-			a.opts.Warnf("nput: 前世代 link-farm を解決できませんでした。世代スキップせず再コミットします: %v", err)
+			a.opts.Warnf("nput: could not resolve the previous generation's link-farm; recommitting without a generation skip: %v", err)
 		} else if same {
 			if err := a.repairDrift(plan, opts.Recopy); err != nil {
 				return nil, err
@@ -244,7 +244,7 @@ func Apply(opts Options) (*Result, error) {
 		commit = nixEnvCommit
 	}
 	if err := commit(a.profile.Profile, a.opts.LinkFarm); err != nil {
-		return nil, fmt.Errorf("nput: 世代コミット（nix-env --set）に失敗しました: %w", err)
+		return nil, fmt.Errorf("nput: generation commit (nix-env --set) failed: %w", err)
 	}
 
 	// 10. remove .pending after --set succeeds (the generation link inherits the gcroot · → ADR-0011, ADR-0025).
@@ -260,7 +260,7 @@ func (a *applier) cleanupPending() {
 		return
 	}
 	if err := os.Remove(a.profile.Pending); err != nil && !os.IsNotExist(err) {
-		a.opts.Warnf("nput: .pending out-link を削除できませんでした (%s): %v", a.profile.Pending, err)
+		a.opts.Warnf("nput: could not remove the .pending out-link (%s): %v", a.profile.Pending, err)
 	}
 }
 
@@ -338,7 +338,7 @@ func resolveRoot(rootKind, fixedRoot, rootOverride, workDir string, git GitFunc)
 		if dir == "" {
 			cwd, err := os.Getwd()
 			if err != nil {
-				return "", fmt.Errorf("nput: cwd を取得できません: %w", err)
+				return "", fmt.Errorf("nput: cannot get cwd: %w", err)
 			}
 			dir = cwd
 		}
@@ -349,34 +349,34 @@ func resolveRoot(rootKind, fixedRoot, rootOverride, workDir string, git GitFunc)
 	case manifest.RootKindHome:
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return "", fmt.Errorf("nput: $HOME を解決できません: %w", err)
+			return "", fmt.Errorf("nput: cannot resolve $HOME: %w", err)
 		}
 		return home, nil
 	case manifest.RootKindFixed:
 		if fixedRoot == "" {
-			return "", fmt.Errorf("nput: rootKind=fixed なのに root パスがありません")
+			return "", fmt.Errorf("nput: rootKind=fixed but no root path provided")
 		}
 		return filepath.Abs(fixedRoot)
 	case manifest.RootKindSystem:
-		return "", fmt.Errorf("nput: root = systemRoot (system mode) は未実装です（→ ADR-0013）")
+		return "", fmt.Errorf("nput: root = systemRoot (system mode) is not implemented (→ ADR-0013)")
 	case "":
-		return "", fmt.Errorf("nput: rootKind が未確定です（eval 先取りまたは manifest が必要）")
+		return "", fmt.Errorf("nput: rootKind is undetermined (eval prefetch or a manifest is required)")
 	default:
-		return "", fmt.Errorf("nput: 未知の rootKind: %q", rootKind)
+		return "", fmt.Errorf("nput: unknown rootKind: %q", rootKind)
 	}
 }
 
 func (a *applier) ensureProfileDir() error {
 	if err := os.MkdirAll(a.profile.Dir, 0o755); err != nil {
-		return fmt.Errorf("nput: profileDir を作成できません (%s): %w", a.profile.Dir, err)
+		return fmt.Errorf("nput: cannot create profileDir (%s): %w", a.profile.Dir, err)
 	}
 	// Place backref .root at the <roothash> level (reverse-lookup seam for orphan profiles · → ADR-0013).
 	if a.profile.Backref != "" {
 		if err := os.MkdirAll(a.profile.BackrefDir, 0o755); err != nil {
-			return fmt.Errorf("nput: backref ディレクトリを作成できません (%s): %w", a.profile.BackrefDir, err)
+			return fmt.Errorf("nput: cannot create backref directory (%s): %w", a.profile.BackrefDir, err)
 		}
 		if err := os.WriteFile(a.profile.Backref, []byte(a.root+"\n"), 0o644); err != nil {
-			return fmt.Errorf("nput: backref を書けません (%s): %w", a.profile.Backref, err)
+			return fmt.Errorf("nput: cannot write backref (%s): %w", a.profile.Backref, err)
 		}
 	}
 	return nil
@@ -392,7 +392,7 @@ func (a *applier) loadPrevManifest() *manifest.Manifest {
 	m, err := manifest.Load(a.profile.Profile)
 	if err != nil {
 		// Even if the previous generation cannot be read, do not block new placement (just give up stale removal).
-		a.opts.Warnf("nput: 前世代 manifest を読めませんでした。stale 除去をスキップします: %v", err)
+		a.opts.Warnf("nput: could not read the previous generation's manifest; skipping stale removal: %v", err)
 		return nil
 	}
 	return m
@@ -406,18 +406,18 @@ func (a *applier) emitWarnings(ws []planner.Warning, recopy bool) {
 	for _, w := range ws {
 		switch w.Kind {
 		case planner.WarnForeignReplace:
-			a.opts.Warnf("nput: 記録の無い symlink を上書きします (foreign・後勝ち): %s", w.Target)
+			a.opts.Warnf("nput: overwriting an unrecorded symlink (foreign; last-wins): %s", w.Target)
 		case planner.WarnStaleMismatch:
-			a.opts.Warnf("nput: stale symlink が記録と不一致のため残します: %s", w.Target)
+			a.opts.Warnf("nput: keeping stale symlink because it mismatches the record: %s", w.Target)
 		case planner.WarnStaleNonSymlink:
-			a.opts.Warnf("nput: stale target が symlink ではないため残します: %s", w.Target)
+			a.opts.Warnf("nput: keeping stale target because it is not a symlink: %s", w.Target)
 		case planner.WarnCopyOrphan:
-			a.opts.Warnf("nput: copy entry が消えましたが target は削除しません（orphan・reset で撤去）: %s", w.Target)
+			a.opts.Warnf("nput: copy entry vanished but the target is not removed (orphan; clear it with reset): %s", w.Target)
 		case planner.WarnCopyForeign:
 			if recopy {
 				continue
 			}
-			a.opts.Warnf("nput: copy target に既存の実ファイルがあるため copy をスキップしました（foreign・place-once）: %s", w.Target)
+			a.opts.Warnf("nput: skipped copy because a real file already exists at the copy target (foreign; place-once): %s", w.Target)
 		}
 	}
 }

@@ -795,7 +795,7 @@ func TestApplyRecopyForeignFileOverwrites(t *testing.T) {
 	}
 	// On the recopy path no foreign skip warning is emitted (it overwrites, so that would be a false report).
 	for _, w := range warns {
-		if strings.Contains(w, "スキップ") {
+		if strings.Contains(w, "skipped copy") {
 			t.Errorf("unexpected copy foreign skip warning during recopy: %q", w)
 		}
 	}

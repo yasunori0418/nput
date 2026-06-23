@@ -17,11 +17,11 @@ import (
 func (a *applier) removeStale(actions []planner.RemoveAction) error {
 	for _, act := range actions {
 		if !reverifyStale(act) {
-			a.opts.Warnf("nput: stale symlink が plan 後にドリフトしたため残します: %s", act.Entry.Target)
+			a.opts.Warnf("nput: keeping stale symlink because it drifted after planning: %s", act.Entry.Target)
 			continue
 		}
 		if err := os.Remove(act.TargetAbs); err != nil {
-			return fmt.Errorf("nput: stale symlink を除去できません (%s): %w", act.TargetAbs, err)
+			return fmt.Errorf("nput: cannot remove stale symlink (%s): %w", act.TargetAbs, err)
 		}
 		a.result.Removed = append(a.result.Removed, act.Entry.Target)
 	}

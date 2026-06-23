@@ -17,14 +17,14 @@ let
 in
 {
   options.nput = {
-    enable = lib.mkEnableOption "nput（フェッチ済み git リポジトリの symlink / copy 配置）";
+    enable = lib.mkEnableOption "nput (symlink / copy placement of fetched git repositories)";
 
     entries = lib.mkOption {
       type = nputTypes.entriesType;
       default = { };
       example = lib.literalExpression ''
         {
-          # 属性キー = root 相対 target（識別子・→ ADR-0014）
+          # attribute key = root-relative target (identifier; → ADR-0014)
           ".claude/skills/nix" = {
             src = inputs.claude-skills;
             subpath = "skills/nix";
@@ -32,9 +32,10 @@ in
         }
       '';
       description = ''
-        配置定義の attrset。属性キー = 配置先 target（識別子）で、各値は entry submodule
-        （src / subpath / target / method）。型は lib/types.nix と共有し、未知キーは eval
-        エラーになる（→ docs/spec.md「entries スキーマ仕様」）。
+        Attrset of placement definitions. The attribute key = the placement target
+        (identifier), and each value is an entry submodule (src / subpath / target /
+        method). The type is shared with lib/types.nix, and unknown keys are an eval
+        error (→ docs/spec.md "entries schema").
       '';
     };
   };

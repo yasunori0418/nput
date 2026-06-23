@@ -157,7 +157,7 @@ func TestRollbackNoPreviousErrors(t *testing.T) {
 		ListGenerations:  func(string) ([]Generation, error) { return []Generation{{Number: 1, Current: true}}, nil },
 		SwitchGeneration: func(string, int) error { return nil },
 	})
-	if err == nil || !strings.Contains(err.Error(), "前世代") {
+	if err == nil || !strings.Contains(err.Error(), "no previous generation") {
 		t.Fatalf("expected no-previous-generation error, got %v", err)
 	}
 }

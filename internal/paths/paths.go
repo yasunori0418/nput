@@ -30,7 +30,7 @@ func StateDir() (string, error) {
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("nput: $HOME を解決できません: %w", err)
+		return "", fmt.Errorf("nput: cannot resolve $HOME: %w", err)
 	}
 	return filepath.Join(home, ".local", "state"), nil
 }

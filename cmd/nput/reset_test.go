@@ -19,10 +19,10 @@ func TestConfirmPolicy(t *testing.T) {
 		wantPrompt  bool
 		wantErr     bool
 	}{
-		{"--yes はスキップ（非対話でも）", true, false, false, false},
-		{"--yes はスキップ（対話でも）", true, true, false, false},
-		{"対話 + --yes 無しはプロンプト", false, true, true, false},
-		{"非対話 + --yes 無しは拒否", false, false, false, true},
+		{"--yes skips (even non-interactive)", true, false, false, false},
+		{"--yes skips (even interactive)", true, true, false, false},
+		{"interactive + no --yes prompts", false, true, true, false},
+		{"non-interactive + no --yes refuses", false, false, false, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -56,7 +56,7 @@ func TestPromptYesNo(t *testing.T) {
 		t.Run(strings.TrimSpace(c.input)+"->"+boolStr(c.want), func(t *testing.T) {
 			restore := withStdin(t, c.input)
 			defer restore()
-			got, err := promptYesNo("続行しますか？")
+			got, err := promptYesNo("Continue?")
 			if err != nil {
 				t.Fatalf("promptYesNo err = %v", err)
 			}
@@ -73,7 +73,7 @@ func TestIsInteractiveNonTTY(t *testing.T) {
 	restore := withStdin(t, "")
 	defer restore()
 	if isInteractive() {
-		t.Error("パイプ stdin では isInteractive() は false であるべき")
+		t.Error("isInteractive() should be false for piped stdin")
 	}
 }
 
@@ -87,35 +87,35 @@ func TestResetOutputStreams(t *testing.T) {
 		KeptForeign:     []string{"/root/c"},
 	}
 
-	t.Run("printResetPlan は stdout 専有", func(t *testing.T) {
+	t.Run("printResetPlan owns stdout exclusively", func(t *testing.T) {
 		out, errOut := captureOutErr(t, func() { printResetPlan(res) })
 		if !strings.Contains(out, "remove-symlink\t/root/a") ||
 			!strings.Contains(out, "remove-copy\t/root/b") ||
 			!strings.Contains(out, "keep-foreign\t/root/c") {
-			t.Errorf("plan が stdout に出ていない: %q", out)
+			t.Errorf("plan not emitted to stdout: %q", out)
 		}
 		if errOut != "" {
-			t.Errorf("plan で stderr に出力があるべきでない: %q", errOut)
+			t.Errorf("plan should not write to stderr: %q", errOut)
 		}
 	})
 
-	t.Run("reportResetResult は stderr 専有", func(t *testing.T) {
+	t.Run("reportResetResult owns stderr exclusively", func(t *testing.T) {
 		out, errOut := captureOutErr(t, func() { reportResetResult(res, "name") })
 		if out != "" {
-			t.Errorf("レポートが stdout を汚している: %q", out)
+			t.Errorf("report pollutes stdout: %q", out)
 		}
 		if !strings.Contains(errOut, "removed-symlink") || !strings.Contains(errOut, "/root/a") {
-			t.Errorf("レポートが stderr に出ていない: %q", errOut)
+			t.Errorf("report not emitted to stderr: %q", errOut)
 		}
 	})
 
-	t.Run("reportResetTargets は stderr 専有", func(t *testing.T) {
+	t.Run("reportResetTargets owns stderr exclusively", func(t *testing.T) {
 		out, errOut := captureOutErr(t, func() { reportResetTargets(res, "name") })
 		if out != "" {
-			t.Errorf("確認表示が stdout を汚している: %q", out)
+			t.Errorf("confirmation prompt pollutes stdout: %q", out)
 		}
 		if !strings.Contains(errOut, "removal targets") {
-			t.Errorf("確認表示が stderr に出ていない: %q", errOut)
+			t.Errorf("confirmation prompt not emitted to stderr: %q", errOut)
 		}
 	})
 }

@@ -125,13 +125,13 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 
 	// If profileDir is absent, apply has never run → no generation to roll back to.
 	if _, err := os.Stat(prof.Dir); err != nil {
-		return nil, fmt.Errorf("nput: profile がありません（一度も apply していません）: %s", prof.Dir)
+		return nil, fmt.Errorf("nput: no profile (apply has never run): %s", prof.Dir)
 	}
 
 	// 2. serialize with concurrent apply / rollback via a blocking flock (→ ADR-0013).
 	l, err := lock.Acquire(prof.Dir, true)
 	if err != nil {
-		return nil, fmt.Errorf("nput: flock の取得に失敗しました (%s): %w", prof.Dir, err)
+		return nil, fmt.Errorf("nput: failed to acquire flock (%s): %w", prof.Dir, err)
 	}
 	defer func() { _ = l.Release() }()
 
@@ -147,10 +147,10 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 		}
 	}
 	if curIdx < 0 {
-		return nil, fmt.Errorf("nput: 現世代を特定できません（profile: %s）", prof.Profile)
+		return nil, fmt.Errorf("nput: cannot identify the current generation (profile: %s)", prof.Profile)
 	}
 	if curIdx == 0 {
-		return nil, fmt.Errorf("nput: 前世代がありません（最古の世代のため rollback できません）")
+		return nil, fmt.Errorf("nput: no previous generation (this is the oldest generation, cannot rollback)")
 	}
 	cur := gens[curIdx]
 	prev := gens[curIdx-1]
@@ -158,11 +158,11 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	// 4. baseline = current generation N's manifest (current FS state) / target = previous generation N-1's manifest.
 	baseline, err := manifest.Load(prof.Profile)
 	if err != nil {
-		return nil, fmt.Errorf("nput: 現世代 manifest を読めません: %w", err)
+		return nil, fmt.Errorf("nput: cannot read the current generation's manifest: %w", err)
 	}
 	target, err := manifest.Load(paths.GenerationLink(prof.Profile, prev.Number))
 	if err != nil {
-		return nil, fmt.Errorf("nput: 前世代 manifest を読めません (世代 %d): %w", prev.Number, err)
+		return nil, fmt.Errorf("nput: cannot read the previous generation's manifest (generation %d): %w", prev.Number, err)
 	}
 
 	// 5. compute the plan for N∖N-1 stale removal · N-1 entry re-placement with the planner (reusing the apply engine with (baseline, target) substituted).
@@ -189,7 +189,7 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 
 	// 7. finally move the profile pointer to N-1 (→ docs/spec.md rollback step 3).
 	if err := switchFn(prof.Profile, prev.Number); err != nil {
-		return nil, fmt.Errorf("nput: profile ポインタの移動に失敗しました（--switch-generation %d）: %w", prev.Number, err)
+		return nil, fmt.Errorf("nput: failed to move the profile pointer (--switch-generation %d): %w", prev.Number, err)
 	}
 
 	return &RollbackResult{Result: *a.result, From: cur.Number, To: prev.Number}, nil
@@ -199,7 +199,7 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 // It captures and parses stdout (ingesting machine-readable output).
 func nixEnvListGenerations(profileLink string) ([]Generation, error) {
 	if _, err := exec.LookPath("nix-env"); err != nil {
-		return nil, fmt.Errorf("nix-env が PATH にありません: %w", err)
+		return nil, fmt.Errorf("nix-env is not on PATH: %w", err)
 	}
 	cmd := exec.Command("nix-env", "--profile", profileLink, "--list-generations")
 	var stdout, stderr bytes.Buffer
@@ -208,9 +208,9 @@ func nixEnvListGenerations(profileLink string) ([]Generation, error) {
 	if err := cmd.Run(); err != nil {
 		trimmed := strings.TrimSpace(stderr.String())
 		if trimmed != "" {
-			return nil, fmt.Errorf("nput: nix-env --list-generations に失敗しました: %w\n%s", err, trimmed)
+			return nil, fmt.Errorf("nput: nix-env --list-generations failed: %w\n%s", err, trimmed)
 		}
-		return nil, fmt.Errorf("nput: nix-env --list-generations に失敗しました: %w", err)
+		return nil, fmt.Errorf("nput: nix-env --list-generations failed: %w", err)
 	}
 	return parseGenerations(stdout.String())
 }
@@ -219,7 +219,7 @@ func nixEnvListGenerations(profileLink string) ([]Generation, error) {
 // nix output is routed to stderr (stdout is reserved for machine-readable output · → docs/spec.md stream discipline).
 func nixEnvSwitchGeneration(profileLink string, gen int) error {
 	if _, err := exec.LookPath("nix-env"); err != nil {
-		return fmt.Errorf("nix-env が PATH にありません: %w", err)
+		return fmt.Errorf("nix-env is not on PATH: %w", err)
 	}
 	cmd := exec.Command("nix-env", "--profile", profileLink, "--switch-generation", strconv.Itoa(gen))
 	cmd.Stdout = os.Stderr
@@ -238,7 +238,7 @@ func parseGenerations(out string) ([]Generation, error) {
 		}
 		n, err := strconv.Atoi(fields[0])
 		if err != nil {
-			return nil, fmt.Errorf("nput: 世代一覧の行を解析できません: %q", line)
+			return nil, fmt.Errorf("nput: cannot parse a line of the generation list: %q", line)
 		}
 		g := Generation{Number: n}
 		end := len(fields)

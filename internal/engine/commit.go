@@ -12,7 +12,7 @@ import (
 // so nix output is routed to stderr (→ docs/spec.md stream discipline).
 func nixEnvCommit(profileLink, linkFarm string) error {
 	if _, err := exec.LookPath("nix-env"); err != nil {
-		return fmt.Errorf("nix-env が PATH にありません: %w", err)
+		return fmt.Errorf("nix-env is not on PATH: %w", err)
 	}
 	cmd := exec.Command("nix-env", "--profile", profileLink, "--set", linkFarm)
 	cmd.Stdout = os.Stderr
