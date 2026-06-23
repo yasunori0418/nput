@@ -25,10 +25,10 @@ mkTransposedPerSystemModule {
     type = types.lazyAttrsOf types.package;
     default = { };
     description = ''
-      nput の named manifest（`nput.lib.mkManifest` の結果＝derivation）を公開する属性集合（→ ADR-0007, ADR-0029）。
+      Attrset that exposes nput's named manifests (the result of `nput.lib.mkManifest` = a derivation) (→ ADR-0007, ADR-0029).
 
-      `perSystem.nput.<name>` に宣言すると top-level の `flake.nput.<system>.<name>` へ自動転置され、
-      CLI が `nix build .#nput.<system>.<name>` で叩く build 可能な derivation になる。
+      Declaring `perSystem.nput.<name>` automatically transposes it to the top-level `flake.nput.<system>.<name>`,
+      yielding a buildable derivation the CLI invokes via `nix build .#nput.<system>.<name>`.
 
       ```nix
       perSystem = { pkgs, ... }: {
