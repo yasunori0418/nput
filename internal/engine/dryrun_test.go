@@ -8,8 +8,8 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
-// TestApplyDryRunNoSideEffects は apply --dryrun が plan を返すだけで FS / profileDir を一切
-// 変えないことを検証する（→ ADR-0006, ADR-0023）。
+// TestApplyDryRunNoSideEffects verifies that apply --dryrun only returns a plan and
+// changes neither the FS nor the profileDir (→ ADR-0006, ADR-0023).
 func TestApplyDryRunNoSideEffects(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
@@ -34,25 +34,26 @@ func TestApplyDryRunNoSideEffects(t *testing.T) {
 	if got := res.Placed; len(got) != 1 || got[0] != ".link" {
 		t.Errorf("Placed = %v, want [.link]", got)
 	}
-	// symlink は張られない。
+	// symlink is not created.
 	if _, err := os.Lstat(filepath.Join(root, ".link")); !os.IsNotExist(err) {
 		t.Errorf(".link should not be created in dryrun, lstat err = %v", err)
 	}
-	// profileDir も作られない（mkdir / flock を取らない）。
+	// profileDir is not created either (no mkdir / flock taken).
 	if _, err := os.Stat(res.ProfileDir); !os.IsNotExist(err) {
 		t.Errorf("profileDir should not be created in dryrun, stat err = %v", err)
 	}
 }
 
-// TestApplyDryRunConflict は target が通常ファイルで占有されているとき conflict を plan に載せ、
-// FS を変えないことを検証する（CLI が exit 2 を判定する・→ docs/spec.md 終了コード表）。
+// TestApplyDryRunConflict verifies that when the target is occupied by a regular file a
+// conflict is recorded in the plan and the FS is left unchanged (the CLI decides exit 2 ·
+// → docs/spec.md exit code table).
 func TestApplyDryRunConflict(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
 	src := makeSrc(t, "sub/file")
 	lf := writeLinkFarm(t, homeManifest(storeEntry(src, "sub", ".link")))
 
-	// target を通常ファイルで占有する（symlink 上書き不可 → conflict）。
+	// Occupy the target with a regular file (cannot overwrite as symlink → conflict).
 	if err := os.WriteFile(filepath.Join(root, ".link"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}

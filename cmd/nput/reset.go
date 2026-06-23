@@ -31,8 +31,8 @@ func newResetCmd() *cobra.Command {
 	return cmd
 }
 
-// runReset は eval 先取りで rootKind（→ profileDir）を確定し、engine.Reset を駆動する。
-// --dryrun は読み取り専用でプランを stdout に出して exit 0。非 dryrun は TTY 確認 / --yes を要求する。
+// runReset resolves rootKind (→ profileDir) via eval pre-resolution and drives engine.Reset.
+// --dryrun prints the plan read-only to stdout and exits 0. Non-dryrun requires TTY confirmation / --yes.
 func runReset(name string, targets []string, dryrun bool) error {
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
@@ -47,7 +47,7 @@ func runReset(name string, targets []string, dryrun bool) error {
 		return err
 	}
 
-	// --dryrun: 副作用ゼロのプレビュー（flock / confirm なし・終了コードは対象有無に依らず 0・→ ADR-0021）。
+	// --dryrun: a side-effect-free preview (no flock / confirm; exit code is 0 regardless of whether there are targets; → ADR-0021).
 	if dryrun {
 		res, err := engine.Reset(engine.ResetOptions{
 			Name:         name,
@@ -64,13 +64,13 @@ func runReset(name string, targets []string, dryrun bool) error {
 		return nil
 	}
 
-	// 非 dryrun は破壊的操作。確認方針（スキップ / プロンプト / 拒否）を --yes と TTY 状態から決める。
+	// Non-dryrun is a destructive operation. Decide the confirmation policy (skip / prompt / refuse) from --yes and TTY state.
 	needPrompt, err := confirmPolicy(flagYes, isInteractive())
 	if err != nil {
 		return err
 	}
 
-	// プロンプトが要るときだけ confirm を渡す。プロンプトは算出済みプランを表示する。
+	// Pass confirm only when a prompt is needed. The prompt shows the computed plan.
 	var confirm func(*engine.ResetResult) (bool, error)
 	if needPrompt {
 		confirm = func(res *engine.ResetResult) (bool, error) {
@@ -100,8 +100,8 @@ func runReset(name string, targets []string, dryrun bool) error {
 	return nil
 }
 
-// printResetPlan は reset --dryrun の削除対象を stdout に出す（機械可読出力を専有・1 行 1 件・
-// → docs/spec.md ストリーム規律・ADR-0023）。成功時沈黙でも抑制しない（stdout 専有原則・→ ADR-0031）。
+// printResetPlan prints reset --dryrun's removal targets to stdout (it owns the machine-readable output; one per line;
+// → docs/spec.md stream discipline, ADR-0023). It is not suppressed even under silent-on-success (the stdout-ownership principle; → ADR-0031).
 func printResetPlan(res *engine.ResetResult) {
 	for _, t := range res.RemovedSymlinks {
 		fmt.Printf("remove-symlink\t%s\n", t)
@@ -117,7 +117,7 @@ func printResetPlan(res *engine.ResetResult) {
 	}
 }
 
-// reportResetTargets は確認プロンプト前に削除予定を stderr に出す（進捗扱い・stdout は機械可読専有）。
+// reportResetTargets prints the planned removals to stderr before the confirmation prompt (treated as progress; stdout is reserved for machine-readable output).
 func reportResetTargets(res *engine.ResetResult, name string) {
 	fmt.Fprintf(os.Stderr, "nput: reset %s removal targets (root=%s):\n", name, res.Root)
 	for _, t := range res.RemovedSymlinks {
@@ -134,7 +134,7 @@ func reportResetTargets(res *engine.ResetResult, name string) {
 	}
 }
 
-// reportResetResult は実削除結果を stderr に出す（stdout は機械可読出力に専有・→ ADR-0023）。
+// reportResetResult prints the actual removal result to stderr (stdout is reserved for machine-readable output; → ADR-0023).
 func reportResetResult(res *engine.ResetResult, name string) {
 	fmt.Fprintf(os.Stderr, "nput: reset %s done (root=%s)\n", name, res.Root)
 	for _, t := range res.RemovedSymlinks {
@@ -151,12 +151,12 @@ func reportResetResult(res *engine.ResetResult, name string) {
 	}
 }
 
-// confirmPolicy は破壊的 reset の確認方針を --yes と TTY 状態から決める（→ ADR-0025 §5）。
-//   - --yes: 確認スキップ（needPrompt=false・err=nil）
-//   - --yes 無し + 対話環境: 確認プロンプト要求（needPrompt=true）
-//   - --yes 無し + 非対話環境: ハング / 空入力誤削除を防ぐため即エラー（refuse）
+// confirmPolicy decides the confirmation policy for a destructive reset from --yes and TTY state (→ ADR-0025 §5).
+//   - --yes: skip confirmation (needPrompt=false, err=nil)
+//   - no --yes + interactive environment: require a confirmation prompt (needPrompt=true)
+//   - no --yes + non-interactive environment: error immediately to prevent a hang / accidental deletion on empty input (refuse)
 //
-// runReset から isInteractive() の結果を渡して使う（nix 非依存で単体テスト可能な seam）。
+// runReset passes in the result of isInteractive() to use it (a nix-independent, unit-testable seam).
 func confirmPolicy(yes, interactive bool) (needPrompt bool, err error) {
 	if yes {
 		return false, nil
@@ -167,8 +167,8 @@ func confirmPolicy(yes, interactive bool) (needPrompt bool, err error) {
 	return true, nil
 }
 
-// isInteractive は stdin が TTY か（端末に接続されているか）を返す（→ ADR-0025 §5）。
-// stdlib のみで判定する（os.ModeCharDevice）。パイプ / リダイレクト / CI では false。
+// isInteractive returns whether stdin is a TTY (attached to a terminal) (→ ADR-0025 §5).
+// It decides using stdlib only (os.ModeCharDevice). false under pipe / redirect / CI.
 func isInteractive() bool {
 	fi, err := os.Stdin.Stat()
 	if err != nil {
@@ -177,7 +177,7 @@ func isInteractive() bool {
 	return fi.Mode()&os.ModeCharDevice != 0
 }
 
-// promptYesNo は stdin から y/N を読み、yes 系の入力のときだけ true を返す（既定 No）。
+// promptYesNo reads y/N from stdin and returns true only for yes-type input (default No).
 func promptYesNo(msg string) (bool, error) {
 	fmt.Fprintf(os.Stderr, "%s [y/N]: ", msg)
 	line, err := bufio.NewReader(os.Stdin).ReadString('\n')

@@ -9,11 +9,11 @@ import (
 
 // removeStale applies the planner's Remove actions, re-verifying the conservative
 // invariant against the real FS immediately before each unlink. The plan already
-// restricts removals to「前世代記録あり かつ 現状も記録通りの先を指す symlink」,
-// but placement (and any concurrent change) runs between planning and removal, so
-// the stale-remover re-checks lstat/readlink and unlinks only when the invariant
-// still holds; drifted targets are kept with a warning (→ ADR-0002, ADR-0006,
-// docs/spec.md「stale 除去の対象と安全不変条件」).
+// restricts removals to "symlinks recorded in the previous generation that still
+// point at the recorded dest", but placement (and any concurrent change) runs
+// between planning and removal, so the stale-remover re-checks lstat/readlink and
+// unlinks only when the invariant still holds; drifted targets are kept with a
+// warning (→ ADR-0002, ADR-0006, docs/spec.md "stale removal targets and safety invariant").
 func (a *applier) removeStale(actions []planner.RemoveAction) error {
 	for _, act := range actions {
 		if !reverifyStale(act) {

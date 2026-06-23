@@ -1,27 +1,27 @@
-# entry submodule + srcType / rootType / marker custom type（→ ADR-0010, ADR-0014）。
+# entry submodule + srcType / rootType / marker custom type (→ ADR-0010, ADR-0014).
 #
-# `mkManifest` の `evalModules` と `modules/common.nix` の `attrsOf (submodule …)` で
-# 共有できるよう、nixpkgs.lib を受け取り型定義一式を返す純関数として書く。
-# `lib.types` / `mkOption` / `evalModules` は nixpkgs.lib のコアなので
-# 「lib は nixpkgs.lib のみ依存」を満たす（home-manager / NixOS / nix-darwin は引かない）。
+# Written as a pure function that takes nixpkgs.lib and returns the full set of type definitions,
+# so it can be shared by `mkManifest`'s `evalModules` and `modules/common.nix`'s `attrsOf (submodule …)`.
+# `lib.types` / `mkOption` / `evalModules` are core to nixpkgs.lib, so this satisfies
+# "lib depends on nixpkgs.lib only" (no dependency on home-manager / NixOS / nix-darwin).
 lib:
 let
   inherit (lib) types mkOption mkDefault;
   inherit (lib.options) mergeEqualOption;
   inherit (builtins) isAttrs isString;
 
-  # marker 判別（`out-of-store.nix` が付ける `_nputMarker` タグで見分ける）。
+  # Marker discrimination (distinguished by the `_nputMarker` tag attached by `out-of-store.nix`).
   isOutOfStoreMarker = x: isAttrs x && (x._nputMarker or null) == "outOfStore";
   isRootMarker = x: isAttrs x && (x._nputMarker or null) == "root";
 
-  # store-backed src: path / derivation / flake input（`{ outPath = …; }`）を 1 ブランチに集約。
-  # 素の文字列は拒否し out-of-store の暗黙分岐を型で禁ずる（→ ADR-0001）。
-  # path と set は挙動が同一（ともに store link）なので型レベルで分けない（→ ADR-0010）。
+  # store-backed src: collapse path / derivation / flake input (`{ outPath = …; }`) into a single branch.
+  # Reject bare strings and forbid the implicit out-of-store branch at the type level (→ ADR-0001).
+  # path and set behave identically (both are store links), so they are not split at the type level (→ ADR-0010).
   isStoreBacked =
     x:
     lib.isPath x || lib.isDerivation x || (isAttrs x && x ? outPath && (x._nputMarker or null) == null);
 
-  # srcType = either storeBacked outOfStoreMarker（→ ADR-0010）。
+  # srcType = either storeBacked outOfStoreMarker (→ ADR-0010).
   srcType = types.mkOptionType {
     name = "nputSrc";
     description = "store-backed source (path / derivation / flake input) or out-of-store marker";
@@ -29,8 +29,8 @@ let
     merge = mergeEqualOption;
   };
 
-  # rootType = either str rootMarker（→ ADR-0010）。`mkManifest` 専用で modules は共有しない
-  # （modules は root を pin する・→ ADR-0003）。
+  # rootType = either str rootMarker (→ ADR-0010). Used only by `mkManifest`, not shared with modules
+  # (modules pin root・→ ADR-0003).
   rootType = types.mkOptionType {
     name = "nputRoot";
     description = "absolute path string or root marker (projectRoot / homeRoot / systemRoot)";
@@ -38,7 +38,7 @@ let
     merge = mergeEqualOption;
   };
 
-  # entry submodule（→ ADR-0014）。属性キー = target が識別子。strict（未知キー拒否）。
+  # entry submodule (→ ADR-0014). The attribute key = target is the identifier. strict (unknown keys rejected).
   entryModule =
     { name, ... }:
     {
@@ -54,7 +54,7 @@ let
         };
         target = mkOption {
           type = types.str;
-          # 既定 = 属性キー（→ ADR-0014）。
+          # Default = attribute key (→ ADR-0014).
           default = name;
           defaultText = "属性キー";
           description = "root 相対の配置先。省略時は属性キー。";

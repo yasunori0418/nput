@@ -6,18 +6,20 @@ import (
 	"github.com/yasunori0418/nput/internal/planner"
 )
 
-// 世代スキップ + lstat ドリフト修復（project mode 限定・→ ADR-0005, ADR-0017,
-// docs/spec.md「project mode の世代」）。
+// Generation skip + lstat drift repair (project mode only · → ADR-0005, ADR-0017,
+// docs/spec.md "project mode generations").
 //
-// devShell / direnv の shellHook はシェル再入のたびに走るため、新 link-farm
-// derivation が前世代と同一なら新世代は積まない（--set を省く・世代無限増殖の回避）。
-// ただし「derivation 同一 ⇒ FS 同一」は foreign tool の書き換えで崩れるため、完全
-// no-op にはせず各 entry の target を lstat 検査し、ドリフトした entry だけ再張りする。
+// The devShell / direnv shellHook runs on every shell re-entry, so if the new
+// link-farm derivation is identical to the previous generation, no new generation
+// is committed (--set is omitted · avoiding unbounded generation growth). However,
+// "same derivation ⇒ same FS" breaks under foreign tool rewrites, so instead of a
+// full no-op each entry's target is lstat-checked and only drifted entries are re-linked.
 
-// generationUnchanged は新 link-farm が前世代（profile リンクが指す世代）と同一の store
-// derivation かを返す。profile リンク → 世代リンク → link-farm store パスの連鎖を解決して
-// 新 link-farm の store パスと突き合わせる。どちらかが解決できなければ error を返し、呼び出し側は
-// 安全側（通常 apply = 新世代コミット）に倒す。
+// generationUnchanged reports whether the new link-farm is the same store derivation
+// as the previous generation (the one the profile link points at). It resolves the
+// chain profile link → generation link → link-farm store path and compares it with the
+// new link-farm's store path. If either cannot be resolved it returns an error and the
+// caller falls back to the safe side (normal apply = new generation commit).
 func generationUnchanged(profileLink, newLinkFarm string) (bool, error) {
 	prev, err := filepath.EvalSymlinks(profileLink)
 	if err != nil {
@@ -30,21 +32,24 @@ func generationUnchanged(profileLink, newLinkFarm string) (bool, error) {
 	return prev == next, nil
 }
 
-// repairDrift は世代スキップ時の lstat ドリフト修復を行う。planner が現 FS 状態から算出した
-// プランのうち、ドリフトした entry **だけ** を再収束させ、stale 除去も世代コミットもしない。
+// repairDrift performs the lstat drift repair during a generation skip. Of the plan the
+// planner computed from the current FS state, it re-converges **only** the drifted entries,
+// performing neither stale removal nor a generation commit.
 //
-//   - symlink: PlaceNew（target 消失）と PlaceForeign（foreign 書き換え）だけ再張りする。
-//     PlaceReplace は「記録通りの先を指す symlink」= ドリフトなしのため触らない（→ ADR-0017）。
-//     foreign 書き換えの warning は呼び出し側が emitWarnings(plan.Warnings) で既に出している。
-//   - copy: planner.Copies は target 不在の place-once アクションのみを含むため、それを反映すると
-//     「copy は target 不在時のみ place-once 復帰」になる。内容差（ユーザー編集）は CopyAction が
-//     生まれず触らない（→ docs/spec.md「project mode の世代」・ADR-0022）。--recopy のときは
-//     recopyAll で無条件上書きする（recopy は世代外の opt-in）。
+//   - symlink: re-links only PlaceNew (target gone) and PlaceForeign (foreign rewrite).
+//     PlaceReplace is "a symlink pointing at the recorded dest" = no drift, so it is left
+//     untouched (→ ADR-0017). The foreign-rewrite warning has already been emitted by the
+//     caller via emitWarnings(plan.Warnings).
+//   - copy: planner.Copies contains only place-once actions for absent targets, so reflecting
+//     it gives "copy reverts place-once only when the target is absent". Content diffs (user
+//     edits) produce no CopyAction and are left untouched (→ docs/spec.md "project mode
+//     generations" · ADR-0022). On --recopy, recopyAll overwrites unconditionally (recopy is
+//     an opt-in outside generations).
 func (a *applier) repairDrift(plan planner.Plan, recopy bool) error {
 	drifted := make([]planner.PlaceAction, 0, len(plan.Place))
 	for _, act := range plan.Place {
 		if act.Kind == planner.PlaceReplace {
-			continue // 記録通りの先を指す symlink = in-sync。ドリフトなしで再張り不要。
+			continue // symlink pointing at the recorded dest = in-sync. No drift, no re-link needed.
 		}
 		drifted = append(drifted, act)
 	}

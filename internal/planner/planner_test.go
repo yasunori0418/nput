@@ -10,11 +10,11 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
-// --- fake FS（純関数 planner を実 FS なしで table-test するための偽 lstat/readlink）---
+// --- fake FS (fake lstat/readlink to table-test the pure planner without a real FS) ---
 
 type fakeEntry struct {
-	mode os.FileMode // ModeSymlink / ModeDir / 0(regular) を立てる
-	dest string      // symlink のとき readlink が返す先
+	mode os.FileMode // set ModeSymlink / ModeDir / 0 (regular)
+	dest string      // destination readlink returns when a symlink
 }
 
 func sym(dest string) fakeEntry { return fakeEntry{mode: os.ModeSymlink, dest: dest} }
@@ -26,7 +26,7 @@ type fakeFS map[string]fakeEntry
 func (f fakeFS) Lstat(path string) (os.FileInfo, error) {
 	e, ok := f[path]
 	if !ok {
-		return nil, os.ErrNotExist // os.IsNotExist が true になる
+		return nil, os.ErrNotExist // makes os.IsNotExist true
 	}
 	return fakeInfo{name: filepath.Base(path), mode: e.mode}, nil
 }
@@ -171,7 +171,7 @@ func TestComputeTableDriven(t *testing.T) {
 		want want
 	}{
 		{
-			// 初回（前世代マニフェストなし）: 何も削除しない・新規配置のみ。
+			// First apply (no previous-generation manifest): remove nothing, place only.
 			name: "first apply: prev nil, remove zero",
 			prev: nil,
 			next: mani(sl(srcA, ".config/foo")),
@@ -179,7 +179,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{placeNew: []string{".config/foo"}},
 		},
 		{
-			// 記録あり×記録通り: 自身の前世代 symlink を silent 張替（foreign 警告なし）。
+			// Recorded × matches record: silently re-link this profile's own previous-generation symlink (no foreign warning).
 			name: "recorded link → silent replace",
 			prev: mani(sl(srcA, ".config/foo")),
 			next: mani(sl(srcB, ".config/foo")),
@@ -187,7 +187,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{placeReplace: []string{".config/foo"}},
 		},
 		{
-			// foreign symlink（記録なし）: warning を出して後勝ち置換。
+			// foreign symlink (unrecorded): emit a warning and last-wins replace.
 			name: "foreign symlink → warn + replace",
 			prev: nil,
 			next: mani(sl(srcB, ".config/foo")),
@@ -195,7 +195,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{placeForeign: []string{".config/foo"}, warns: []WarnKind{WarnForeignReplace}},
 		},
 		{
-			// 通常ファイルが target に既存: 上書きしない conflict。
+			// A regular file already at target: no-overwrite conflict.
 			name: "regular file at place target → conflict",
 			prev: nil,
 			next: mani(sl(srcB, ".config/foo")),
@@ -203,7 +203,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{conflicts: 1},
 		},
 		{
-			// 祖先 component が symlink: 配下にネストできない conflict（→ ADR-0015）。
+			// An ancestor component is a symlink: cannot nest under it, conflict (→ ADR-0015).
 			name: "ancestor symlink → conflict",
 			prev: nil,
 			next: mani(sl(srcB, ".claude/skills/nix")),
@@ -211,7 +211,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{conflicts: 1},
 		},
 		{
-			// stale 記録通り: 保守的不変条件を満たすので remove。
+			// stale matches record: satisfies the conservative invariant, so remove.
 			name: "stale recorded link → remove",
 			prev: mani(sl(srcA, ".config/keep"), sl(srcA, ".config/drop")),
 			next: mani(sl(srcA, ".config/keep")),
@@ -225,7 +225,7 @@ func TestComputeTableDriven(t *testing.T) {
 			},
 		},
 		{
-			// entries = {}（空 manifest）: 前世代の全 nput symlink を保守的に除去（警告なし）。
+			// entries = {} (empty manifest): conservatively remove all previous-generation nput symlinks (no warning).
 			name: "empty manifest → remove all recorded (no warning)",
 			prev: mani(sl(srcA, "a"), sl(srcA, "b")),
 			next: mani(),
@@ -236,7 +236,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{remove: []string{"a", "b"}},
 		},
 		{
-			// stale 記録あり but 実体が別先を指す（不一致）: 削除せず warning。
+			// stale recorded but reality points elsewhere (mismatch): not removed, warning.
 			name: "stale mismatch (recorded but points elsewhere) → keep + warn",
 			prev: mani(sl(srcA, ".config/foo")),
 			next: mani(),
@@ -244,7 +244,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{warns: []WarnKind{WarnStaleMismatch}},
 		},
 		{
-			// stale target が通常ファイル: nput 非管理として残し warning。
+			// stale target is a regular file: kept as non-nput-managed, warning.
 			name: "stale non-symlink (regular file) → keep + warn",
 			prev: mani(sl(srcA, ".config/foo")),
 			next: mani(),
@@ -252,7 +252,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{warns: []WarnKind{WarnStaleNonSymlink}},
 		},
 		{
-			// stale target が既に無い: no-op（警告なし）。
+			// stale target already gone: no-op (no warning).
 			name: "stale already gone → no-op",
 			prev: mani(sl(srcA, ".config/foo")),
 			next: mani(),
@@ -260,7 +260,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{},
 		},
 		{
-			// copy entry が消えた: 削除せず orphan を警告（FS 状態に依らない）。
+			// copy entry vanished: not removed, warn as orphan (independent of FS state).
 			name: "copy orphan → keep + warn",
 			prev: mani(cp(srcA, ".config/foo")),
 			next: mani(),
@@ -268,7 +268,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{warns: []WarnKind{WarnCopyOrphan}},
 		},
 		{
-			// copy target 不在: place-once で新規コピー。
+			// copy target absent: new copy under place-once.
 			name: "copy target absent → place-once copy",
 			prev: nil,
 			next: mani(cp(srcA, ".config/foo")),
@@ -276,7 +276,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{copies: []string{".config/foo"}},
 		},
 		{
-			// copy 既存・記録あり（前世代も copy）: place-once で no-op。
+			// copy exists, recorded (previous generation was also copy): no-op under place-once.
 			name: "copy recorded → no-op",
 			prev: mani(cp(srcA, ".config/foo")),
 			next: mani(cp(srcA, ".config/foo")),
@@ -284,7 +284,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{},
 		},
 		{
-			// copy 既存・記録なし（foreign 実ファイル）: skip + warning。
+			// copy exists, unrecorded (foreign real file): skip + warning.
 			name: "copy foreign file → skip + warn",
 			prev: nil,
 			next: mani(cp(srcA, ".config/foo")),
@@ -292,7 +292,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{warns: []WarnKind{WarnCopyForeign}},
 		},
 		{
-			// 構造不一致（src dir × target file）: conflict。
+			// structure mismatch (src dir × target file): conflict.
 			name: "copy structure mismatch (src dir, target file) → conflict",
 			prev: nil,
 			next: mani(cp(srcA, ".config/foo")),
@@ -300,7 +300,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{conflicts: 1},
 		},
 		{
-			// 構造不一致（src file × target dir）: conflict。
+			// structure mismatch (src file × target dir): conflict.
 			name: "copy structure mismatch (src file, target dir) → conflict",
 			prev: nil,
 			next: mani(cp(srcA, ".config/foo")),
@@ -308,7 +308,7 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{conflicts: 1},
 		},
 		{
-			// copy 既存・記録あり・dir/dir 一致: no-op。
+			// copy exists, recorded, dir/dir match: no-op.
 			name: "copy recorded dir → no-op",
 			prev: mani(cp(srcA, ".config/foo")),
 			next: mani(cp(srcA, ".config/foo")),
@@ -316,16 +316,16 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{},
 		},
 		{
-			// 複合: 新規 + silent 張替 + foreign 警告 + stale 除去 + mismatch 残し。
+			// mixed: new + silent re-link + foreign warning + stale removal + mismatch kept.
 			name: "mixed plan",
 			prev: mani(sl(srcA, "keep"), sl(srcA, "drop"), sl(srcA, "mism")),
 			next: mani(sl(srcB, "keep"), sl(srcB, "fresh"), sl(srcB, "foreign")),
 			fs: fakeFS{
-				abs("keep"):    sym(srcA),          // 記録通り → silent replace
-				abs("drop"):    sym(srcA),          // stale 記録通り → remove
-				abs("mism"):    sym("/elsewhere"),  // stale 不一致 → keep + warn
-				abs("foreign"): sym("/foreign/ln"), // 記録なし symlink → foreign warn + replace
-				// fresh は不在 → PlaceNew
+				abs("keep"):    sym(srcA),          // matches record → silent replace
+				abs("drop"):    sym(srcA),          // stale matches record → remove
+				abs("mism"):    sym("/elsewhere"),  // stale mismatch → keep + warn
+				abs("foreign"): sym("/foreign/ln"), // unrecorded symlink → foreign warn + replace
+				// fresh is absent → PlaceNew
 			},
 			want: want{
 				placeNew:     []string{"fresh"},
@@ -356,7 +356,7 @@ func TestComputeTableDriven(t *testing.T) {
 	}
 }
 
-// TestComputeUnknownMethodErrors は未知 method を弾くことを検証する。
+// TestComputeUnknownMethodErrors verifies that an unknown method is rejected.
 func TestComputeUnknownMethodErrors(t *testing.T) {
 	e := sl("/nix/store/x", ".config/foo")
 	e.Method = "bogus"
@@ -366,7 +366,7 @@ func TestComputeUnknownMethodErrors(t *testing.T) {
 	}
 }
 
-// TestComputeAncestorDirNotSymlink は祖先が通常ディレクトリなら conflict にならないことを確認する。
+// TestComputeAncestorDirNotSymlink confirms that no conflict arises when the ancestor is a regular directory.
 func TestComputeAncestorDirNotSymlink(t *testing.T) {
 	plan, err := Compute(nil, mani(sl("/nix/store/x", ".config/foo")), root,
 		fakeFS{abs(".config"): dir()})

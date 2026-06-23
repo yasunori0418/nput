@@ -11,9 +11,10 @@ import (
 	"github.com/yasunori0418/nput/internal/planner"
 )
 
-// materializeCopies は copy entry を実 FS に反映する分岐点。--recopy のときは全 copy target を
-// 無条件上書き（recopyAll）、通常は planner の place-once 分類（target 不在のみ新規コピー）に従う
-// （→ ADR-0020）。通常 apply と世代スキップ時のドリフト修復が共有する。
+// materializeCopies is the branch point that reflects copy entries onto the real FS.
+// On --recopy it overwrites all copy targets unconditionally (recopyAll); normally it
+// follows the planner's place-once classification (new copy only when the target is
+// absent) (→ ADR-0020). Shared by normal apply and generation-skip drift repair.
 func (a *applier) materializeCopies(plan planner.Plan, recopy bool) error {
 	if recopy {
 		return a.recopyAll()
@@ -21,9 +22,10 @@ func (a *applier) materializeCopies(plan planner.Plan, recopy bool) error {
 	return a.placeCopies(plan.Copies)
 }
 
-// placeCopies materializes the planner's place-once CopyActions（target 不在の copy のみ・
-// → ADR-0002, ADR-0016）。既存 target（記録あり / foreign）は planner が CopyAction を
-// 生まないため、ここは「新規コピー」だけを実 FS に反映する薄い executor に徹する。
+// placeCopies materializes the planner's place-once CopyActions (only copies whose
+// target is absent · → ADR-0002, ADR-0016). The planner emits no CopyAction for an
+// existing target (recorded / foreign), so this stays a thin executor that reflects
+// only "new copies" onto the real FS.
 func (a *applier) placeCopies(actions []planner.CopyAction) error {
 	for _, act := range actions {
 		if err := os.MkdirAll(filepath.Dir(act.TargetAbs), 0o755); err != nil {
@@ -37,10 +39,11 @@ func (a *applier) placeCopies(actions []planner.CopyAction) error {
 	return nil
 }
 
-// recopyAll は apply --recopy の copy 上書き経路（→ ADR-0020, docs/spec.md「recopy」）。
-// config 内の全 copy entry について、target が在れば削除してから無条件に再コピーする
-// （差分判定なし・ローカル編集は破棄）。place-once 分類（planner.Copies）は使わず manifest を
-// 直接走査するが、祖先 symlink / 構造不一致は planner の conflict ゲートで apply 前に弾かれている。
+// recopyAll is the copy overwrite path of apply --recopy (→ ADR-0020, docs/spec.md "recopy").
+// For every copy entry in the config, if the target exists it is removed and then
+// re-copied unconditionally (no diff check · local edits are discarded). It does not use
+// the place-once classification (planner.Copies) but scans the manifest directly; ancestor
+// symlinks / structural mismatches are already rejected by the planner's conflict gate before apply.
 func (a *applier) recopyAll() error {
 	for _, e := range a.manifest.Entries {
 		if e.Method != manifest.MethodCopy {
@@ -72,11 +75,12 @@ func (a *applier) recopyAll() error {
 	return nil
 }
 
-// copyTree は src（ファイル / ディレクトリ / symlink）を dst へネイティブにコピーする
-// （→ ADR-0016, docs/spec.md「copy モード」）。
-//   - mode は保存しつつ owner-write（0o200）を付与する（store の read-only 0444/0555 →
-//     編集可能な 0644/0755）。
-//   - src ツリー内の symlink は deref せず symlink のまま複製する（循環 / サイズ膨張回避）。
+// copyTree natively copies src (file / directory / symlink) to dst
+// (→ ADR-0016, docs/spec.md "copy mode").
+//   - Preserves mode while adding owner-write (0o200) (store's read-only 0444/0555 →
+//     editable 0644/0755).
+//   - Symlinks inside the src tree are duplicated as symlinks without deref (avoids
+//     cycles / size blow-up).
 func copyTree(src, dst string) error {
 	info, err := os.Lstat(src)
 	if err != nil {
@@ -109,7 +113,7 @@ func copyTree(src, dst string) error {
 			if err := os.MkdirAll(dstPath, 0o755); err != nil {
 				return err
 			}
-			// umask に依らず最終 mode を確定する（owner-write 付与）。
+			// Fix the final mode regardless of umask (add owner-write).
 			return os.Chmod(dstPath, fi.Mode().Perm()|0o200)
 		default:
 			return copyFile(path, dstPath, fi.Mode())
@@ -117,7 +121,7 @@ func copyTree(src, dst string) error {
 	})
 }
 
-// copyFile は単一ファイルを内容コピーし、mode 保存 + owner-write を付与する。
+// copyFile copies a single file's contents, preserving mode and adding owner-write.
 func copyFile(src, dst string, mode os.FileMode) error {
 	in, err := os.Open(src)
 	if err != nil {
@@ -137,17 +141,17 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	if err := out.Close(); err != nil {
 		return err
 	}
-	// OpenFile の mode は umask でマスクされるため、最終 perm を明示確定する。
+	// OpenFile's mode is masked by umask, so set the final perm explicitly.
 	return os.Chmod(dst, perm)
 }
 
-// copySymlink は symlink を deref せず、同じリンク先で複製する（→ ADR-0016）。
+// copySymlink duplicates a symlink without deref, pointing at the same link target (→ ADR-0016).
 func copySymlink(src, dst string) error {
 	target, err := os.Readlink(src)
 	if err != nil {
 		return err
 	}
-	// 再コピー時の残骸対策（recopy は親を RemoveAll 済みだが防御的に消す）。
+	// Guard against leftovers on re-copy (recopy has already RemoveAll'd the parent, but remove defensively).
 	_ = os.Remove(dst)
 	return os.Symlink(target, dst)
 }

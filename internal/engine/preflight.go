@@ -8,14 +8,15 @@ import (
 	"github.com/yasunori0418/nput/internal/planner"
 )
 
-// checkOutOfStore は out-of-store symlink entry のリンク先（marker のローカル絶対パス +
-// subpath = planner.LinkDest）が実在することを配置直前に検査する。不在なら dangling symlink
-// を張ることになるため engine 実行時エラーで停止する（「リンク先不在は実行時エラー」・→ ADR-0001,
-// ADR-0013, docs/spec.md「out-of-store symlink」）。
+// checkOutOfStore checks, just before placement, that the link target of out-of-store symlink
+// entries (the marker's local absolute path + subpath = planner.LinkDest) actually exists. If
+// absent, placing it would create a dangling symlink, so it stops with an engine runtime error
+// ("an absent link target is a runtime error" · → ADR-0001, ADR-0013, docs/spec.md "out-of-store symlink").
 //
-// 検査は out-of-store のみに閉じる: store link は farm derivation のビルドで実在が保証され、
-// copy は別経路（place-once・本検査の対象外）。method=copy × out-of-store marker は
-// normalizeManifest が eval 時に弾くため、ここに copy の out-of-store entry は来ない（→ ADR-0013）。
+// The check is closed to out-of-store only: store links are guaranteed to exist by the farm
+// derivation build, and copy goes through a different path (place-once · outside this check).
+// method=copy × out-of-store marker is rejected by normalizeManifest at eval time, so no copy
+// out-of-store entry reaches here (→ ADR-0013).
 func (a *applier) checkOutOfStore() error {
 	for _, e := range a.manifest.Entries {
 		if e.SrcKind != manifest.SrcKindOutOfStore {

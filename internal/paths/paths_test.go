@@ -19,7 +19,7 @@ func TestRootHashDeterministicAndFixedLen(t *testing.T) {
 	if c := RootHash("/home/me/other"); c == a {
 		t.Errorf("distinct roots collided: %q", c)
 	}
-	// FS 安全（hex のみ）。
+	// FS-safe (hex only).
 	for _, r := range a {
 		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
 			t.Errorf("RootHash has non-hex char %q in %q", r, a)
@@ -61,7 +61,7 @@ func TestResolveHomeUsesNameKey(t *testing.T) {
 }
 
 func TestResolveHomeWithOverrideUsesRootHash(t *testing.T) {
-	// --root 明示時は home でも roothash キー（→ ADR-0023）。
+	// With --root explicit, even home uses the roothash key (→ ADR-0023).
 	state := "/state"
 	root := "/tmp/sandbox"
 	p := Resolve(state, "vim", manifest.RootKindHome, root, true)
@@ -75,7 +75,7 @@ func TestResolveHomeWithOverrideUsesRootHash(t *testing.T) {
 }
 
 func TestResolveFixedUsesRootHash(t *testing.T) {
-	// fixed root（--root なし）も roothash キー（→ ADR-0024）。
+	// A fixed root (no --root) also uses the roothash key (→ ADR-0024).
 	state := "/state"
 	root := "/opt/x"
 	p := Resolve(state, "c", manifest.RootKindFixed, root, false)

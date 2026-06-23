@@ -1,8 +1,9 @@
 // Package lock serializes concurrent apply / reset / rollback on a profileDir
 // via an advisory flock (→ ADR-0011, ADR-0013).
 //
-// syscall.Flock の advisory ロックはプロセス終了時に OS が自動解放するため、
-// クラッシュしても stale lock が残らない。linux / darwin 両対応（→ ADR-0011）。
+// The advisory lock from syscall.Flock is released automatically by the OS on
+// process exit, so no stale lock remains even after a crash. Supports both
+// linux and darwin (→ ADR-0011).
 package lock
 
 import (
@@ -11,19 +12,19 @@ import (
 	"syscall"
 )
 
-// ErrLocked は非ブロッキング取得（try-lock）で他者が保持中のときに返る。
-// shellHook 経路（--no-wait）の skip 判定に使う（→ ADR-0013）。
+// ErrLocked is returned by a non-blocking acquisition (try-lock) when another holder is active.
+// Used for the skip decision on the shellHook path (--no-wait) (→ ADR-0013).
 var ErrLocked = errors.New("nput: profileDir is locked by another process")
 
-// Lock は profileDir 上に取得した排他 flock。
+// Lock is an exclusive flock acquired on a profileDir.
 type Lock struct {
 	f *os.File
 }
 
-// Acquire は dir（profileDir）に対し排他 flock を取得する。
-// blocking=true は明示 apply 用の LOCK_EX（取得まで待つ）、
-// blocking=false は shellHook 用の LOCK_NB（保持中なら ErrLocked・→ ADR-0013）。
-// dir は事前に存在している必要がある。
+// Acquire takes an exclusive flock on dir (the profileDir).
+// blocking=true uses LOCK_EX for explicit apply (waits until acquired);
+// blocking=false uses LOCK_NB for shellHook (returns ErrLocked if held; → ADR-0013).
+// dir must already exist.
 func Acquire(dir string, blocking bool) (*Lock, error) {
 	f, err := os.Open(dir)
 	if err != nil {
@@ -44,7 +45,7 @@ func Acquire(dir string, blocking bool) (*Lock, error) {
 	return &Lock{f: f}, nil
 }
 
-// Release は flock を解放しファイルを閉じる。
+// Release releases the flock and closes the file.
 func (l *Lock) Release() error {
 	if l == nil || l.f == nil {
 		return nil

@@ -13,7 +13,7 @@ func initRepo(t *testing.T) string {
 		t.Skip("git not available")
 	}
 	dir := t.TempDir()
-	// macOS の /tmp は /private/tmp への symlink なので解決後パスで比較する。
+	// On macOS /tmp is a symlink to /private/tmp, so compare against the resolved path.
 	dir, err := filepath.EvalSymlinks(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -46,7 +46,7 @@ func TestToplevelOutsideRepo(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
-	// $HOME 等の祖先が git repo だと誤検知するため、隔離した tmpdir を使う。
+	// Use an isolated tmpdir, since an ancestor like $HOME being a git repo would cause false positives.
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("GIT_CEILING_DIRECTORIES", filepath.Dir(dir))

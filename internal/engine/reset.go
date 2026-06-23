@@ -10,21 +10,26 @@ import (
 	"github.com/yasunori0418/nput/internal/planner"
 )
 
-// reset は配置物を無い状態へ戻す FS-only teardown（→ ADR-0020, ADR-0021, ADR-0025,
-// docs/spec.md「recopy・reset」）。
+// reset is an FS-only teardown that reverts placed entities to a not-placed state (→ ADR-0020,
+// ADR-0021, ADR-0025, docs/spec.md "recopy · reset").
 //
-//   - symlink: stale 除去と同じ保守的不変条件（前世代 manifest が記録し、かつ現状もその記録通りの
-//     先を指す symlink のみ削除。foreign / 記録不一致は warning で残す）。planner.Compute（next=nil）+
-//     staleremove を再利用する（完成済みモジュール・→ planner, staleremove.go）。
-//   - copy target: 削除する（copy を消す唯一の明示手段・事前存在ファイルを消すリスクは CLI の確認で守る）。
-//   - profile / 世代は触らない。config が entry を残す限り次の apply で再配置される（transient）。
+//   - symlink: the same conservative invariant as stale removal (delete only symlinks that the
+//     previous generation's manifest recorded and that currently still point at the recorded dest.
+//     foreign / record mismatches are kept with a warning). Reuses planner.Compute (next=nil) +
+//     staleremove (finished modules · → planner, staleremove.go).
+//   - copy target: deleted (the only explicit means to remove a copy · the risk of deleting a
+//     pre-existing file is guarded by the CLI's confirmation).
+//   - profile / generations are untouched. As long as the config keeps the entry it is re-placed
+//     on the next apply (transient).
 //
-// 撤去対象 entry の源は **前世代 manifest（profileDir/profile が指す link-farm の manifest.json）**。
-// これが「nput が実際に配置した（記録した）真実」で、保守的不変条件の "recorded dest" と一致する
-// （config を build し直すと src ドリフト時に記録 dest とズレ誤判定するため、記録済み前世代を使う）。
-// rootKind 先取り eval（profileDir 確定）は CLI が担い、entries はこの前世代 manifest から読む。
+// The source of teardown-target entries is the **previous generation's manifest (the manifest.json
+// of the link-farm that profileDir/profile points at)**. This is "the truth of what nput actually
+// placed (recorded)" and matches the conservative invariant's "recorded dest" (rebuilding the
+// config would diverge from the recorded dest under src drift and misjudge, so the recorded
+// previous generation is used). The CLI handles the rootKind pre-resolution eval (fixing profileDir),
+// and entries are read from this previous generation's manifest.
 
-// ResetOptions は Reset の入力。Reset は build しない（前世代 manifest を読む）。
+// ResetOptions is the input to Reset. Reset does not build (it reads the previous generation's manifest).
 type ResetOptions struct {
 	Name         string
 	RootKind     string
@@ -34,32 +39,34 @@ type ResetOptions struct {
 	StateDir     string
 	Git          GitFunc
 
-	// Targets は撤去対象 target の絞り込み（root 相対・空 = 全 entry）。
-	// 前世代 manifest に存在しない target を指定するとエラーになる。
+	// Targets narrows the teardown-target targets (root-relative · empty = all entries).
+	// Specifying a target not present in the previous generation's manifest is an error.
 	Targets []string
-	// DryRun は副作用ゼロのプレビュー（削除対象を算出して返すだけ・flock / confirm / FS 削除なし・→ ADR-0021）。
+	// DryRun is a side-effect-free preview (just computes and returns the removal targets · no flock / confirm / FS deletion · → ADR-0021).
 	DryRun bool
-	// Confirm は削除実行前の確認コールバック（nil = 確認なしで実行・--yes 経路 / dryrun）。
-	// 算出済みプランを渡し、false を返すと中断する（Result.Aborted = true）。CLI が TTY プロンプトを担う。
+	// Confirm is the confirmation callback before performing deletion (nil = run without confirmation · --yes path / dryrun).
+	// It is passed the computed plan; returning false aborts (Result.Aborted = true). The CLI handles the TTY prompt.
 	Confirm func(*ResetResult) (bool, error)
-	// Warnf は warning の出力先（nil = stderr）。foreign symlink を残す等の可視化に使う。
+	// Warnf is the warning output sink (nil = stderr). Used to surface kept foreign symlinks etc.
 	Warnf func(format string, args ...any)
 }
 
-// ResetResult は Reset の結果（dryrun はプレビュー・実行時は実削除結果）。
+// ResetResult is the result of Reset (dryrun is a preview · at run time the actual deletion result).
 type ResetResult struct {
-	Root            string   // 解決後の絶対 root
-	ProfileDir      string   // 確定した profileDir
-	RemovedSymlinks []string // 削除した（dryrun は削除予定の）symlink target
-	RemovedCopies   []string // 削除した（dryrun は削除予定の）copy target
-	KeptForeign     []string // 保守的不変条件を満たさず残した symlink target（foreign / 記録不一致）
-	DryRun          bool     // 読み取り専用プレビューだった
-	Aborted         bool     // 確認プロンプトで中断した
+	Root            string   // resolved absolute root
+	ProfileDir      string   // the fixed profileDir
+	RemovedSymlinks []string // removed (in dryrun, to-be-removed) symlink targets
+	RemovedCopies   []string // removed (in dryrun, to-be-removed) copy targets
+	KeptForeign     []string // symlink targets kept for not satisfying the conservative invariant (foreign / record mismatch)
+	DryRun          bool     // was a read-only preview
+	Aborted         bool     // aborted at the confirmation prompt
 }
 
-// Reset は対象 entry の配置物を無い状態へ戻す。docs/spec.md「実行フロー」の非 build コマンド前段
-// （rootKind 先取り eval → root 解決 → profileDir 確定）を CLI と分担し、engine 側は profileDir 解決・
-// blocking flock・前世代 manifest 読み・保守的 symlink 除去 + copy 削除を所有する（→ ADR-0021, ADR-0024）。
+// Reset reverts the placed entities of the target entries to a not-placed state. It shares with the
+// CLI the non-build command preamble of docs/spec.md "execution flow" (rootKind pre-resolution eval →
+// root resolution → fixing profileDir), and the engine side owns profileDir resolution · blocking
+// flock · reading the previous generation's manifest · conservative symlink removal + copy deletion
+// (→ ADR-0021, ADR-0024).
 func Reset(opts ResetOptions) (*ResetResult, error) {
 	warnf := opts.Warnf
 	if warnf == nil {
@@ -68,7 +75,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		}
 	}
 
-	// 1. profileDir 確定（root 解決 → レイアウト・apply / rollback と共通の前段・→ ADR-0024）。
+	// 1. fix profileDir (resolve root → layout · preamble shared with apply / rollback · → ADR-0024).
 	prof, root, err := ProfileFor(ProfileOptions{
 		Name: opts.Name, RootKind: opts.RootKind, FixedRoot: opts.FixedRoot,
 		RootOverride: opts.RootOverride, WorkDir: opts.WorkDir, StateDir: opts.StateDir, Git: opts.Git,
@@ -78,7 +85,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	}
 	res := &ResetResult{Root: root, ProfileDir: prof.Dir, DryRun: opts.DryRun}
 
-	// profile（前世代リンク）が無ければ一度も apply していない = 撤去対象ゼロの no-op。
+	// If profile (the previous generation link) is absent, apply has never run = a no-op with zero teardown targets.
 	if _, err := os.Stat(prof.Profile); err != nil {
 		if os.IsNotExist(err) {
 			return res, nil
@@ -86,8 +93,8 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		return nil, fmt.Errorf("nput: profile を確認できません (%s): %w", prof.Profile, err)
 	}
 
-	// 2. 実行時は blocking flock で並行 apply / reset と直列化する（→ ADR-0013, ADR-0021）。
-	//    dryrun は読み取り専用なので flock を取らない。
+	// 2. at run time, serialize with concurrent apply / reset via a blocking flock (→ ADR-0013, ADR-0021).
+	//    dryrun is read-only, so it does not take a flock.
 	if !opts.DryRun {
 		l, err := lock.Acquire(prof.Dir, true)
 		if err != nil {
@@ -96,7 +103,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		defer func() { _ = l.Release() }()
 	}
 
-	// 3. 前世代 manifest（記録済みの真実）を読み、対象 entry を絞り込む。
+	// 3. read the previous generation's manifest (the recorded truth) and narrow the target entries.
 	prev, err := manifest.Load(prof.Profile)
 	if err != nil {
 		return nil, err
@@ -106,8 +113,8 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		return nil, err
 	}
 
-	// 4. symlink は保守的不変条件で除去するプランを planner で算出（next=nil で全対象が remove 候補）。
-	//    copy は planner が決して消さない領域なので分離して扱う。
+	// 4. for symlinks, compute a conservative-invariant removal plan with the planner (next=nil makes all targets remove candidates).
+	//    copy is a region the planner never removes, so handle it separately.
 	var symEntries, copyEntries []manifest.Entry
 	for _, e := range entries {
 		if e.Method == manifest.MethodCopy {
@@ -122,7 +129,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		return nil, err
 	}
 
-	// 5. copy target のうち実在するものを削除候補にする（不在は no-op・→ docs/spec.md エラー仕様）。
+	// 5. make the existing copy targets removal candidates (absent ones are a no-op · → docs/spec.md error spec).
 	copyTargets := make([]string, 0, len(copyEntries))
 	for _, e := range copyEntries {
 		targetAbs := filepath.Join(root, filepath.Clean(e.Target))
@@ -134,7 +141,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		}
 	}
 
-	// プレビュー（dryrun / confirm 表示）用に symlink 削除予定・残す foreign を詰める。
+	// For the preview (dryrun / confirm display), pack the to-be-removed symlinks and the kept foreign.
 	for _, a := range plan.Remove {
 		res.RemovedSymlinks = append(res.RemovedSymlinks, a.Entry.Target)
 	}
@@ -144,12 +151,12 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		}
 	}
 
-	// 6. dryrun は算出済みプランを返して終了（FS 削除・confirm なし・→ ADR-0021）。
+	// 6. dryrun returns the computed plan and finishes (no FS deletion · no confirm · → ADR-0021).
 	if opts.DryRun {
 		return res, nil
 	}
 
-	// 7. 確認（データ損失リスク・→ ADR-0020, ADR-0025）。CLI が TTY プロンプト / --yes を担う。
+	// 7. confirmation (data-loss risk · → ADR-0020, ADR-0025). The CLI handles the TTY prompt / --yes.
 	if opts.Confirm != nil {
 		proceed, err := opts.Confirm(res)
 		if err != nil {
@@ -161,8 +168,8 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		}
 	}
 
-	// 8. 実 FS に反映する。symlink は staleremove（plan 後ドリフト再検証つき）を再利用し、
-	//    copy target は削除する。残す foreign の warning を出す。
+	// 8. reflect onto the real FS. For symlinks reuse staleremove (with post-plan drift re-verification),
+	//    and delete copy targets. Emit warnings for the kept foreign.
 	a := &applier{opts: Options{Warnf: warnf}, result: &Result{Root: root, ProfileDir: prof.Dir}}
 	a.profile = prof
 	a.root = root
@@ -170,7 +177,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	if err := a.removeStale(plan.Remove); err != nil {
 		return nil, err
 	}
-	res.RemovedSymlinks = a.result.Removed // 実削除分（ドリフトで残ったものは除外）
+	res.RemovedSymlinks = a.result.Removed // actually removed (excludes those kept due to drift)
 
 	removedCopies := make([]string, 0, len(copyTargets))
 	for i, targetAbs := range copyTargets {
@@ -184,8 +191,8 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	return res, nil
 }
 
-// selectResetEntries は前世代 manifest の entry を Targets で絞り込む（空 = 全 entry）。
-// 指定 target が前世代に存在しなければエラー（nput が配置していない target は撤去対象にならない）。
+// selectResetEntries narrows the previous generation's manifest entries by Targets (empty = all entries).
+// If a specified target does not exist in the previous generation, it is an error (a target nput did not place is not a teardown target).
 func selectResetEntries(entries []manifest.Entry, targets []string) ([]manifest.Entry, error) {
 	if len(targets) == 0 {
 		return entries, nil

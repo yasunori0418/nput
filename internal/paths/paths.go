@@ -1,9 +1,10 @@
 // Package paths computes the on-disk profile layout the engine operates on
 // (→ ADR-0005, ADR-0013, ADR-0022, ADR-0024, ADR-0025).
 //
-// profileDir は各 config 専用ディレクトリ（= flock キー）。profile リンクはその中の
-// profile、世代は profile-N-link、build out-link は .pending、backref .root は
-// <roothash> 階層に置く（→ docs/spec.md「profile のオンディスクレイアウト」）。
+// profileDir is the per-config dedicated directory (= flock key). The profile
+// link sits inside it as profile, generations as profile-N-link, the build
+// out-link as .pending, and the backref .root at the <roothash> level
+// (→ docs/spec.md "on-disk layout of the profile").
 package paths
 
 import (
@@ -16,12 +17,13 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
-// rootHashLen は roothash の hex 文字数（128bit・固定長・FS 安全・→ ADR-0013）。
-// lib.mkManifest の anchorName（sha256 の先頭 32 hex）と桁を揃える。
+// rootHashLen is the hex character count of the roothash (128 bit; fixed length;
+// FS-safe; → ADR-0013). It matches the digit count of lib.mkManifest's anchorName
+// (the first 32 hex of sha256).
 const rootHashLen = 32
 
-// StateDir は profile 群の基底 <state> を返す。$XDG_STATE_HOME があればそれ、
-// 無ければ $HOME/.local/state（nix 本体の profile 既定と整合・→ ADR-0022）。
+// StateDir returns the base <state> for the profiles. $XDG_STATE_HOME if set,
+// otherwise $HOME/.local/state (consistent with nix's own profile default; → ADR-0022).
 func StateDir() (string, error) {
 	if s := os.Getenv("XDG_STATE_HOME"); s != "" {
 		return s, nil
@@ -33,48 +35,51 @@ func StateDir() (string, error) {
 	return filepath.Join(home, ".local", "state"), nil
 }
 
-// RootHash は解決後の絶対 root パスの sha256 を短縮した hex を返す（→ ADR-0013）。
+// RootHash returns the truncated hex of the sha256 of the resolved absolute root path (→ ADR-0013).
 func RootHash(absRoot string) string {
 	sum := sha256.Sum256([]byte(absRoot))
 	return hex.EncodeToString(sum[:])[:rootHashLen]
 }
 
-// Base は profile 群の基底 <state>/nix/profiles/nput を返す。home（--root なし）の
-// profileDir はこの直下の <name>、roothash 系列は <roothash>/<name>（→ ADR-0024）。
+// Base returns the base <state>/nix/profiles/nput for the profiles. The home
+// (no --root) profileDir is <name> directly under it; the roothash series is
+// <roothash>/<name> (→ ADR-0024).
 func Base(stateDir string) string {
 	return filepath.Join(stateDir, "nix", "profiles", "nput")
 }
 
-// GenerationLink は profile リンクの兄弟として nix-env が作る世代リンク
-// <profileDir>/profile-<gen>-link のパスを返す（→ docs/spec.md オンディスクレイアウト・ADR-0025）。
+// GenerationLink returns the path of the generation link
+// <profileDir>/profile-<gen>-link that nix-env creates as a sibling of the
+// profile link (→ docs/spec.md on-disk layout; ADR-0025).
 func GenerationLink(profileLink string, gen int) string {
 	return fmt.Sprintf("%s-%d-link", profileLink, gen)
 }
 
-// Profile は 1 config 分の profile レイアウトのパス一式。
+// Profile is the full set of profile-layout paths for one config.
 type Profile struct {
-	// Dir は profileDir（config 専用ディレクトリ・flock キー）。
+	// Dir is the profileDir (per-config directory; flock key).
 	Dir string
-	// Profile は profile リンク（nix-env --profile の対象）。
+	// Profile is the profile link (the target of nix-env --profile).
 	Profile string
-	// Pending は nix build --out-link の出力先（profile を貫通しない兄弟）。
+	// Pending is the output of nix build --out-link (a sibling that does not pass through the profile).
 	Pending string
-	// BackrefDir は backref .root を置く階層。home（--root なし）では空。
+	// BackrefDir is the level where the backref .root is placed. Empty for home (no --root).
 	BackrefDir string
-	// Backref は元 root の絶対パスを記録する backref ファイル。home では空。
+	// Backref is the backref file recording the original root's absolute path. Empty for home.
 	Backref string
 }
 
-// Resolve は state 基底・config 名・rootKind・解決後絶対 root・--root 上書き有無から
-// profile レイアウトを確定する（→ docs/spec.md「root の解決」表・ADR-0024, ADR-0025）。
+// Resolve determines the profile layout from the state base, config name,
+// rootKind, resolved absolute root, and whether --root was overridden
+// (→ docs/spec.md "root resolution" table; ADR-0024, ADR-0025).
 //
-//   - home（--root なし）              : <state>/nix/profiles/nput/<name>（backref なし）
-//   - project / fixed / --root 上書き : <state>/nix/profiles/nput/<roothash>/<name>
-//     （backref .root は <roothash> 階層）
+//   - home (no --root)               : <state>/nix/profiles/nput/<name> (no backref)
+//   - project / fixed / --root override : <state>/nix/profiles/nput/<roothash>/<name>
+//     (backref .root at the <roothash> level)
 func Resolve(stateDir, name, rootKind, absRoot string, rootOverride bool) Profile {
 	base := Base(stateDir)
 
-	// home（--root なし）のみ <name> 直キー。それ以外は root ごとに独立系列へ分離する。
+	// Only home (no --root) keys directly on <name>. Otherwise separate into an independent series per root.
 	if rootKind == manifest.RootKindHome && !rootOverride {
 		dir := filepath.Join(base, name)
 		return Profile{

@@ -8,8 +8,8 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
-// applyForReset は reset テストの前提として 1 世代を積む（prof.Profile が link-farm を指す）。
-// --root 上書き（RootOverride=root）で git に依存せず root を固定する。
+// applyForReset commits one generation as a precondition for reset tests (prof.Profile points at the link-farm).
+// The --root override (RootOverride=root) fixes root without depending on git.
 func applyForReset(t *testing.T, root, state string, m manifest.Manifest) {
 	t.Helper()
 	lf := writeLinkFarm(t, m)
@@ -83,7 +83,7 @@ func TestResetKeepsForeignSymlink(t *testing.T) {
 
 	applyForReset(t, root, state, homeManifest(storeEntry(symSrc, "sub", ".link")))
 
-	// 配置済み symlink を別の先へ差し替える（foreign / 記録不一致をシミュレート）。
+	// Swap the placed symlink to point elsewhere (simulate foreign / record mismatch).
 	linkAbs := filepath.Join(root, ".link")
 	if err := os.Remove(linkAbs); err != nil {
 		t.Fatal(err)
@@ -97,7 +97,7 @@ func TestResetKeepsForeignSymlink(t *testing.T) {
 		t.Fatalf("Reset: %v", err)
 	}
 
-	// 保守的不変条件を満たさないため残る。
+	// Kept because it does not satisfy the conservative invariant.
 	if _, err := os.Lstat(linkAbs); err != nil {
 		t.Errorf("foreign symlink should be kept, lstat err = %v", err)
 	}
@@ -128,14 +128,14 @@ func TestResetDryRunNoSideEffects(t *testing.T) {
 		t.Error("Result.DryRun = false, want true")
 	}
 
-	// FS は不変（プレビューのみ）。
+	// FS unchanged (preview only).
 	if _, err := os.Lstat(filepath.Join(root, ".link")); err != nil {
 		t.Errorf(".link should still exist after dryrun: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(root, ".copied")); err != nil {
 		t.Errorf(".copied should still exist after dryrun: %v", err)
 	}
-	// プランは削除予定を列挙する。
+	// The plan enumerates the to-be-removed entries.
 	if len(res.RemovedSymlinks) != 1 || len(res.RemovedCopies) != 1 {
 		t.Errorf("dryrun plan = sym%v copy%v, want one each", res.RemovedSymlinks, res.RemovedCopies)
 	}
@@ -179,7 +179,7 @@ func TestResetNoProfileIsNoop(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
 
-	// 一度も apply していない（profile 不在）→ no-op・エラーなし。
+	// Never applied (profile absent) → no-op, no error.
 	res, err := Reset(resetOpts(root, state, nil, false, nil))
 	if err != nil {
 		t.Fatalf("Reset no-profile: %v", err)
@@ -195,7 +195,7 @@ func TestResetConfirmAbort(t *testing.T) {
 	src := makeSrc(t, "sub/file")
 	applyForReset(t, root, state, homeManifest(storeEntry(src, "sub", ".a")))
 
-	// confirm が false を返したら中断し FS は不変。
+	// If confirm returns false, abort and leave the FS unchanged.
 	res, err := Reset(resetOpts(root, state, nil, false, func(*ResetResult) (bool, error) {
 		return false, nil
 	}))

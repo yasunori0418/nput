@@ -3,9 +3,10 @@
 // links conservatively, and commits a generation with `nix-env --set`
 // (→ ADR-0002, ADR-0005, ADR-0006, ADR-0011, ADR-0013, ADR-0015, ADR-0025).
 //
-// 本スライス（#6）の最小核は project mode の store-symlink 配置に絞る。配置〜
-// stale 除去（ネイティブ FS）は nix 不使用でユニット/統合テスト可能にし、commit
-// （nix-env --set）は注入可能にして tmpdir テストでは nix を呼ばない（→ ADR-0006）。
+// The minimal core of this slice (#6) is limited to store-symlink placement in
+// project mode. Placement through stale removal (native FS) is made unit/integration
+// testable without nix, and commit (nix-env --set) is injectable so tmpdir tests do
+// not call nix (→ ADR-0006).
 package engine
 
 import (
@@ -20,85 +21,89 @@ import (
 	"github.com/yasunori0418/nput/internal/planner"
 )
 
-// CommitFunc は配置成功後に世代を積むコミット点（→ ADR-0006, docs/spec.md 実行フロー f）。
-// 既定は nix-env --profile <profileLink> --set <linkFarm>。tmpdir テストはこれを
-// 差し替えて nix を呼ばずに検証する。
+// CommitFunc is the commit point that records a generation after a successful placement
+// (→ ADR-0006, docs/spec.md execution flow f). The default is
+// nix-env --profile <profileLink> --set <linkFarm>. tmpdir tests substitute this to
+// verify without calling nix.
 type CommitFunc func(profileLink, linkFarm string) error
 
-// BuildFunc は flock 取得後・ロック内で link-farm を build するコールバック（→ docs/spec.md 実行フロー 2b・ADR-0011, ADR-0023）。
-// 引数 pending は out-link を張る先（<profileDir>/.pending）。返り値は build された link-farm の
-// store パス（os.Readlink の解決後）。CLI が `nix build <ep>#nput.<system>.<name> --out-link <pending>`
-// を差し込む。nil のときは opts.LinkFarm を既ビルド済みとして使う（tmpdir テスト経路）。
+// BuildFunc is the callback that builds the link-farm in-lock after the flock is taken
+// (→ docs/spec.md execution flow 2b · ADR-0011, ADR-0023). The pending argument is the
+// out-link destination (<profileDir>/.pending). The return value is the built link-farm's
+// store path (after os.Readlink resolution). The CLI injects
+// `nix build <ep>#nput.<system>.<name> --out-link <pending>`. When nil, opts.LinkFarm is
+// used as pre-built (tmpdir test path).
 type BuildFunc func(pending string) (linkFarm string, err error)
 
-// GitFunc は project mode の git toplevel 解決（→ ADR-0005）。既定は gitutil.Toplevel。
+// GitFunc resolves the git toplevel in project mode (→ ADR-0005). The default is gitutil.Toplevel.
 type GitFunc func(dir string) (string, error)
 
-// Options は Apply の入力。
+// Options is the input to Apply.
 type Options struct {
-	// LinkFarm は manifest.json と GC アンカー symlink farm を含む link-farm ディレクトリ。
-	// Build を渡さない経路（tmpdir テスト）でのみ使う既ビルド済み link-farm（→ ADR-0011）。
+	// LinkFarm is the link-farm directory containing manifest.json and the GC anchor symlink farm.
+	// Pre-built link-farm used only on the path that does not pass Build (tmpdir tests) (→ ADR-0011).
 	LinkFarm string
-	// Name は config 名（profile を一意特定する。entrypoint の nput.<name> 由来）。
+	// Name is the config name (uniquely identifies a profile; derived from the entrypoint's nput.<name>).
 	Name string
-	// RootKind は eval 先取りで得た root kind（→ docs/spec.md 実行フロー 1・ADR-0023）。
-	// Build 経路では manifest 未ビルドのため必須。空のときは LinkFarm の manifest から得る。
+	// RootKind is the root kind obtained via eval pre-resolution (→ docs/spec.md execution flow 1 · ADR-0023).
+	// Required on the Build path since the manifest is not yet built. When empty, obtained from LinkFarm's manifest.
 	RootKind string
-	// FixedRoot は rootKind=fixed のときの絶対パス（eval 先取りの passthru.root 由来）。
-	// 空かつ Build=nil のときは LinkFarm の manifest.Root.Root を使う。
+	// FixedRoot is the absolute path when rootKind=fixed (from eval pre-resolution's passthru.root).
+	// When empty and Build=nil, LinkFarm's manifest.Root.Root is used.
 	FixedRoot string
-	// RootOverride は --root 上書き（空 = なし）。明示時は全モードで roothash キー（→ ADR-0023）。
+	// RootOverride is the --root override (empty = none). When set, uses the roothash key in all modes (→ ADR-0023).
 	RootOverride string
-	// WorkDir は project mode の git toplevel 解決の起点（空 = os.Getwd）。
+	// WorkDir is the starting point for project-mode git toplevel resolution (empty = os.Getwd).
 	WorkDir string
-	// StateDir は profile 基底 <state> の上書き（空 = paths.StateDir で解決・主にテスト用）。
+	// StateDir overrides the profile base <state> (empty = resolved via paths.StateDir · mainly for tests).
 	StateDir string
-	// NoWait は flock を try-lock にする（shellHook 経路・保持中なら ErrSkipped・→ ADR-0013）。
+	// NoWait makes the flock a try-lock (shellHook path · ErrSkipped if held · → ADR-0013).
 	NoWait bool
-	// Recopy は apply --recopy 修飾（config 内の全 copy target を src から無条件上書き再コピー・→ ADR-0020）。
-	// place-once を破る opt-in 経路。symlink 部の通常 apply（stale 除去 + 世代コミット）は不変。
+	// Recopy is the apply --recopy modifier (unconditionally overwrite/re-copy all copy targets in the config from src · → ADR-0020).
+	// An opt-in path that breaks place-once. The normal apply of the symlink part (stale removal + generation commit) is unchanged.
 	Recopy bool
-	// DryRun は副作用ゼロの読み取り専用プレビュー（apply --dryrun・→ ADR-0006, ADR-0023）。
-	// true のとき planner を読み取り専用で回して plan を Result に詰めて return し、
-	// FS 書込・--set・flock・pending gcroot いずれも取らない。build（src 解決）はするが配置しない。
+	// DryRun is a side-effect-free read-only preview (apply --dryrun · → ADR-0006, ADR-0023).
+	// When true it runs the planner read-only, packs the plan into Result and returns,
+	// taking none of FS writes / --set / flock / pending gcroot. It builds (src resolution) but does not place.
 	DryRun bool
 
-	// Build はロック内 build の差し替え（nil = opts.LinkFarm を既ビルド済みとして使う）。
+	// Build substitutes the in-lock build (nil = use opts.LinkFarm as pre-built).
 	Build BuildFunc
-	// Git は git toplevel 解決の差し替え（nil = gitutil.Toplevel）。
+	// Git substitutes git toplevel resolution (nil = gitutil.Toplevel).
 	Git GitFunc
-	// Commit は世代コミットの差し替え（nil = nix-env --set）。
+	// Commit substitutes the generation commit (nil = nix-env --set).
 	Commit CommitFunc
-	// Warnf は warning の出力先（nil = stderr）。foreign symlink 等の可視化に使う（→ ADR-0015）。
+	// Warnf is the warning output sink (nil = stderr). Used to surface foreign symlinks etc. (→ ADR-0015).
 	Warnf func(format string, args ...any)
 }
 
-// Result は Apply の結果レポート（dryrun / レポート表示・テスト検証用）。
+// Result is the result report of Apply (for dryrun / report display · test verification).
 type Result struct {
-	Root       string   // 解決後の絶対 root パス
-	ProfileDir string   // 確定した profileDir
-	Placed     []string // 新規配置した symlink target
-	Replaced   []string // 既存 symlink を張り替えた target
-	Copied     []string // place-once で新規コピーした copy target
-	Recopied   []string // --recopy で上書き再コピーした既存 copy target（→ ADR-0020）
-	Removed    []string // stale 除去した target
-	Skipped    bool     // try-lock 競合で skip した（NoWait 経路）
-	DryRun     bool     // 読み取り専用プレビュー（Placed 等は「これから配置する」予定・→ ADR-0023）
-	Conflicts  []string // dryrun で検出した conflict（"target: reason"・CLI が exit 2 判定に使う・→ ADR-0006）
-	// GenerationSkipped は project mode の世代スキップで新世代を積まなかった（--set を省いた）
-	// ことを表す。新 link-farm が前世代と同一のため commit せず、ドリフトした entry だけ
-	// lstat 修復した経路（→ ADR-0005, ADR-0017, docs/spec.md 世代スキップ）。
+	Root       string   // resolved absolute root path
+	ProfileDir string   // the fixed profileDir
+	Placed     []string // newly placed symlink targets
+	Replaced   []string // targets whose existing symlink was re-linked
+	Copied     []string // copy targets newly copied via place-once
+	Recopied   []string // existing copy targets overwritten/re-copied by --recopy (→ ADR-0020)
+	Removed    []string // stale-removed targets
+	Skipped    bool     // skipped on try-lock contention (NoWait path)
+	DryRun     bool     // read-only preview (Placed etc. are "to be placed" plans · → ADR-0023)
+	Conflicts  []string // conflicts detected in dryrun ("target: reason" · used by the CLI to decide exit 2 · → ADR-0006)
+	// GenerationSkipped indicates that the project-mode generation skip committed no new
+	// generation (omitted --set). The path where the new link-farm equals the previous
+	// generation so no commit happens and only drifted entries are lstat-repaired
+	// (→ ADR-0005, ADR-0017, docs/spec.md generation skip).
 	GenerationSkipped bool
 }
 
-// ErrSkipped は NoWait 経路で他の apply が進行中のため skip したことを表す。
+// ErrSkipped indicates a skip on the NoWait path because another apply is in progress.
 var ErrSkipped = lock.ErrLocked
 
-// Apply は project mode の store-symlink 配置を行い、成功後に世代をコミットする。
-// docs/spec.md「実行フロー」の engine 駆動部（2. engine を駆動）に対応し、
-// 「flock → ロック内 build → 配置 → --set → .pending 削除」の順を engine が所有する。
-// build は opts.Build（CLI が nix build を差し込む）にロック内で委譲し、未指定なら
-// opts.LinkFarm を既ビルド済みとして使う（tmpdir テスト経路）。
+// Apply places store-symlinks in project mode and commits a generation on success.
+// It corresponds to the engine-driven part of docs/spec.md "execution flow" (2. drive the
+// engine), and the engine owns the order "flock → in-lock build → placement → --set →
+// .pending removal". The build is delegated in-lock to opts.Build (the CLI injects nix
+// build); when unspecified, opts.LinkFarm is used as pre-built (tmpdir test path).
 func Apply(opts Options) (*Result, error) {
 	a := &applier{opts: opts, result: &Result{}}
 	if a.opts.Warnf == nil {
@@ -107,8 +112,8 @@ func Apply(opts Options) (*Result, error) {
 		}
 	}
 
-	// root kind: Build 経路では manifest 未ビルドのため eval 先取りの opts.RootKind を使う。
-	// 既ビルド済み LinkFarm 経路（テスト）では先に manifest を読んで rootKind を得る。
+	// root kind: on the Build path the manifest is not yet built, so use eval-pre-resolved opts.RootKind.
+	// On the pre-built LinkFarm path (tests), read the manifest first to obtain rootKind.
 	rootKind := opts.RootKind
 	fixedRoot := opts.FixedRoot
 	if opts.Build == nil {
@@ -125,7 +130,7 @@ func Apply(opts Options) (*Result, error) {
 		}
 	}
 
-	// 1. root 解決 → profileDir 確定（→ docs/spec.md「root の解決」）。
+	// 1. resolve root → fix profileDir (→ docs/spec.md "root resolution").
 	root, err := a.resolveRoot(rootKind, fixedRoot)
 	if err != nil {
 		return nil, err
@@ -143,19 +148,19 @@ func Apply(opts Options) (*Result, error) {
 	a.profile = paths.Resolve(stateDir, opts.Name, rootKind, root, opts.RootOverride != "")
 	a.result.ProfileDir = a.profile.Dir
 
-	// 1.5 dryrun は副作用ゼロの読み取り専用短絡（→ ADR-0006, ADR-0023, docs/spec.md 実行フロー）。
-	//     profileDir 確定までは apply と共通だが、ここから先（mkdir / flock / 配置 / --set /
-	//     pending gcroot）は一切行わず、planner を read-only で回して plan を Result に詰めて返す。
+	// 1.5 dryrun is a side-effect-free read-only short-circuit (→ ADR-0006, ADR-0023, docs/spec.md execution flow).
+	//     Up to fixing profileDir it is common with apply, but from here on (mkdir / flock / placement / --set /
+	//     pending gcroot) nothing is done; the planner is run read-only and the plan is packed into Result and returned.
 	if opts.DryRun {
 		return a.dryRun()
 	}
 
-	// 2. profileDir / backref を用意（flock は profileDir を開くため先に作る）。
+	// 2. prepare profileDir / backref (the flock opens profileDir, so create it first).
 	if err := a.ensureProfileDir(); err != nil {
 		return nil, err
 	}
 
-	// 3. 解決後 profileDir 単位で flock を取得し直列化する（→ ADR-0013）。
+	// 3. acquire a flock per resolved profileDir and serialize (→ ADR-0013).
 	l, err := lock.Acquire(a.profile.Dir, !opts.NoWait)
 	if err != nil {
 		if opts.NoWait && err == lock.ErrLocked {
@@ -166,8 +171,8 @@ func Apply(opts Options) (*Result, error) {
 	}
 	defer func() { _ = l.Release() }()
 
-	// 4. ロック内で link-farm を build する（→ docs/spec.md 実行フロー 2b・ADR-0023）。
-	//    build をロック内に閉じることで並行 apply の .pending 奪い合いが構造的に消える。
+	// 4. build the link-farm in-lock (→ docs/spec.md execution flow 2b · ADR-0023).
+	//    Closing the build inside the lock structurally removes .pending contention among concurrent applies.
 	if opts.Build != nil {
 		linkFarm, err := opts.Build(a.profile.Pending)
 		if err != nil {
@@ -181,10 +186,10 @@ func Apply(opts Options) (*Result, error) {
 		a.manifest = m
 	}
 
-	// 5. 前世代 manifest を読む（無ければ初回 = stale 除去ゼロ）。
+	// 5. read the previous generation's manifest (absent = first run = zero stale removals).
 	prev := a.loadPrevManifest()
 
-	// 6. planner で place/replace/remove プランを算出する（純ロジック・→ internal/planner）。
+	// 6. compute the place/replace/remove plan with the planner (pure logic · → internal/planner).
 	plan, err := planner.Compute(prev, a.manifest, a.root, planner.OSFS)
 	if err != nil {
 		return nil, err
@@ -195,20 +200,20 @@ func Apply(opts Options) (*Result, error) {
 	}
 	a.emitWarnings(plan.Warnings, opts.Recopy)
 
-	// 6.5 out-of-store のリンク先存在を配置直前に検査（dangling 禁止・→ ADR-0001, ADR-0013）。
-	//     FS 変更前に閉じるため、不在なら何も配置せずエラー停止する。
+	// 6.5 check out-of-store link target existence just before placement (no dangling · → ADR-0001, ADR-0013).
+	//     Closed before any FS change, so on absence it places nothing and stops with an error.
 	if err := a.checkOutOfStore(); err != nil {
 		return nil, err
 	}
 
-	// 7. project mode の世代スキップ判定（新 link-farm derivation が前世代と同一か）。
-	//    同一なら新世代を積まず（--set を省く）、ドリフトした entry だけ lstat 修復して返す
-	//    （完全 no-op にしない）。home / fixed / system は対象外で毎回新世代を積む
-	//    （世代スキップは project mode 限定・→ ADR-0005, ADR-0017, docs/spec.md 世代スキップ）。
+	// 7. project-mode generation-skip decision (is the new link-farm derivation the same as the previous generation?).
+	//    If the same, commit no new generation (omit --set) and return after lstat-repairing only drifted entries
+	//    (not a full no-op). home / fixed / system are excluded and commit a new generation every time
+	//    (generation skip is project mode only · → ADR-0005, ADR-0017, docs/spec.md generation skip).
 	if rootKind == manifest.RootKindProject && prev != nil {
 		same, err := generationUnchanged(a.profile.Profile, a.opts.LinkFarm)
 		if err != nil {
-			// 前世代 link-farm を解決できないときは安全側に倒して通常 apply（新世代を積む）。
+			// When the previous generation's link-farm cannot be resolved, fall back to the safe side: normal apply (commit a new generation).
 			a.opts.Warnf("nput: 前世代 link-farm を解決できませんでした。世代スキップせず再コミットします: %v", err)
 		} else if same {
 			if err := a.repairDrift(plan, opts.Recopy); err != nil {
@@ -220,9 +225,9 @@ func Apply(opts Options) (*Result, error) {
 		}
 	}
 
-	// 8. プランを実 FS に反映（新規 / 張替を先に、stale 除去を最後に・→ ADR-0006）。
-	//    symlink は plan 駆動。copy は --recopy のとき全 copy target を無条件上書き、
-	//    通常は place-once（target 不在のみ新規コピー）に分岐する（→ ADR-0020）。
+	// 8. reflect the plan onto the real FS (new / re-link first, stale removal last · → ADR-0006).
+	//    symlinks are plan-driven. copy branches: on --recopy overwrite all copy targets unconditionally,
+	//    normally place-once (new copy only when target is absent) (→ ADR-0020).
 	if err := a.place(plan.Place); err != nil {
 		return nil, err
 	}
@@ -233,7 +238,7 @@ func Apply(opts Options) (*Result, error) {
 		return nil, err
 	}
 
-	// 9. 世代コミット（→ docs/spec.md 実行フロー 2f）。
+	// 9. generation commit (→ docs/spec.md execution flow 2f).
 	commit := opts.Commit
 	if commit == nil {
 		commit = nixEnvCommit
@@ -242,14 +247,14 @@ func Apply(opts Options) (*Result, error) {
 		return nil, fmt.Errorf("nput: 世代コミット（nix-env --set）に失敗しました: %w", err)
 	}
 
-	// 10. --set 成功後に .pending を削除する（世代リンクが gcroot を引き継ぐ・→ ADR-0011, ADR-0025）。
+	// 10. remove .pending after --set succeeds (the generation link inherits the gcroot · → ADR-0011, ADR-0025).
 	a.cleanupPending()
 
 	return a.result, nil
 }
 
-// cleanupPending は --set 成功後（または世代スキップ後）に .pending out-link を削除する。
-// build 経路でのみ pending を張るため、その経路でのみ削除する（→ ADR-0011, ADR-0025）。
+// cleanupPending removes the .pending out-link after --set succeeds (or after a generation skip).
+// pending is only created on the build path, so it is removed only on that path (→ ADR-0011, ADR-0025).
 func (a *applier) cleanupPending() {
 	if a.opts.Build == nil {
 		return
@@ -267,14 +272,15 @@ type applier struct {
 	result   *Result
 }
 
-// dryRun は apply --dryrun の読み取り専用短絡（→ ADR-0006, ADR-0023）。manifest を build で
-// 解決（src 解決のため build はするが配置しない・pending gcroot は張らない）し、前世代 manifest
-// と planner.Compute で place/replace/remove/conflict を算出して Result に詰めて返す。flock /
-// FS 書込 / --set は一切行わない。conflict があっても error にせず Result.Conflicts に載せ、
-// CLI が exit 2 を判定する（→ docs/spec.md 終了コード表）。
+// dryRun is the read-only short-circuit of apply --dryrun (→ ADR-0006, ADR-0023). It resolves
+// the manifest via build (it builds for src resolution but does not place · does not create a
+// pending gcroot), computes place/replace/remove/conflict via planner.Compute against the
+// previous generation's manifest, and packs them into Result before returning. It performs none
+// of flock / FS writes / --set. Even on a conflict it does not error but records it in
+// Result.Conflicts, and the CLI decides exit 2 (→ docs/spec.md exit code table).
 func (a *applier) dryRun() (*Result, error) {
-	// build 経路（CLI）は manifest 未取得なので read-only build で src を解決する。
-	// CLI は dryrun では `nix build --no-link --print-out-paths`（gcroot なし）を差し込む。
+	// On the build path (CLI) the manifest is not yet obtained, so resolve src via a read-only build.
+	// In dryrun the CLI injects `nix build --no-link --print-out-paths` (no gcroot).
 	if a.opts.Build != nil {
 		linkFarm, err := a.opts.Build(a.profile.Pending)
 		if err != nil {
@@ -319,9 +325,9 @@ func (a *applier) resolveRoot(rootKind, fixedRoot string) (string, error) {
 	return resolveRoot(rootKind, fixedRoot, a.opts.RootOverride, a.opts.WorkDir, a.opts.Git)
 }
 
-// resolveRoot は rootKind（+ fixed root のときは絶対パス）から配置先の絶対 root を解決する
-// （→ docs/spec.md「root の解決」）。Apply / Rollback / ProfileFor が共有する純解決ロジックで、
-// `--root` 上書き時は kind に依らず上書きパスを使う。
+// resolveRoot resolves the absolute placement root from rootKind (+ the absolute path when
+// fixed root) (→ docs/spec.md "root resolution"). Pure resolution logic shared by Apply /
+// Rollback / ProfileFor; on `--root` override it uses the override path regardless of kind.
 func resolveRoot(rootKind, fixedRoot, rootOverride, workDir string, git GitFunc) (string, error) {
 	if rootOverride != "" {
 		return filepath.Abs(rootOverride)
@@ -364,7 +370,7 @@ func (a *applier) ensureProfileDir() error {
 	if err := os.MkdirAll(a.profile.Dir, 0o755); err != nil {
 		return fmt.Errorf("nput: profileDir を作成できません (%s): %w", a.profile.Dir, err)
 	}
-	// backref .root を <roothash> 階層に置く（孤児 profile の逆引き seam・→ ADR-0013）。
+	// Place backref .root at the <roothash> level (reverse-lookup seam for orphan profiles · → ADR-0013).
 	if a.profile.Backref != "" {
 		if err := os.MkdirAll(a.profile.BackrefDir, 0o755); err != nil {
 			return fmt.Errorf("nput: backref ディレクトリを作成できません (%s): %w", a.profile.BackrefDir, err)
@@ -376,25 +382,26 @@ func (a *applier) ensureProfileDir() error {
 	return nil
 }
 
-// loadPrevManifest は profileDir/profile（前世代 link-farm への symlink）が指す
-// manifest.json を読む。初回（profile 不在）は nil を返す（削除対象ゼロ・→ ADR-0006）。
+// loadPrevManifest reads the manifest.json pointed at by profileDir/profile (the symlink to
+// the previous generation's link-farm). On the first run (profile absent) it returns nil
+// (zero removal targets · → ADR-0006).
 func (a *applier) loadPrevManifest() *manifest.Manifest {
 	if _, err := os.Stat(a.profile.Profile); err != nil {
 		return nil
 	}
 	m, err := manifest.Load(a.profile.Profile)
 	if err != nil {
-		// 前世代が読めなくても新規配置は妨げない（stale 除去だけ諦める）。
+		// Even if the previous generation cannot be read, do not block new placement (just give up stale removal).
 		a.opts.Warnf("nput: 前世代 manifest を読めませんでした。stale 除去をスキップします: %v", err)
 		return nil
 	}
 	return m
 }
 
-// emitWarnings は planner が算出した非致命 warning を stderr（opts.Warnf）へ出す。
-// warning は --quiet でも消えない（→ docs/spec.md ストリーム規律・ADR-0015, ADR-0024）。
-// recopy=true のときは copy foreign skip 警告を抑制する（recopy は foreign も上書きするため
-// 「skip した」は誤報になる・→ ADR-0020）。
+// emitWarnings emits the non-fatal warnings computed by the planner to stderr (opts.Warnf).
+// Warnings are not silenced even by --quiet (→ docs/spec.md stream discipline · ADR-0015, ADR-0024).
+// When recopy=true it suppresses the copy foreign skip warning (recopy overwrites foreign too, so
+// "skipped" would be a false report · → ADR-0020).
 func (a *applier) emitWarnings(ws []planner.Warning, recopy bool) {
 	for _, w := range ws {
 		switch w.Kind {

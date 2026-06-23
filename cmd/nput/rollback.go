@@ -24,7 +24,7 @@ func newRollbackCmd() *cobra.Command {
 	}
 }
 
-// runRollback は eval 先取りで rootKind を確認（home mode 限定）し、engine.Rollback を駆動する。
+// runRollback confirms rootKind via eval pre-resolution (home mode only) and drives engine.Rollback.
 func runRollback(name string) error {
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
@@ -59,7 +59,7 @@ func runRollback(name string) error {
 	return nil
 }
 
-// reportRollback は世代遷移と配置差分を stderr に出す（stdout は機械可読出力に専有・→ ADR-0023）。
+// reportRollback prints the generation transition and placement diff to stderr (stdout is reserved for machine-readable output; → ADR-0023).
 func reportRollback(res *engine.RollbackResult, name string) {
 	fmt.Fprintf(os.Stderr, "nput: rollback %s done (generation %d → %d, root=%s)\n", name, res.From, res.To, res.Root)
 	for _, t := range res.Placed {
