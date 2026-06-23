@@ -9,11 +9,12 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
-// 世代スキップ + lstat ドリフト修復の tmpdir 統合テスト（実 FS・nix 不使用・fakeCommit 経路）。
-// fakeCommit は profile リンクを link-farm へ直接張るため、同一 link-farm を 2 度 apply すると
-// generationUnchanged が成立し（project mode 限定）、新世代を積まず（--set 省略）lstat 修復だけ走る。
+// tmpdir integration tests for generation skip + lstat drift repair (real FS · no nix · fakeCommit path).
+// fakeCommit links the profile link directly to the link-farm, so applying the same link-farm twice
+// makes generationUnchanged hold (project mode only), committing no new generation (--set omitted) and
+// running only the lstat repair.
 
-// applyOnce は project mode（roothash キー）の 1 回分 apply を回す共通ヘルパ。
+// applyOnce is a shared helper that runs a single apply in project mode (roothash key).
 func applyOnce(t *testing.T, lf, name, root, state string, commits *[][2]string, warns *[]string) *Result {
 	t.Helper()
 	opts := Options{
@@ -33,7 +34,7 @@ func TestApplyGenerationSkipNoDrift(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
 	src := makeSrc(t, "x")
-	// 同一 link-farm を 2 度使う（derivation 同一 = 世代スキップ対象）。
+	// Use the same link-farm twice (same derivation = generation-skip candidate).
 	lf := writeLinkFarm(t, projectManifest(storeEntry(src, ".", ".config/foo")))
 
 	var commits [][2]string
@@ -42,7 +43,7 @@ func TestApplyGenerationSkipNoDrift(t *testing.T) {
 		t.Fatalf("first apply commit calls = %d, want 1", len(commits))
 	}
 
-	// 2 回目: link-farm 同一・FS もドリフトなし → 世代スキップ・完全 no-op（commit 増えない）。
+	// Second apply: same link-farm, no FS drift → generation skip, full no-op (commit count unchanged).
 	res := applyOnce(t, lf, "c", root, state, &commits, nil)
 	if !res.GenerationSkipped {
 		t.Errorf("GenerationSkipped = false, want true (same derivation)")
@@ -53,7 +54,7 @@ func TestApplyGenerationSkipNoDrift(t *testing.T) {
 	if len(res.Placed)+len(res.Replaced)+len(res.Removed) != 0 {
 		t.Errorf("no-drift skip should touch nothing: Placed=%v Replaced=%v Removed=%v", res.Placed, res.Replaced, res.Removed)
 	}
-	// symlink は記録通りのまま。
+	// symlink stays as recorded.
 	if dest, _ := os.Readlink(filepath.Join(root, ".config", "foo")); dest != src {
 		t.Errorf("symlink dest = %q, want %q (untouched)", dest, src)
 	}
@@ -68,13 +69,13 @@ func TestApplyGenerationSkipRepairsDeletedSymlink(t *testing.T) {
 	var commits [][2]string
 	applyOnce(t, lf, "c", root, state, &commits, nil)
 
-	// foreign tool が target を消す。
+	// foreign tool removes the target.
 	tgt := filepath.Join(root, ".config", "foo")
 	if err := os.Remove(tgt); err != nil {
 		t.Fatal(err)
 	}
 
-	// 2 回目: 世代スキップだが、消えた entry を再張りする（完全 no-op にしない）。
+	// Second apply: generation skip, but re-link the deleted entry (not a full no-op).
 	res := applyOnce(t, lf, "c", root, state, &commits, nil)
 	if !res.GenerationSkipped {
 		t.Errorf("GenerationSkipped = false, want true")
@@ -99,7 +100,7 @@ func TestApplyGenerationSkipRepairsForeignSymlinkWithWarn(t *testing.T) {
 	var commits [][2]string
 	applyOnce(t, lf, "c", root, state, &commits, nil)
 
-	// foreign tool が target を別の先へ書き換える。
+	// foreign tool rewrites the target to point elsewhere.
 	tgt := filepath.Join(root, ".config", "foo")
 	foreign := realTempDir(t)
 	if err := os.Remove(tgt); err != nil {
@@ -109,7 +110,7 @@ func TestApplyGenerationSkipRepairsForeignSymlinkWithWarn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 2 回目: 世代スキップだが foreign 書き換えを warning 付きで再張り（後勝ち）。
+	// Second apply: generation skip, but re-link the foreign rewrite with a warning (last-wins).
 	var warns []string
 	res := applyOnce(t, lf, "c", root, state, &commits, &warns)
 	if !res.GenerationSkipped {
@@ -148,7 +149,7 @@ func TestApplyGenerationSkipRepairsDeletedCopy(t *testing.T) {
 		t.Fatalf("copy target should exist after first apply: %v", err)
 	}
 
-	// foreign tool が copy target を消す → place-once 復帰の対象。
+	// foreign tool removes the copy target → subject to place-once revert.
 	if err := os.Remove(tgt); err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +178,7 @@ func TestApplyGenerationSkipKeepsEditedCopy(t *testing.T) {
 	var commits [][2]string
 	applyOnce(t, lf, "c", root, state, &commits, nil)
 
-	// ユーザーが copy を編集する（内容差）→ 世代スキップの修復では触らない（src 追従は --recopy 限定）。
+	// User edits the copy (content diff) → generation-skip repair leaves it untouched (src follow is --recopy only).
 	tgt := filepath.Join(root, ".config", "foo")
 	if err := os.WriteFile(tgt, []byte("user-edit"), 0o644); err != nil {
 		t.Fatal(err)
@@ -196,12 +197,12 @@ func TestApplyGenerationSkipKeepsEditedCopy(t *testing.T) {
 }
 
 func TestApplyGenerationSkipOnlyProjectMode(t *testing.T) {
-	// home mode は世代スキップしない（毎回新世代）。home mode は同一 link-farm でも commit が増える。
+	// home mode does not skip generations (a new generation every time). In home mode the commit count grows even with the same link-farm.
 	root := realTempDir(t)
 	state := realTempDir(t)
 	src := makeSrc(t, "x")
 
-	// home mode manifest（RootKindHome）。RootOverride で root を tmpdir に逃がす（→ ADR-0017 --root 全モード上書き）。
+	// home mode manifest (RootKindHome). RootOverride redirects root to a tmpdir (→ ADR-0017 --root overrides all modes).
 	hm := manifest.Manifest{
 		SchemaVersion: 1,
 		Root:          manifest.Root{RootKind: manifest.RootKindHome},
@@ -231,7 +232,7 @@ func TestApplyGenerationSkipOnlyProjectMode(t *testing.T) {
 }
 
 func TestApplyGenerationSkipRecopyOverwrites(t *testing.T) {
-	// --recopy は世代スキップ時も copy を無条件上書きする（recopy は世代外の opt-in）。
+	// --recopy overwrites copies unconditionally even during a generation skip (recopy is an opt-in outside generations).
 	root := realTempDir(t)
 	state := realTempDir(t)
 	src := makeROSrc(t, "file.txt", "store-content")
@@ -244,7 +245,7 @@ func TestApplyGenerationSkipRecopyOverwrites(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 2 回目: derivation 同一で世代スキップだが --recopy で copy を上書き。世代は積まない。
+	// Second apply: same derivation so generation skip, but --recopy overwrites the copy. No new generation.
 	res, err := Apply(Options{
 		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Recopy: true, Commit: fakeCommit(&commits),
 	})
@@ -266,7 +267,7 @@ func TestApplyGenerationSkipRecopyOverwrites(t *testing.T) {
 }
 
 func TestApplyNewDerivationCommitsNewGeneration(t *testing.T) {
-	// link-farm derivation が変われば（別 src）世代スキップせず新世代を積む。
+	// If the link-farm derivation changes (different src), no generation skip and a new generation is committed.
 	root := realTempDir(t)
 	state := realTempDir(t)
 
@@ -275,7 +276,7 @@ func TestApplyNewDerivationCommitsNewGeneration(t *testing.T) {
 	var commits [][2]string
 	applyOnce(t, lf1, "c", root, state, &commits, nil)
 
-	// 別 link-farm（別 src = 別 derivation）→ 世代スキップしない。
+	// Different link-farm (different src = different derivation) → no generation skip.
 	src2 := makeSrc(t, "x")
 	lf2 := writeLinkFarm(t, projectManifest(storeEntry(src2, ".", ".config/foo")))
 	res := applyOnce(t, lf2, "c", root, state, &commits, nil)

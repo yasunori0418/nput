@@ -9,12 +9,13 @@ import (
 )
 
 // place materializes the planner's Place actions as native symlinks
-// （新規 / 張替を stale 除去より先に・→ ADR-0006）。プランは planner.Compute が
-// 現 FS 状態から算出済みで、ここは plan を実 FS に反映する薄い executor に徹する。
-// 本スライスは store / out-of-store の symlink 配置のみ（copy は将来スライス・→ Issue #6）。
+// (new / re-link before stale removal · → ADR-0006). The plan is already computed by
+// planner.Compute from the current FS state, so this stays a thin executor that reflects
+// the plan onto the real FS. This slice covers only store / out-of-store symlink placement
+// (copy is a future slice · → Issue #6).
 func (a *applier) place(actions []planner.PlaceAction) error {
 	for _, act := range actions {
-		// 親ディレクトリを作成（祖先 symlink は planner が conflict として弾き済み・→ ADR-0015）。
+		// Create the parent directory (ancestor symlinks are already rejected as conflicts by the planner · → ADR-0015).
 		if err := os.MkdirAll(filepath.Dir(act.TargetAbs), 0o755); err != nil {
 			return fmt.Errorf("nput: 親ディレクトリを作成できません (%s): %w", filepath.Dir(act.TargetAbs), err)
 		}
@@ -23,8 +24,8 @@ func (a *applier) place(actions []planner.PlaceAction) error {
 		case planner.PlaceNew:
 			a.result.Placed = append(a.result.Placed, act.Entry.Target)
 		case planner.PlaceReplace, planner.PlaceForeign:
-			// 張替は unlink + symlink（rename ベースの atomic swap は採らない・→ ADR-0017）。
-			// foreign 上書きの warning は planner.Warnings 経由で emitWarnings 済み（→ ADR-0015）。
+			// Re-link is unlink + symlink (no rename-based atomic swap · → ADR-0017).
+			// The foreign-overwrite warning is already emitted via planner.Warnings by emitWarnings (→ ADR-0015).
 			if err := os.Remove(act.TargetAbs); err != nil {
 				return fmt.Errorf("nput: 既存 symlink を除去できません (%s): %w", act.TargetAbs, err)
 			}

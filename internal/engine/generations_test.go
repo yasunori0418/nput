@@ -59,8 +59,8 @@ func TestParseGenerationsBadLine(t *testing.T) {
 	}
 }
 
-// TestRollbackReconverges は現世代 N → 前世代 N-1 への FS 再収束を検証する。
-// gen1 = {a, b}, gen2(現) = {a, c}。rollback で c を stale 除去・b を再配置し a は残す。
+// TestRollbackReconverges verifies FS re-convergence from current generation N → previous generation N-1.
+// gen1 = {a, b}, gen2(current) = {a, c}. Rollback stale-removes c, re-places b, and keeps a.
 func TestRollbackReconverges(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
@@ -68,7 +68,7 @@ func TestRollbackReconverges(t *testing.T) {
 	srcB := makeSrc(t, "x")
 	srcC := makeSrc(t, "x")
 
-	// --root 上書きで home + roothash キーにし $HOME 非依存にする。
+	// Use the --root override for home + roothash key to be independent of $HOME.
 	prof := paths.Resolve(state, "vim", manifest.RootKindHome, root, true)
 	if err := os.MkdirAll(prof.Dir, 0o755); err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestRollbackReconverges(t *testing.T) {
 		storeEntry(srcC, ".", "c"),
 	))
 
-	// 世代リンク（profile-N-link）と現 profile（gen2）を用意する。
+	// Prepare the generation links (profile-N-link) and the current profile (gen2).
 	if err := os.Symlink(lf1, paths.GenerationLink(prof.Profile, 1)); err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestRollbackReconverges(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 現状 FS = gen2: a→srcA, c→srcC を配置済みにする。
+	// Current FS = gen2: place a→srcA, c→srcC.
 	if err := os.Symlink(srcA, filepath.Join(root, "a")); err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestRollbackReconverges(t *testing.T) {
 		t.Errorf("switched generation = %d, want 1", switched)
 	}
 
-	// FS は gen1 と一致する: a 残存・b 新規・c 除去。
+	// FS matches gen1: a remains, b new, c removed.
 	if dest, err := os.Readlink(filepath.Join(root, "a")); err != nil || dest != srcA {
 		t.Errorf("a: dest=%q err=%v, want %q", dest, err, srcA)
 	}
@@ -139,7 +139,7 @@ func TestRollbackReconverges(t *testing.T) {
 	}
 }
 
-// TestRollbackNoPreviousErrors は現世代が最古（前世代なし）のとき rollback がエラー停止することを検証する。
+// TestRollbackNoPreviousErrors verifies that rollback stops with an error when the current generation is the oldest (no previous generation).
 func TestRollbackNoPreviousErrors(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
@@ -162,7 +162,7 @@ func TestRollbackNoPreviousErrors(t *testing.T) {
 	}
 }
 
-// TestRollbackNoProfileErrors は profileDir が無い（未 apply）とき rollback がエラー停止することを検証する。
+// TestRollbackNoProfileErrors verifies that rollback stops with an error when profileDir is absent (never applied).
 func TestRollbackNoProfileErrors(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
@@ -176,7 +176,7 @@ func TestRollbackNoProfileErrors(t *testing.T) {
 	}
 }
 
-// TestResolveRootHome は rootKind=home が $HOME を返すことを検証する（root resolver 単体）。
+// TestResolveRootHome verifies that rootKind=home returns $HOME (root resolver unit test).
 func TestResolveRootHome(t *testing.T) {
 	home := realTempDir(t)
 	t.Setenv("HOME", home)
@@ -189,7 +189,7 @@ func TestResolveRootHome(t *testing.T) {
 	}
 }
 
-// TestResolveRootOverrideWins は --root 上書きが rootKind に依らず優先されることを検証する。
+// TestResolveRootOverrideWins verifies that the --root override takes precedence regardless of rootKind.
 func TestResolveRootOverrideWins(t *testing.T) {
 	override := realTempDir(t)
 	got, err := resolveRoot(manifest.RootKindHome, "", override, "", nil)

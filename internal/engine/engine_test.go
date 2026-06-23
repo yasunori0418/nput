@@ -13,7 +13,7 @@ import (
 	"github.com/yasunori0418/nput/internal/paths"
 )
 
-// profileDirFor は --root 上書き（roothash キー）時の profileDir を返す。
+// profileDirFor returns the profileDir for the --root override (roothash key) case.
 func profileDirFor(t *testing.T, state, root, name string) string {
 	t.Helper()
 	return paths.Resolve(state, name, manifest.RootKindProject, root, true).Dir
@@ -21,7 +21,7 @@ func profileDirFor(t *testing.T, state, root, name string) string {
 
 // --- test helpers ----------------------------------------------------------
 
-// realTempDir は EvalSymlinks 済みの tmpdir を返す（macOS の /var → /private/var 対策）。
+// realTempDir returns an EvalSymlinks'd tmpdir (works around macOS /var → /private/var).
 func realTempDir(t *testing.T) string {
 	t.Helper()
 	d, err := filepath.EvalSymlinks(t.TempDir())
@@ -31,7 +31,7 @@ func realTempDir(t *testing.T) string {
 	return d
 }
 
-// writeLinkFarm は手書き manifest.json を持つ link-farm ディレクトリを作って返す。
+// writeLinkFarm creates and returns a link-farm directory with a hand-written manifest.json.
 func writeLinkFarm(t *testing.T, m manifest.Manifest) string {
 	t.Helper()
 	dir := realTempDir(t)
@@ -45,7 +45,7 @@ func writeLinkFarm(t *testing.T, m manifest.Manifest) string {
 	return dir
 }
 
-// makeSrc は store src 相当の tmpdir に <subpath> のファイルを作って src dir を返す。
+// makeSrc creates a file at <subpath> in a store-src-equivalent tmpdir and returns the src dir.
 func makeSrc(t *testing.T, subpath string) string {
 	t.Helper()
 	src := realTempDir(t)
@@ -59,8 +59,8 @@ func makeSrc(t *testing.T, subpath string) string {
 	return src
 }
 
-// fakeCommit は nix-env --set を模し、profile リンクを link-farm へ張る
-// （前世代 manifest の読み取りを後続 apply で成立させる）。
+// fakeCommit mimics nix-env --set and links the profile link to the link-farm
+// (so that reading the previous generation's manifest works on a subsequent apply).
 func fakeCommit(captured *[][2]string) CommitFunc {
 	return func(profileLink, linkFarm string) error {
 		if captured != nil {
@@ -95,7 +95,7 @@ func storeEntry(src, subpath, target string) manifest.Entry {
 	}
 }
 
-// outOfStoreEntry は marker のローカル絶対パス（store 外）を指す out-of-store symlink entry。
+// outOfStoreEntry is an out-of-store symlink entry pointing at the marker's local absolute path (outside the store).
 func outOfStoreEntry(src, subpath, target string) manifest.Entry {
 	return manifest.Entry{
 		SrcKind: manifest.SrcKindOutOfStore,
@@ -112,8 +112,8 @@ func copyEntry(src, subpath, target string) manifest.Entry {
 	return e
 }
 
-// makeROSrc は store 相当の read-only ファイル（0o444）を <subpath> に作って src dir を返す。
-// copy の mode 保存 + owner-write 付与（0444 → 0644）を検証するための src。
+// makeROSrc creates a store-equivalent read-only file (0o444) at <subpath> and returns the src dir.
+// A src for verifying copy's mode preservation + owner-write addition (0444 → 0644).
 func makeROSrc(t *testing.T, subpath, content string) string {
 	t.Helper()
 	src := realTempDir(t)
@@ -153,7 +153,7 @@ func TestApplyFirstPlacementProjectMode(t *testing.T) {
 		t.Fatalf("Apply: %v", err)
 	}
 
-	// symlink が <root>/<target> -> <src>/<subpath> で張られる。
+	// symlink is created as <root>/<target> -> <src>/<subpath>.
 	target := filepath.Join(root, ".claude", "skills", "nix")
 	dest, err := os.Readlink(target)
 	if err != nil {
@@ -163,7 +163,7 @@ func TestApplyFirstPlacementProjectMode(t *testing.T) {
 		t.Errorf("symlink dest = %q, want %q", dest, want)
 	}
 
-	// profileDir レイアウトが <state>/nix/profiles/nput/<roothash>/<name> に作られる。
+	// The profileDir layout is created at <state>/nix/profiles/nput/<roothash>/<name>.
 	if !strings.HasPrefix(res.ProfileDir, filepath.Join(state, "nix", "profiles", "nput")) {
 		t.Errorf("ProfileDir = %q, not under state base", res.ProfileDir)
 	}
@@ -171,7 +171,7 @@ func TestApplyFirstPlacementProjectMode(t *testing.T) {
 		t.Errorf("profileDir not created: %v", err)
 	}
 
-	// backref .root が <roothash> 階層に root の絶対パスを記録する。
+	// backref .root records root's absolute path at the <roothash> level.
 	backref := filepath.Join(filepath.Dir(res.ProfileDir), ".root")
 	data, err := os.ReadFile(backref)
 	if err != nil {
@@ -181,7 +181,7 @@ func TestApplyFirstPlacementProjectMode(t *testing.T) {
 		t.Errorf("backref = %q, want %q", strings.TrimSpace(string(data)), root)
 	}
 
-	// commit が profileDir/profile と link-farm で 1 回呼ばれる。
+	// commit is called once with profileDir/profile and the link-farm.
 	if len(commits) != 1 {
 		t.Fatalf("commit calls = %d, want 1", len(commits))
 	}
@@ -209,7 +209,7 @@ func TestApplySubpathDot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dest != src { // subpath="." → src そのもの
+	if dest != src { // subpath="." → src itself
 		t.Errorf("dest = %q, want %q", dest, src)
 	}
 }
@@ -219,7 +219,7 @@ func TestApplyAncestorSymlinkError(t *testing.T) {
 	src := makeSrc(t, "x")
 	state := realTempDir(t)
 
-	// <root>/.claude を symlink 配置済みにする → 配下に nix をネストできない。
+	// Make <root>/.claude an already-placed symlink → cannot nest nix beneath it.
 	if err := os.Symlink(realTempDir(t), filepath.Join(root, ".claude")); err != nil {
 		t.Fatal(err)
 	}
@@ -259,7 +259,7 @@ func TestApplyForeignSymlinkWarns(t *testing.T) {
 	src := makeSrc(t, "x")
 	state := realTempDir(t)
 
-	// 記録の無い foreign symlink を target に置く。
+	// Place an unrecorded foreign symlink at the target.
 	foreign := realTempDir(t)
 	if err := os.MkdirAll(filepath.Join(root, ".config"), 0o755); err != nil {
 		t.Fatal(err)
@@ -302,7 +302,7 @@ func TestApplyRecordedSymlinkReplacedSilently(t *testing.T) {
 		t.Fatalf("first Apply: %v", err)
 	}
 
-	// 2 回目: 同 target・別 src。前世代記録と一致するので foreign 警告を出さず張替。
+	// Second apply: same target, different src. Matches the previous generation's record, so re-link without a foreign warning.
 	src2 := makeSrc(t, "x")
 	lf2 := writeLinkFarm(t, projectManifest(storeEntry(src2, ".", ".config/foo")))
 	var warns []string
@@ -332,7 +332,7 @@ func TestApplyStaleRemoval(t *testing.T) {
 	state := realTempDir(t)
 	src := makeSrc(t, "x")
 
-	// 1 回目: 2 entry。
+	// First apply: 2 entries.
 	lf1 := writeLinkFarm(t, projectManifest(
 		storeEntry(src, ".", ".config/keep"),
 		storeEntry(src, ".", ".config/drop"),
@@ -347,7 +347,7 @@ func TestApplyStaleRemoval(t *testing.T) {
 		t.Fatalf("drop should exist after first apply: %v", err)
 	}
 
-	// 2 回目: drop を外す → stale 除去される。keep は残る。
+	// Second apply: drop drop → stale-removed. keep remains.
 	lf2 := writeLinkFarm(t, projectManifest(storeEntry(src, ".", ".config/keep")))
 	res, err := Apply(Options{
 		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
@@ -379,14 +379,14 @@ func TestApplyStaleRemovalKeepsForeign(t *testing.T) {
 		t.Fatalf("first Apply: %v", err)
 	}
 
-	// ユーザーが target を別の先へ差し替える（記録と不一致）→ stale 除去しない。
+	// User swaps the target to point elsewhere (mismatch with the record) → no stale removal.
 	tgt := filepath.Join(root, ".config", "drop")
 	_ = os.Remove(tgt)
 	if err := os.Symlink(realTempDir(t), tgt); err != nil {
 		t.Fatal(err)
 	}
 
-	lf2 := writeLinkFarm(t, projectManifest()) // 空 manifest = 全クリア。
+	lf2 := writeLinkFarm(t, projectManifest()) // empty manifest = clear everything.
 	var warns []string
 	res, err := Apply(Options{
 		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state,
@@ -431,7 +431,7 @@ func TestApplyNoWaitSkipsWhenLocked(t *testing.T) {
 	src := makeSrc(t, "x")
 	lf := writeLinkFarm(t, projectManifest(storeEntry(src, ".", ".config/foo")))
 
-	// profileDir を先に作って flock を握っておく。
+	// Create profileDir first and hold the flock.
 	prof := profileDirFor(t, state, root, "c")
 	if err := os.MkdirAll(prof, 0o755); err != nil {
 		t.Fatal(err)
@@ -451,7 +451,7 @@ func TestApplyNoWaitSkipsWhenLocked(t *testing.T) {
 	if res == nil || !res.Skipped {
 		t.Errorf("expected res.Skipped = true, got %+v", res)
 	}
-	// skip したので配置はされない。
+	// Skipped, so nothing is placed.
 	if _, err := os.Lstat(filepath.Join(root, ".config", "foo")); !os.IsNotExist(err) {
 		t.Errorf("skip should not place: lstat err = %v", err)
 	}
@@ -460,7 +460,7 @@ func TestApplyNoWaitSkipsWhenLocked(t *testing.T) {
 func TestApplyOutOfStorePlacesLiveSymlink(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
-	// store 外のローカル実体を out-of-store のリンク先に使う。
+	// Use a local entity outside the store as the out-of-store link target.
 	src := makeSrc(t, "lua/init.lua")
 	lf := writeLinkFarm(t, projectManifest(outOfStoreEntry(src, "lua", ".config/nvim")))
 
@@ -476,11 +476,11 @@ func TestApplyOutOfStorePlacesLiveSymlink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Readlink target: %v", err)
 	}
-	// live symlink は marker の絶対パス（<src>/<subpath>）を直接指す。
+	// The live symlink points directly at the marker's absolute path (<src>/<subpath>).
 	if want := filepath.Join(src, "lua"); dest != want {
 		t.Errorf("symlink dest = %q, want %q (local abs path)", dest, want)
 	}
-	// dangling でなく実体に解決できる。
+	// Resolves to a live entity, not dangling.
 	if _, err := os.Stat(target); err != nil {
 		t.Errorf("symlink should resolve to a live path: %v", err)
 	}
@@ -494,7 +494,7 @@ func TestApplyOutOfStoreStaleRemoval(t *testing.T) {
 	state := realTempDir(t)
 	src := makeSrc(t, "x")
 
-	// 1 回目: out-of-store entry を配置（manifest に marker の絶対パスが記録される）。
+	// First apply: place the out-of-store entry (the marker's absolute path is recorded in the manifest).
 	lf1 := writeLinkFarm(t, projectManifest(outOfStoreEntry(src, ".", ".config/nvim")))
 	var commits [][2]string
 	if _, err := Apply(Options{
@@ -507,7 +507,7 @@ func TestApplyOutOfStoreStaleRemoval(t *testing.T) {
 		t.Fatalf("first apply dest = %q, want %q", dest, src)
 	}
 
-	// 2 回目: 空 manifest。記録された out-of-store パスを指す link なので保守的不変条件を満たし除去。
+	// Second apply: empty manifest. The link points at the recorded out-of-store path, so it satisfies the conservative invariant and is removed.
 	lf2 := writeLinkFarm(t, projectManifest())
 	res, err := Apply(Options{
 		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
@@ -536,7 +536,7 @@ func TestApplyOutOfStoreStaleKeepsMismatch(t *testing.T) {
 		t.Fatalf("first Apply: %v", err)
 	}
 
-	// ユーザーが target を別のローカル先へ差し替える（記録と不一致）→ stale 除去しない。
+	// User swaps the target to a different local destination (mismatch with the record) → no stale removal.
 	tgt := filepath.Join(root, ".config", "nvim")
 	_ = os.Remove(tgt)
 	if err := os.Symlink(realTempDir(t), tgt); err != nil {
@@ -566,7 +566,7 @@ func TestApplyOutOfStoreStaleKeepsMismatch(t *testing.T) {
 func TestApplyOutOfStoreMissingPathError(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
-	// 存在しないローカルパスを out-of-store のリンク先にする。
+	// Use a non-existent local path as the out-of-store link target.
 	missing := filepath.Join(realTempDir(t), "does-not-exist")
 	lf := writeLinkFarm(t, projectManifest(outOfStoreEntry(missing, ".", ".config/nvim")))
 
@@ -579,7 +579,7 @@ func TestApplyOutOfStoreMissingPathError(t *testing.T) {
 	if !strings.Contains(err.Error(), "out-of-store") {
 		t.Errorf("error should mention out-of-store: %v", err)
 	}
-	// 不在検査は配置前に閉じるため target は作られない。
+	// The absence check is closed before placement, so the target is not created.
 	if _, err := os.Lstat(filepath.Join(root, ".config", "nvim")); !os.IsNotExist(err) {
 		t.Errorf("should not place on missing path: lstat err = %v", err)
 	}
@@ -599,7 +599,7 @@ func TestApplyCopyPlaceOnceFile(t *testing.T) {
 	}
 
 	target := filepath.Join(root, ".config", "foo")
-	// 内容がコピーされる（symlink ではなく実ファイル）。
+	// Content is copied (a regular file, not a symlink).
 	fi, err := os.Lstat(target)
 	if err != nil {
 		t.Fatalf("Lstat target: %v", err)
@@ -611,7 +611,7 @@ func TestApplyCopyPlaceOnceFile(t *testing.T) {
 	if err != nil || string(data) != "store-content" {
 		t.Errorf("content = %q (err %v), want store-content", data, err)
 	}
-	// mode は保存しつつ owner-write を付与（0444 → 0644）。
+	// Preserve mode while adding owner-write (0444 → 0644).
 	if fi.Mode().Perm() != 0o644 {
 		t.Errorf("mode = %o, want 0644 (mode-preserve + owner-write)", fi.Mode().Perm())
 	}
@@ -626,20 +626,20 @@ func TestApplyCopyPlaceOnceKeepsExisting(t *testing.T) {
 	src := makeROSrc(t, "file.txt", "store-content")
 	lf := writeLinkFarm(t, projectManifest(copyEntry(src, "file.txt", ".config/foo")))
 
-	// 1 回目: 新規コピー。
+	// First apply: new copy.
 	var commits [][2]string
 	if _, err := Apply(Options{
 		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
 	}); err != nil {
 		t.Fatalf("first Apply: %v", err)
 	}
-	// ユーザーが編集する。
+	// User edits it.
 	target := filepath.Join(root, ".config", "foo")
 	if err := os.WriteFile(target, []byte("user-edit"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	// 2 回目: place-once により target は触られない（編集が残る）。
+	// Second apply: place-once leaves the target untouched (the edit remains).
 	res, err := Apply(Options{
 		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
 	})
@@ -660,7 +660,7 @@ func TestApplyCopyForeignFileSkipsWithWarn(t *testing.T) {
 	state := realTempDir(t)
 	src := makeROSrc(t, "file.txt", "store-content")
 
-	// 記録の無い foreign 実ファイルを target に置く。
+	// Place an unrecorded foreign regular file at the target.
 	target := filepath.Join(root, ".config", "foo")
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		t.Fatal(err)
@@ -678,7 +678,7 @@ func TestApplyCopyForeignFileSkipsWithWarn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
-	// place-once skip: foreign ファイルは上書きしない。
+	// place-once skip: the foreign file is not overwritten.
 	if data, _ := os.ReadFile(target); string(data) != "foreign" {
 		t.Errorf("foreign file should be kept, content = %q", data)
 	}
@@ -694,7 +694,7 @@ func TestApplyCopyDirRecursivePreservesSymlinks(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
 
-	// src ツリー: ディレクトリ + ファイル + 内部 symlink。
+	// src tree: directory + file + internal symlink.
 	src := realTempDir(t)
 	if err := os.MkdirAll(filepath.Join(src, "tree", "sub"), 0o755); err != nil {
 		t.Fatal(err)
@@ -717,7 +717,7 @@ func TestApplyCopyDirRecursivePreservesSymlinks(t *testing.T) {
 	if data, _ := os.ReadFile(filepath.Join(dst, "sub", "f.txt")); string(data) != "hi" {
 		t.Errorf("nested file content = %q, want hi", data)
 	}
-	// 内部 symlink は deref されず symlink のまま複製される。
+	// The internal symlink is duplicated as a symlink without deref.
 	li, err := os.Lstat(filepath.Join(dst, "link"))
 	if err != nil {
 		t.Fatalf("Lstat link: %v", err)
@@ -736,7 +736,7 @@ func TestApplyRecopyOverwrites(t *testing.T) {
 	src := makeROSrc(t, "file.txt", "store-content")
 	lf := writeLinkFarm(t, projectManifest(copyEntry(src, "file.txt", ".config/foo")))
 
-	// 1 回目: 新規コピー。
+	// First apply: new copy.
 	var commits [][2]string
 	if _, err := Apply(Options{
 		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
@@ -748,7 +748,7 @@ func TestApplyRecopyOverwrites(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 2 回目: --recopy で無条件上書き → src 内容に戻る。
+	// Second apply: --recopy overwrites unconditionally → reverts to src content.
 	res, err := Apply(Options{
 		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state,
 		Recopy: true, Commit: fakeCommit(&commits),
@@ -769,7 +769,7 @@ func TestApplyRecopyForeignFileOverwrites(t *testing.T) {
 	state := realTempDir(t)
 	src := makeROSrc(t, "file.txt", "store-content")
 
-	// 記録の無い foreign ファイル: 通常 apply なら skip だが --recopy は無条件上書き。
+	// Unrecorded foreign file: normal apply would skip, but --recopy overwrites unconditionally.
 	target := filepath.Join(root, ".config", "foo")
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		t.Fatal(err)
@@ -793,7 +793,7 @@ func TestApplyRecopyForeignFileOverwrites(t *testing.T) {
 	if len(res.Recopied) != 1 {
 		t.Errorf("Recopied = %v, want 1", res.Recopied)
 	}
-	// recopy 経路では foreign skip 警告を出さない（上書きするため誤報）。
+	// On the recopy path no foreign skip warning is emitted (it overwrites, so that would be a false report).
 	for _, w := range warns {
 		if strings.Contains(w, "スキップ") {
 			t.Errorf("unexpected copy foreign skip warning during recopy: %q", w)
