@@ -1,5 +1,7 @@
 # nput
 
+*Read this in [Japanese (日本語)](README.ja.md).*
+
 > Place fetched git repositories at arbitrary paths via symlink or copy.
 
 nput is a Nix library and module set that **places the contents of an already-fetched
