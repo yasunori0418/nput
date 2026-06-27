@@ -46,8 +46,8 @@
             shellHook = ''
               export REPO_ROOT=$(git rev-parse --show-superproject-working-tree --show-toplevel)
               # mattpocock/skills を .claude/skills/ に dogfood 配置する（project mode）。
-              # 競合時は待たず skip（--no-wait）し、no-op / 配置レポートは抑制する（--quiet）。
-              nput apply skills -f "$REPO_ROOT/dev" --no-wait --quiet
+              # 競合時は待たず skip（--no-wait）し、no-op
+              nput apply skills -f "$REPO_ROOT/dev" --no-wait
             '';
           };
 
