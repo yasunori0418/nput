@@ -1,0 +1,39 @@
+name: 'Detect relevant changes'
+description: 'Detect whether nix / Go / CI-defining files changed. Outputs run=true when the CI jobs should execute (→ ADR-0030).'
+outputs:
+  run:
+    description: 'true when nix/Go/CI files changed, or on any non-pull_request event'
+    value: ${{ steps.decide.outputs.run }}
+runs:
+  using: 'composite'
+  steps:
+    # On pull_request, classify the changed paths. The same set the old `paths`
+    # trigger used; centralised here so required status checks always report
+    # (skipped jobs count as success) instead of never starting (→ ADR-0030).
+    - name: Filter changed paths
+      id: filter
+      if: github.event_name == 'pull_request'
+      uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v4.0.1
+      with:
+        filters: |
+          relevant:
+            - '**.nix'
+            - '**.go'
+            - 'go.mod'
+            - 'go.sum'
+            - 'flake.lock'
+            - 'dev/flake.lock'
+            - '.github/workflows/**'
+            - '.github/actions/**'
+
+    # Non-pull_request events (workflow_dispatch) always run; pull_request runs
+    # only when relevant files changed, so docs-only PRs skip nix entirely.
+    - name: Decide
+      id: decide
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" != "pull_request" ]; then
+          echo "run=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "run=${{ steps.filter.outputs.relevant }}" >> "$GITHUB_OUTPUT"
+        fi

@@ -2,21 +2,28 @@ name: Test
 
 on:
   workflow_dispatch:
+  # No `paths` trigger: the workflow starts on every PR so the required status
+  # checks always report. Relevant-change detection moved into the `changes`
+  # job, which skips flake-check / e2e on docs-only PRs (skipped == success for
+  # required checks). The old "run nix only when nix/Go/CI files change"
+  # optimisation is preserved via the `if:` gate (→ ADR-0027 §2, ADR-0030).
   pull_request:
-    # nix / Go / CI 定義の変更時のみ実行する。docs のみの変更で flake check を回さない。
-    # paths は workflow 単位（全 job 共通）。手動再実行は workflow_dispatch で担保。
-    paths:
-      - "**.nix"
-      - "**.go"
-      - "go.mod"
-      - "go.sum"
-      - "flake.lock"
-      - "dev/flake.lock"
-      - ".github/workflows/**"
-      - ".github/actions/**"
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Detect relevant changes
+        id: detect
+        uses: ./.github/actions/changes
+
   flake-check:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -40,8 +47,11 @@ jobs:
         run: nix flake check -L
 
   e2e:
-    # 非 NixOS（ubuntu-latest）E2E。「nix さえあれば動く」主張を実 nix で検証する（→ ADR-0012）。
-    # ci devShell（nput / git / jq / coreutils）の中で tests/e2e/run.sh を回す。
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    # Non-NixOS (ubuntu-latest) E2E. Verifies the "works as long as nix is present"
+    # claim with real nix (→ ADR-0012). Runs tests/e2e/run.sh inside the ci devShell
+    # (nput / git / jq / coreutils).
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
