@@ -9,42 +9,11 @@
 #
 # Minimal scope of this slice: root = projectRoot only / src = store-backed symlink entries of path/set only
 # (→ Issue #5). Types and throwIf are defined in full form, anticipating future slices (home / copy / out-of-store).
+#
+# Private helpers (escapesBase / pathChecks / anchorName / resolveEntry / farmEntries) live in
+# ./__internal.nix so they stay unit-test reachable via `nput.__internal.<name>` (→ #71).
 let
-  # ---- Path safety (→ ADR-0019)----------------------------------------------
-  # target is root-relative, subpath is relative within src. Absolute paths (leading `/`) and
-  # paths that escape outward via `..` are rejected at eval time. Decidable statically, independent of root's concrete value (runtime resolution).
-  pathChecks =
-    lib:
-    let
-      isAbsolute = lib.hasPrefix "/";
-      # Determine whether following `..` makes the depth go negative (escapes outside base).
-      escapesBase =
-        p:
-        let
-          comps = lib.filter (c: c != "" && c != ".") (lib.splitString "/" p);
-          step =
-            acc: c:
-            if acc.bad then
-              acc
-            else if c == ".." then
-              {
-                bad = acc.depth == 0;
-                depth = if acc.depth == 0 then 0 else acc.depth - 1;
-              }
-            else
-              {
-                bad = false;
-                depth = acc.depth + 1;
-              };
-        in
-        (lib.foldl' step {
-          bad = false;
-          depth = 0;
-        } comps).bad;
-    in
-    {
-      isUnsafe = p: isAbsolute p || escapesBase p;
-    };
+  internal = import ./__internal.nix;
 
   normalizeManifest =
     {
@@ -54,7 +23,7 @@ let
     }:
     let
       t = import ./types.nix lib;
-      checks = pathChecks lib;
+      checks = internal.pathChecks lib;
 
       # mkManifest itself runs evalModules so validation applies on both paths (direct CLI call / module) (→ ADR-0010).
       evaluated = lib.evalModules {
@@ -85,27 +54,7 @@ let
 
       # entry marker tag → clean enum + resolved src string (→ ADR-0010).
       # Since the attribute key = target, serialize to an array deterministically in attrNames lexical order (Go reads the array・→ ADR-0014).
-      resolveEntry =
-        e:
-        let
-          srcInfo =
-            if t.isOutOfStoreMarker e.src then
-              {
-                srcKind = "outOfStore";
-                src = e.src.path;
-              }
-            else
-              {
-                srcKind = "store";
-                src = toString e.src;
-              };
-        in
-        {
-          inherit (srcInfo) srcKind src;
-          inherit (e) subpath target method;
-        };
-
-      normEntries = map (key: resolveEntry cfg.entries.${key}) (lib.attrNames cfg.entries);
+      normEntries = map (key: internal.resolveEntry lib cfg.entries.${key}) (lib.attrNames cfg.entries);
 
       targets = map (e: e.target) normEntries;
 
@@ -143,9 +92,6 @@ let
     # Run every assertion through the evaluation gate with throwIf.
     lib.foldl' (acc: msg: lib.throwIf true msg acc) result assertions;
 
-  # GC anchor name for the symlink farm = sha256 short hex of target (fixed length, FS-safe, collision-free・→ ADR-0016).
-  anchorName = lib: target: lib.substring 0 32 (builtins.hashString "sha256" target);
-
   mkManifest =
     {
       pkgs,
@@ -160,10 +106,10 @@ let
 
       # Farm anchors are limited to entries that are "store-backed and method = symlink" (→ ADR-0016, ADR-0019).
       # out-of-store / copy have no farm anchor (copy is out-of-generation, place-once, and independent of the store).
-      farmEntries = lib.filter (e: e.srcKind == "store" && e.method == "symlink") norm.entries;
+      farmEntries = internal.farmEntries lib norm.entries;
 
       anchorLines = lib.concatMapStringsSep "\n" (
-        e: "ln -s ${lib.escapeShellArg e.src} \"$out/${anchorName lib e.target}\""
+        e: "ln -s ${lib.escapeShellArg e.src} \"$out/${internal.anchorName lib e.target}\""
       ) farmEntries;
     in
     # The derivation contains manifest.json (the engine's input contract) + a symlink farm to the store src (GC anchors) (→ ADR-0006).
