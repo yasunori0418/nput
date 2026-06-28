@@ -399,7 +399,7 @@ func (a *applier) loadPrevManifest() *manifest.Manifest {
 }
 
 // emitWarnings emits the non-fatal warnings computed by the planner to stderr (opts.Warnf).
-// Warnings are not silenced even by --quiet (→ docs/spec.md stream discipline · ADR-0015, ADR-0024).
+// Warnings are always emitted, regardless of the silent-on-success default or -v (→ docs/spec.md stream discipline · ADR-0015, ADR-0024, ADR-0031).
 // When recopy=true it suppresses the copy foreign skip warning (recopy overwrites foreign too, so
 // "skipped" would be a false report · → ADR-0020).
 func (a *applier) emitWarnings(ws []planner.Warning, recopy bool) {
