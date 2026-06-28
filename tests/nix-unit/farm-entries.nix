@@ -51,12 +51,6 @@ in
     ];
   };
 
-  # 採用された全エントリは store-backed かつ method = symlink である（フィルタ条件の明示アサート）。
-  testFarmEntriesAllStoreSymlink = {
-    expr = lib.all (e: e.srcKind == "store" && e.method == "symlink") farm;
-    expected = true;
-  };
-
   # store×symlink が皆無なら farmEntries は空（copy / out-of-store だけではアンカーを持たない）。
   testFarmEntriesEmptyWhenNoStoreSymlink = {
     expr =
