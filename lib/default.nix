@@ -9,6 +9,11 @@ let
   manifest = import ./manifest.nix;
 in
 {
+  # Private helpers (escapesBase / pathChecks / anchorName / resolveEntry / farmEntries) exposed
+  # solely as a unit-test seam (→ #71). NOT a stable public API; the `__internal` name marks intent.
+  # Each helper takes nixpkgs.lib explicitly (the nput lib attrset is unparameterized).
+  __internal = import ./__internal.nix;
+
   # lib.mkManifest { pkgs, root, entries } -> derivation (manifest.json + symlink farm・→ ADR-0006, ADR-0023)
   inherit (manifest) mkManifest;
 
