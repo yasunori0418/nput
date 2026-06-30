@@ -41,7 +41,17 @@
               nixd
               inputs'.root.formatter
               inputs'.root.packages.nput
+              go
               gopls
+              # ローカルでカバレッジ計測する coverage ツール（go test -coverprofile + go tool cover）。
+              # func サマリを出し、HTML を見たい場合のコマンドを案内する（閾値ゲートは持たない）。
+              (writeShellScriptBin "nput-coverage" ''
+                set -euo pipefail
+                profile="cover.out"
+                go test -coverprofile="$profile" ./...
+                go tool cover -func="$profile"
+                echo "HTML レポート: go tool cover -html=$profile"
+              '')
             ];
             shellHook = ''
               export REPO_ROOT=$(git rev-parse --show-superproject-working-tree --show-toplevel)

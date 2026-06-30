@@ -120,6 +120,21 @@
             vendorHash = "sha256-7K17JaXFsjf163g5PXCb5ng2gYdotnZ2IDKk8KFjNj0=";
             doCheck = true;
             env.GOTOOLCHAIN = "local";
+            # 既存 go test と同じ対象（unit + tmpdir 統合）を -coverprofile 付きで回し、func サマリを
+            # build ログへ出す。計測・レポート出力のみで閾値ゲートは持たない（テスト追加 PR の
+            # マージ順依存を避ける → タスク規約）。`go test ./...` は default checkPhase と同等の対象。
+            checkPhase = ''
+              runHook preCheck
+              go test -coverprofile="$TMPDIR/cover.out" ./...
+              go tool cover -func="$TMPDIR/cover.out" | tee "$TMPDIR/coverage-func.txt"
+              runHook postCheck
+            '';
+            # coverprofile / func レポートを成果物へ同梱する。CI は cache hit でも $out から決定論的に
+            # 取り出して Step Summary に出せる（build ログ依存だと cache hit で消えるため）。
+            postInstall = ''
+              install -Dm644 "$TMPDIR/cover.out" "$out/share/nput/coverage/cover.out"
+              install -Dm644 "$TMPDIR/coverage-func.txt" "$out/share/nput/coverage/coverage-func.txt"
+            '';
             meta = {
               description = "Place fetched git repositories at arbitrary paths via symlink or copy.";
               mainProgram = "nput";
