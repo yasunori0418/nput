@@ -800,3 +800,136 @@ func TestApplyRecopyForeignFileOverwrites(t *testing.T) {
 		}
 	}
 }
+
+// --- error-path coverage (engine.go:262-264, 359, 369-382) ------------------
+// These exercise the under-covered failure branches of resolveRoot (fixed-root
+// Abs), ensureProfileDir (mkdir / backref write), and cleanupPending (warn-only
+// Remove). Failures are induced by file-type conflicts (ENOTDIR / EISDIR /
+// ENOTEMPTY), not permission bits, so they reproduce under root as well and need
+// no os.Geteuid()==0 skip guard.
+
+// TestResolveRootFixedAbsFailure covers engine.go:359 (filepath.Abs(fixedRoot)).
+// filepath.Abs only errors when the path is relative and os.Getwd fails, which is
+// inherently environment-dependent: we induce it by chdir'ing into a directory and
+// removing it out from under the process (cwd no longer resolves → Getwd errors).
+// On platforms where a removed cwd still resolves, the branch cannot be reached and
+// the test skips with that reason recorded rather than silently passing.
+func TestResolveRootFixedAbsFailure(t *testing.T) {
+	gone := filepath.Join(realTempDir(t), "gone")
+	if err := os.Mkdir(gone, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// t.Chdir restores the original cwd at cleanup regardless of removal.
+	t.Chdir(gone)
+	if err := os.Remove(gone); err != nil {
+		t.Skipf("cannot remove cwd to induce Getwd failure: %v", err)
+	}
+	if _, err := os.Getwd(); err == nil {
+		t.Skip("removed cwd still resolves on this platform; Abs failure branch unreachable")
+	}
+
+	// rootKind=fixed with a relative fixedRoot routes into filepath.Abs, which now
+	// fails because Getwd fails. resolveRoot is unexported but reachable in-package.
+	_, err := resolveRoot(manifest.RootKindFixed, "relative/path", "", "", nil)
+	if err == nil {
+		t.Fatal("expected Abs failure for relative fixed root with broken cwd, got nil")
+	}
+}
+
+// TestEnsureProfileDirMkdirFailure covers engine.go:370-372 (MkdirAll(profile.Dir)).
+// A regular file planted at <state>/nix forces MkdirAll under it to fail with ENOTDIR.
+func TestEnsureProfileDirMkdirFailure(t *testing.T) {
+	root := realTempDir(t)
+	src := makeSrc(t, "x")
+	state := realTempDir(t)
+	// <state>/nix is a file, so <state>/nix/profiles/... cannot be created.
+	if err := os.WriteFile(filepath.Join(state, "nix"), []byte("not a dir"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lf := writeLinkFarm(t, projectManifest(storeEntry(src, ".", ".config/foo")))
+
+	_, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
+	})
+	if err == nil {
+		t.Fatal("expected profileDir mkdir failure, got nil")
+	}
+	if !strings.Contains(err.Error(), "cannot create profileDir") {
+		t.Errorf("error = %v, want mention of profileDir creation", err)
+	}
+}
+
+// TestEnsureProfileDirBackrefWriteFailure covers engine.go:378-380 (WriteFile backref).
+// The backref path <roothash>/.root is pre-created as a directory so WriteFile fails
+// with EISDIR while the two preceding MkdirAll calls still succeed.
+func TestEnsureProfileDirBackrefWriteFailure(t *testing.T) {
+	root := realTempDir(t)
+	src := makeSrc(t, "x")
+	state := realTempDir(t)
+
+	// Resolve the same layout Apply will compute (RootOverride → roothash key, abs root == root).
+	prof := paths.Resolve(state, "c", manifest.RootKindProject, root, true)
+	if prof.Backref == "" {
+		t.Fatal("expected a backref path for the roothash-keyed layout")
+	}
+	// Plant a directory where the backref file should be written.
+	if err := os.MkdirAll(prof.Backref, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	lf := writeLinkFarm(t, projectManifest(storeEntry(src, ".", ".config/foo")))
+
+	_, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
+	})
+	if err == nil {
+		t.Fatal("expected backref write failure, got nil")
+	}
+	if !strings.Contains(err.Error(), "cannot write backref") {
+		t.Errorf("error = %v, want mention of backref write", err)
+	}
+}
+
+// TestApplyCleanupPendingRemoveFailureWarns covers engine.go:262-264 (warn-only Remove).
+// cleanupPending runs only on the Build path. The injected Build leaves a non-empty
+// directory at the .pending path, so os.Remove fails with ENOTEMPTY; the failure must
+// be surfaced as a warning only and must not fail Apply or undo the placement.
+func TestApplyCleanupPendingRemoveFailureWarns(t *testing.T) {
+	root := realTempDir(t)
+	src := makeSrc(t, "x")
+	state := realTempDir(t)
+	lf := writeLinkFarm(t, projectManifest(storeEntry(src, ".", ".config/foo")))
+
+	build := func(pending string) (string, error) {
+		// A non-empty directory at the pending out-link makes os.Remove fail (ENOTEMPTY).
+		if err := os.MkdirAll(filepath.Join(pending, "child"), 0o755); err != nil {
+			return "", err
+		}
+		return lf, nil
+	}
+
+	var warns []string
+	res, err := Apply(Options{
+		Name: "c", RootOverride: root, StateDir: state,
+		RootKind: manifest.RootKindProject, Build: build,
+		Commit: fakeCommit(nil), Warnf: collectWarnings(&warns),
+	})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	// Placement is unaffected by the pending cleanup failure.
+	if len(res.Placed) != 1 || res.Placed[0] != ".config/foo" {
+		t.Errorf("Placed = %v, want [.config/foo]", res.Placed)
+	}
+	if _, err := os.Readlink(filepath.Join(root, ".config", "foo")); err != nil {
+		t.Errorf("symlink should be placed despite pending cleanup failure: %v", err)
+	}
+	found := false
+	for _, w := range warns {
+		if strings.Contains(w, "could not remove the .pending out-link") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected a .pending cleanup warning, warns = %v", warns)
+	}
+}
