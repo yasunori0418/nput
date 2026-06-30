@@ -46,6 +46,33 @@ jobs:
       - name: Run nix flake check
         run: nix flake check -L
 
+  go-coverage:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    # buildGoModule の checkPhase が出力する coverprofile / func レポートを成果物（$out）から取り出し、
+    # Job Summary に表示する（計測・表示のみ。閾値ゲートは持たない → 他テスト追加 PR とのマージ順依存回避）。
+    # $out 同梱なので cachix の cache hit でも決定論的に同じレポートを参照できる。
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
+        with:
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Build nput (runs go test with coverage)
+        run: nix build '.#nput' -L
+
+      - name: Report coverage
+        run: |
+          {
+            echo '## Go test coverage'
+            echo '```'
+            cat result/share/nput/coverage/coverage-func.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   e2e:
     needs: changes
     if: needs.changes.outputs.run == 'true'
