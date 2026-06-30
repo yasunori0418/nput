@@ -828,8 +828,10 @@ func TestResolveRootFixedAbsFailure(t *testing.T) {
 		t.Skip("removed cwd still resolves on this platform; Abs failure branch unreachable")
 	}
 
-	// rootKind=fixed with a relative fixedRoot routes into filepath.Abs, which now
-	// fails because Getwd fails. resolveRoot is unexported but reachable in-package.
+	// fixedRoot must be RELATIVE here: filepath.Abs only calls os.Getwd for relative
+	// paths (an absolute path is just cleaned and never errors), so only a relative
+	// path routes into the now-broken Getwd and makes Abs fail. resolveRoot is
+	// unexported but reachable in-package.
 	_, err := resolveRoot(manifest.RootKindFixed, "relative/path", "", "", nil)
 	if err == nil {
 		t.Fatal("expected Abs failure for relative fixed root with broken cwd, got nil")
