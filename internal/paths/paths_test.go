@@ -1,11 +1,64 @@
 package paths
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
 	"github.com/yasunori0418/nput/internal/manifest"
 )
+
+func TestStateDirUsesXDGStateHome(t *testing.T) {
+	// $XDG_STATE_HOME takes precedence regardless of $HOME.
+	t.Setenv("XDG_STATE_HOME", "/xdg/state")
+	t.Setenv("HOME", "/home/me")
+	got, err := StateDir()
+	if err != nil {
+		t.Fatalf("StateDir() error = %v", err)
+	}
+	if got != "/xdg/state" {
+		t.Errorf("StateDir() = %q, want %q", got, "/xdg/state")
+	}
+}
+
+func TestStateDirFallsBackToHome(t *testing.T) {
+	// Without $XDG_STATE_HOME, fall back to $HOME/.local/state.
+	t.Setenv("XDG_STATE_HOME", "")
+	t.Setenv("HOME", "/home/me")
+	got, err := StateDir()
+	if err != nil {
+		t.Fatalf("StateDir() error = %v", err)
+	}
+	want := filepath.Join("/home/me", ".local", "state")
+	if got != want {
+		t.Errorf("StateDir() = %q, want %q", got, want)
+	}
+}
+
+func TestStateDirErrorsWhenHomeUnresolvable(t *testing.T) {
+	// With neither $XDG_STATE_HOME nor $HOME set, os.UserHomeDir fails and the
+	// error is surfaced (no fallback path is returned).
+	t.Setenv("XDG_STATE_HOME", "")
+	t.Setenv("HOME", "")
+	got, err := StateDir()
+	if err == nil {
+		t.Fatalf("StateDir() error = nil, want non-nil (got %q)", got)
+	}
+	if got != "" {
+		t.Errorf("StateDir() = %q on error, want empty string", got)
+	}
+}
+
+func TestGenerationLinkFormat(t *testing.T) {
+	profileLink := filepath.Join("/state", "nix", "profiles", "nput", "vim", "profile")
+	for _, gen := range []int{0, 1, 42} {
+		got := GenerationLink(profileLink, gen)
+		want := fmt.Sprintf("%s-%d-link", profileLink, gen)
+		if got != want {
+			t.Errorf("GenerationLink(%q, %d) = %q, want %q", profileLink, gen, got, want)
+		}
+	}
+}
 
 func TestRootHashDeterministicAndFixedLen(t *testing.T) {
 	a := RootHash("/home/me/proj")
