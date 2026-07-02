@@ -10,6 +10,7 @@
 package engine
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -99,6 +100,18 @@ type Result struct {
 // ErrSkipped indicates a skip on the NoWait path because another apply is in progress.
 var ErrSkipped = lock.ErrLocked
 
+// acquireProfileLock takes the profileDir flock and wraps the error, deduplicating the
+// acquire→wrap step shared by Apply / Rollback / Reset (→ ADR-0013). The NoWait/ErrSkipped
+// branch and defer Release stay with each caller since they differ (Apply short-circuits with
+// a Result; Rollback/Reset always block).
+func acquireProfileLock(dir string, wait bool) (*lock.Lock, error) {
+	l, err := lock.Acquire(dir, wait)
+	if err != nil {
+		return nil, fmt.Errorf("nput: failed to acquire flock (%s): %w", dir, err)
+	}
+	return l, nil
+}
+
 // Apply places store-symlinks in project mode and commits a generation on success.
 // It corresponds to the engine-driven part of docs/spec.md "execution flow" (2. drive the
 // engine), and the engine owns the order "flock → in-lock build → placement → --set →
@@ -161,13 +174,13 @@ func Apply(opts Options) (*Result, error) {
 	}
 
 	// 3. acquire a flock per resolved profileDir and serialize (→ ADR-0013).
-	l, err := lock.Acquire(a.profile.Dir, !opts.NoWait)
+	l, err := acquireProfileLock(a.profile.Dir, !opts.NoWait)
 	if err != nil {
-		if opts.NoWait && err == lock.ErrLocked {
+		if opts.NoWait && errors.Is(err, lock.ErrLocked) {
 			a.result.Skipped = true
 			return a.result, ErrSkipped
 		}
-		return nil, fmt.Errorf("nput: failed to acquire flock (%s): %w", a.profile.Dir, err)
+		return nil, err
 	}
 	defer func() { _ = l.Release() }()
 
