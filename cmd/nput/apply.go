@@ -238,28 +238,10 @@ func runApplyAll() error {
 	}
 
 	// 3. Apply each config independently. Continue on partial failure and aggregate failures (each config is independently atomic).
-	var failures, skipped, applied int
-	for _, name := range selected {
+	applied, skipped, failures := aggregateApply(selected, func(name string) (*engine.Result, error) {
 		ri := roots[name]
-		res, err := applyOne(ep, system, name, ri.RootKind, ri.Root)
-		if err != nil {
-			if errors.Is(err, engine.ErrSkipped) {
-				skipped++
-				if flagVerbose {
-					fmt.Fprintf(os.Stderr, "nput: skipped apply %s (another apply is in progress)\n", name)
-				}
-				continue
-			}
-			failures++
-			// Do not swallow partial failures; print to stderr and continue (→ docs/spec.md "continue on partial failure").
-			fmt.Fprintf(os.Stderr, "nput: apply %s failed: %v\n", name, err)
-			continue
-		}
-		applied++
-		if flagVerbose {
-			reportResult(res, name)
-		}
-	}
+		return applyOne(ep, system, name, ri.RootKind, ri.Root)
+	})
 
 	// 4. Aggregate report and exit code (priority error(1) > conflict(2) > 0; → docs/spec.md, ADR-0024).
 	if flagVerbose {
@@ -295,6 +277,35 @@ func runApplyAllDryRun(ep *entrypoint, system string, selected []string, roots m
 		return nil
 	}
 	return &exitError{code: code}
+}
+
+// aggregateApply runs each selected config via applyFn and aggregates applied / skipped / failure counts,
+// continuing on partial failure (each config is independently atomic; → docs/spec.md "continue on partial
+// failure"). It does not swallow ErrSkipped (a try-lock skip is normal) or other errors; a skip is counted
+// and reported to stderr under flagVerbose, a failure is counted and always reported to stderr, and either
+// way the loop continues (a seam that injects the apply implementation for testability, mirroring aggregateDryRun).
+func aggregateApply(selected []string, applyFn func(name string) (*engine.Result, error)) (applied, skipped, failures int) {
+	for _, name := range selected {
+		res, err := applyFn(name)
+		if err != nil {
+			if errors.Is(err, engine.ErrSkipped) {
+				skipped++
+				if flagVerbose {
+					fmt.Fprintf(os.Stderr, "nput: skipped apply %s (another apply is in progress)\n", name)
+				}
+				continue
+			}
+			failures++
+			// Do not swallow partial failures; print to stderr and continue (→ docs/spec.md "continue on partial failure").
+			fmt.Fprintf(os.Stderr, "nput: apply %s failed: %v\n", name, err)
+			continue
+		}
+		applied++
+		if flagVerbose {
+			reportResult(res, name)
+		}
+	}
+	return applied, skipped, failures
 }
 
 // aggregateDryRun runs each selected config read-only via applyDry, prints the plan to stdout,
