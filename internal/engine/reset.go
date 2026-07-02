@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/yasunori0418/nput/internal/lock"
 	"github.com/yasunori0418/nput/internal/manifest"
 	"github.com/yasunori0418/nput/internal/planner"
 )
@@ -96,9 +95,9 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	// 2. at run time, serialize with concurrent apply / reset via a blocking flock (→ ADR-0013, ADR-0021).
 	//    dryrun is read-only, so it does not take a flock.
 	if !opts.DryRun {
-		l, err := lock.Acquire(prof.Dir, true)
+		l, err := acquireProfileLock(prof.Dir, true)
 		if err != nil {
-			return nil, fmt.Errorf("nput: failed to acquire flock (%s): %w", prof.Dir, err)
+			return nil, err
 		}
 		defer func() { _ = l.Release() }()
 	}
