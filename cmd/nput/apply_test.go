@@ -107,6 +107,62 @@ func TestAggregateDryRun(t *testing.T) {
 	}
 }
 
+// Verifies aggregateApply's applied/skipped/failure counts and continue-on-partial-failure behavior by
+// injecting the apply implementation, without nix. This is the regression guard for the real path of
+// docs/spec.md "continue on partial failure" and ErrSkipped-as-normal-skip.
+func TestAggregateApply(t *testing.T) {
+	clean := func(name string) (*engine.Result, error) {
+		return &engine.Result{Placed: []string{"/p/" + name}}, nil
+	}
+	skipped := func(string) (*engine.Result, error) {
+		return nil, engine.ErrSkipped
+	}
+	failed := func(string) (*engine.Result, error) {
+		return nil, io.EOF
+	}
+
+	cases := []struct {
+		name         string
+		apply        func(string) (*engine.Result, error)
+		selected     []string
+		wantApplied  int
+		wantSkipped  int
+		wantFailures int
+	}{
+		{"all succeed → 0 failures", clean, []string{"a", "b"}, 2, 0, 0},
+		{"ErrSkipped counts as skip, not failure", func(n string) (*engine.Result, error) {
+			if n == "b" {
+				return skipped(n)
+			}
+			return clean(n)
+		}, []string{"a", "b"}, 1, 1, 0},
+		{"error counts as failure and continues", func(n string) (*engine.Result, error) {
+			if n == "b" {
+				return failed(n)
+			}
+			return clean(n)
+		}, []string{"a", "b", "c"}, 2, 0, 1},
+		{"mixed skip and failure both continue", func(n string) (*engine.Result, error) {
+			switch n {
+			case "a":
+				return skipped(n)
+			case "b":
+				return failed(n)
+			}
+			return clean(n)
+		}, []string{"a", "b", "c"}, 1, 1, 1},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			applied, skippedCount, failures := aggregateApply(c.selected, c.apply)
+			if applied != c.wantApplied || skippedCount != c.wantSkipped || failures != c.wantFailures {
+				t.Errorf("aggregateApply() = (applied=%d, skipped=%d, failures=%d), want (applied=%d, skipped=%d, failures=%d)",
+					applied, skippedCount, failures, c.wantApplied, c.wantSkipped, c.wantFailures)
+			}
+		})
+	}
+}
+
 func TestSelectedRootFilter(t *testing.T) {
 	defer func() { flagProjectRoot, flagHomeRoot, flagSystemRoot = false, false, false }()
 
