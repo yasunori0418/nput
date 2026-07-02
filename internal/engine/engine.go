@@ -131,21 +131,16 @@ func Apply(opts Options) (*Result, error) {
 	}
 
 	// 1. resolve root → fix profileDir (→ docs/spec.md "root resolution").
-	root, err := a.resolveRoot(rootKind, fixedRoot)
+	prof, root, err := ProfileFor(ProfileOptions{
+		Name: opts.Name, RootKind: rootKind, FixedRoot: fixedRoot,
+		RootOverride: opts.RootOverride, WorkDir: opts.WorkDir, StateDir: opts.StateDir, Git: opts.Git,
+	})
 	if err != nil {
 		return nil, err
 	}
 	a.root = root
 	a.result.Root = root
-
-	stateDir := opts.StateDir
-	if stateDir == "" {
-		stateDir, err = paths.StateDir()
-		if err != nil {
-			return nil, err
-		}
-	}
-	a.profile = paths.Resolve(stateDir, opts.Name, rootKind, root, opts.RootOverride != "")
+	a.profile = prof
 	a.result.ProfileDir = a.profile.Dir
 
 	// 1.5 dryrun is a side-effect-free read-only short-circuit (→ ADR-0006, ADR-0023, docs/spec.md execution flow).
@@ -319,10 +314,6 @@ func (a *applier) dryRun() (*Result, error) {
 		a.result.Conflicts = append(a.result.Conflicts, fmt.Sprintf("%s: %s", c.Entry.Target, c.Reason))
 	}
 	return a.result, nil
-}
-
-func (a *applier) resolveRoot(rootKind, fixedRoot string) (string, error) {
-	return resolveRoot(rootKind, fixedRoot, a.opts.RootOverride, a.opts.WorkDir, a.opts.Git)
 }
 
 // resolveRoot resolves the absolute placement root from rootKind (+ the absolute path when
