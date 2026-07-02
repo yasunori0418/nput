@@ -8,6 +8,17 @@ import (
 	"github.com/yasunori0418/nput/internal/planner"
 )
 
+// ensureParentDir creates targetAbs's parent directory (ancestor symlinks are already
+// rejected as conflicts by the planner · → ADR-0015), wrapping any failure with the
+// target path for diagnosability. Shared by all place-execution entry points that write
+// to targetAbs (place, placeCopies, recopyAll).
+func ensureParentDir(targetAbs string) error {
+	if err := os.MkdirAll(filepath.Dir(targetAbs), 0o755); err != nil {
+		return fmt.Errorf("nput: cannot create parent directory (%s): %w", filepath.Dir(targetAbs), err)
+	}
+	return nil
+}
+
 // place materializes the planner's Place actions as native symlinks
 // (new / re-link before stale removal · → ADR-0006). The plan is already computed by
 // planner.Compute from the current FS state, so this stays a thin executor that reflects
@@ -15,9 +26,8 @@ import (
 // (copy is a future slice · → Issue #6).
 func (a *applier) place(actions []planner.PlaceAction) error {
 	for _, act := range actions {
-		// Create the parent directory (ancestor symlinks are already rejected as conflicts by the planner · → ADR-0015).
-		if err := os.MkdirAll(filepath.Dir(act.TargetAbs), 0o755); err != nil {
-			return fmt.Errorf("nput: cannot create parent directory (%s): %w", filepath.Dir(act.TargetAbs), err)
+		if err := ensureParentDir(act.TargetAbs); err != nil {
+			return err
 		}
 
 		switch act.Kind {

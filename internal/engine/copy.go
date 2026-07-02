@@ -28,8 +28,8 @@ func (a *applier) materializeCopies(plan planner.Plan, recopy bool) error {
 // only "new copies" onto the real FS.
 func (a *applier) placeCopies(actions []planner.CopyAction) error {
 	for _, act := range actions {
-		if err := os.MkdirAll(filepath.Dir(act.TargetAbs), 0o755); err != nil {
-			return fmt.Errorf("nput: cannot create parent directory (%s): %w", filepath.Dir(act.TargetAbs), err)
+		if err := ensureParentDir(act.TargetAbs); err != nil {
+			return err
 		}
 		if err := copyTree(act.Src, act.TargetAbs); err != nil {
 			return fmt.Errorf("nput: copy placement failed (%s -> %s): %w", act.Src, act.TargetAbs, err)
@@ -60,8 +60,8 @@ func (a *applier) recopyAll() error {
 			return fmt.Errorf("nput: cannot lstat recopy target (%s): %w", targetAbs, err)
 		}
 
-		if err := os.MkdirAll(filepath.Dir(targetAbs), 0o755); err != nil {
-			return fmt.Errorf("nput: cannot create parent directory (%s): %w", filepath.Dir(targetAbs), err)
+		if err := ensureParentDir(targetAbs); err != nil {
+			return err
 		}
 		if err := copyTree(planner.LinkDest(e), targetAbs); err != nil {
 			return fmt.Errorf("nput: recopy failed (%s -> %s): %w", planner.LinkDest(e), targetAbs, err)
