@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yasunori0418/nput/internal/lock"
 	"github.com/yasunori0418/nput/internal/manifest"
 	"github.com/yasunori0418/nput/internal/paths"
 	"github.com/yasunori0418/nput/internal/planner"
@@ -129,9 +128,9 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	}
 
 	// 2. serialize with concurrent apply / rollback via a blocking flock (→ ADR-0013).
-	l, err := lock.Acquire(prof.Dir, true)
+	l, err := acquireProfileLock(prof.Dir, true)
 	if err != nil {
-		return nil, fmt.Errorf("nput: failed to acquire flock (%s): %w", prof.Dir, err)
+		return nil, err
 	}
 	defer func() { _ = l.Release() }()
 
