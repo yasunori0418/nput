@@ -949,7 +949,7 @@ devShells.default = pkgs.mkShell {
 | `lib/types.nix`（entry submodule / `srcType` / `rootType` / marker custom type）| nixpkgs.lib のみ（`modules/common.nix` と共有・→ ADR-0010）|
 | `lib/out-of-store.nix`（`mkOutOfStoreSymlink` / `projectRoot` / `homeRoot` / `systemRoot` マーカー）| なし（`_nputMarker` タグ付きマーカー構築子・→ ADR-0010）|
 | `internal/`（配置エンジン = 内部層分離。公開モジュールではない・→ ADR-0011）| **stdlib-only 厳守**（第三者依存ゼロ）。`syscall.Flock`・`filepath.WalkDir`+`io.Copy`+`os.Chmod`・`encoding/json`・`fmt.Errorf`+`%w`。`manifest.json` を入力に取り runtime に `nix`（profile）/ `git`（toplevel）をサブプロセスで要求（→ ADR-0006, ADR-0011）|
-| `cmd/nput`（CLI = `packages.nput`）| 配置エンジンを import。最小依存を許可（**cobra** = サブコマンド / help、**fatih/color** = dryrun 色付け）。entrypoint 発見と `nix`（build / eval）オーケストレーションを担う。`buildGoModule` + **vendorHash 文字列**でビルド。Go は nixpkgs の go に pin し `toolchain` ディレクティブ不使用（→ ADR-0007, ADR-0011）|
+| `cmd/nput`（CLI = `packages.nput`）| 配置エンジンを import。最小依存を許可（**cobra** = サブコマンド / help）。entrypoint 発見と `nix`（build / eval）オーケストレーションを担う。`buildGoModule` + **vendorHash 文字列**でビルド。Go は nixpkgs の go に pin し `toolchain` ディレクティブ不使用（→ ADR-0007, ADR-0011）|
 | `modules/common.nix` | nixpkgs.lib のみ |
 | `modules/home-manager.nix` | home-manager の module system（起動配線のみ）|
 | `modules/nixos.nix`（将来）| NixOS の module system（起動配線のみ）|
