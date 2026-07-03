@@ -17,7 +17,7 @@ _Avoid_: 「配置フレームワーク」「設定管理」（設定は生成�
 _Avoid_: 「config ごとに生成される bash スクリプト」「各層がネイティブ機構へ翻訳する」「層ごとの配置ロジック」「CLI と一体の平らな単一実装」「engine を公開 Go モジュールとして外部から import する」（エンジンは `manifest.json` in 契約を保つ `internal/` 層）
 
 **nput CLI**:
-ユーザーが叩く一次 UX。PATH に常駐する `packages.nput`。**entrypoint** を発見（CWD 既定 / `-f` で上書き）し、内部で `nix build` / `eval` を回して named manifest を得て **engine** に配置させる。`apply [<name>]`（省略時は `nput.default`）/ `apply --all` / `rollback`（home mode 限定）/ `list-generations`（home mode 限定）/ `gitignore`（project mode 限定・→ ADR-0023）/ `init` のサブコマンドを持つ。**`apply` の manifest 取得元は 2 つ**: entrypoint を build する（標準）か、ビルド済み link-farm を `--manifest` で直接渡す（`apply --manifest`・module / host activation の engine kick・取得後の挙動は同一・→ ADR-0026）。内部で叩く nix コマンドは `--help` で開示する（→ ADR-0007）。
+ユーザーが叩く一次 UX。PATH に常駐する `packages.nput`。**entrypoint** を発見（CWD 既定 / `-f` で上書き）し、内部で `nix build` / `eval` を回して named manifest を得て **engine** に配置させる。`apply [<name>]`（省略時は `nput.default`）/ `apply --all` / `reset`（配置物を無い状態へ戻す。名指し必須・→ ADR-0020, ADR-0021）/ `rollback`（home mode 限定）/ `list-generations`（home mode 限定）/ `gitignore`（project mode 限定・→ ADR-0023）/ `init` のサブコマンドを持つ。**`apply` の manifest 取得元は 2 つ**: entrypoint を build する（標準）か、ビルド済み link-farm を `--manifest` で直接渡す（`apply --manifest`・module / host activation の engine kick・取得後の挙動は同一・→ ADR-0026）。内部で叩く nix コマンドは `--help` で開示する（→ ADR-0007）。
 _Avoid_: config ごとの `nix run .#x` ラッパーを一次 UX と説明すること（per-config ラッパー `mkActivationScript` は廃止 → ADR-0007）、`apply` を「常に entrypoint を build する」と説明すること（`--manifest` でビルド済み link-farm も適用する・→ ADR-0026）
 
 **entrypoint**:

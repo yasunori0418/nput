@@ -48,7 +48,7 @@ standalone（home mode）では nix profile に乗せた世代管理（ロール
 │   ├── manifest.nix       # mkManifest（manifest.json + symlink farm derivation を生成する純粋関数）
 │   └── out-of-store.nix   # mkOutOfStoreSymlink / projectRoot / homeRoot / systemRoot（マーカー構築子）
 ├── cmd/nput/              # nput CLI のエントリポイント（packages.nput・一次 UX・→ ADR-0007）
-│   └── main.go            # entrypoint 発見 + nix build/eval オーケストレーション + サブコマンド分岐（apply [--dryrun] / rollback / list-generations / gitignore / init）
+│   └── main.go            # entrypoint 発見 + nix build/eval オーケストレーション + サブコマンド分岐（apply [--dryrun] / reset / rollback / list-generations / gitignore / init）
 ├── internal/              # 配置・diff・保守的 stale 除去の純ロジック（Go ライブラリ・ユニットテスト対象・→ ADR-0006, ADR-0007）
 ├── templates/             # nix flake init -t 用（最小 + 手厚いコメント・1 config 例・→ ADR-0006, ADR-0007, ADR-0018）
 │   ├── standalone/        # flake.nix（homeRoot の 1 例 + バリエーションコメント）
