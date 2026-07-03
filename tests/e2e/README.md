@@ -31,6 +31,7 @@ fixture flake は `nput` を `path:<repo>` input で参照し、`nixpkgs` / `hom
 | `04-copy`    | copy place-once / out-of-store。copy が通常ファイル（書込可）・place-once 冪等（ローカル編集を破棄しない）・out-of-store の live symlink |
 | `05-hm`      | HM module。home-manager standalone configuration を非 NixOS で評価・activate し、activation が engine を起動して配置すること |
 | `06-init-templates` | init + templates。`nput init <t>` で standalone / project テンプレを展開し、展開後 flake が `nix flake check`（nput を局所 override）を通ること |
+| `07-legacy`  | legacy entrypoint（shell.nix・passthru canonical 形・→ ADR-0032）。`NIX_PATH` を flake.lock の nixpkgs に pin し、`nput apply` / `apply --all` / 素の `nix-shell` 互換を検証 |
 
 ## 将来拡張
 
