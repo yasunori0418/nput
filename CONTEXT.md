@@ -92,6 +92,12 @@ _Avoid_: 「stateless スクリプト」前提の語り（初期方針からは�
 **store マニフェスト (store manifest)**:
 「nput が配置した」記録を持つ世代由来のデータ。実体は link-farm derivation 内の **`manifest.json`**（`schemaVersion` 付き）で、Nix（`lib.mkManifest`）が生成し Go エンジンが読む **Nix↔Go の契約**。GC 参照は併存する symlink farm が明示的に張る。エンジンの保守的 stale 除去（記録通りを指す nput 管理 symlink だけ削除し、ユーザーの実ファイルには触れない）の不変条件を支える（→ ADR-0002, ADR-0003, ADR-0006）。
 
+### エラー処理
+
+**エラー wrap 規約 (error-wrap convention)**:
+`internal/engine/` のエラーは**発生源（syscall / exec / parse に最も近い箇所）で 1 回だけ** `fmt.Errorf("nput: cannot <op> (<target>): %w", ...)` の形で op（何をしようとしたか）と対象パスを付けて wrap する。呼び出し元は素通し（bare `return err`）が既定で、伝搬経路での再 wrap は `nput: ...: nput: ...` の二重 context ノイズと既存のエラー文字列 assert 破壊を招くため行わない。sentinel エラー（`ErrSkipped` = `lock.ErrLocked` 等）は常に `%w` で透過させ、呼び出し元が `errors.Is` で判定できる状態を保つ。監査の判定基準は「ユーザーに見える失敗が op＋対象を少なくとも 1 回含むか」であり、含まれていれば伝搬経路の途中に op＋対象が無くても規約違反ではない。
+_Avoid_: 境界を跨ぐたびに context を積み増すこと、sentinel を wrap で握り潰し `errors.Is` を辿れなくすること
+
 ## Flagged ambiguities
 
 - **「symlink」単独では曖昧**。必ず **store link** か **out-of-store symlink** のどちらかに寄せる。`entries` の `method = "symlink"`（旧名 `mode`・→ ADR-0015）+ out-of-store marker の `src` で out-of-store を指すが、デフォルトの store link も symlink で実現される。
