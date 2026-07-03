@@ -129,3 +129,21 @@ e2e_flake_inputs() {
 
 # nput を実行する（dirty git tree 警告など stderr ノイズは通すが、結果はアサーションで判定）。
 nput() { command "$NPUT" "$@"; }
+
+# legacy（shell.nix / default.nix）シナリオ用: flake.lock がピン留めした nixpkgs の store path を
+# NIX_PATH にエクスポートする（legacy entrypoint は `<nixpkgs>` を NIX_PATH 経由で解決する best-effort
+# impure eval のため・→ ADR-0007 §5, ADR-0032）。使い捨ての probe flake で他 fixture と同じ
+# `inputs.nixpkgs.follows = "nput/nixpkgs"` pin を再利用し、offline で解決する。
+e2e_pin_nix_path() {
+	local probe="$E2E_WORK/nixpkgs-probe"
+	mkdir -p "$probe"
+	cat >"$probe/flake.nix" <<EOF
+{
+$(e2e_flake_inputs)
+  outputs = { self, nixpkgs, nput }: { nixpkgsPath = nixpkgs.outPath; };
+}
+EOF
+	local path
+	path="$(nix eval --raw "$probe#nixpkgsPath")"
+	export NIX_PATH="nixpkgs=$path"
+}
