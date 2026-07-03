@@ -44,12 +44,14 @@
 | `nix flake check`（nix-unit / namaka / go-vet / golangci-lint / treefmt / hm-module） | all passed |
 | `go test ./...` | 全パス |
 | e2e ハーネス（`tests/e2e/run.sh` 01-06、実 nix build/eval/`nix-env --set`） | 6/6 PASS |
-| spec ↔ 実装 乖離 | 0 件 |
+| spec ↔ 実装 乖離（2026-06-22 検証時点） | 0 件 |
 
 **結論: MVP（standalone CLI + project mode + home mode）は完成している。** system mode / NixOS / nix-darwin は設計通り MVP 外（将来拡張）。
 
+> 「spec ↔ 実装 乖離 0 件」は上記検証日時点の結果。公開後の epic #107（ドキュメント横断分析）で spec ↔ 実装の乖離が再検出されており、現在の乖離状況は #107 配下（#111 等）および tracking #91 を参照する。
+
 ### Go テストカバレッジ（参考値）
-`go test ./... -cover` 実測:
+`go test ./... -cover` 実測（2026-06-22 時点、#59 完了前の値）:
 
 | パッケージ | カバレッジ |
 |---|---|
@@ -62,6 +64,8 @@
 | internal/planner | 86.3% |
 
 cmd/nput が低いのは nix eval/build + cobra が一体で単体テストしにくい構造的理由による（→ 公開後ワークストリーム）。
+
+> 上表は #59（test(go): Go テスト充実、sub-issue #76-80/#82/#97/#98）完了前の古い実測値。#59 は #81（cmd orchestration 分離、後に #60 配下へ移設）を除く洗い出しを完了済み・CI へのカバレッジ計測導入（#82）も完了しているため、最新のカバレッジは CI 上の計測結果を参照する。
 
 ---
 
