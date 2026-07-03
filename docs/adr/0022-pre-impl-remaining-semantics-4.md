@@ -6,6 +6,12 @@
 - 改訂対象: なし（既存決定の細目補完・反転なし）
 - 起点: 実装着手前のドキュメント検査で、各文書が沈黙していた5つの細目を洗い出した（ADR-0015/0016/0017 と同系列の「実装前残セマンティクス」確定）
 
+> **2026-06-14 改訂注記（ADR-0025）**: 本 ADR §3 の profile パス（`$XDG_STATE_HOME` 尊重）自体は不変だが、ADR-0025 §4 が
+> **config 専用ディレクトリレイアウト**へ精緻化した。`<state>/nix/profiles/nput/<name>` は profile リンクそのものではなく
+> **profileDir（専用ディレクトリ）**になり、実体は `<profileDir>/profile`（profile リンク）/ `<profileDir>/profile-N-link`
+> （世代）/ `<profileDir>/.pending`（pending out-link）に分かれる。project mode の backref `.root` は `<roothash>` 階層に
+> 据え置き（→ ADR-0025）。
+
 ## 背景
 
 設計は 21 ADR で成熟したが、実装着手前の検査で次の5点が**どの文書にも明示されていない**ことが判明した。
