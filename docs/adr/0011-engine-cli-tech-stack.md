@@ -10,6 +10,11 @@
 > - **src ツリー内 symlink は symlink のまま複製**（deref しない）。store 内への絶対 symlink は store 依存が残る点を docs に明記。
 > - **symlink farm の GC アンカー名は `target` のハッシュ**（サニタイズだと別 target が同名衝突する）。
 
+> **2026-06-14 改訂注記（ADR-0023）**: 本 ADR §4 の store path 取得（`nix build --out-link <profileDir>/.pending-<name>`）は、
+> ADR-0023 §1 が実行順序を「eval 先行（rootKind 取得 → root 解決 → profileDir 確定）→ flock → build」と確定したことで、
+> **flock 取得後・ロック内**で行うと具体化された。これにより同名・同 root への並行 apply が `.pending-<name>` out-link を
+> 奪い合う競合が構造的に消える（→ ADR-0023）。
+
 ## 背景
 
 ADR-0006（言語 = Go・lib はデータ生成・固定エンジン）と ADR-0007（CLI を一次 UX に・engine をライブラリ化）で
