@@ -71,36 +71,38 @@ cmd/nput が低いのは nix eval/build + cobra が一体で単体テストし�
 
 ## 3. 公開ブロッカー（public 化の瞬間まで必須）
 
+**✅ ①〜⑥ 全完了。リポジトリは public 公開済み。** 以下は公開当時の計画の記録として残す。
+
 依存順に並べる。`!` は破壊的変更（Conventional Commits）。main 直コミット禁止のため各ブロッカーはブランチ + PR で進める。
 
 **順序の根拠**: API / 挙動を先に確定（①②）→ 確定した文字列を英語化（③④）→ 用語集を土台に README（⑤⑥）。後工程の英語化対象が前工程で確定する。
 
-### ① listFilesInSrc 除去（公開 API 変更）
+### ① listFilesInSrc 除去（公開 API 変更）— ✅ 完了
 - `lib/list-files.nix` 削除 / `lib/default.nix` の export 削除
 - `tests/nix-unit.nix` の関連テスト（5 件）削除
 - docs 整理（日本語維持）: spec.md（§132 / §478 応用節 / エラー仕様表）・design.md・CONTEXT.md（subpath 項）・templates コメント・`dev/nput.nix` の stale コメント → 「動的 entry 生成は既 realise store パス / flake input を `builtins.readDir`」idiom 注記へ置換
 - コミット: `refactor(lib)!: drop listFilesInSrc, demote to readDir idiom`
 
-### ② UNIX 出力再設計（CLI 挙動変更）
+### ② UNIX 出力再設計（CLI 挙動変更）— ✅ 完了
 - `cmd/nput/main.go`: `--quiet` 削除、`-v` / `--verbose` を「配置レポート opt-in」に再定義、`--debug`（nix コマンド開示）追加
 - `cmd/nput/apply.go` / `reset.go` / `rollback.go`: 成功レポートをデフォルト沈黙化し `-v` で gating
 - `cmd/nput/nix.go`: nix コマンド開示を `--debug` gating
 - spec.md / design.md の出力規律更新（+ 新 ADR か既存改訂）、e2e の該当箇所更新
 - コミット: `feat(cli)!: silent on success, opt-in report via -v` / `feat(cli): move nix command disclosure to --debug` / `refactor(cli)!: remove --quiet`
 
-### ③ 出力 / help 英語化
+### ③ 出力 / help 英語化 — ✅ 完了
 - 全 stderr / stdout 文字列、cobra Short / Long / flag usage を英語化（②で確定した文字列が対象）
 - コミット: `i18n(cli): translate user-facing output and help to English`
 
-### ④ 全ソースコメント英語化（Go = godoc 形式）
+### ④ 全ソースコメント英語化（Go = godoc 形式）— ✅ 完了
 - cmd/ internal/ lib/ modules/ templates/ の全コメント。Go の exported 宣言は識別子名始まりの doc comment にする
 - パッケージ単位でコミット分割: `docs(cmd)` / `docs(engine)` / `docs(planner|paths|...)` / `docs(lib)` / `docs(modules)` / `docs(templates)`
 
-### ⑤ docs/glossary.md（英語）
+### ⑤ docs/glossary.md（英語）— ✅ 完了
 - CONTEXT.md 括弧英語訳から canonical 用語集を抽出
 - コミット: `docs: add English glossary`
 
-### ⑥ README（英語・包括的単体）
+### ⑥ README（英語・包括的単体）— ✅ 完了
 - concept / install / quickstart（project + home）/ entries スキーマ / コマンドリファレンス / 他ツール比較 / MVP ステータス。⑤の用語に準拠
 - コミット: `docs: add public English README`
 
