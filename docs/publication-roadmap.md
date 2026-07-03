@@ -130,15 +130,15 @@ cmd/nput が低いのは nix eval/build + cobra が一体で単体テストし�
 
 sub-issue #76〜#82（+ 安全網テスト #97/#98）は全マージ済み・親 #59 クローズ済み。詳細は tracking #91 を参照。
 
-### D. Go パフォーマンス向上 / リファクタリング（backlog）
-すべて stdlib-only 制約に整合。
+### D. Go パフォーマンス向上 / リファクタリング（backlog）— issue 化・完了済み（#60）
+すべて stdlib-only 制約に整合。→ この backlog は #60（sub-issue #83〜#90 + #81）として issue 化され、着手前のコード照合で perf 系タスク（#83/#86/#87/#89）は実体消滅（wontfix / 実装済み / 対象不在）と判明し、残る 5 件（#81/#84/#85/#88/#90）を軽量再スコープした上で全完了・親 #60 クローズ済み。再計画の経緯と各タスクの最終スコープは tracking #91 を参照。
 
-**高優先:**
-- `reverifyStale` の plan 時 Lstat 結果キャッシュ化（重複 I/O 削減）
-- Apply / Rollback / Reset の「lock → 操作 → cleanup」共通化（`executeWithLock` 抽出）
-- copy / symlink の `Executor` interface dispatch 統一（place.go / copy.go / drift.go の責務分散解消・テスト容易性向上）
+**高優先（当初計画・#60 で再スコープ済み）:**
+- `reverifyStale` の plan 時 Lstat 結果キャッシュ化（重複 I/O 削減）→ #83 は wontfix（ADR-0002 の TOCTOU 再検証と正面衝突・重複 I/O なしと判明）
+- Apply / Rollback / Reset の「lock → 操作 → cleanup」共通化（`executeWithLock` 抽出）→ #84 で薄い `acquireProfileLock` ヘルパとして実装（closure 型 `executeWithLock` は不採用）
+- copy / symlink の `Executor` interface dispatch 統一（place.go / copy.go / drift.go の責務分散解消・テスト容易性向上）→ #85 で `ensureParentDir` 抽出として実装（Executor interface は不採用）
 
-**中〜低:** `byTarget` map キャッシュ / FS walk ロジック（ancestorSymlink / copyTree / reset）統一 / root override × profile layout の分岐局所化 / copyTree の重複 Lstat 削減 / error wrapping に context 付与。
+**中〜低（当初計画・#60 で再スコープ済み）:** `byTarget` map キャッシュ / FS walk ロジック（ancestorSymlink / copyTree / reset）統一 → #87 は対象不在でクローズ / root override × profile layout の分岐局所化 → #88 で Apply 前段の ProfileFor 統合として実装 / copyTree の重複 Lstat 削減 → #89 は WalkDir + d.Info() で既に最適化済みと判明しクローズ / error wrapping に context 付与 → #90 で「発生源で 1 回 wrap」規約の明文化＋横断監査として実装。
 
 ---
 
