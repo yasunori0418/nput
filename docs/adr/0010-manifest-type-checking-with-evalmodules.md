@@ -16,6 +16,11 @@
 > **2026-06-14 改訂注記（ADR-0019）**: `normalizeManifest` の検査に **target / subpath のパス安全性検査**を追加した。
 > 絶対パス（`/` 始まり）拒否・`filepath.Clean` 相当で正規化し `..` で root / src の外へ出るものを拒否する（root 外書き込み防止・→ ADR-0019）。
 
+> **2026-06-14 改訂注記（ADR-0024）**: 本 ADR の「早期エラー（型 / 評価時に契約を強制）」方針を、ADR-0024 §5 が
+> **同一 manifest 内の target 衝突検出**へ回収した。別キー A/B が正規化後 `target` を同値に明示上書きした衝突は
+> `normalizeManifest` が **eval 時に `lib.throwIf` で検出・停止**する（engine 実行時ではない）。cross-config（別 profile）の
+> 同一 target 衝突は eval では検出不可のため、引き続き engine 実行時の後勝ち + foreign symlink warning（ADR-0015）のまま区別する（→ ADR-0024）。
+
 ## 背景
 
 `lib.mkManifest { entries, root } -> derivation` は entries（配置定義のリスト）と root（配置先基準）を入力に取り、`manifest.json` + symlink farm を生成する純粋関数（→ ADR-0006）。この入力に対する型検査をどう実装するかが未決だった。
