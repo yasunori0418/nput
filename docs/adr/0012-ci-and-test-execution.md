@@ -5,6 +5,10 @@
 - 関連: ADR-0006, ADR-0011, `docs/spec.md`
 - 参照: `~/src/github.com/yasunori0418/cryoflow` の CI 構成（同一メンテナの実績構成）
 
+> **2026-06-20 改訂（ADR-0028）**: 本 ADR §4 の「tag push 時に matrix で cachix 投入」は、ADR-0028 が
+> **push:main（`**.nix`/`**.go`/`go.mod`/`go.sum`/`flake.lock`/`dev/flake.lock` の `paths` フィルタ + `workflow_dispatch`）**
+> に変更した。投入対象（x86_64-linux / aarch64-linux / aarch64-darwin）とキャッシュ名 `yasunori0418` は不変（→ ADR-0028）。
+
 ## 背景
 
 ADR-0006 はテスト戦略（lib = nix-unit / namaka、engine = Go ユニット + tmpdir 統合、E2E = 非 NixOS + nix コンテナ）を
