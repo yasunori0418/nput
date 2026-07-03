@@ -205,7 +205,7 @@ nput の**中心的な配置モード**が **root = プロジェクトルート*
   `nput gitignore`（stdout 出力のみ・method を区別せず copy target も含む）で列挙し、プロジェクト管理者が一度登録する。
   copy target も ephemeral 扱いで、各 clone で place-once 再マテリアライズされ編集は clone local（→ ADR-0019）。
 - **世代は内部機構のみ**: profile は解決済み root でキーしてクローン間衝突を避け、stale 除去と世代スキップ判定に使う。
-  `--rollback` / `--list-generations` は公開しない（ephemeral な配置で rollback の意味が薄いため）。
+  `rollback` / `list-generations` は公開しない（ephemeral な配置で rollback の意味が薄いため）。
 
 ```nix
 # entrypoint(flake.nix)が manifest を公開し、devShell で nput apply する
