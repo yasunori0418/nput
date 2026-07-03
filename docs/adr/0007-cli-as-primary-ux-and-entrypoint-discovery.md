@@ -26,7 +26,6 @@
 > passthru はホスト derivation の attrset にマージされるため、CLI の attr path はどちらの形でも同一の `nput.<name>`
 > （実装分岐なし）。CLI の addressing は **`nix build -f <ep> nput.<name>` / `nix eval -f <ep> nput.<name>.rootKind`**
 > （新 CLI に統一）へ置き換わった。§5 の「best-effort・再現性はユーザー責任」という decision 自体は不変。詳細は ADR-0032。
-
 ## 背景
 
 ADR-0006 は次の露出モデルを決定していた。
