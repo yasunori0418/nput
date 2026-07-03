@@ -15,7 +15,7 @@ nput のコア。`root` 相対の `target` に Nix store のパスを配置す�
 - **Avoid**: 「per-config generated bash script（config ごとに生成される bash スクリプト）」「per-layer placement logic（層ごとの配置ロジック）」「a single flat implementation fused with the CLI（CLI と一体の平らな単一実装）」「importing the engine as a public Go module（engine を公開 Go モジュールとして import する）」。
 
 ### nput CLI
-ユーザーが直接触れる一次 UX。`PATH` 上の `packages.nput` バイナリ。**entrypoint** を発見し、内部で `nix build` / `eval` を回して named manifest を取得し、エンジンに配置させる。サブコマンドは `apply [<name>]`・`apply --all`・`rollback`・`list-generations`・`gitignore`・`init`。
+ユーザーが直接触れる一次 UX。`PATH` 上の `packages.nput` バイナリ。**entrypoint** を発見し、内部で `nix build` / `eval` を回して named manifest を取得し、エンジンに配置させる。サブコマンドは `apply [<name>]`・`apply --all`・`reset`・`rollback`・`list-generations`・`gitignore`・`init`。
 - **Avoid**: config ごとの `nix run .#x` ラッパーを一次 UX と説明すること、`apply` を「常に entrypoint を build する」と説明すること（ビルド済み link-farm は `--manifest` で適用できる）。
 
 ### entrypoint

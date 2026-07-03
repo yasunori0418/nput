@@ -15,7 +15,7 @@ The placement core that owns both placement (native filesystem operations) and s
 - **Avoid**: "per-config generated bash script", "per-layer placement logic", "a single flat implementation fused with the CLI", "importing the engine as a public Go module".
 
 ### nput CLI
-The primary user-facing UX; the `packages.nput` binary on `PATH`. It discovers an **entrypoint**, runs `nix build` / `eval` internally to obtain a named manifest, and has the engine place it. Subcommands include `apply [<name>]`, `apply --all`, `rollback`, `list-generations`, `gitignore`, and `init`.
+The primary user-facing UX; the `packages.nput` binary on `PATH`. It discovers an **entrypoint**, runs `nix build` / `eval` internally to obtain a named manifest, and has the engine place it. Subcommands include `apply [<name>]`, `apply --all`, `reset`, `rollback`, `list-generations`, `gitignore`, and `init`.
 - **Avoid**: describing a per-config `nix run .#x` wrapper as the primary UX; describing `apply` as "always builds the entrypoint" (a built link-farm can be applied with `--manifest`).
 
 ### entrypoint
