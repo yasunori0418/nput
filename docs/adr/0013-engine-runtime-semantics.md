@@ -17,6 +17,10 @@
 > **2026-06-14 改訂注記（ADR-0017）**: 本 ADR §3 の `apply --all` に **root モードフィルタ `--project-root` / `--home-root` / `--system-root`** を追加した。
 > 素の `--all` は全 config を適用（不変）だが、フィルタで該当 root モードの config のみに絞れる。home / project mode 混在 entrypoint で
 > devShell から `--all` を打つと home config も `$HOME` に配置される footgun を opt-in で回避する（→ ADR-0017）。
+>
+> **2026-06-14 改訂注記（ADR-0023）**: 本 ADR §2 の「ロックキーは解決後の profileDir」自体は不変だが、flock を取得するタイミングは
+> ADR-0023 §1 が「root 解決（eval 先行）の後・build の前」に確定した。apply 全体の実行順序は「eval 先行 → flock → build」
+> （→ ADR-0023）。
 
 ## 背景
 
