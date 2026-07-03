@@ -23,6 +23,8 @@ config は **Nix で書き `nix build` で評価**される。CLI が発見す�
 
 `lib`（`mkManifest` / マーカー群）は nixpkgs.lib のみに依存する純データ生成器。配置ロジックは持たない（→ ADR-0006）。
 
+`lib.__internal` は private helper（`escapesBase` / `pathChecks` / `anchorName` / `resolveEntry` / `farmEntries`）を nix-unit / namaka のテスト seam として公開する内部 API で、安定 API ではない（→ #71）。
+
 ### `lib.mkManifest`
 
 配置データ（`manifest.json` + symlink farm を含む derivation）を生成する**純粋関数**（→ ADR-0006, ADR-0007）。
