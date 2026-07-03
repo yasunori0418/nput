@@ -15,6 +15,10 @@
 > **flock 取得後・ロック内**で行うと具体化された。これにより同名・同 root への並行 apply が `.pending-<name>` out-link を
 > 奪い合う競合が構造的に消える（→ ADR-0023）。
 
+> **2026-07-03 実装注記**: 本 ADR §2 が決定した **fatih/color（dryrun 色付け）は実装では採用しなかった**。
+> `cmd/nput` の依存は cobra のみで、dryrun 出力は色なしの `fmt.Printf` で表示する。CLI 層が「最小依存」枠内で
+> 選択できるという §1 の方針自体は不変（→ Issue #111）。
+
 ## 背景
 
 ADR-0006（言語 = Go・lib はデータ生成・固定エンジン）と ADR-0007（CLI を一次 UX に・engine をライブラリ化）で
