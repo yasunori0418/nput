@@ -16,6 +16,10 @@
 > `nput apply --manifest <link-farm>` で kick する**（モジュール評価時に `mkManifest` でビルドし、entrypoint output を持たない）。
 > モジュールの engine kick invocation は ADR-0026 で確定（→ ADR-0026）。
 
+> **2026-06-13 改訂注記（ADR-0011）**: 本 ADR §3.2 の「内部で `nix build` / `nix eval` を回して store path を得る」は、
+> ADR-0011 §4 が **`nix build <ep>#nput.<system>.<name> --out-link <profileDir>/.pending-<name>` で取得と indirect gcroot 登録を
+> 一手に行う**方式へ具体化した。`nix build` 完了〜`nix-env --set` 間の並行 GC で symlink farm が dangling 化する窓を塞ぐ（→ ADR-0011）。
+
 > **2026-07-03 改訂（ADR-0032）**: 本 ADR §4 の「default.nix / shell.nix はトップレベル `{ nput.<name> = ...; }`・
 > CLI は `nix-build -A nput.<name>`」という addressing 記述を改訂した。**shell.nix / default.nix は nixpkgs `mkShell` と
 > 共存できる passthru 形（`passthru.nput.<name>`）を canonical** とする（トップレベル attrset 形も引き続き有効）。
