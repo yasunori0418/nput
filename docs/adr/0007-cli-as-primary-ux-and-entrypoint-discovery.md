@@ -1,6 +1,6 @@
 # ADR-0007: 汎用 nput CLI を一次 UX に昇格し、entrypoint 発見＋root 明示モデルへ移行する
 
-- ステータス: 採用（2026-06-14 追記: project mode の `nput` は devShell 同梱が canonical → ADR-0015）
+- ステータス: 採用（2026-06-14 追記: project mode の `nput` は devShell 同梱が canonical → ADR-0015／2026-07-03 改訂: legacy entrypoint の addressing を `nix build -f` に統一 → ADR-0032）
 - 日付: 2026-06-13
 - 関連: ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0015, `docs/concept.md`, `docs/design.md`, `docs/spec.md`
 - 改訂対象: ADR-0006「nput の露出と環境セットアップ」節と棄却案（本 ADR が反転）、ADR-0004 / ADR-0005 の root モデル
@@ -15,6 +15,13 @@
 > `nput.<name>` を公開し `nput apply <name>` で build→配置）を指す。これとは別に、HM 等の**モジュールはビルド済み manifest を
 > `nput apply --manifest <link-farm>` で kick する**（モジュール評価時に `mkManifest` でビルドし、entrypoint output を持たない）。
 > モジュールの engine kick invocation は ADR-0026 で確定（→ ADR-0026）。
+
+> **2026-07-03 改訂（ADR-0032）**: 本 ADR §4 の「default.nix / shell.nix はトップレベル `{ nput.<name> = ...; }`・
+> CLI は `nix-build -A nput.<name>`」という addressing 記述を改訂した。**shell.nix / default.nix は nixpkgs `mkShell` と
+> 共存できる passthru 形（`passthru.nput.<name>`）を canonical** とする（トップレベル attrset 形も引き続き有効）。
+> passthru はホスト derivation の attrset にマージされるため、CLI の attr path はどちらの形でも同一の `nput.<name>`
+> （実装分岐なし）。CLI の addressing は **`nix build -f <ep> nput.<name>` / `nix eval -f <ep> nput.<name>.rootKind`**
+> （新 CLI に統一）へ置き換わった。§5 の「best-effort・再現性はユーザー責任」という decision 自体は不変。詳細は ADR-0032。
 
 ## 背景
 
