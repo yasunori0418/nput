@@ -109,7 +109,7 @@ outputs = { ... }: {
 
   # 関数呼び出し（モジュールシステム不使用）
   lib = import ./lib;
-  # lib.mkManifest          { entries, root }   → derivation（manifest.json + symlink farm・純データ。root は必須）
+  # lib.mkManifest          { pkgs, entries, root }   → derivation（manifest.json + symlink farm・純データ。pkgs / root は必須）
   #                                               passthru.rootKind（+ fixed 時 passthru.root）を露出し CLI がビルド前 eval で読む（→ ADR-0023）
   # lib.mkOutOfStoreSymlink "/abs/path"         → marker（src に渡す）
   # lib.projectRoot                             → marker（root に渡す: project mode / git toplevel）
@@ -349,6 +349,7 @@ perSystem = { pkgs, ... }: {
 ```nix
 # flake.nix — repo に入ると .claude/skills を nix store から配置する
 outputs.nput.${system}.skills = nput.lib.mkManifest {
+  inherit pkgs;
   root = nput.lib.projectRoot;   # git toplevel を root に解決（project mode）
   entries = {
     ".claude/skills/nix" = { src = inputs.claude-skills; subpath = "skills/nix"; };
@@ -377,6 +378,7 @@ nput gitignore skills
 # flake.nix — entrypoint が役割ごとに named manifest を公開（それぞれ別 profile）
 outputs.nput.${system} = {
   vim-plugins = nput.lib.mkManifest {
+    inherit pkgs;
     root = nput.lib.homeRoot;
     entries = {
       ".local/share/nvim/site/pack/foo/start/foo" = { src = inputs.vim-foo; };
@@ -385,6 +387,7 @@ outputs.nput.${system} = {
   };
 
   zsh-plugins = nput.lib.mkManifest {
+    inherit pkgs;
     root = nput.lib.homeRoot;
     entries = {
       ".zsh/plugins/autosuggestions"     = { src = inputs.zsh-autosuggestions; };
