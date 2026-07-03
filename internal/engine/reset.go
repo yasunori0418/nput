@@ -105,7 +105,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	// 3. read the previous generation's manifest (the recorded truth) and narrow the target entries.
 	prev, err := manifest.Load(prof.Profile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nput: cannot read the previous generation's manifest (%s): %w", prof.Profile, err)
 	}
 	entries, err := selectResetEntries(prev.Entries, opts.Targets)
 	if err != nil {
