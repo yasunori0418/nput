@@ -6,6 +6,12 @@
 - 改訂対象: **ADR-0013**「`--all` は全 config を適用」に root モードフィルタを追加。**ADR-0005 / ADR-0006**「project mode の世代スキップ = 完全 no-op」を「lstat 検査 + 必要時のみ再張り」へ精緻化
 - 起点: ADR-0016 に続く実装前レビュー第 3 巡（grill）で surfaced した残細目の束
 
+> **2026-06-14 改訂注記（ADR-0023）**: ADR-0023 が apply 実行フローを「eval 先行 → flock → build」に確定したのに伴い、
+> 本 ADR §2 の「`--root <path>` は全モードで解決 root を上書きする」という決定は不変のまま、上書き後の **profileDir
+> キーイング**（home / fixed mode で `--root` 明示時にどうキーするか、本 ADR では未定義だった）を ADR-0023 §3 が
+> 「上書き後 root の `<roothash>` でキーする」と具体化した（`apply` / `reset` / `rollback` / `list-generations` で
+> 一貫・→ ADR-0023）。
+
 ## 背景
 
 ADR-0015 / ADR-0016 で実装前残セマンティクスの大半が固まったが、第 3 巡のレビューで次の 4 点に
