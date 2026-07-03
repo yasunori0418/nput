@@ -166,9 +166,26 @@ entrypoint は `nput.<name>` に named manifest（`mkManifest` の結果）を�
 |---|---|---|
 | `flake.nix`（直書き）| `outputs.nput.<system>.<name> = mkManifest { ... }` | `nix build <ep>#nput.<system>.<name>`（CLI が現行 `<system>` を差し込む）|
 | `flake.nix`（flake-parts）| `perSystem.nput.<name> = mkManifest { inherit pkgs; ... }`（flakeModule 経由）| `nix build <ep>#nput.<system>.<name>`（同上）|
-| `default.nix` / `shell.nix` | `{ nput.<name> = mkManifest { ... }; }`（トップレベル）| `nix-build <ep> -A nput.<name>` |
+| `default.nix` / `shell.nix`（passthru・canonical・→ ADR-0032）| `pkgs.mkShell { ...; passthru.nput.<name> = mkManifest { ... }; }` | `nix build -f <ep> nput.<name>` |
+| `default.nix` / `shell.nix`（トップレベル attrset）| `{ nput.<name> = mkManifest { ... }; }` | `nix build -f <ep> nput.<name>` |
 
 > **flake-parts 経路（→ ADR-0029）**: flake-parts を使う repo は `imports = [ inputs.nput.flakeModules.default ]` の上で `perSystem.nput.<name> = mkManifest { inherit pkgs; ... }` を宣言する。flake-parts が `flake.nput.<system>.<name>` へ **transpose** し、直書きと**同一の derivation を生む**（CLI のアドレッシングは不変）。`pkgs` が perSystem 由来になり `packages.nput` と一貫する（二重解決なし）。flake-parts 利用者にはこちらが canonical で、直書きは plain flake と `shell.nix` / `default.nix` の canonical。`mkManifest` は両形で唯一の公開 API（flakeModule の option は `mkManifest` の derivation を格納するだけ）。
+
+> **legacy entrypoint の canonical 形（→ ADR-0032）**: `shell.nix` / `default.nix` は **nixpkgs `mkShell` と共存できる passthru 形**を canonical とする。`shell.nix` は素の `mkShell` derivation を返し、`passthru.nput.<name>` に named manifest を載せる（`project` template の devShell 同梱・→ ADR-0015 と両立する）。`passthru` はホスト derivation の attrset にマージされるため、**CLI が叩く attr path（`nput.<name>`）はトップレベル attrset 形と同一**で実装分岐を持たない。素の `nix-shell`（`-A` 不要）はどちらの形でも壊れない。
+>
+> ```nix
+> # shell.nix（canonical: passthru 形）
+> { pkgs ? import <nixpkgs> {}, nput ? import (fetchTarball "https://github.com/yasunori0418/nput/archive/....tar.gz") }:
+> pkgs.mkShell {
+>   packages = [ ];
+>   shellHook = "nput apply skills --no-wait";
+>   passthru.nput = {
+>     skills = nput.lib.mkManifest { inherit pkgs; root = nput.lib.projectRoot; entries = { }; };
+>   };
+> }
+> ```
+>
+> legacy entrypoint には flake の `<system>` に相当する次元が無く、addressing はフラットな `nput.<name>` になる（→ 下記「アドレッシング」表）。複数 manifest の一括処理は既存の `apply --all` の一括 eval（`nix eval -f <ep> nput --apply … --json`）でそのまま充足し、`mkShell` の `inputsFrom` で manifest を合成するヘルパは持たない（1 profile = 1 config の atomic 性・→ ADR-0002 と衝突するため）。
 
 `<name>` = `default` は flake の `default` 慣例に倣う特別な名前で、`nput apply`（name 省略）が解決先に使う。専用 `nput` 名前空間を使い `packages` を汚さない（manifest が通常パッケージとして `nix flake show` / `nix build` に混ざらない・→ ADR-0007）。
 
@@ -293,7 +310,7 @@ nput init project      # nix flake init -t github:yasunori0418/nput#project の�
 nput apply <name> [-f <ep>] [--root <p>]
   0. entrypoint 発見（-f 上書き）
   1. root kind を先取り eval:
-     nix eval <ep>#nput.<system>.<name>.rootKind（legacy は nix eval -f <ep> nput.<name>.rootKind）
+     nix eval <ep>#nput.<system>.<name>.rootKind（legacy は per-system 次元なし: nix eval -f <ep> nput.<name>.rootKind・→ ADR-0032）
      → root 解決（kind: project=git rev-parse / home=$HOME / system=/ / 固定パス、--root 上書き）
      → profileDir 確定（home: <name> / project: <roothash>/<name>。--root 明示時は全モード <roothash>/<name>・→ ADR-0023）
        ※ rootKind は mkManifest の passthru として eval 時に確定（git toplevel / $HOME の実体解決は engine 実行時）
@@ -304,7 +321,7 @@ nput apply <name> [-f <ep>] [--root <p>]
         （例: `nput: another apply in progress, skipped (run \`nput apply\` manually)`・シェル入室はブロックしない・→ ADR-0022）。
         同一 profileDir への同時実行はユーザー責任で衝突時は後勝ち（→ ADR-0013）
      b. ロック内で nix build <ep>#nput.<system>.<name> --out-link <profileDir>/.pending
-        （legacy は nix-build <ep> -A nput.<name> --out-link <profileDir>/.pending）
+        （legacy は nix build -f <ep> nput.<name> --out-link <profileDir>/.pending・→ ADR-0032）
         → os.Readlink で link-farm store path を得る。out-link が indirect gcroot を張り
           配置〜--set の GC 窓を塞ぐ（→ ADR-0011）。build がロック内なので out-link 競合は構造的に起きない（→ ADR-0023）
      c. profileDir の前世代 manifest.json を読む（無ければ初回 = 削除対象ゼロ）
@@ -316,7 +333,7 @@ nput apply <name> [-f <ep>] [--root <p>]
 ```
 
 - **非 build コマンド（`reset` / `rollback` / `list-generations`）も eval 先行を共通前段に持つ**（→ ADR-0024）。build はしないが、profileDir 単位の flock / 前世代 manifest 読みのため profileDir 確定（= rootKind 先取り eval → root 解決）が前提になる。`--root` 上書き時は §「root の解決」と同じ roothash キーで profileDir を引く（`--root` を付けた世代を操作するには同じ `--root` が要る）。`reset` はさらに entries 読みのため entrypoint eval も行う。
-- **`apply --all` は rootKind を 1 回の一括 eval で取る**（→ ADR-0024）。`nix eval <ep>#nput.<system> --apply 'cs: builtins.mapAttrs (_: c: c.rootKind) cs' --json`（legacy は対応する `-f` 形）で config 名 → rootKind マップを 1 回で取得し、各 profileDir を確定する。`--project-root` 等のフィルタもこの結果で振り分ける。build だけは atomic 性のため config ごと N 回。eval プロセス起動コストを N→1 に固定する。
+- **`apply --all` は rootKind を 1 回の一括 eval で取る**（→ ADR-0024）。`nix eval <ep>#nput.<system> --apply 'cs: builtins.mapAttrs (_: c: c.rootKind) cs' --json`（legacy は per-system 次元なし: `nix eval -f <ep> nput --apply 'cs: …' --json`・→ ADR-0032）で config 名 → rootKind マップを 1 回で取得し、各 profileDir を確定する。`--project-root` 等のフィルタもこの結果で振り分ける。build だけは atomic 性のため config ごと N 回。eval プロセス起動コストを N→1 に固定する。
 - `--dryrun` は root kind を eval し root を解決するが（プラン表示のため）、link-farm を build しても配置しない読み取り専用なので、flock も pending gcroot（out-link）も取らない（→ ADR-0011, ADR-0023）。
 - `--set`（f）到達前に apply が失敗すると `<profileDir>/.pending` gcroot が残り、ビルド済み未使用 link-farm を掴み続けるが、次回 apply が**同名**（`.pending`）で上書きするため config あたり最大 1 個に有界。回収処理は持たず許容する（→ ADR-0016）。
 - **`apply --manifest <link-farm>` は 0〜1（entrypoint 発見・rootKind 先取り eval）と 2b（ロック内 `nix build`）を skip する**（→ ADR-0026）。ビルド済み link-farm を engine へ直接渡し、rootKind は link-farm 内 `manifest.json` から engine が読む。2a（flock 取得）以降〜2g は通常 apply と同一。pending out-link は build しないため張らない。host / module activation（HM 等）が switch 時に使う経路で、`-f` / `--all` とは取得元衝突で併用エラー。

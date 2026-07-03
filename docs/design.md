@@ -119,14 +119,12 @@ outputs = { ... }: {
 };
 ```
 
-ユーザーの entrypoint 側は `nput.<name>` に named manifest を公開する（→ ADR-0007）。直書きと flake-parts module の 2 経路があり、**いずれも同一の `flake.nput.<system>.<name>`（`mkManifest` の derivation）を生む**。CLI のアドレッシング（`nix build .#nput.<system>.<name>`）は両形で同一（→ ADR-0029）。
+ユーザーの entrypoint 側は `nput.<name>` に named manifest を公開する（→ ADR-0007）。flake は直書きと flake-parts module の 2 経路があり、**いずれも同一の `flake.nput.<system>.<name>`（`mkManifest` の derivation）を生む**。CLI のアドレッシング（`nix build .#nput.<system>.<name>`）は両形で同一（→ ADR-0029）。
 
 ```nix
-# 直書き（plain flake / default.nix / shell.nix の canonical・→ ADR-0007）
+# 直書き（plain flake の canonical・→ ADR-0007）
 # ユーザーの flake.nix
 outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = { ... }; };
-# ユーザーの default.nix / shell.nix
-{ nput.<name> = nput.lib.mkManifest { root = ...; entries = { ... }; }; }
 
 # flake-parts module 経由（flake-parts 利用者の canonical・→ ADR-0029）
 # imports = [ inputs.nput.flakeModules.default ];
@@ -134,13 +132,30 @@ outputs.nput.<system>.<name> = nput.lib.mkManifest { root = ...; entries = { ...
 #   nput.<name> = inputs.nput.lib.mkManifest { inherit pkgs; root = ...; entries = { ... }; };
 # };
 # → flake-parts が flake.nput.<system>.<name> へ transpose する。pkgs は perSystem 由来で
-#   packages.nput と一貫（将来の overlay / config も含む・二重解決なし）。
+#   packages.nput と一貫(将来の overlay / config も含む・二重解決なし)。
 ```
 
 > `nput.<system>.<name>` は `packages` を汚さない専用 namespace（→ ADR-0007）。`nix flake check` はこれを **unknown output として警告するが
 > exit 0・無害**で、配下の derivation は build / eval されない（`nput` 直下 attrset の eval だけは検査される）。**flake-parts module で transpose しても
 > この警告は消えない**（nix 本体が known-output を hardcode するため・→ ADR-0029）。警告は出力名変更でも消せない。成果物の主検証は
 > `nix build .#nput.<system>.<name>` で行う（→ ADR-0015）。
+
+`default.nix` / `shell.nix`（legacy entrypoint）は flake の per-system 次元を持たず、**nixpkgs `mkShell` と共存できる passthru 形を canonical**とする（→ ADR-0032）。トップレベル attrset 形も引き続き有効（`passthru` はホスト derivation の attrset にマージされるため、CLI が叩く attr path はどちらの形でも同一の `nput.<name>`）。
+
+```nix
+# passthru 形（canonical・shell.nix が mkShell を兼ねられる・project mode の devShell 同梱と両立・→ ADR-0015, ADR-0032）
+{ pkgs ? import <nixpkgs> {}, nput ? ... }:
+pkgs.mkShell {
+  packages = [ ];
+  shellHook = "nput apply skills --no-wait";
+  passthru.nput.skills = nput.lib.mkManifest { inherit pkgs; root = nput.lib.projectRoot; entries = { ... }; };
+}
+
+# トップレベル attrset 形（引き続き有効・mkShell を使わない最小構成向け）
+{ nput.<name> = nput.lib.mkManifest { inherit pkgs; root = ...; entries = { ... }; }; }
+```
+
+legacy の CLI アドレッシングは新 CLI の `-f` 形（`nix build -f <ep> nput.<name>` / `nix eval -f <ep> nput.<name>.rootKind`）で、flake の `<ep>#nput.<system>.<name>` 形とは別の実行パスを通るが、attr path の組み立て以外（`runNixCapture` / `runNixStream` / エラー処理）は共通のまま再利用する（→ ADR-0032）。
 
 ---
 
@@ -214,8 +229,8 @@ method = copy, subpath がファイル     → place-once: target 不在時の�
 ```
 nput apply <name> [-f <ep>] [--root <p>]
   0. entrypoint 発見（既定: CWD で flake.nix → shell.nix → default.nix。-f で上書き）
-  1. root kind を先取り eval（nix eval <ep>#nput.<system>.<name>.rootKind）→ root 解決 → profileDir 確定（→ ADR-0023）
-  2. 配置エンジン（import）を駆動: flock → ロック内で nix build --out-link → 前世代 diff → 配置 → stale 除去 → nix-env --set
+  1. root kind を先取り eval（nix eval <ep>#nput.<system>.<name>.rootKind。legacy は per-system 次元なし: nix eval -f <ep> nput.<name>.rootKind・→ ADR-0032）→ root 解決 → profileDir 確定（→ ADR-0023）
+  2. 配置エンジン（import）を駆動: flock → ロック内で nix build --out-link（legacy は nix build -f <ep> nput.<name> --out-link ...・→ ADR-0032）→ 前世代 diff → 配置 → stale 除去 → nix-env --set
 ```
 
 > 順序は **eval 先行 → flock → build**（→ ADR-0023）。profileDir は root 解決後にしか確定しない（project / `--root` / fixed 時は `<roothash>`・→ ADR-0024）ため、`mkManifest` が passthru する `rootKind` を安価な `nix eval` で先取りし、flock を取ってから build をロック内で行う。これで profileDir 未確定の循環と、ロック外 build の `.pending` out-link 競合が同時に解消する（`profileDir` は config 専用ディレクトリ・profile リンクは `<profileDir>/profile`・→ ADR-0025）。**非 build コマンド（`reset` / `rollback` / `list-generations`）も profileDir 確定のため rootKind eval を先行する**。**`apply --all` は rootKind を 1 回の一括 eval（`--apply` で config 名 → rootKind マップ）で取り**、build だけ config ごとに回す（→ ADR-0024）。
@@ -444,6 +459,7 @@ E2E は `tests/e2e/`（bash ハーネス・実 nix 使用・偽 src は fixture 
 - **stale 除去**: entry を config から削除 → 再 apply で旧 symlink が消える（保守的不変条件）
 - **copy place-once / out-of-store**: copy が通常ファイル（書込可）・place-once 冪等（ローカル編集を破棄しない）・out-of-store の live symlink
 - **HM module**: home-manager standalone configuration を非 NixOS で評価・activate し、activation が engine を起動して配置する
+- **legacy entrypoint**: `shell.nix`（passthru 形・`NIX_PATH` を flake.lock の nixpkgs に pin）で `nput apply` / `apply --all` / 素の `nix-shell` 互換を検証（→ ADR-0032）
 
 NixOS VM テスト（`runNixOSTest`）はモジュール経路を実装する段で追加する（上記 E2E ハーネスのスコープ外・将来拡張）。
 
