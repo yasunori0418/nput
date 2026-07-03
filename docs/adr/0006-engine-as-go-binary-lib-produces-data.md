@@ -14,12 +14,24 @@
 > - エンジンは Go ライブラリ化し、`cmd/nput` CLI が import する（`manifest.json` in 契約はライブラリ API として温存）。
 > 固定 Go エンジン・`manifest.json` 契約・profile / 世代 / 保守的 stale 除去・ネイティブ FS という他の決定は不変。
 
+> **2026-06-13 改訂注記（ADR-0011）**: 本 ADR は CLI ラッパーが store path を注入する前提だったが、その取得手段を ADR-0011 §4 が
+> **`nix build <ep>#nput.<system>.<name> --out-link <profileDir>/.pending-<name>` で取得と indirect gcroot 登録を一手に行う**方式へ
+> 具体化した。`nix build` 完了〜`nix-env --set` 間に並行 `nix-collect-garbage` が走っても symlink farm が dangling 化しない（→ ADR-0011）。
+
 > **2026-06-14 改訂注記（ADR-0019）**: 本 ADR の「GC アンカー = manifest + symlink farm」を精緻化した。**farm アンカーは `method = "symlink"` の
 > store-backed entry 限定**で、**`method = "copy"` entry は farm アンカーを持たない**（copy は place-once でマテリアライズ後は store から独立・世代外なので
 > store src を掴む必要がなく `nix-collect-garbage` で解放されてよい・→ ADR-0019）。
 
 > **2026-06-14 改訂注記（ADR-0020）**: 本 ADR のサブコマンド体系に **`reset <name> [target...]`**（配置物の FS-only teardown）を追加し、
 > `apply` に **`--recopy`**（copy target を src から無条件上書き）、グローバルに **`--yes` / `-y`**（reset 確認スキップ）を追加した（→ ADR-0020）。
+
+> **2026-06-14 改訂注記（ADR-0017）**: 本 ADR の実行フロー4「project mode かつ新 link-farm が前世代と同一なら no-op で終了（世代スキップ）」を
+> **「lstat 検査 + 必要時のみ再張り」**へ精緻化した。derivation が前世代と同一なら新世代は積まない（世代無限増殖の回避は不変）が、各 target を
+> lstat 検査し foreign に書き換えられた／消えた entry はその entry だけ再張りしてドリフトを収束させる（→ ADR-0017）。
+
+> **2026-06-14 改訂注記（ADR-0023）**: 本 ADR の実行フロー（「1. flock(profileDir) を try-lock」→「2. root 解決」→…→build）の順序は、
+> ADR-0023 §1 が **「eval 先行（rootKind 取得 → root 解決 → profileDir 確定）→ flock → build（ロック内）」**へ再定義した。profileDir
+> 確定に root 解決が要るのに root 解決が flock 後という循環と、ロック外 build による out-link 競合を同時に解消するため（→ ADR-0023）。
 
 ## 背景
 
