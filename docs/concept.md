@@ -348,6 +348,14 @@ nput は「任意パスへの粒度自由な配置プリミティブ」に徹す
 | project mode（ADR-0005）| root=`$HOME` 固定 vs プロジェクト相対 | root を公開引数へ昇格し git toplevel 相対の project mode を追加。配置物は ephemeral・主トリガは devShell |
 | エンジン実装（ADR-0006）| config ごとの生成 bash vs 固定バイナリ | 配置ロジックを固定 Go エンジンに集約。lib はデータ生成に徹し、契約は manifest.json。CLI はサブコマンド体系 |
 | 露出 / root（ADR-0007）| per-config ラッパー vs 汎用 CLI、root 暗黙 vs 明示 | 汎用 `nput` CLI を一次 UX に昇格（entrypoint 発見・`nput.<name>`・`nput init`）。`mkActivationScript` 廃止・`mkManifest` 存続。root は明示必須（projectRoot/homeRoot/systemRoot）。positioning を project-first に |
+| src/subpath 分離（ADR-0008）| `source` を `src` の略称と誤読される問題 | `source` を `subpath` に改名。全体選択は省略で表現し、専用トークン/marker は追加しない |
+| entries 識別子（ADR-0014）| entry に `name` フィールドを持たせるか vs attrset キーを識別子にするか | `entries` を target キーの attrset に変更。`name` フィールドは廃止し、キー重複不可で一意性を native に担保 |
+| copy method と reset（ADR-0019〜0021）| symlink 以外の配置手段・撤去手段の要否 | `method = "copy"`（世代外・place-once）を追加、`--recopy` で無条件再コピー、`reset` サブコマンドで配置物を teardown |
+| module activation の経路（ADR-0026）| HM 等のモジュールも entrypoint 発見経由にするか | モジュールはビルド済み link-farm を `apply --manifest` で直接適用する専用経路を新設（entrypoint 発見・eval をスキップ）|
+| flake-parts 統合（ADR-0029）| flake-parts ユーザー向けの output 形をどう提供するか | `perSystem.nput` を `flake.nput.<system>` へ transpose する flakeModule を追加。直書きと同一 derivation を生成 |
+| 出力規律（ADR-0031）| 成功時に配置レポートを毎回出すか | 成功時はデフォルト沈黙に変更。`-v` で配置レポートを opt-in 表示（`--quiet` は廃止）|
+
+上記に挙げていない ADR-0009・0010〜0013・0015〜0018・0022〜0025・0027・0028・0030 等は、実装確定に伴う詳細な意味論整備（CI・型検査・flock・root 解決の細部等）。個々の内容は `docs/adr/` を参照。
 
 ---
 
