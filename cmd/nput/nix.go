@@ -12,15 +12,31 @@ import (
 	"strings"
 )
 
-// entrypoint is a discovered flake entrypoint. This slice supports only flake.nix
-// (legacy shell.nix / default.nix are a future slice; → ADR-0007, ADR-0023 §4).
+// entrypointKind distinguishes a flake entrypoint (`nput.<system>.<name>`, addressed via `<flakeRef>#...`)
+// from a legacy entrypoint (`nput.<name>`, addressed via `nix ... -f <path> ...`; → ADR-0007, ADR-0032).
+type entrypointKind int
+
+const (
+	entrypointFlake entrypointKind = iota
+	entrypointLegacy
+)
+
+// legacyEntrypointNames is the discovery order for legacy entrypoints, tried after flake.nix
+// (→ docs/spec.md "entrypoint discovery", ADR-0032).
+var legacyEntrypointNames = []string{"shell.nix", "default.nix"}
+
+// entrypoint is a discovered entrypoint: a flake (flake.nix) or a legacy file (shell.nix / default.nix).
+// Legacy has no per-system dimension (unlike the flake's `nput.<system>.<name>`; → ADR-0032).
 type entrypoint struct {
+	kind entrypointKind
 	// flakeRef is the flake ref passed to `nix build`/`nix eval` (the absolute path of the directory containing flake.nix).
 	flakeRef string
+	// legacyPath is the absolute path to the shell.nix / default.nix file, passed to `nix ... -f`.
+	legacyPath string
 }
 
 // discoverEntrypoint discovers the entrypoint in the order -f explicit → CWD autodiscovery
-// (→ docs/spec.md "entrypoint discovery"). This slice accepts only flake.nix.
+// (→ docs/spec.md "entrypoint discovery"). Discovery order is flake.nix → shell.nix → default.nix (→ ADR-0032).
 func discoverEntrypoint(fileFlag string) (*entrypoint, error) {
 	if fileFlag != "" {
 		abs, err := filepath.Abs(fileFlag)
@@ -33,15 +49,22 @@ func discoverEntrypoint(fileFlag string) (*entrypoint, error) {
 		}
 		if info.IsDir() {
 			if fileExists(filepath.Join(abs, "flake.nix")) {
-				return &entrypoint{flakeRef: abs}, nil
+				return &entrypoint{kind: entrypointFlake, flakeRef: abs}, nil
 			}
-			return nil, fmt.Errorf("nput: no flake.nix in the -f directory (%s). This slice supports only a flake entrypoint", abs)
+			for _, legacy := range legacyEntrypointNames {
+				if p := filepath.Join(abs, legacy); fileExists(p) {
+					return &entrypoint{kind: entrypointLegacy, legacyPath: p}, nil
+				}
+			}
+			return nil, fmt.Errorf("nput: no flake.nix / shell.nix / default.nix in the -f directory (%s)", abs)
 		}
 		switch filepath.Base(abs) {
 		case "flake.nix":
-			return &entrypoint{flakeRef: filepath.Dir(abs)}, nil
+			return &entrypoint{kind: entrypointFlake, flakeRef: filepath.Dir(abs)}, nil
+		case "shell.nix", "default.nix":
+			return &entrypoint{kind: entrypointLegacy, legacyPath: abs}, nil
 		default:
-			return nil, fmt.Errorf("nput: -f must point to a flake.nix (%s). shell.nix / default.nix are not supported in this slice", abs)
+			return nil, fmt.Errorf("nput: -f must point to a flake.nix, shell.nix, or default.nix (%s)", abs)
 		}
 	}
 
@@ -50,15 +73,14 @@ func discoverEntrypoint(fileFlag string) (*entrypoint, error) {
 		return nil, fmt.Errorf("nput: cannot get the current working directory: %w", err)
 	}
 	if fileExists(filepath.Join(cwd, "flake.nix")) {
-		return &entrypoint{flakeRef: cwd}, nil
+		return &entrypoint{kind: entrypointFlake, flakeRef: cwd}, nil
 	}
-	// If a legacy entrypoint is found, stop and make clear it is unsupported.
-	for _, legacy := range []string{"shell.nix", "default.nix"} {
-		if fileExists(filepath.Join(cwd, legacy)) {
-			return nil, fmt.Errorf("nput: %s is not supported in this slice (only flake.nix is supported; pass a flake with -f)", legacy)
+	for _, legacy := range legacyEntrypointNames {
+		if p := filepath.Join(cwd, legacy); fileExists(p) {
+			return &entrypoint{kind: entrypointLegacy, legacyPath: p}, nil
 		}
 	}
-	return nil, errors.New("nput: no entrypoint found (no flake.nix in the CWD; specify one with -f)")
+	return nil, errors.New("nput: no entrypoint found (no flake.nix / shell.nix / default.nix in the CWD; specify one with -f)")
 }
 
 func fileExists(p string) bool {
@@ -68,6 +90,7 @@ func fileExists(p string) bool {
 
 // currentSystem returns the nix system name of the runtime environment (e.g. aarch64-darwin).
 // Because the flake has a system dimension in `nput.<system>.<name>`, the CLI injects the current system (→ ADR-0007).
+// Legacy entrypoints have no system dimension and ignore it (→ ADR-0032).
 func currentSystem() (string, error) {
 	var arch string
 	switch runtime.GOARCH {
@@ -86,15 +109,40 @@ func currentSystem() (string, error) {
 	}
 }
 
-// installable builds the `<flakeRef>#nput.<system>.<name>` passed to `nix build`/`nix eval`.
-func (e *entrypoint) installable(system, name string) string {
-	return fmt.Sprintf("%s#nput.%s.%s", e.flakeRef, system, name)
+// installableArgs returns the nix args that select `nput.<name><suffix>` for this entrypoint, to be appended
+// right after the `eval`/`build` subcommand name. A flake entrypoint yields a single
+// "<flakeRef>#nput.<system>.<name><suffix>" installable; a legacy entrypoint (shell.nix / default.nix) has no
+// per-system dimension and yields "-f <legacyPath> nput.<name><suffix>" (→ ADR-0032, docs/spec.md addressing).
+func (e *entrypoint) installableArgs(system, name, suffix string) []string {
+	if e.kind == entrypointLegacy {
+		return []string{"-f", e.legacyPath, "nput." + name + suffix}
+	}
+	return []string{fmt.Sprintf("%s#nput.%s.%s%s", e.flakeRef, system, name, suffix)}
 }
 
-// namespace builds `<flakeRef>#nput.<system>` (the config set) without a config name.
-// It is used for the batch eval of apply --all / gitignore --all (config name → rootKind map; → ADR-0024).
-func (e *entrypoint) namespace(system string) string {
-	return fmt.Sprintf("%s#nput.%s", e.flakeRef, system)
+// namespaceArgs returns the nix args that select the `nput.<system>` (flake) or `nput` (legacy) namespace,
+// used for the batch eval of apply --all / gitignore --all (→ ADR-0024, ADR-0032).
+func (e *entrypoint) namespaceArgs(system string) []string {
+	if e.kind == entrypointLegacy {
+		return []string{"-f", e.legacyPath, "nput"}
+	}
+	return []string{fmt.Sprintf("%s#nput.%s", e.flakeRef, system)}
+}
+
+// label renders a human-readable attr path for error messages (→ wrapEvalErr).
+func (e *entrypoint) label(system, name string) string {
+	if e.kind == entrypointLegacy {
+		return "nput." + name
+	}
+	return fmt.Sprintf("nput.%s.%s", system, name)
+}
+
+// namespaceLabel renders a human-readable namespace path for error messages (→ wrapEvalAllErr).
+func (e *entrypoint) namespaceLabel(system string) string {
+	if e.kind == entrypointLegacy {
+		return "nput"
+	}
+	return fmt.Sprintf("nput.%s", system)
 }
 
 // rootInfo is one config's root info (the value from the batch eval). It has Root only when fixed.
@@ -109,13 +157,15 @@ type rootInfo struct {
 func evalAllRoots(e *entrypoint, system string) (map[string]rootInfo, error) {
 	// Extract only rootKind (+ root if fixed) from each config under nput.<system>.
 	apply := `cs: builtins.mapAttrs (_: c: { rootKind = c.rootKind; } // (if c ? root then { root = c.root; } else {})) cs`
-	out, err := runNixCapture("eval", e.namespace(system), "--apply", apply, "--json")
+	args := append([]string{"eval"}, e.namespaceArgs(system)...)
+	args = append(args, "--apply", apply, "--json")
+	out, err := runNixCapture(args...)
 	if err != nil {
-		return nil, wrapEvalAllErr(err, system)
+		return nil, wrapEvalAllErr(err, e.namespaceLabel(system))
 	}
 	var roots map[string]rootInfo
 	if err := json.Unmarshal([]byte(out), &roots); err != nil {
-		return nil, fmt.Errorf("nput: cannot parse the batch eval result for nput.%s: %w", system, err)
+		return nil, fmt.Errorf("nput: cannot parse the batch eval result for %s: %w", e.namespaceLabel(system), err)
 	}
 	return roots, nil
 }
@@ -124,13 +174,15 @@ func evalAllRoots(e *entrypoint, system string) (map[string]rootInfo, error) {
 // Because gitignore does no placement, it gets only the store path via `--no-link --print-out-paths` without laying down an out-link gcroot.
 // Progress goes to stderr and the store path to stdout (→ docs/spec.md output stream discipline).
 func buildManifestStorePath(e *entrypoint, system, name string) (string, error) {
-	out, err := runNixCapture("build", e.installable(system, name), "--no-link", "--print-out-paths")
+	args := append([]string{"build"}, e.installableArgs(system, name, "")...)
+	args = append(args, "--no-link", "--print-out-paths")
+	out, err := runNixCapture(args...)
 	if err != nil {
 		return "", err
 	}
 	store := strings.TrimSpace(out)
 	if store == "" {
-		return "", fmt.Errorf("nput: cannot obtain the build output path for nput.%s.%s", system, name)
+		return "", fmt.Errorf("nput: cannot obtain the build output path for %s", e.label(system, name))
 	}
 	return store, nil
 }
@@ -138,16 +190,19 @@ func buildManifestStorePath(e *entrypoint, system, name string) (string, error) 
 // evalRoot pre-resolves rootKind (+ the absolute path when fixed root) via a cheap nix eval before build
 // (→ docs/spec.md execution flow 1, ADR-0023). This resolves profileDir and establishes the order flock → build.
 func evalRoot(e *entrypoint, system, name string) (rootKind, fixedRoot string, err error) {
-	inst := e.installable(system, name)
-	out, err := runNixCapture("eval", inst+".rootKind", "--raw")
+	args := append([]string{"eval"}, e.installableArgs(system, name, ".rootKind")...)
+	args = append(args, "--raw")
+	out, err := runNixCapture(args...)
 	if err != nil {
-		return "", "", wrapEvalErr(err, system, name)
+		return "", "", wrapEvalErr(err, e.label(system, name))
 	}
 	rootKind = strings.TrimSpace(out)
 	if rootKind == "fixed" {
-		out, err := runNixCapture("eval", inst+".root", "--raw")
+		rootArgs := append([]string{"eval"}, e.installableArgs(system, name, ".root")...)
+		rootArgs = append(rootArgs, "--raw")
+		out, err := runNixCapture(rootArgs...)
 		if err != nil {
-			return "", "", wrapEvalErr(err, system, name)
+			return "", "", wrapEvalErr(err, e.label(system, name))
 		}
 		fixedRoot = strings.TrimSpace(out)
 	}
@@ -157,9 +212,10 @@ func evalRoot(e *entrypoint, system, name string) (rootKind, fixedRoot string, e
 // buildFunc returns the build callback injected into the engine (→ engine.BuildFunc).
 // Inside the lock it runs `nix build <installable> --out-link <pending>`, reads the out-link, and returns the store path.
 func buildFunc(e *entrypoint, system, name string) func(pending string) (string, error) {
-	inst := e.installable(system, name)
 	return func(pending string) (string, error) {
-		if err := runNixStream("build", inst, "--out-link", pending); err != nil {
+		args := append([]string{"build"}, e.installableArgs(system, name, "")...)
+		args = append(args, "--out-link", pending)
+		if err := runNixStream(args...); err != nil {
 			return "", err
 		}
 		store, err := os.Readlink(pending)
@@ -174,15 +230,16 @@ func buildFunc(e *entrypoint, system, name string) func(pending string) (string,
 // it gets the link-farm's store path via `nix build --no-link --print-out-paths` **without laying down a gcroot (out-link)**
 // (dryrun is side-effect-free and creates no pending out-link; → ADR-0011, ADR-0023). The pending argument is unused.
 func dryBuildFunc(e *entrypoint, system, name string) func(pending string) (string, error) {
-	inst := e.installable(system, name)
 	return func(string) (string, error) {
-		out, err := runNixCapture("build", inst, "--no-link", "--print-out-paths")
+		args := append([]string{"build"}, e.installableArgs(system, name, "")...)
+		args = append(args, "--no-link", "--print-out-paths")
+		out, err := runNixCapture(args...)
 		if err != nil {
 			return "", err
 		}
 		store := strings.TrimSpace(out)
 		if store == "" {
-			return "", fmt.Errorf("nput: nix build --print-out-paths was empty (%s)", inst)
+			return "", fmt.Errorf("nput: nix build --print-out-paths was empty (%s)", e.label(system, name))
 		}
 		// --print-out-paths may return multiple lines (multi-output). The link-farm is a single output, so take the last line.
 		lines := strings.Split(store, "\n")
@@ -261,21 +318,21 @@ Original nix error:
 
 // wrapEvalErr makes the "nput.<name> does not exist" case of an eval failure clearer
 // (experimental etc. are passed through as-is) (→ docs/spec.md error spec).
-func wrapEvalErr(err error, system, name string) error {
+func wrapEvalErr(err error, label string) error {
 	msg := err.Error()
 	if strings.Contains(msg, "does not provide attribute") ||
 		(strings.Contains(msg, "attribute") && strings.Contains(msg, "missing")) {
-		return fmt.Errorf("nput: nput.%s.%s not found in the entrypoint (check the config name and system)\n%s", system, name, msg)
+		return fmt.Errorf("nput: %s not found in the entrypoint (check the config name)\n%s", label, msg)
 	}
 	return err
 }
 
 // wrapEvalAllErr makes the "nput.<system> does not exist" case of a batch eval failure clearer.
-func wrapEvalAllErr(err error, system string) error {
+func wrapEvalAllErr(err error, label string) error {
 	msg := err.Error()
 	if strings.Contains(msg, "does not provide attribute") ||
 		(strings.Contains(msg, "attribute") && strings.Contains(msg, "missing")) {
-		return fmt.Errorf("nput: nput.%s not found in the entrypoint (no configs for this system)\n%s", system, msg)
+		return fmt.Errorf("nput: %s not found in the entrypoint (no configs found)\n%s", label, msg)
 	}
 	return err
 }

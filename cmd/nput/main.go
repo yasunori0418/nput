@@ -57,6 +57,9 @@ Internal nix commands (disclosed for transparency; you can run them by hand sele
   rollback /        nix eval <ep>#nput.<system>.<name>.rootKind --raw
   list-generations
 
+For a legacy entrypoint (shell.nix / default.nix; no per-system dimension; see ADR-0032), the
+above take the -f form instead: nix eval -f <ep> nput.<name>.rootKind / nix build -f <ep> nput.<name> ...
+
 Pass --debug to print the actual nix commands to stderr as they run.`
 
 func newRootCmd() *cobra.Command {
