@@ -4,9 +4,15 @@ on:
   workflow_dispatch:
   # No `paths` trigger: the workflow starts on every PR so the required status
   # checks always report. Relevant-change detection moved into the `changes`
-  # job, which skips flake-check / e2e on docs-only PRs (skipped == success for
-  # required checks). The old "run nix only when nix/Go/CI files change"
-  # optimisation is preserved via the `if:` gate (→ ADR-0027 §2, ADR-0030).
+  # job, which skips e2e / go-coverage on docs-only PRs (skipped == success for
+  # required checks) via a job-level `if:` gate. flake-check instead gates at
+  # step level (see below) because the branch ruleset requires its
+  # matrix-expanded contexts (`flake-check (os, system)`), which only get
+  # created when the matrix actually runs — a job-level `if:` would skip the
+  # whole job before the matrix expands, leaving those contexts stuck as
+  # "Expected" forever and blocking merge. The old "run nix only when
+  # nix/Go/CI files change" optimisation is preserved either way
+  # (→ ADR-0027 §2, ADR-0030).
   pull_request:
 
 jobs:
@@ -23,7 +29,11 @@ jobs:
 
   flake-check:
     needs: changes
-    if: needs.changes.outputs.run == 'true'
+    # Job-level `if:` would skip matrix expansion entirely on docs-only PRs,
+    # so the ruleset's required `flake-check (os, system)` contexts would
+    # never be reported and merge would stay blocked forever. Gate at step
+    # level instead: the job (and its matrix legs) always run and always
+    # report, but do nothing when there's nothing relevant to check.
     strategy:
       fail-fast: false
       matrix:
@@ -39,11 +49,13 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup Nix
+        if: needs.changes.outputs.run == 'true'
         uses: ./.github/actions/setup-nix
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Run nix flake check
+        if: needs.changes.outputs.run == 'true'
         run: nix flake check -L
 
   go-coverage:
