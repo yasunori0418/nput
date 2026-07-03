@@ -151,6 +151,7 @@ at arbitrary in-repo paths, kicked from a devShell.
     in
     {
       nput.${system}.skills = nput.lib.mkManifest {
+        inherit pkgs;
         root = nput.lib.projectRoot;        # resolves to the git toplevel at runtime
         entries = {
           ".claude/skills/nix" = { src = inputs.claude-skills; subpath = "skills/nix"; };
@@ -190,6 +191,7 @@ profile, committed every apply, with user-facing `rollback`.
 # flake.nix — each role is a named manifest = an independent profile
 outputs.nput.${system} = {
   vim-plugins = nput.lib.mkManifest {
+    inherit pkgs;
     root = nput.lib.homeRoot;
     entries = {
       ".local/share/nvim/site/pack/foo/start/foo" = { src = inputs.vim-foo; };
@@ -198,6 +200,7 @@ outputs.nput.${system} = {
   };
 
   zsh-plugins = nput.lib.mkManifest {
+    inherit pkgs;
     root = nput.lib.homeRoot;
     entries = {
       ".zsh/plugins/autosuggestions"     = { src = inputs.zsh-autosuggestions; };
@@ -368,6 +371,7 @@ not from `baseNameOf src` (a store path resolves to `/nix/store/<hash>-source`, 
 ```nix
 let plugins = [ "telescope" "treesitter" "cmp" ]; in
 nput.lib.mkManifest {
+  inherit pkgs;
   root = nput.lib.homeRoot;
   entries = builtins.listToAttrs (map (n: {
     name  = ".local/share/nvim/site/pack/plugins/start/${n}";  # key = target
@@ -386,6 +390,7 @@ let
   names  = builtins.attrNames (nixpkgs.lib.filterAttrs (_: t: t == "directory") skills);
 in
 nput.lib.mkManifest {
+  inherit pkgs;
   root = nput.lib.homeRoot;
   entries = builtins.listToAttrs (map (n: {
     name  = ".claude/skills/${n}";

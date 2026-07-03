@@ -112,6 +112,7 @@ nput init project      # projectRoot の例 ＋ devShell 配線 ＋ .gitignore �
     in
     {
       nput.${system}.skills = nput.lib.mkManifest {
+        inherit pkgs;
         root = nput.lib.projectRoot;        # 実行時に git toplevel へ解決される
         entries = {
           ".claude/skills/nix" = { src = inputs.claude-skills; subpath = "skills/nix"; };
@@ -146,6 +147,7 @@ nput gitignore skills >> .gitignore
 # flake.nix — 各役割が named manifest = 独立した profile
 outputs.nput.${system} = {
   vim-plugins = nput.lib.mkManifest {
+    inherit pkgs;
     root = nput.lib.homeRoot;
     entries = {
       ".local/share/nvim/site/pack/foo/start/foo" = { src = inputs.vim-foo; };
@@ -154,6 +156,7 @@ outputs.nput.${system} = {
   };
 
   zsh-plugins = nput.lib.mkManifest {
+    inherit pkgs;
     root = nput.lib.homeRoot;
     entries = {
       ".zsh/plugins/autosuggestions"     = { src = inputs.zsh-autosuggestions; };
@@ -298,6 +301,7 @@ subpath = "themes/dark.json";   # 単一ファイル
 ```nix
 let plugins = [ "telescope" "treesitter" "cmp" ]; in
 nput.lib.mkManifest {
+  inherit pkgs;
   root = nput.lib.homeRoot;
   entries = builtins.listToAttrs (map (n: {
     name  = ".local/share/nvim/site/pack/plugins/start/${n}";  # キー = target
@@ -314,6 +318,7 @@ let
   names  = builtins.attrNames (nixpkgs.lib.filterAttrs (_: t: t == "directory") skills);
 in
 nput.lib.mkManifest {
+  inherit pkgs;
   root = nput.lib.homeRoot;
   entries = builtins.listToAttrs (map (n: {
     name  = ".claude/skills/${n}";

@@ -29,13 +29,14 @@ config は **Nix で書き `nix build` で評価**される。CLI が発見す�
 entrypoint が `nput.<name>` に公開し、nput CLI が `nix build` してエンジンに渡す。Nix 評価テスト（nix-unit / namaka）の単体対象でもある。
 
 ```
-mkManifest :: { entries, root } -> derivation
+mkManifest :: { pkgs, entries, root } -> derivation
 ```
 
 **引数**
 
 | 引数 | 型 | デフォルト | 説明 |
 |---|---|---|---|
+| `pkgs` | attrset（nixpkgs） | **なし（必須）** | derivation ビルド（`runCommandLocal` 等）と `pkgs.lib` の取得に使う |
 | `entries` | attrset of entry | — | 配置定義の attrset。**属性キー = target パス**が識別子（後述・→ ADR-0014）|
 | `root` | string \| marker | **なし（必須）** | 配置先の基準。暗黙デフォルトを持たない（→ ADR-0007）|
 
@@ -81,6 +82,7 @@ entry の型定義（`lib/types.nix` の submodule）は `modules/common.nix` �
 ```nix
 # flake.nix
 outputs.nput.${system}.dotfiles = nput.lib.mkManifest {
+  inherit pkgs;
   root = nput.lib.projectRoot;
   entries = {
     # 属性キー = target。target フィールドは省略（キーから既定）
@@ -420,6 +422,7 @@ let
   plugins = [ "telescope" "treesitter" "cmp" ];
 in
 nput.lib.mkManifest {
+  inherit pkgs;
   root = nput.lib.homeRoot;
   entries = builtins.listToAttrs (map (n: {
     name  = ".local/share/nvim/site/pack/plugins/start/${n}";  # キー = target
@@ -452,6 +455,7 @@ let
   names  = builtins.attrNames (nixpkgs.lib.filterAttrs (_: t: t == "directory") skills);
 in
 nput.lib.mkManifest {
+  inherit pkgs;
   root = nput.lib.homeRoot;
   entries = builtins.listToAttrs (map (n: {
     name  = ".claude/skills/${n}";                                # キー = target（配置先）
@@ -808,6 +812,7 @@ let
   dotfiles = "${homeDir}/dotfiles";
 in
 nput.lib.mkManifest {
+  inherit pkgs;
   root = nput.lib.homeRoot;
   entries = {
     ".config/nvim" = { src = nput.lib.mkOutOfStoreSymlink dotfiles; subpath = "home/.config/nvim"; };
@@ -978,6 +983,7 @@ lib 層は home-manager / NixOS / nix-darwin に依存しない。配置ロジ�
     # パターン1: project mode（repo 内に配置・devShell キック）
     nput.${system} = {
       skills = nput.lib.mkManifest {
+        inherit pkgs;
         root = nput.lib.projectRoot;
         entries = {
           ".claude/skills/nix" = { src = inputs.claude-skills; subpath = "skills/nix"; };
@@ -992,6 +998,7 @@ lib 層は home-manager / NixOS / nix-darwin に依存しない。配置ロジ�
 
     # パターン2: home mode（標準的な dotfiles 配置・別 profile）
     # nput.${system}.vim-plugins = nput.lib.mkManifest {
+    #   inherit pkgs;
     #   root = nput.lib.homeRoot;
     #   entries = {
     #     ".local/share/nvim/site/pack/foo/start/foo" = { src = inputs.vim-plugin-foo; };

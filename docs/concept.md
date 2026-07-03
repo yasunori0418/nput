@@ -210,6 +210,7 @@ nput の**中心的な配置モード**が **root = プロジェクトルート*
 ```nix
 # entrypoint(flake.nix)が manifest を公開し、devShell で nput apply する
 nput.${system}.skills = nput.lib.mkManifest {
+  inherit pkgs;
   root = nput.lib.projectRoot;
   entries = {
     ".claude/skills/nix" = { src = inputs.claude-skills; subpath = "skills/nix"; };
