@@ -77,7 +77,21 @@ ADR-0007 §4/§5 は shell.nix / default.nix を entrypoint として受理す�
   （pure-eval はデフォルト無効で、flake 評価だけが暗黙に強制する）ため、`<nixpkgs>` の NIX_PATH 参照はそのまま解決できる
   （→ ADR-0007 §5 の「impure eval を許容」はこの意味）。
 
-### 5. entrypoint 発見順序に shell.nix / default.nix を追加する
+### 5. legacy では `src` の store 化は自動ではない（reproducibility は既存どおりユーザー責任）
+
+- flake entrypoint は評価前にディレクトリ全体（git 管理下のファイル）が store へコピーされるため、flake.nix 内の
+  相対 path リテラル（例: `src = ./srcrepo;`）は評価時点で既に store 内パスを指しており、`toString` だけで
+  store symlink になる。
+- **legacy（`-f` eval）にはこの事前コピーが無い**。相対 path リテラルは shell.nix / default.nix の実ファイル位置基準で
+  解決され、`resolveEntry` の `toString e.src`（→ `lib/__internal.nix`）は store への add-to-store を発生させない
+  （`"${e.src}"` のような文字列補間で初めて add-to-store が起きる）。そのため **legacy で素の相対 path を `src` に渡すと、
+  manifest.json 上は `srcKind = "store"` のまま、実体は生の（store 外・GC 非対象・可変な）作業木パスを指す symlink になる**。
+- これは §5（旧）の「NIX_PATH / channels 依存の impure eval を許容・再現性はユーザー責任」という decision の具体的帰結の一つとして扱う
+  （decision の追加ではなく、既存 decision の射程を明確化する）。reproducible / store-backed な配置を望むユーザーは、
+  `src` に `builtins.path { path = ./srcrepo; }` や `fetchTarball` / `builtins.fetchGit` など明示的に store へ
+  add する手段を使う（docs/spec.md に注記する）。
+
+### 6. entrypoint 発見順序に shell.nix / default.nix を追加する
 
 - 既定探索（CWD）: `flake.nix` → `shell.nix` → `default.nix` の優先順（ADR-0007 §3 の記述どおり）。
 - `-f` / `--file` はファイル直接指定（`flake.nix` / `shell.nix` / `default.nix` のいずれも受理）に加え、ディレクトリ指定時も
