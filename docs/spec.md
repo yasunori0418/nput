@@ -184,6 +184,8 @@ entrypoint は `nput.<name>` に named manifest（`mkManifest` の結果）を�
 > ```
 >
 > legacy entrypoint には flake の `<system>` に相当する次元が無く、addressing はフラットな `nput.<name>` になる（→ 下記「アドレッシング」表）。複数 manifest の一括処理は既存の `apply --all` の一括 eval（`nix eval -f <ep> nput --apply … --json`）でそのまま充足し、`mkShell` の `inputsFrom` で manifest を合成するヘルパは持たない（1 profile = 1 config の atomic 性・→ ADR-0002 と衝突するため）。
+>
+> **`src` の store 化は自動ではない**: flake は評価前にディレクトリ全体が store へコピーされるため相対 path リテラル（`src = ./foo;`）がそのまま store symlink になるが、legacy（`-f` eval）にはこの事前コピーが無く、相対 path はファイルの実位置基準で解決される live な作業木パスのまま manifest に載る（→ ADR-0032）。reproducible / store-backed にしたい場合は `src` に `builtins.path { path = ./foo; }` や `fetchTarball` / `builtins.fetchGit` など明示的に store へ add する手段を使う。
 
 `<name>` = `default` は flake の `default` 慣例に倣う特別な名前で、`nput apply`（name 省略）が解決先に使う。専用 `nput` 名前空間を使い `packages` を汚さない（manifest が通常パッケージとして `nix flake show` / `nix build` に混ざらない・→ ADR-0007）。
 
