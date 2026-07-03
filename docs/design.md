@@ -101,7 +101,8 @@ outputs = { ... }: {
 
   # モジュール統合
   homeManagerModules.default = ./modules/home-manager.nix;
-  # nixosModules / darwinModules は将来拡張（ADR-0004）
+  nixosModules.default  = ./modules/nixos.nix;      # スタブとして公開済み・中身は将来拡張（ADR-0004）
+  darwinModules.default = ./modules/nix-darwin.nix; # スタブとして公開済み・中身は将来拡張（ADR-0004）
 
   # flake-parts module（perSystem.nput を flake.nput.<system> へ transpose・→ ADR-0029）。
   # consumer が flake-parts を使う場合に import すると perSystem.nput.<name> を書ける。
