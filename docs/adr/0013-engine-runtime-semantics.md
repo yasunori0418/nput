@@ -21,6 +21,11 @@
 > **2026-06-14 改訂注記（ADR-0023）**: 本 ADR §2 の「ロックキーは解決後の profileDir」自体は不変だが、flock を取得するタイミングは
 > ADR-0023 §1 が「root 解決（eval 先行）の後・build の前」に確定した。apply 全体の実行順序は「eval 先行 → flock → build」
 > （→ ADR-0023）。
+>
+> **2026-07-04 改訂注記（ADR-0036）**: 本 ADR §5 の「`root = systemRoot` は eval 時エラー（system mode 未実装）」を撤回し、
+> system mode を実装する。`systemRoot` を API に残した判断自体は不変で、その seam が実装に進んだ。`normalizeManifest` は
+> `rootKind = "system"` を通し、engine は root = `/` へ解決・変更系操作で euid 0 を検査・profile 状態は
+> `/nix/var/nix/profiles/nput` 配下に置く（→ ADR-0036）。
 
 ## 背景
 

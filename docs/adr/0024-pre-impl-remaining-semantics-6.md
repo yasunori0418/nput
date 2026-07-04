@@ -10,6 +10,15 @@
 > 「standalone は複数 profile で役割分離できるが HM は単一 `nput.entries` = 1 profile に限られる」というユーザー視点の制約を
 > 明記し、将来の `nput.configs.<name>` seam を追記した。また §11 で言及した **`.pending-<name>` は ADR-0025 §4 の専用
 > ディレクトリレイアウトで `.pending` に改名**された（→ ADR-0025）。
+>
+> **2026-07-04 改訂注記（ADR-0034）**: 本 ADR §11 の「cleanup コマンドは MVP 非対応」は当時の決定として不変だが、残しておいた
+> **将来 `nput prune` seam の実装が決定**した。削除対象は「backref `.root` の root パスが実在しない roothash 系列」のみに限定し、
+> 配置物には触れない。`--dryrun`・確認プロンプト・try-lock skip を備える（→ ADR-0034）。
+>
+> **2026-07-04 改訂注記（ADR-0035）**: 本 ADR §2（HM モジュール = MVP で固定名 `default` 1 profile）は MVP の決定として不変だが、
+> 将来拡張としていた **HM 複数 profile 化（`nput.configs.<name>.entries`）の実装が決定**した。`nput.entries` は
+> `configs.default.entries` への rename 糖衣（deprecated）として残る。1 config = 1 profile = 1 manifest の atomic 性は不変
+> （→ ADR-0035）。
 
 ## 背景
 
