@@ -19,6 +19,10 @@
 > 将来拡張としていた **HM 複数 profile 化（`nput.configs.<name>.entries`）の実装が決定**した。`nput.entries` は
 > `configs.default.entries` への rename 糖衣（deprecated）として残る。1 config = 1 profile = 1 manifest の atomic 性は不変
 > （→ ADR-0035）。
+>
+> **2026-07-04 改訂注記（ADR-0038）**: 本 ADR §8 の `--all` 一括 eval（config 名 → rootKind マップを 1 回で取得）を、
+> **rootKind に加えて正規化後 target 一覧も同じ 1 回の eval で取得**するよう拡張した。取得した target は build 前の
+> cross-config 衝突検査（rootKind バケット単位・検出時 error 停止）に使う。build が config ごと N 回である点は不変（→ ADR-0038）。
 
 ## 背景
 

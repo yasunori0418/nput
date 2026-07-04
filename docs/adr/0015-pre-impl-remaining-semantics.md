@@ -10,6 +10,11 @@
 > 最後に）は不変。ただし「home mode 限定（project mode は rollback 非公開・ADR-0005）」というゲーティングは、system mode の実装に
 > 伴い **home / system mode** へ拡張された。公開基準は「配置の永続性」（project = ephemeral だから非公開、home / system = 永続
 > だから公開）として明文化された（→ ADR-0036）。
+>
+> **2026-07-04 改訂注記（ADR-0038）**: 本 ADR §2 の「cross-config 同一 target は実行時後勝ち + foreign symlink warning」のうち、
+> **同一 entrypoint 内**（`apply --all` の対象 config 間）の衝突は、`--all` の前段（一括 eval + CLI 検査）で検出して **error 停止**
+> するよう改訂した。別 entrypoint・別ツール・project と fixed の偶然の一致など**検出不能な衝突は本 ADR の実行時後勝ち + warning の
+> まま不変**（→ ADR-0038）。
 
 ## 背景
 
