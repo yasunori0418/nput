@@ -5,6 +5,11 @@
 - 関連: ADR-0005, ADR-0006, ADR-0007, ADR-0013, ADR-0015, ADR-0016, ADR-0017, `docs/spec.md`, `docs/design.md`, `docs/concept.md`
 - 起点: ADR-0017 に続く実装前レビューで「templates の具体内容」「`gitignore` / `rollback` / `list-generations` の `--all` 対応」が未定義だった
 
+> **2026-07-04 改訂注記（ADR-0036）**: 本 ADR §4 の `--all` 対応範囲（`gitignore --all` / `list-generations --all` 対応・
+> `rollback --all` 非対応 = 名指し必須）は不変。ただし「`list-generations` は home mode 限定コマンドなので `--all` は homeRoot の
+> config を対象」という記述は、system mode の実装（世代操作の公開が home / system mode へ拡張）に伴い **homeRoot / systemRoot の
+> config を対象**へ広がった（→ ADR-0036）。
+
 ## 背景
 
 `nput init <template>` は `nix flake init -t <nput>#<template>` の透明なラッパーで（ADR-0006, ADR-0007）、

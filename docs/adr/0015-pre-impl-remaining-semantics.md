@@ -6,6 +6,11 @@
 - 改訂対象: **ADR-0002**「世代 GC / rollback を `nix profile`（新CLI）/ `nix-collect-garbage` に委譲」を `nix-env` 系統一へ訂正。**ADR-0007 / templates** に devShell 同梱を canonical として追記。**ADR-0013** の配置セマンティクス（foreign symlink・祖先 symlink）を拡張。**ADR-0010 / ADR-0014** の entry フィールド `mode` を `method` に改名
 - 起点: ドキュメント計画段階の最終レビュー（grill）で surfaced した「実装前に決めておくべき」残細目の束
 
+> **2026-07-04 改訂注記（ADR-0036）**: 本 ADR §5 の rollback セマンティクス（baseline = 離れる世代・FS 収束を先に・ポインタ移動を
+> 最後に）は不変。ただし「home mode 限定（project mode は rollback 非公開・ADR-0005）」というゲーティングは、system mode の実装に
+> 伴い **home / system mode** へ拡張された。公開基準は「配置の永続性」（project = ephemeral だから非公開、home / system = 永続
+> だから公開）として明文化された（→ ADR-0036）。
+
 ## 背景
 
 ADR-0013 / ADR-0014 で engine 実行時セマンティクスと entries モデルの大半が固まったが、
