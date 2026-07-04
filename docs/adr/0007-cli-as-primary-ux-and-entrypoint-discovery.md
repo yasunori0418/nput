@@ -26,6 +26,10 @@
 > passthru はホスト derivation の attrset にマージされるため、CLI の attr path はどちらの形でも同一の `nput.<name>`
 > （実装分岐なし）。CLI の addressing は **`nix build -f <ep> nput.<name>` / `nix eval -f <ep> nput.<name>.rootKind`**
 > （新 CLI に統一）へ置き換わった。§5 の「best-effort・再現性はユーザー責任」という decision 自体は不変。詳細は ADR-0032。
+
+> **2026-07-04 改訂注記（ADR-0040）**: 本 ADR の 3 root マーカー（projectRoot / homeRoot / systemRoot）に**関数適用形
+> `homeRoot { subdir = ".config"; }`** を追加した（`__functor` により単体使用は不変）。実体は root を動かさず
+> `normalizeManifest` が全 target に `subdir` を前置する eval 時糖衣で、engine / manifest スキーマは変わらない（→ ADR-0040）。
 ## 背景
 
 ADR-0006 は次の露出モデルを決定していた。
