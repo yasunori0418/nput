@@ -230,7 +230,7 @@ nput init <template>           # nix flake init -t <nput>#<template> のラッ�
 -y, --yes           # reset の確認プロンプトをスキップ（スクリプト / CI 用・→ ADR-0020）
 ```
 
-> `--json`（機械可読出力）は **MVP では持たない**（将来送り・→ ADR-0023）。当面はテキスト出力 + 下記のストリーム規律で足りる。
+> `--json`（機械可読出力）は **niface 規約準拠のエンベロープ**を stdout に出す（opt-in の第 2 契約・→ ADR-0043・niface specVersion 1）。デフォルトのテキスト出力 + 下記のストリーム規律は不変で、`--json` 時のみ niface エンベロープに切り替わる。ペイロード詳細は各コマンド仕様（#130 以降で追記）。
 
 - `apply` の **name 省略時は `nput.default` を適用**する（flake の `default` 慣例に倣う。`default` が未定義ならエラー）。`<name>` を明示すればその config を、`--all` で `nput.*` 全てを適用する。profile は config 単位で atomic（→ ADR-0002）。
 - `apply --manifest <link-farm>` は **ビルド済み link-farm を engine へ直接適用**する（host / module activation の seam・→ ADR-0026）。entrypoint 発見・rootKind 先取り eval・`nix build` を**行わず**、引数の link-farm 内 `manifest.json` から engine が rootKind を読む（project / home / fixed の全モード対応）。取得後の挙動（flock → 前世代 diff → 配置 → 保守的 stale 除去 → `nix-env --set` → レポート）は通常 apply と同一で、配置ロジックは二重化しない（engine の `Build` / `LinkFarm` seam に対応・→ ADR-0011, ADR-0003）。引数は **link-farm**（`mkManifest` 出力の store パス = 世代としてコミットされる対象）で、`manifest.json` 単体ファイルは渡さない。`-f` / `--all` は取得元が衝突するため**併用エラー**、位置引数 `name`（profile 選択）とは直交し両立する（省略 = `default`・→ ADR-0024）。HM モジュールの activation が使う主経路（→「モジュール別動作仕様」）。module 経路は CLI と `mkManifest` が同一 flake input 由来のため schemaVersion skew が構造的に起きない（→ ADR-0026, ADR-0006）。
@@ -264,7 +264,8 @@ nput init <template>           # nix flake init -t <nput>#<template> のラッ�
   | `1` | 一般エラー（eval エラー・engine 実行時エラー・`apply --all` の部分失敗）|
   | `2` | `apply --dryrun` で conflict を検出（CI の事前 gate に使える）|
 
-- **`-v` / `--verbose` を付けたときだけ配置レポートを stderr に出す**（既定沈黙の opt-in・skip 通知・`apply --all` 完了サマリも含む・→ ADR-0031）。**内部実行する nix コマンドの開示は `--debug`** に分離する（冗長度＝`-v` と、デバッグ＝`--debug` を直交させる）。`--json` は MVP では持たない（将来送り）。`--quiet` は既定沈黙化（ADR-0031）に伴い廃止した。
+- **niface 準拠の `--json` 出力（→ ADR-0043・niface specVersion 1）**: `--json` 指定時、stdout に **niface エンベロープ**を 1 文書だけ出す（`specVersion` / `tool` / `command` / `mode` / `status` / `dryRun` / `startedAt` / `finishedAt` / `errors` / `result{items,changes,info}`・camelCase・時刻 RFC 3339）。デフォルトの行指向 stdout（`gitignore` の列挙・`apply --dryrun` のプラン）は不変で、`--json` は opt-in の第 2 契約。エラーは niface エンベロープに構造化（item 非依存は `errors[]`・item 起因は `item.error`）しつつ **stderr の人間向けテキストも常時併存**する（上記ストリーム規律の骨子は不変・エラー畳み込みは ADR-0023 §2 / ADR-0033 §2 の再改訂）。終了コード表 0 / 1 / 2 は不変で、niface `status` は exit 0 → `success` / 1・2 → `error` に連動する。`--all` は常に `mode:"batch"`（`results[]` に config ごとの完全な `mode:"single"` sub-envelope）。read-only 列挙（`list-generations` の世代・`gitignore` のパス）は `result.info` のツール固有インベントリに置き id 導出 item にはしない。**nput の JSON 出力は現在も将来の機能も niface 規約に準拠する**（エコシステム合成の北極星要件・→ 概念は concept.md 北極星節）。各コマンドの JSON ペイロード詳細は #130 以降で本節に追記する。
+- **`-v` / `--verbose` を付けたときだけ配置レポートを stderr に出す**（既定沈黙の opt-in・skip 通知・`apply --all` 完了サマリも含む・→ ADR-0031）。**内部実行する nix コマンドの開示は `--debug`** に分離する（冗長度＝`-v` と、デバッグ＝`--debug` を直交させる）。`--json`（stdout・機械向け）は `-v`（stderr・人間向け）と直交・併用可（→ ADR-0043）。`--quiet` は既定沈黙化（ADR-0031）に伴い廃止した。
 - **沈黙化の対象は stderr の配置レポートのみ**で、**stdout 専有の機械可読出力（`apply --dryrun` の plan・`gitignore` の列挙）は既定でも `-v` 下でも常に出す**（→ ADR-0024）。stdout 専有原則を貫き、`nput apply <name> --dryrun | ...` や `nput gitignore <name> >> .gitignore` のパイプを壊さない。
 - **`apply --all --dryrun` の終了コードは「いずれかが error なら 1、error が無く conflict があれば 2、どちらも無ければ 0」**（error(1) 最優先 → conflict(2) → 0・→ ADR-0024）。単純な最大値（2 > 1 で conflict 優先）は採らない（より深刻な eval / engine エラーを CI で隠すため）。非 dryrun の `--all` は conflict 概念が無く 0 / 1 のみ。
 

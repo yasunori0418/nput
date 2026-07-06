@@ -238,6 +238,13 @@ Arch / Gentoo 的なミニマル Linux ディストリビューションの基�
 このため、コアの中心抽象は root を `$HOME` に固定せず一般化する。project 配置（`projectRoot`）も
 `home.file` 相当（`homeRoot`）も将来の system 配置（`systemRoot` = `/`）も、同じ関数に**明示マーカー**を渡して到達できるように設計する（→ ADR-0007）。
 
+**エコシステムへの接続（niface 規約準拠）**
+
+nput は単独ツールに留まらず、n プレフィックスのツール群（nput / nboot / nwrap / nherd / nshadow / ncompose）を **stdout / stdin の JSON パイプで合成する**エコシステムの一員である（→ niface `docs/ecosystem/overview.md`）。北極星は「単一責務のツールを niface 規格のパイプで合成して Nix 版 Arch / Gentoo を組む」ことであり、その前提は「**規格が契約**（ツール間の会話は niface 規約のみに依存する）」に尽きる。
+
+- nput の機械可読出力（`--json`）は **niface specVersion 1 規約に準拠する**。ツール固有情報は niface の `info` 配下にのみ置く（→ ADR-0043）。
+- これは今回の `--json` 機能に閉じた話ではなく、**今後追加するすべての機能の JSON 出力が niface 規約を守る**という恒常原則である。ncompose が nput を含む各ツールを合成できるのは各出力が規格準拠であるからで、**niface 準拠はディストリビューション構築（北極星）に向けた設計要件**である（→ ADR-0043）。
+
 **スコープの線引き（honest な但し書き）**
 
 - 今回の実装スコープは standalone CLI + project mode をコアとし、home mode（`homeRoot`）も対象。system 配置（`systemRoot` = `/`）は将来拡張（→ ADR-0007）。
