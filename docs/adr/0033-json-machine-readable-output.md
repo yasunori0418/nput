@@ -6,6 +6,8 @@
 - 改訂対象: ADR-0023 §2 の「`--json` は MVP では持たない（将来送り・必要になった時点で追加）」を撤回し、実装を決定。ストリーム規律・終了コード表そのものは不変
 - 起点: 次期マイルストーン計画の grilling（2026-07-04）。ADR-0023 が「必要になった時点で追加」とした条件を、`nput prune` 新設（→ ADR-0034）や外部ツール連携（statusline / エディタ統合 / CI）の消費側要求で満たしたと判断した
 
+> **2026-07-06 改訂注記（ADR-0043）**: 本 ADR の「`--json` を導入する」という決定は不変。ただし **§1-3 の出力形は niface specVersion 1 準拠へ改訂**された。独自エンベロープ `{"version":1,"command":...}` は niface エンベロープ（`specVersion` / `tool` / `command` / `mode` / `status` / `dryRun` / `startedAt` / `finishedAt` / `result{items,changes,info}`）に置き換わる。**§2 の「warning / error は JSON へ畳み込まず stderr 専有」は反転**し、エラーは niface エンベロープに構造化して載せた上で stderr テキストを併存させる。ストリーム規律の骨子（stdout=機械可読専有・warning/error 常時 stderr）と終了コード表 0/1/2、`gitignore` の二契約方針は不変。JSON 出力の niface 準拠は nput の恒常原則となった（→ ADR-0043）。
+
 ## 背景
 
 ADR-0023 §2 は出力ストリーム規律（stdout = 機械可読専有 / warning・error = stderr）と終了コード表（0 / 1 / 2）を確定し、`--json` は YAGNI として将来送りにした。ADR-0031 で成功時デフォルト沈黙・`-v` レポート opt-in・`--debug` 分離が確定し、テキスト出力面の規律は完成している。

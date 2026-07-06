@@ -257,7 +257,7 @@ nput init <template>    # nix flake init -t github:yasunori0418/nput#<template> 
 `--only`（一部 entry だけ適用）は profile 世代の atomic 性と衝突するため提供しない。
 選択的更新は「役割ごとに別 config（`nput.<name>`）に分ける」ことで担保する。
 
-出力・終了コード規約（→ ADR-0023, ADR-0031）: **stdout は機械可読出力専有**（`gitignore` / `--dryrun` プラン）、**warning / error は stderr**。**成功時はデフォルト沈黙**（沈黙は金）で配置レポート / skip 通知は出さず、`-v` / `--verbose` で opt-in 表示する。内部 nix コマンドの開示は `--debug`。終了コードは `0`（成功 / no-op / `--no-wait` skip）/ `1`（一般エラー・`--all` 部分失敗）/ `2`（`--dryrun` で conflict）。`--json` は将来送り。`gitignore` は project mode 限定。`--root` 明示時は全モードで profileDir を `<roothash>` キーにする。
+出力・終了コード規約（→ ADR-0023, ADR-0031）: **stdout は機械可読出力専有**（`gitignore` / `--dryrun` プラン）、**warning / error は stderr**。**成功時はデフォルト沈黙**（沈黙は金）で配置レポート / skip 通知は出さず、`-v` / `--verbose` で opt-in 表示する。内部 nix コマンドの開示は `--debug`。終了コードは `0`（成功 / no-op / `--no-wait` skip）/ `1`（一般エラー・`--all` 部分失敗）/ `2`（`--dryrun` で conflict）。**`--json` は niface 規約準拠の機械可読出力**（niface エンベロープ・opt-in の第 2 契約。エラーはエンベロープに構造化しつつ stderr テキストは併存・→ ADR-0043）。nput の JSON 出力は現在も将来も niface 規約に準拠する（エコシステム合成の北極星要件）。`gitignore` は project mode 限定。`--root` 明示時は全モードで profileDir を `<roothash>` キーにする。
 
 ### 再現性スタンス（→ ADR-0007）
 
