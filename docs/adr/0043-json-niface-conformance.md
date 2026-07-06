@@ -1,10 +1,10 @@
 # ADR-0043: `--json` 機械可読出力を niface 規約準拠にし、JSON 出力の niface 準拠を恒常原則とする
 
 - ステータス: 採用
-- 日付: 2026-07-06
+- 日付: 2026-07-07
 - 関連: ADR-0033, ADR-0023, ADR-0031, ADR-0018, ADR-0042, ADR-0004, `docs/concept.md`, `docs/design.md`, `docs/spec.md`, niface specVersion 1（yasunori0418/niface）, yasunori0418/niface#1
 - 改訂対象: ADR-0033 §1-3（独自エンベロープ `{"version":1,...}` を niface エンベロープ準拠へ）/ ADR-0023 §2（「エラーは stdout に畳み込まず stderr 専有」を再改訂）。ストリーム規律の骨子（stdout=機械可読専有・warning/error 常時 stderr）と終了コード表 0/1/2 は不変
-- 起点: nput の niface 準拠化 grilling（2026-07-06）と、それを受けた niface 側 grilling による niface#1 の方針確定（batch エンベロープ + subject + §5 参照キー規約の 3 層化）
+- 起点: nput の niface 準拠化 grilling（2026-07-06）と、それを受けた niface 側 grilling による niface#1 の方針確定（batch エンベロープ + subject + §5 参照キー規約の 3 層化）。2026-07-07 に niface 側の正式成果物（`spec/v1/spec.md`・`schema/v1/envelope.schema.json`・`go` module・`testdata/v1` 適合ベクタ）が確定し、**エンベロープは single / batch を問わずトップレベル常時 `results[]` に統一**された。本 ADR は確定仕様に合わせて記述する
 
 ## 背景
 
@@ -27,8 +27,10 @@ niface#1 の grilling で niface 側の仕様も確定した（batch エンベ�
 
 ### 2. エンベロープと `mode`
 
-- `--json` 指定時、stdout に **niface エンベロープを 1 文書だけ**書く（`specVersion` / `tool{name,version}` / `command` / `mode` / `status` / `dryRun` / `startedAt` / `finishedAt` / `errors` / `result{items,changes,info}`）。命名は camelCase・時刻は RFC 3339。
-- `mode` は single / batch の唯一の判別子（必須）。単一主体コマンドは `mode:"single"` + `result`、複数主体（`--all`）は `mode:"batch"` + `results[]`（`result` XOR `results`）。
+- `--json` 指定時、stdout に **niface エンベロープを 1 文書だけ**書く。トップレベルは `specVersion` / `tool{name,version}` / `command` / `mode` / `status` / `dryRun` / `startedAt` / `finishedAt` / `errors[]` / **`results[]`**。命名は camelCase・時刻は RFC 3339。
+- **single / batch を問わずトップレベルは常に `results[]`（`SubjectResult` の配列）**であり、単数の `result` はトップに存在しない（niface §2）。`specVersion` / `tool` / `command` / `mode` はトップに 1 度だけ置き、主体ごとに繰り返さない。
+- `results[]` の各要素は `SubjectResult`＝`subject`（任意/必須は §3）/ `status` / `startedAt` / `finishedAt` / `errors[]` / `result{items,changes,info}`。item / change / info は各 `SubjectResult.result` 配下に入る。
+- `mode` は single / batch の唯一の判別子（必須）で、**起動の性質**で決まり結果件数に依らない。`mode:"single"` は `results` が**高々 1 要素**（0 または 1）、`mode:"batch"`（`--all`）は `results` が 0 以上。
 - `tool.version` は VERSION ファイル → ldflags 埋め込み（ADR-0042・`--version` 新設が前提）。
 - niface の `specVersion`（出力規格）・`manifest.json` の `schemaVersion`（engine 入力契約）・`tool.version`（nput リリース）は**独立**に進化する 3 つのバージョンとして扱う。
 
@@ -37,7 +39,7 @@ niface#1 の grilling で niface 側の仕様も確定した（batch エンベ�
 - item の `id` は niface の `id = lowercase-hex(sha256(JCS(identity)))` で導出する。`identity = {kind, key}`。
 - entry の identity は `kind="entry"`, `key={target}`（root 相対 target のみ）。**config 名は key に含めない**。
 - niface#1 §5（参照キー規約 3 層）に従い、id 値は subject を跨いで衝突してよく、consumer は **`(tool.name, subject, id)` の 3 つ組**で参照を解決する。`subject` は id 導出に関与しない弱い識別子。
-- `subject` は single モードで optional なトップレベル `subject:{name}`（config 名）、batch モードで各 sub-envelope に必須。
+- `subject` は各 `results[i]` 内に置く（`SubjectResult.subject:{name}`＝config 名）。**トップレベル `subject` は存在しない**。single モードでは `results[0].subject` は任意（省略可）、batch モードでは各 `SubjectResult.subject` が必須（niface §2・schema の `allOf` で強制）。
 
 ### 4. items / changes マッピングと reversible
 
@@ -55,23 +57,23 @@ niface#1 の grilling で niface 側の仕様も確定した（batch エンベ�
 
 ### 6. エラーと終了コード
 
-- エラーは **niface エンベロープに構造化して載せる**（item 非依存の全体エラーは `errors[]`、item 起因は `item.error`）。**同時に stderr の人間向けテキスト（既存の op + 対象パス wrap 規約）も常時併存**させる（niface §1 が stderr を診断チャネルとして許容）。これは ADR-0023 §2 / ADR-0033 §2 の「エラーは stdout に畳み込まず stderr 専有」を再改訂するもの。
+- エラーは **niface エンベロープに構造化して載せる**。置き場は 2 層（niface §2）: **トップレベル `errors[]` は主体列挙・解決の前段エラーのみ**（入力 parse 失敗・`specVersion` 不能・主体列挙自体の失敗）、**主体に紐づく全体エラー（その主体の build / lock 失敗等）は該当 `results[i].errors[]`**、item 起因は `item.error`。single モードでも主体起因エラーは `results[0].errors[]` に置きトップ `errors[]` には畳まない。**同時に stderr の人間向けテキスト（既存の op + 対象パス wrap 規約）も常時併存**させる（niface §1 が stderr を診断チャネルとして許容）。これは ADR-0023 §2 / ADR-0033 §2 の「エラーは stdout に畳み込まず stderr 専有」を再改訂するもの。
 - 終了コード表 0 / 1 / 2 は不変（POSIX・0=成功 / 非 0=失敗。1 = 一般エラー・`--all` 部分失敗、2 = `--dryrun` conflict は nput 内部の意味づけ）。niface の `status` は exit 0 → `success` / exit 1・2 → `error` に連動する。niface 消費側が依存してよいのは「0 ⇔ success / 非 0 ⇔ error」のみ。
 - conflict は該当 entry を `item.status:"failed"` + `error.code:"E_NPUT_COLLISION"` で表し、1 件でもあれば `status:"error"`（`--dryrun` でも当該 item は failed）。
 
 ### 7. `--all` は batch エンベロープ
 
 - `apply --all` / `list-generations --all` / `gitignore --all` は **常に** `mode:"batch"`（対象が N=0 / 1 でも。起動の性質で形状が決まる）。
-- `results[]` の各要素は **完全な `mode:"single"` sub-envelope**（`specVersion` / `tool` / `command` / `mode` / `subject` を自身で持ち、切り出せば単独で valid）。`subject={config名}`。config 単位の build / lock 失敗（item 非依存）は該当 sub-envelope の `errors[]` に置く。top の `errors[]` は主体列挙自体の失敗のみ。
+- `results[]` の各要素は `SubjectResult`（`subject` / `status` / `startedAt` / `finishedAt` / `errors[]` / `result`）。`specVersion` / `tool` / `command` / `mode` は**トップレベルに 1 度だけ**置き、各 `SubjectResult` は持たない（切り出して単独 valid にはならない・niface §2）。`subject={config名}` で各 `SubjectResult` に必須。config 単位の build / lock 失敗（item 非依存）は該当 `results[i].errors[]` に置く。top の `errors[]` は主体列挙自体の失敗のみ。
 - top の `status` は集約（sibling に 1 つでも error があれば error）。空 batch（`results:[]`）は `success`。`--all --dryrun` の終了コード優先度（error 1 → conflict 2 → 0）は不変（ADR-0024）。
 - **`gitignore --all --json` は cross-config dedup をしない**: 各 subject が自 config の paths を持ち、消費側が union + dedup して `.gitignore` を再構成する。一方 **テキスト既定出力は従来通り dedup + sort 済みの単一リスト**（ADR-0018 不変）。テキスト＝集約 / JSON＝per-config という非対称を受け入れる（JSON は「どの config 由来か」を保つ利点があり、機械側の dedup は自明）。
 
 ### 8. Go 依存・エラーコード・実装 gate
 
 - `github.com/yasunori0418/niface/go`（Envelope 汎用型 + `DeriveID`）を依存に追加する。ADR-0033 が課した「stdlib-only で emit」制約は、niface/go 自体が stdlib-only の規格参照実装であること、および id 導出（JCS + sha256）を規格実装と共有して適合ベクタ（`id-vectors.json`）との乖離リスクを下げることを理由に緩和する。CLI 出力契約は cmd 層に閉じ、`engine.Result` 等を直接 marshal せず DTO 経由で niface 型へ詰め替える。
-- エラーコード: ツール別 `E_NPUT_COLLISION` / `E_NPUT_BUILD`・警告 `W_NPUT_FOREIGN`（foreign symlink）。共通コードは `E_LOCK` / `E_IO` / `E_NOTFOUND` / `E_PERMISSION` を再利用する（niface §6 の二層命名）。
+- エラーコード: ツール別 `E_NPUT_COLLISION` / `E_NPUT_BUILD`・警告 `W_NPUT_FOREIGN_SYMLINK`（foreign symlink・niface §3 の例と揃える）。共通コードは `E_LOCK` / `E_IO` / `E_NOTFOUND` / `E_PERMISSION` を再利用し、入力 parse 失敗は `E_INPUT`・`specVersion` 不能は `E_SPEC_VERSION` を用いる（niface §6 の二層命名・共通レジストリ）。
 - `reset --json` は破壊的操作の確認を機械消費で扱えないため **`--yes` を必須**とし、無ければ prompt せず `status:"error"`・非 0 で fail fast する。
-- **実装の着手**は niface の正式成果物（`spec/v1` 更新・`envelope-batch.schema.json`・go module の mode/batch/subject 型）の完成、および ADR-0042 の VERSION + `--version` を前提とする。本 ADR は決定の記録であり、実装は前提成果物の完成後に #130 以降で進める。
+- **実装の着手**は niface の正式成果物（`spec/v1/spec.md`・`schema/v1/envelope.schema.json`〔single / batch 統合の単一 schema〕・`go` module〔`Envelope[TItem,TChange,TInfo]` 汎用型・`DeriveID`・`Mode` / `Subject` / `SubjectResult` 型〕・`testdata/v1/id-vectors.json` 適合ベクタ）の完成、および ADR-0042 の VERSION + `--version` を前提とする。本 ADR は決定の記録であり、実装は前提成果物の完成後に #130 以降で進める。
 
 ## 根拠
 

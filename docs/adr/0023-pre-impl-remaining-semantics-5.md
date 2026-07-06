@@ -25,7 +25,7 @@
 > 終了コード表（0/1/2）は不変で、`--json` は stdout に単一 JSON オブジェクト（version フィールド付き）を出力する追加 opt-in
 > （→ ADR-0033）。
 >
-> **2026-07-06 改訂注記（ADR-0043）**: 本 ADR §2 の出力規律のうち **「warning / error は stdout に畳み込まず stderr 専有」を ADR-0043 が再改訂**した。stdout=機械可読専有・warning/error を常時 stderr に出す骨子と終了コード表（0/1/2）は不変だが、`--json` 時はエラーの**構造化コピーを niface エンベロープにも載せる**（stderr テキストは併存）。また `--json` の出力形は ADR-0033 の独自エンベロープから **niface specVersion 1 準拠**へ改訂された（→ ADR-0043）。
+> **2026-07-07 改訂注記（ADR-0043）**: 本 ADR §2 の出力規律のうち **「warning / error は stdout に畳み込まず stderr 専有」を ADR-0043 が再改訂**した。stdout=機械可読専有・warning/error を常時 stderr に出す骨子と終了コード表（0/1/2）は不変だが、`--json` 時はエラーの**構造化コピーを niface エンベロープにも載せる**（stderr テキストは併存）。また `--json` の出力形は ADR-0033 の独自エンベロープから **niface specVersion 1 準拠**へ改訂された（→ ADR-0043）。
 
 ## 背景
 
