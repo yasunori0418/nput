@@ -45,6 +45,10 @@ func generationUnchanged(profileLink, newLinkFarm string) (bool, error) {
 //     edits) produce no CopyAction and are left untouched (→ docs/spec.md "project mode
 //     generations" · ADR-0022). On --recopy, recopyAll overwrites unconditionally (recopy is
 //     an opt-in outside generations).
+//
+// plan.PreRemove is structurally empty on this path: an ancestor→children migration changes the
+// manifest, hence the link-farm derivation, so generationUnchanged is never true and the gen-skip
+// branch is not taken (→ ADR-0046). The drift repair therefore has no pre-removal to run.
 func (a *applier) repairDrift(plan planner.Plan, recopy bool) error {
 	drifted := make([]planner.PlaceAction, 0, len(plan.Place))
 	for _, act := range plan.Place {

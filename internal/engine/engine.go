@@ -233,9 +233,13 @@ func Apply(opts Options) (*Result, error) {
 		}
 	}
 
-	// 8. reflect the plan onto the real FS (new / re-link first, stale removal last · → ADR-0006).
-	//    symlinks are plan-driven. copy branches: on --recopy overwrite all copy targets unconditionally,
-	//    normally place-once (new copy only when target is absent) (→ ADR-0020).
+	// 8. reflect the plan onto the real FS. PreRemove first (unlink self-recorded stale ancestor
+	//    symlinks so nested children land in a real dir · local exception to ADR-0006 · → ADR-0046),
+	//    then new / re-link, then stale removal last (→ ADR-0006). copy branches: on --recopy overwrite
+	//    all copy targets unconditionally, normally place-once (new copy only when target is absent) (→ ADR-0020).
+	if err := a.preRemove(plan.PreRemove); err != nil {
+		return nil, err
+	}
 	if err := a.place(plan.Place); err != nil {
 		return nil, err
 	}
@@ -319,6 +323,9 @@ func (a *applier) dryRun() (*Result, error) {
 	}
 	for _, c := range plan.Copies {
 		a.result.Copied = append(a.result.Copied, c.Entry.Target)
+	}
+	for _, r := range plan.PreRemove {
+		a.result.Removed = append(a.result.Removed, r.Entry.Target)
 	}
 	for _, r := range plan.Remove {
 		a.result.Removed = append(a.result.Removed, r.Entry.Target)

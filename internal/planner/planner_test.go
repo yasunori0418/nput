@@ -86,6 +86,7 @@ type want struct {
 	placeForeign []string
 	copies       []string
 	remove       []string
+	preRemove    []string
 	warns        []WarnKind
 	conflicts    int
 }
@@ -103,6 +104,14 @@ func placeTargets(p Plan, kind PlaceKind) []string {
 func removeTargets(p Plan) []string {
 	var out []string
 	for _, a := range p.Remove {
+		out = append(out, a.Entry.Target)
+	}
+	return out
+}
+
+func preRemoveTargets(p Plan) []string {
+	var out []string
+	for _, a := range p.PreRemove {
 		out = append(out, a.Entry.Target)
 	}
 	return out
@@ -209,6 +218,60 @@ func TestComputeTableDriven(t *testing.T) {
 			next: mani(sl(srcB, ".claude/skills/nix")),
 			fs:   fakeFS{abs(".claude"): sym("/some/store")},
 			want: want{conflicts: 1},
+		},
+		{
+			// Self-recorded stale ancestor symlink (prev recorded .claude/skills, on-disk matches, next
+			// drops it for children): migrate — pre-remove the ancestor and place children as new,
+			// deduping the ancestor across multiple children (→ ADR-0046).
+			name: "self-recorded stale ancestor → migrate (preRemove + child PlaceNew)",
+			prev: mani(sl(srcA, ".claude/skills")),
+			next: mani(sl(srcB, ".claude/skills/foo"), sl(srcB, ".claude/skills/bar")),
+			fs: fakeFS{
+				abs(".claude"):        dir(),
+				abs(".claude/skills"): sym(srcA),
+			},
+			want: want{
+				placeNew:  []string{".claude/skills/foo", ".claude/skills/bar"},
+				preRemove: []string{".claude/skills"},
+			},
+		},
+		{
+			// Recorded ancestor but the on-disk symlink points elsewhere (mismatch = foreign / user-swapped):
+			// not eligible for migration, the child stays a conflict; the ancestor is kept with a stale-mismatch
+			// warning by the remove side (→ ADR-0046).
+			name: "foreign ancestor (recorded mismatch) → conflict",
+			prev: mani(sl(srcA, ".claude/skills")),
+			next: mani(sl(srcB, ".claude/skills/foo")),
+			fs: fakeFS{
+				abs(".claude"):        dir(),
+				abs(".claude/skills"): sym("/foreign"),
+			},
+			want: want{conflicts: 1, warns: []WarnKind{WarnStaleMismatch}},
+		},
+		{
+			// The new generation keeps the ancestor whole-tree symlink AND a nested child
+			// (self-contradictory): the ancestor cannot be removed, so the child stays a conflict while
+			// the ancestor entry itself re-links as a recorded replace (→ ADR-0046).
+			name: "self-contradictory ancestor (kept in next) → conflict",
+			prev: mani(sl(srcA, ".claude/skills")),
+			next: mani(sl(srcB, ".claude/skills"), sl(srcB, ".claude/skills/foo")),
+			fs: fakeFS{
+				abs(".claude"):        dir(),
+				abs(".claude/skills"): sym(srcA),
+			},
+			want: want{
+				placeReplace: []string{".claude/skills"},
+				conflicts:    1,
+			},
+		},
+		{
+			// Recorded stale ancestor but already gone on disk: ancestorSymlink stops at the missing
+			// component, so the child classifies normally as a new placement and nothing is pre-removed.
+			name: "recorded ancestor already gone → plain place",
+			prev: mani(sl(srcA, ".claude/skills")),
+			next: mani(sl(srcB, ".claude/skills/foo")),
+			fs:   fakeFS{abs(".claude"): dir()},
+			want: want{placeNew: []string{".claude/skills/foo"}},
 		},
 		{
 			// stale matches record: satisfies the conservative invariant, so remove.
@@ -348,6 +411,7 @@ func TestComputeTableDriven(t *testing.T) {
 			sortedEq(t, "placeForeign", placeTargets(plan, PlaceForeign), tt.want.placeForeign)
 			sortedEq(t, "copies", copyTargets(plan), tt.want.copies)
 			sortedEq(t, "remove", removeTargets(plan), tt.want.remove)
+			sortedEq(t, "preRemove", preRemoveTargets(plan), tt.want.preRemove)
 			warnEq(t, warnKinds(plan), tt.want.warns)
 			if len(plan.Conflicts) != tt.want.conflicts {
 				t.Errorf("conflicts = %d, want %d (%v)", len(plan.Conflicts), tt.want.conflicts, plan.Conflicts)

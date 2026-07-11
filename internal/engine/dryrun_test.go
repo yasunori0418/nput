@@ -76,3 +76,48 @@ func TestApplyDryRunConflict(t *testing.T) {
 		t.Errorf("conflicting entry should not be planned for place, Placed = %v", res.Placed)
 	}
 }
+
+// TestApplyDryRunAncestorMigration verifies that apply --dryrun reports a self-recorded stale
+// ancestor migration as a (non-conflict) removal plus child placements and leaves the FS
+// untouched (→ ADR-0046).
+func TestApplyDryRunAncestorMigration(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+
+	// First apply commits a whole-tree symlink at .claude/skills (sets up the previous generation).
+	// srcOld deliberately does not contain "foo", so lstat of the child through the still-present
+	// ancestor symlink resolves to nothing and the "FS untouched" check below is meaningful.
+	srcOld := makeSrc(t, "other")
+	lf1 := writeLinkFarm(t, projectManifest(storeEntry(srcOld, ".", ".claude/skills")))
+	if _, err := Apply(Options{
+		LinkFarm: lf1, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
+	}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+
+	// Dryrun the migration to nested children.
+	srcNew := makeSrc(t, "foo")
+	lf2 := writeLinkFarm(t, projectManifest(storeEntry(srcNew, "foo", ".claude/skills/foo")))
+	res, err := Apply(Options{
+		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, DryRun: true,
+	})
+	if err != nil {
+		t.Fatalf("dryrun Apply: %v", err)
+	}
+	if len(res.Conflicts) != 0 {
+		t.Errorf("Conflicts = %v, want none (a self-recorded ancestor is a migration, not a conflict)", res.Conflicts)
+	}
+	if len(res.Removed) != 1 || res.Removed[0] != ".claude/skills" {
+		t.Errorf("Removed = %v, want [.claude/skills]", res.Removed)
+	}
+	if len(res.Placed) != 1 || res.Placed[0] != ".claude/skills/foo" {
+		t.Errorf("Placed = %v, want [.claude/skills/foo]", res.Placed)
+	}
+	// FS untouched: the ancestor symlink is still present and the child was not created.
+	if got, err := os.Readlink(filepath.Join(root, ".claude", "skills")); err != nil || got != srcOld {
+		t.Errorf(".claude/skills should be untouched in dryrun = %q (err %v); want symlink to %q", got, err, srcOld)
+	}
+	if _, err := os.Lstat(filepath.Join(root, ".claude", "skills", "foo")); !os.IsNotExist(err) {
+		t.Errorf("child should not be created in dryrun, lstat err = %v", err)
+	}
+}
