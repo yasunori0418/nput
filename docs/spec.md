@@ -332,7 +332,7 @@ nput apply <name> [-f <ep>] [--root <p>]
      c. profileDir の前世代 manifest.json を読む（無ければ初回 = 削除対象ゼロ）
      d. project mode かつ新 link-farm が前世代と同一なら新世代は積まない（世代スキップ）。ただし各 target を lstat 検査し、
         ドリフトした entry だけ再張りする（完全 no-op にしない・→ ADR-0017）
-     e. manifest.json を新旧 diff → 新規/張替を配置 → 保守的 stale 除去（ネイティブ FS）
+     e. manifest.json を新旧 diff → 自己記録 stale 祖先 symlink を配置前除去（PreRemove・ネスト移行・→ ADR-0046）→ 新規/張替を配置 → 保守的 stale 除去（ネイティブ FS）
      f. nix-env --profile <profileDir>/profile --set <link-farm>（サブプロセス・コミット点）
      g. --set 成功後に <profileDir>/.pending を削除（世代リンクが gcroot を引き継ぐ・→ ADR-0011）
 ```
@@ -565,9 +565,12 @@ engine が**ネイティブ FS 操作**で行う（`ln` / `rsync` は使わな�
 ### symlink モード
 
 ```
-0. target の各祖先 component を lstat で walk。いずれかが symlink ならエラーで停止（→ ADR-0015）
-   （祖先が全体 symlink 配置のとき、その配下にネストできない。store 汚染 / dangling を防ぐ）
-1. target の親ディレクトリを作成（mkdir -p 相当。祖先 symlink は 0 で弾き済み）
+0. target の各祖先 component を lstat で walk。symlink の祖先があれば非対称に扱う:
+   - 自己記録 stale（自身の前世代 manifest が記録・on-disk が記録 dest と一致・次世代に無い）
+     → その祖先を配置前に除去（PreRemove）し、配下子を新規配置してネスト移行する（silent・`-v` で可視・→ ADR-0046）
+   - foreign（記録なし / 記録 dest と不一致 / 前世代なし）または次世代にも祖先が残る自己矛盾
+     → エラーで停止（配下にネストできない。store 汚染 / dangling を防ぐ・→ ADR-0015 §4, ADR-0046）
+1. target の親ディレクトリを作成（mkdir -p 相当。緩和対象の祖先 symlink は PreRemove 除去済み・foreign は 0 で弾き済み）
 2. target が既存 symlink のとき:
    - 自身の前世代 manifest が記録した symlink → そのまま置き換える（silent）
    - 記録の無い symlink（foreign = 他 nput profile / 他ツール / 手動）→ warning を出して置き換える（後勝ち・→ ADR-0015）
@@ -913,7 +916,8 @@ devShells.default = pkgs.mkShell {
 | `src` が marker でローカルパスが存在しない | engine 実行時にエラーで停止 |
 | `subpath` が `src` 内に存在しないパス | engine 実行時にエラーで停止 |
 | `target` に通常ファイル・ディレクトリが既存（symlink モード）| エラーで停止（上書きしない）|
-| `target` の祖先 component が symlink（全体 symlink 配置の配下にネスト）| engine 実行時にエラーで停止（lstat walk・`--dryrun` は conflict・→ ADR-0015）|
+| `target` の祖先 component が foreign symlink（記録なし / 記録 dest と不一致 / 前世代なし）、または次世代にも祖先が残る自己矛盾 | engine 実行時にエラーで停止（lstat walk・`--dryrun` は conflict・→ ADR-0015 §4, ADR-0046）|
+| `target` の祖先 component が自己記録 stale symlink（前世代 manifest が記録・on-disk 一致・次世代に無い）| 祖先を配置前に除去（PreRemove）し配下子を新規配置してネスト移行（silent・`-v` で可視・`--dryrun` は非 conflict の remove・→ ADR-0046）|
 | `target` に foreign symlink が既存（自身の前世代 manifest に記録なし・別 config / 別ツール / 手動）| warning を出して後勝ちで置き換える（→ ADR-0015）|
 | `subpath` がディレクトリのとき `target` に通常ファイルが既存（copy モード）| エラーで停止 |
 | `subpath` がファイルのとき `target` がディレクトリとして既存（copy モード）| エラーで停止 |
