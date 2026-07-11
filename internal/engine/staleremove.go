@@ -30,15 +30,21 @@ func (a *applier) removeStale(actions []planner.RemoveAction) error {
 
 // preRemove unlinks the self-recorded stale ancestor symlinks the planner scheduled for
 // migration, re-verifying the conservative invariant against the real FS right before each
-// unlink (the same check removeStale uses). It runs *before* place so nested children land in
-// a real directory instead of resolving through the previous farm's symlink (local ordering
-// exception to ADR-0006 · → ADR-0046). Removed ancestors are folded into result.Removed: the
-// migration is silent by default and surfaced only under -v, never as a warning (→ ADR-0031).
+// unlink. It runs *before* place so nested children land in a real directory instead of
+// resolving through the previous farm's symlink (local ordering exception to ADR-0006 · → ADR-0046).
+// Removed ancestors are folded into result.Removed: the migration is silent by default and
+// surfaced only under -v, never as a warning (→ ADR-0031).
+//
+// Unlike removeStale — the last stage, where keeping a drifted link is harmless — a drifted
+// ancestor here is *not* safe to skip: the children under it were planned as unconditional new
+// placements that assume the ancestor is gone, so continuing would nest them through the drifted
+// symlink (e.g. one swapped to a foreign, writable dir) and re-open the ADR-0015 §4 pollution that
+// place/ensureParentDir do not re-guard. So on drift it aborts loudly instead of skipping; an
+// idempotent re-run re-plans against the current FS and converges (→ ADR-0017, ADR-0046).
 func (a *applier) preRemove(actions []planner.RemoveAction) error {
 	for _, act := range actions {
 		if !reverifyStale(act) {
-			a.opts.Warnf("nput: skipping ancestor migration because it drifted after planning: %s", act.Entry.Target)
-			continue
+			return fmt.Errorf("nput: ancestor symlink changed after planning; cannot migrate its nesting safely (%s); re-run apply to converge", act.Entry.Target)
 		}
 		if err := os.Remove(act.TargetAbs); err != nil {
 			return fmt.Errorf("nput: cannot remove ancestor symlink for migration (%s): %w", act.TargetAbs, err)
