@@ -236,6 +236,21 @@ func TestComputeTableDriven(t *testing.T) {
 			},
 		},
 		{
+			// Same migration but the nested child is a copy entry: it becomes a place-once CopyAction
+			// (the "target absent" copy arm), not a symlink placement (→ ADR-0046).
+			name: "self-recorded stale ancestor, copy child → migrate (preRemove + copy)",
+			prev: mani(sl(srcA, ".claude/skills")),
+			next: mani(cp(srcB, ".claude/skills/foo")),
+			fs: fakeFS{
+				abs(".claude"):        dir(),
+				abs(".claude/skills"): sym(srcA),
+			},
+			want: want{
+				copies:    []string{".claude/skills/foo"},
+				preRemove: []string{".claude/skills"},
+			},
+		},
+		{
 			// Recorded ancestor but the on-disk symlink points elsewhere (mismatch = foreign / user-swapped):
 			// not eligible for migration, the child stays a conflict; the ancestor is kept with a stale-mismatch
 			// warning by the remove side (→ ADR-0046).

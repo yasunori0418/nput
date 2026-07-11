@@ -310,6 +310,69 @@ func TestApplyAncestorSelfRecordedMigration(t *testing.T) {
 	}
 }
 
+// TestApplyAncestorSelfRecordedMigrationCopyChild verifies the migration when the nested child is
+// a copy entry: the ancestor symlink is pre-removed, .claude/skills becomes a real directory, and
+// the child is materialized as a real (owner-writable) copied file, not a symlink (→ ADR-0046).
+func TestApplyAncestorSelfRecordedMigrationCopyChild(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+
+	// Previous generation: whole-tree symlink at .claude/skills → srcOld (holds foo, so a naive
+	// lstat through the ancestor would find it and misclassify the copy child).
+	srcOld := realTempDir(t)
+	if err := os.WriteFile(filepath.Join(srcOld, "foo"), []byte("old"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lf1 := writeLinkFarm(t, projectManifest(storeEntry(srcOld, ".", ".claude/skills")))
+	var commits [][2]string
+	if _, err := Apply(Options{
+		LinkFarm: lf1, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+
+	// New generation: nest a copy child under the (now stale) ancestor symlink.
+	srcNew := makeSrc(t, "foo") // srcNew/foo = "content"
+	lf2 := writeLinkFarm(t, projectManifest(copyEntry(srcNew, "foo", ".claude/skills/foo")))
+	res, err := Apply(Options{
+		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	})
+	if err != nil {
+		t.Fatalf("second Apply (copy-child migration): %v", err)
+	}
+
+	// .claude/skills is now a real directory (ancestor symlink pre-removed).
+	info, err := os.Lstat(filepath.Join(root, ".claude", "skills"))
+	if err != nil {
+		t.Fatalf(".claude/skills lstat: %v", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		t.Errorf(".claude/skills is still a symlink, want a real directory")
+	}
+	// The child is a real copied file (not a symlink) carrying the new content.
+	child := filepath.Join(root, ".claude", "skills", "foo")
+	ci, err := os.Lstat(child)
+	if err != nil {
+		t.Fatalf("child lstat: %v", err)
+	}
+	if ci.Mode()&os.ModeSymlink != 0 {
+		t.Errorf("copy child is a symlink, want a real file")
+	}
+	data, err := os.ReadFile(child)
+	if err != nil {
+		t.Fatalf("child read: %v", err)
+	}
+	if string(data) != "content" {
+		t.Errorf("child content = %q, want \"content\"", data)
+	}
+	if len(res.Removed) != 1 || res.Removed[0] != ".claude/skills" {
+		t.Errorf("Removed = %v, want [.claude/skills]", res.Removed)
+	}
+	if len(res.Copied) != 1 || res.Copied[0] != ".claude/skills/foo" {
+		t.Errorf("Copied = %v, want [.claude/skills/foo]", res.Copied)
+	}
+}
+
 func TestApplyExistingRegularFileError(t *testing.T) {
 	root := realTempDir(t)
 	src := makeSrc(t, "x")
