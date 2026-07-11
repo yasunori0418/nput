@@ -42,7 +42,7 @@ foreign（他 nput profile / 他ツール / 手動作成 = 記録 dest と不一
 - `Plan` に **`PreRemove []RemoveAction`** を新設。planner が緩和対象の祖先を PreRemove に載せる（複数の子が同一祖先を検出しても **dedup** して 1 件）。
 - 既存 stale ループは、同 target が PreRemove 済みなら**スキップ**（二重除去回避）。
 - engine は **PreRemove → place → copies → removeStale** の順で流す。ADR-0006 の本流（新を先に置いてから旧を消す）は不変で、**局所例外のみ**を明示的に前段へ置く。順序決定が planner に閉じるため純粋・テスト可能（ADR-0003 の役割分担と一致）。
-- 除去は removeStale と同じ**保守的不変条件を配置直前に再検証**してから unlink する（planning と実行の間のドリフトに対する安全確認は共通）。
+- 除去は removeStale と同じ**保守的不変条件を配置直前に再検証**してから unlink する。ただしドリフト時の扱いは非対称: removeStale は最終段なので残置して warning にとどめるが、**PreRemove は前段**で走り後続 place が「祖先除去済み」を前提に子を無条件配置するため、祖先がドリフト（例: foreign symlink へ張替え）していたら skip せず **error 停止**する（skip して子配置を続行すると drift 後の祖先 symlink 経由で foreign 配下へ子を書き ADR-0015 §4 の汚染を再び開くため）。冪等再実行で現状の FS に対し再計画され収束する（ADR-0017）。
 
 ### 4. 報告は既定 silent・`-v` で可視・warning にはしない
 

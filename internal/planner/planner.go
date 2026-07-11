@@ -160,6 +160,11 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			return Plan{}, err
 		}
 		if offenderAbs != "" {
+			// offenderRel is the cleaned root-relative ancestor path; matching it against
+			// nextByTarget / prevByTarget (keyed by the raw manifest target) relies on targets being
+			// canonical — the same convention the rest of the planner already assumes (byTarget keys,
+			// placement's filepath.Clean). A non-canonical ancestor target simply fails to match here
+			// and degrades safely to a conflict; it never mis-migrates.
 			_, keptInNext := nextByTarget[offenderRel]
 			if !keptInNext && recordedLink(offenderRel, offenderAbs, prevByTarget, fs) {
 				if !preRemoved[offenderRel] {
