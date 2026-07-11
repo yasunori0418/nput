@@ -28,6 +28,26 @@ func (a *applier) removeStale(actions []planner.RemoveAction) error {
 	return nil
 }
 
+// preRemove unlinks the self-recorded stale ancestor symlinks the planner scheduled for
+// migration, re-verifying the conservative invariant against the real FS right before each
+// unlink (the same check removeStale uses). It runs *before* place so nested children land in
+// a real directory instead of resolving through the previous farm's symlink (local ordering
+// exception to ADR-0006 · → ADR-0046). Removed ancestors are folded into result.Removed: the
+// migration is silent by default and surfaced only under -v, never as a warning (→ ADR-0031).
+func (a *applier) preRemove(actions []planner.RemoveAction) error {
+	for _, act := range actions {
+		if !reverifyStale(act) {
+			a.opts.Warnf("nput: skipping ancestor migration because it drifted after planning: %s", act.Entry.Target)
+			continue
+		}
+		if err := os.Remove(act.TargetAbs); err != nil {
+			return fmt.Errorf("nput: cannot remove ancestor symlink for migration (%s): %w", act.TargetAbs, err)
+		}
+		a.result.Removed = append(a.result.Removed, act.Entry.Target)
+	}
+	return nil
+}
+
 // reverifyStale re-checks the conservative invariant on the real FS right before
 // unlink: the target must still be a symlink pointing to the recorded dest.
 func reverifyStale(act planner.RemoveAction) bool {

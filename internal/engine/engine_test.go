@@ -233,6 +233,83 @@ func TestApplyAncestorSymlinkError(t *testing.T) {
 	}
 }
 
+// TestApplyAncestorSelfRecordedMigration verifies that a whole-tree symlink recorded by this
+// profile's own previous generation migrates to nested child entries without a manual rm: the
+// ancestor symlink is pre-removed and the children are placed fresh against the new src, not
+// misclassified through the still-present ancestor into the old farm (→ ADR-0046).
+func TestApplyAncestorSelfRecordedMigration(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+
+	// Previous generation: a whole-tree symlink at .claude/skills → srcOld. srcOld itself holds
+	// foo/bar, so a naive lstat through the ancestor symlink would find them and misclassify the
+	// children (the store-pollution risk the relaxation avoids by placing them unconditionally).
+	srcOld := realTempDir(t)
+	for _, name := range []string{"foo", "bar"} {
+		if err := os.WriteFile(filepath.Join(srcOld, name), []byte("old"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	lf1 := writeLinkFarm(t, projectManifest(storeEntry(srcOld, ".", ".claude/skills")))
+	var commits [][2]string
+	if _, err := Apply(Options{
+		LinkFarm: lf1, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+	if got, err := os.Readlink(filepath.Join(root, ".claude", "skills")); err != nil || got != srcOld {
+		t.Fatalf(".claude/skills after first apply = %q (err %v); want symlink to %q", got, err, srcOld)
+	}
+
+	// New generation: replace the whole-tree symlink with nested children pointing at srcNew.
+	srcNew := realTempDir(t)
+	for _, name := range []string{"foo", "bar"} {
+		if err := os.WriteFile(filepath.Join(srcNew, name), []byte("new"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	lf2 := writeLinkFarm(t, projectManifest(
+		storeEntry(srcNew, "foo", ".claude/skills/foo"),
+		storeEntry(srcNew, "bar", ".claude/skills/bar"),
+	))
+	res, err := Apply(Options{
+		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	})
+	if err != nil {
+		t.Fatalf("second Apply (migration): %v", err)
+	}
+
+	// .claude/skills is now a real directory (the ancestor symlink was pre-removed).
+	info, err := os.Lstat(filepath.Join(root, ".claude", "skills"))
+	if err != nil {
+		t.Fatalf(".claude/skills lstat: %v", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		t.Errorf(".claude/skills is still a symlink after migration, want a real directory")
+	}
+	// Each child is a fresh symlink into srcNew, not a srcOld leftover.
+	for _, name := range []string{"foo", "bar"} {
+		got, err := os.Readlink(filepath.Join(root, ".claude", "skills", name))
+		if err != nil {
+			t.Fatalf("child %s readlink: %v", name, err)
+		}
+		if wantDest := filepath.Join(srcNew, name); got != wantDest {
+			t.Errorf("child %s → %q, want %q", name, got, wantDest)
+		}
+	}
+	// The ancestor is reported removed and both children placed.
+	if len(res.Removed) != 1 || res.Removed[0] != ".claude/skills" {
+		t.Errorf("Removed = %v, want [.claude/skills]", res.Removed)
+	}
+	placed := map[string]bool{}
+	for _, p := range res.Placed {
+		placed[p] = true
+	}
+	if len(res.Placed) != 2 || !placed[".claude/skills/foo"] || !placed[".claude/skills/bar"] {
+		t.Errorf("Placed = %v, want [.claude/skills/foo .claude/skills/bar]", res.Placed)
+	}
+}
+
 func TestApplyExistingRegularFileError(t *testing.T) {
 	root := realTempDir(t)
 	src := makeSrc(t, "x")

@@ -110,12 +110,19 @@ type Warning struct {
 }
 
 // Plan is the computed place/replace/remove plan plus non-fatal warnings and
-// fatal conflicts. The engine executes Place / Copies then Remove ("new/re-link
-// first, stale removal last"; → ADR-0006); a non-empty Conflicts means apply must stop.
+// fatal conflicts. The engine executes PreRemove → Place / Copies → Remove
+// ("new/re-link first, stale removal last"; PreRemove is a local ordering exception
+// that unlinks self-recorded stale ancestor symlinks *before* placement so children
+// nest into a real directory; → ADR-0006, ADR-0046); a non-empty Conflicts means apply must stop.
 type Plan struct {
-	Place     []PlaceAction
-	Copies    []CopyAction
-	Remove    []RemoveAction
+	Place  []PlaceAction
+	Copies []CopyAction
+	Remove []RemoveAction
+	// PreRemove unlinks self-recorded stale ancestor symlinks before placement, so a
+	// previous-generation whole-tree symlink can migrate to nested child entries without a
+	// manual rm. Populated only for ancestors the previous generation recorded and the new
+	// generation drops (recorded ∧ stale); foreign or still-kept ancestors stay Conflicts (→ ADR-0046).
+	PreRemove []RemoveAction
 	Conflicts []Conflict
 	Warnings  []Warning
 }
@@ -137,19 +144,43 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 
 	// --- place / replace side: classify each new-generation entry against the current FS ---
 	prevByTarget := byTarget(prev)
+	nextByTarget := byTarget(next)
+	// preRemoved dedups ancestors scheduled for pre-removal migration: several children can
+	// detect the same ancestor symlink, but it is unlinked once (→ ADR-0046).
+	preRemoved := map[string]bool{}
 	for _, e := range entriesOf(next) {
 		targetAbs := filepath.Join(root, filepath.Clean(e.Target))
 
-		// If an ancestor component is a symlink, nesting is forbidden: conflict (common to all methods; → ADR-0015).
-		offender, err := ancestorSymlink(root, e.Target, fs)
+		// If an ancestor component is a symlink, nesting is normally forbidden (→ ADR-0015). The one
+		// exception is a symlink this profile's own previous generation recorded and the new generation
+		// drops (recorded ∧ stale): migrate it — schedule a pre-removal and place the child as new —
+		// instead of stopping (→ ADR-0046).
+		offenderAbs, offenderRel, err := ancestorSymlink(root, e.Target, fs)
 		if err != nil {
 			return Plan{}, err
 		}
-		if offender != "" {
+		if offenderAbs != "" {
+			_, keptInNext := nextByTarget[offenderRel]
+			if !keptInNext && recordedLink(offenderRel, offenderAbs, prevByTarget, fs) {
+				if !preRemoved[offenderRel] {
+					preRemoved[offenderRel] = true
+					plan.PreRemove = append(plan.PreRemove, RemoveAction{Entry: prevByTarget[offenderRel], TargetAbs: offenderAbs})
+				}
+				// The child currently resolves *through* the ancestor symlink into the previous farm,
+				// so an lstat here would misclassify it against store content (the pollution ADR-0015 §4
+				// guarded). After PreRemove the ancestor is gone and the child is absent, so place it as
+				// new unconditionally without probing the FS (→ ADR-0046).
+				if err := appendAbsentPlacement(&plan, e, targetAbs); err != nil {
+					return Plan{}, err
+				}
+				continue
+			}
+			// foreign ancestor, or the new generation still keeps the ancestor (self-contradictory):
+			// the ancestor symlink cannot be removed, so nesting stays a conflict (→ ADR-0015, ADR-0046).
 			plan.Conflicts = append(plan.Conflicts, Conflict{
 				Entry:     e,
 				TargetAbs: targetAbs,
-				Reason:    fmt.Sprintf("ancestor %q is a symlink; cannot nest beneath it (→ ADR-0015)", offender),
+				Reason:    fmt.Sprintf("ancestor %q is a symlink; cannot nest beneath it (→ ADR-0015)", offenderAbs),
 			})
 			continue
 		}
@@ -192,9 +223,12 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 	// --- remove side: compute stale entries (prev ∖ next) under the conservative invariant ---
 	// On first apply (prev == nil) nothing is removed (→ ADR-0006).
 	if prev != nil {
-		nextByTarget := byTarget(next)
 		for _, pe := range prev.Entries {
 			if _, kept := nextByTarget[pe.Target]; kept {
+				continue
+			}
+			if preRemoved[pe.Target] {
+				// Already scheduled for pre-removal migration; do not remove it twice (→ ADR-0046).
 				continue
 			}
 			if pe.Method == manifest.MethodCopy {
@@ -305,6 +339,23 @@ func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget m
 	}
 }
 
+// appendAbsentPlacement records the placement for an entry whose target is known to be absent
+// (a child nesting under a to-be-pre-removed ancestor symlink): a new symlink, or a place-once
+// copy. It mirrors the "target absent" arms of the normal per-method classification without
+// probing the FS, which would misread store content through the still-present ancestor symlink
+// (→ ADR-0046).
+func appendAbsentPlacement(plan *Plan, e manifest.Entry, targetAbs string) error {
+	switch e.Method {
+	case manifest.MethodSymlink:
+		plan.Place = append(plan.Place, PlaceAction{Entry: e, TargetAbs: targetAbs, Dest: LinkDest(e), Kind: PlaceNew})
+	case manifest.MethodCopy:
+		plan.Copies = append(plan.Copies, CopyAction{Entry: e, TargetAbs: targetAbs, Src: LinkDest(e)})
+	default:
+		return fmt.Errorf("nput: unknown method: %q (target: %s)", e.Method, e.Target)
+	}
+	return nil
+}
+
 // copyStructureMismatch reports whether the dir/file kind of src (<src>/<subpath>)
 // disagrees with the kind of the existing target (subpath dir × target file /
 // subpath file × target dir; → docs/spec.md). A symlink target has IsDir()=false
@@ -317,11 +368,13 @@ func copyStructureMismatch(e manifest.Entry, targetInfo os.FileInfo, fs FS) (boo
 	return srcInfo.IsDir() != targetInfo.IsDir(), nil
 }
 
-// ancestorSymlink walks the target's ancestor components under root and returns
-// the first existing ancestor that is a symlink (cannot nest under a whole-tree
-// symlink placement; → ADR-0015). A non-existent ancestor stops the walk (its descendants don't exist
-// either), returning "" with no error.
-func ancestorSymlink(root, target string, fs FS) (string, error) {
+// ancestorSymlink walks the target's ancestor components under root and returns the first
+// existing ancestor that is a symlink, as both its absolute path and its root-relative
+// (cleaned) target. The caller needs the relative target to look the offender up in the
+// prev/next manifests and decide whether it is a self-recorded stale link eligible for
+// pre-removal migration (→ ADR-0015, ADR-0046). A non-existent ancestor stops the walk (its
+// descendants don't exist either), returning "", "" with no error.
+func ancestorSymlink(root, target string, fs FS) (abs, rel string, err error) {
 	clean := filepath.Clean(target)
 	comps := strings.Split(clean, string(os.PathSeparator))
 	cur := root
@@ -330,16 +383,21 @@ func ancestorSymlink(root, target string, fs FS) (string, error) {
 			continue
 		}
 		cur = filepath.Join(cur, comps[i])
-		info, err := fs.Lstat(cur)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return "", nil
+		if rel == "" {
+			rel = comps[i]
+		} else {
+			rel = filepath.Join(rel, comps[i])
+		}
+		info, lerr := fs.Lstat(cur)
+		if lerr != nil {
+			if os.IsNotExist(lerr) {
+				return "", "", nil
 			}
-			return "", fmt.Errorf("nput: cannot lstat ancestor (%s): %w", cur, err)
+			return "", "", fmt.Errorf("nput: cannot lstat ancestor (%s): %w", cur, lerr)
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return cur, nil
+			return cur, rel, nil
 		}
 	}
-	return "", nil
+	return "", "", nil
 }
