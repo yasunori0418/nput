@@ -272,11 +272,17 @@ func TestApplyAncestorSelfRecordedMigration(t *testing.T) {
 		storeEntry(srcNew, "foo", ".claude/skills/foo"),
 		storeEntry(srcNew, "bar", ".claude/skills/bar"),
 	))
+	var warns []string
 	res, err := Apply(Options{
-		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state,
+		Commit: fakeCommit(&commits), Warnf: collectWarnings(&warns),
 	})
 	if err != nil {
 		t.Fatalf("second Apply (migration): %v", err)
+	}
+	// The migration is a silent, intended operation: it must not surface any warning (→ ADR-0046 §4, ADR-0031).
+	if len(warns) != 0 {
+		t.Errorf("migration emitted warnings, want none: %v", warns)
 	}
 
 	// .claude/skills is now a real directory (the ancestor symlink was pre-removed).

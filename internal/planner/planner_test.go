@@ -229,6 +229,12 @@ func TestComputeTableDriven(t *testing.T) {
 			fs: fakeFS{
 				abs(".claude"):        dir(),
 				abs(".claude/skills"): sym(srcA),
+				// The child keys stand in for the files a real lstat would find by resolving through the
+				// ancestor symlink into the previous farm. The relaxation must place children as new
+				// WITHOUT probing them; if the code regressed to normal lstat classification it would see
+				// these regular files and emit conflicts, so their presence keeps this case honest (→ ADR-0046).
+				abs(".claude/skills/foo"): reg(),
+				abs(".claude/skills/bar"): reg(),
 			},
 			want: want{
 				placeNew:  []string{".claude/skills/foo", ".claude/skills/bar"},
@@ -244,9 +250,44 @@ func TestComputeTableDriven(t *testing.T) {
 			fs: fakeFS{
 				abs(".claude"):        dir(),
 				abs(".claude/skills"): sym(srcA),
+				// Stand-in for the file a real lstat would resolve through the ancestor symlink; the copy
+				// child must be planned as a place-once new copy without probing it (→ ADR-0046).
+				abs(".claude/skills/foo"): reg(),
 			},
 			want: want{
 				copies:    []string{".claude/skills/foo"},
+				preRemove: []string{".claude/skills"},
+			},
+		},
+		{
+			// Two distinct stale ancestors dropped and re-nested in the same generation: PreRemove
+			// accumulates both (the slice/dedup map grow across multiple keys, not just repeat one) (→ ADR-0046).
+			name: "two distinct self-recorded stale ancestors → migrate both",
+			prev: mani(sl(srcA, ".claude/skills"), sl(srcA, ".config/nvim")),
+			next: mani(sl(srcB, ".claude/skills/foo"), sl(srcB, ".config/nvim/init.lua")),
+			fs: fakeFS{
+				abs(".claude"):        dir(),
+				abs(".claude/skills"): sym(srcA),
+				abs(".config"):        dir(),
+				abs(".config/nvim"):   sym(srcA),
+			},
+			want: want{
+				placeNew:  []string{".claude/skills/foo", ".config/nvim/init.lua"},
+				preRemove: []string{".claude/skills", ".config/nvim"},
+			},
+		},
+		{
+			// Child nested two levels below the stale ancestor symlink (.claude/skills/sub/foo): the walk
+			// stops at the ancestor and the deeper child is placed new via appendAbsentPlacement (→ ADR-0046).
+			name: "self-recorded stale ancestor, deep child → migrate",
+			prev: mani(sl(srcA, ".claude/skills")),
+			next: mani(sl(srcB, ".claude/skills/sub/foo")),
+			fs: fakeFS{
+				abs(".claude"):        dir(),
+				abs(".claude/skills"): sym(srcA),
+			},
+			want: want{
+				placeNew:  []string{".claude/skills/sub/foo"},
 				preRemove: []string{".claude/skills"},
 			},
 		},
