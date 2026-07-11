@@ -15,6 +15,12 @@
 > **同一 entrypoint 内**（`apply --all` の対象 config 間）の衝突は、`--all` の前段（一括 eval + CLI 検査）で検出して **error 停止**
 > するよう改訂した。別 entrypoint・別ツール・project と fixed の偶然の一致など**検出不能な衝突は本 ADR の実行時後勝ち + warning の
 > まま不変**（→ ADR-0038）。
+>
+> **2026-07-12 改訂注記（ADR-0046）**: 本 ADR §4 の「target の祖先 component が symlink なら配置前に一律 error 停止」は、
+> **foreign 祖先のみ error / 自己記録 stale 祖先（前世代 manifest が記録し on-disk が記録 dest と一致し、かつ次世代に無い symlink）は
+> migration** へ改訂した。§2 の「前世代 manifest 記録の symlink は置換可（silent・後勝ち）」判定を祖先へ拡張し、緩和対象の祖先は配置**前**に
+> 除去（`Plan.PreRemove`）してから配下子を新規配置する。foreign 祖先・自己矛盾（次世代にも祖先が残る）・`prev == nil` は**従来通り
+> error 停止**で store 汚染の担保は不変（→ ADR-0046）。
 
 ## 背景
 
