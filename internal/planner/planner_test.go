@@ -700,6 +700,79 @@ func TestComputeTableDriven(t *testing.T) {
 	}
 }
 
+// TestComputeDirMigrationPreRemoveOrderIsBottomUp verifies the ordering invariant
+// classifyDirMigration's doc comment promises (→ ADR-0047, issue #175 §8): plan.PreRemove lists
+// children before parents, so a consumer walking the slice front-to-back naturally unlinks
+// leaves first and rmdirs from the deepest directory upward — never rmdir-ing a directory before
+// its own contents are cleared. TestComputeTableDriven's sortedEq comparisons cannot catch an
+// order regression (they sort before comparing), so this test asserts slice order directly on a
+// three-level-deep occupying directory (.claude/hooks/foo/sub, with a leaf at each level).
+func TestComputeDirMigrationPreRemoveOrderIsBottomUp(t *testing.T) {
+	const src = "/nix/store/aaa-src"
+	prev := mani(
+		sl(src, ".claude/hooks/top.sh"),
+		sl(src, ".claude/hooks/foo/mid.sh"),
+		sl(src, ".claude/hooks/foo/sub/leaf.sh"),
+	)
+	next := mani(sl(src, ".claude/hooks"))
+	fs := fakeFS{
+		abs(".claude"):                       dir(),
+		abs(".claude/hooks"):                 dir(),
+		abs(".claude/hooks/top.sh"):          sym(src),
+		abs(".claude/hooks/foo"):             dir(),
+		abs(".claude/hooks/foo/mid.sh"):      sym(src),
+		abs(".claude/hooks/foo/sub"):         dir(),
+		abs(".claude/hooks/foo/sub/leaf.sh"): sym(src),
+	}
+
+	plan, err := Compute(prev, next, root, fs)
+	if err != nil {
+		t.Fatalf("Compute: unexpected error: %v", err)
+	}
+	if len(plan.Conflicts) != 0 {
+		t.Fatalf("Conflicts = %v, want none", plan.Conflicts)
+	}
+
+	// Build a position index over the actual PreRemove slice order (both Unlink and Rmdir kinds,
+	// keyed by their target — Entry.Target for Unlink, the root-relative dir for Rmdir).
+	pos := map[string]int{}
+	for i, a := range plan.PreRemove {
+		key := a.Entry.Target
+		if a.Kind == RemoveRmdir {
+			rel, err := filepath.Rel(root, a.TargetAbs)
+			if err != nil {
+				t.Fatalf("filepath.Rel: %v", err)
+			}
+			key = rel
+		}
+		pos[key] = i
+	}
+
+	// Every ordering constraint classifyDirMigration's bottom-up contract implies: a leaf's Unlink
+	// must precede the Rmdir of the directory that directly contains it, at every nesting level.
+	constraints := [][2]string{
+		{".claude/hooks/foo/sub/leaf.sh", ".claude/hooks/foo/sub"}, // deepest leaf before its dir
+		{".claude/hooks/foo/sub", ".claude/hooks/foo"},             // deepest dir before its parent dir
+		{".claude/hooks/foo/mid.sh", ".claude/hooks/foo"},          // mid-level leaf before its dir
+		{".claude/hooks/foo", ".claude/hooks"},                     // that dir before the placement target
+		{".claude/hooks/top.sh", ".claude/hooks"},                  // top-level leaf before the placement target
+	}
+	for _, c := range constraints {
+		before, after := c[0], c[1]
+		bi, ok := pos[before]
+		if !ok {
+			t.Fatalf("PreRemove missing expected action for %q; got %v", before, plan.PreRemove)
+		}
+		ai, ok := pos[after]
+		if !ok {
+			t.Fatalf("PreRemove missing expected action for %q; got %v", after, plan.PreRemove)
+		}
+		if bi >= ai {
+			t.Errorf("PreRemove order: %q (index %d) must come before %q (index %d); got %v", before, bi, after, ai, plan.PreRemove)
+		}
+	}
+}
+
 // TestComputeUnknownMethodErrors verifies that an unknown method is rejected.
 func TestComputeUnknownMethodErrors(t *testing.T) {
 	e := sl("/nix/store/x", ".config/foo")
