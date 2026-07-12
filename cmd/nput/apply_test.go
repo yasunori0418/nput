@@ -50,6 +50,27 @@ func captureStdout(t *testing.T, f func()) string {
 	return <-done
 }
 
+// captureStderr is captureStdout's stderr counterpart (verifies reportResult's placement report,
+// which is stderr-owned by ADR-0023's stream discipline · → docs/spec.md "出力ストリームと終了コード").
+func captureStderr(t *testing.T, f func()) string {
+	t.Helper()
+	old := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	os.Stderr = w
+	done := make(chan string, 1)
+	go func() {
+		b, _ := io.ReadAll(r)
+		done <- string(b)
+	}()
+	f()
+	_ = w.Close()
+	os.Stderr = old
+	return <-done
+}
+
 // Verifies aggregateDryRun's aggregate exit code and plan output (stdout ownership) by injecting the apply
 // implementation, without nix. This is the regression guard for the real path of #14 AC-4 "error(1) > conflict(2) > 0".
 func TestAggregateDryRun(t *testing.T) {
@@ -186,4 +207,43 @@ func TestSelectedRootFilter(t *testing.T) {
 			t.Fatal("specifying multiple should be an error")
 		}
 	})
+}
+
+// TestPrintApplyPlanBackupLine verifies apply --dryrun's plan output includes a "backup\t<target>"
+// line for a planned backup, alongside the existing place/replace/copy/remove lines (→ ADR-0045).
+func TestPrintApplyPlanBackupLine(t *testing.T) {
+	out := captureStdout(t, func() {
+		printApplyPlan(&engine.Result{BackedUp: []string{".config/foo"}})
+	})
+	if !strings.Contains(out, "backup\t.config/foo") {
+		t.Errorf("printApplyPlan output = %q, want a line containing %q", out, "backup\t.config/foo")
+	}
+}
+
+// TestReportResultBackupLineAndNoOp verifies reportResult's -v placement report includes a
+// "backedUp <target>" line for a backup-only run, and does NOT report it as "no-op" — a run that
+// only backed up an entity still did something, even though Placed/Replaced/Copied/Removed/Pruned
+// are all empty (→ ADR-0045; regression guard: reportResult's no-op check must count BackedUp too).
+func TestReportResultBackupLineAndNoOp(t *testing.T) {
+	out := captureStderr(t, func() {
+		reportResult(&engine.Result{Root: "/root", BackedUp: []string{".config/foo"}}, "c")
+	})
+	if !strings.Contains(out, "backedUp .config/foo") {
+		t.Errorf("reportResult output = %q, want a line containing %q", out, "backedUp .config/foo")
+	}
+	if strings.Contains(out, "no-op") {
+		t.Errorf("reportResult output = %q, must not report no-op when BackedUp is non-empty", out)
+	}
+}
+
+// TestReportResultAllEmptyIsNoOp is the counterpart of TestReportResultBackupLineAndNoOp: a truly
+// empty Result (including BackedUp) must still report "no-op" (pre-existing behavior, unchanged by
+// the BackedUp addition to the no-op check).
+func TestReportResultAllEmptyIsNoOp(t *testing.T) {
+	out := captureStderr(t, func() {
+		reportResult(&engine.Result{Root: "/root"}, "c")
+	})
+	if !strings.Contains(out, "no-op") {
+		t.Errorf("reportResult output = %q, want it to report no-op for a fully empty Result", out)
+	}
 }
