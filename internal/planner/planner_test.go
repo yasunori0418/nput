@@ -600,6 +600,48 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{conflicts: 1},
 		},
 		{
+			// Method changed symlink→copy at the same target: the previous generation's recorded
+			// symlink is pre-removed (Unlink) and a fresh place-once copy is scheduled — zero data
+			// loss since the symlink carried no user data (→ ADR-0047 D5).
+			name: "method change symlink→copy, recorded → migrate (preRemove unlink + copy)",
+			prev: mani(sl(srcA, ".config/tool.conf")),
+			next: mani(cp(srcB, ".config/tool.conf")),
+			fs: fakeFS{
+				srcB:                     reg(),
+				abs(".config/tool.conf"): sym(srcA),
+			},
+			want: want{
+				copies:    []string{".config/tool.conf"},
+				preRemove: []string{".config/tool.conf"},
+			},
+		},
+		{
+			// Method changed symlink→copy but the on-disk symlink drifted from the record (foreign /
+			// user-swapped): not eligible for the method-change migration, falls through to the
+			// ordinary foreign handling (→ ADR-0047 D5 fallback).
+			name: "method change symlink→copy, drifted record → foreign (no migration)",
+			prev: mani(sl(srcA, ".config/tool.conf")),
+			next: mani(cp(srcB, ".config/tool.conf")),
+			fs: fakeFS{
+				srcB:                     reg(),
+				abs(".config/tool.conf"): sym("/elsewhere"),
+			},
+			want: want{warns: []WarnKind{WarnCopyForeign}},
+		},
+		{
+			// Method changed copy→symlink at the same target: NOT migrated (D5 keeps copy→symlink a
+			// conflict to protect potentially user-edited copy data; ADR-0047 only automates the
+			// zero-data-loss symlink→copy direction). The existing copy target is a real file
+			// occupying a symlink placement target, so it is the ordinary no-overwrite conflict.
+			name: "method change copy→symlink, recorded copy → conflict (not migrated)",
+			prev: mani(cp(srcA, ".config/tool.conf")),
+			next: mani(sl(srcB, ".config/tool.conf")),
+			fs: fakeFS{
+				abs(".config/tool.conf"): reg(),
+			},
+			want: want{conflicts: 1},
+		},
+		{
 			// mixed: new + silent re-link + foreign warning + stale removal + mismatch kept.
 			name: "mixed plan",
 			prev: mani(sl(srcA, "keep"), sl(srcA, "drop"), sl(srcA, "mism")),

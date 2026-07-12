@@ -245,7 +245,7 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 
 		// Branch the place-once / re-link classification per method.
 		if e.Method == manifest.MethodCopy {
-			if err := classifyCopy(&plan, e, targetAbs, prevByTarget, fs); err != nil {
+			if err := classifyCopy(&plan, e, targetAbs, prevByTarget, preRemoved, fs); err != nil {
 				return Plan{}, err
 			}
 			continue
@@ -386,19 +386,36 @@ func recordedLink(target, targetAbs string, prevByTarget map[string]manifest.Ent
 // classifyCopy classifies a copy entry under place-once semantics (→ ADR-0002,
 // ADR-0016, ADR-0022, docs/spec.md "copy mode").
 //
-//	target absent              → CopyAction (new place-once copy)
+//	target absent                     → CopyAction (new place-once copy)
+//	target is a self-recorded stale symlink (method changed symlink→copy) → PreRemove(Unlink) + CopyAction (→ ADR-0047 D5)
 //	target exists, structure mismatch → conflict (subpath dir × target file / subpath file × target dir)
-//	target exists, recorded    → no-op (placed by nput in a previous generation; place-once leaves it untouched)
-//	target exists, foreign     → skip + WarnCopyForeign (unrecorded real file; masking prevention)
+//	target exists, recorded           → no-op (placed by nput in a previous generation; place-once leaves it untouched)
+//	target exists, foreign            → skip + WarnCopyForeign (unrecorded real file; masking prevention)
 //
 // recopy (apply --recopy) is a separate path that breaks place-once: the engine
 // overwrites the manifest's copy entry directly. The planner only does the
 // normal place-once classification (→ ADR-0020).
-func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget map[string]manifest.Entry, fs FS) error {
+func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget map[string]manifest.Entry, preRemoved map[string]bool, fs FS) error {
 	info, err := fs.Lstat(targetAbs)
 	switch {
+	case err == nil && info.Mode()&os.ModeSymlink != 0 && prevByTarget[e.Target].Method == manifest.MethodSymlink && recordedLink(e.Target, targetAbs, prevByTarget, fs):
+		// The previous generation placed a symlink here and the new generation wants a copy at the
+		// same target (method changed symlink→copy): pre-remove the recorded symlink and place a
+		// fresh place-once copy — zero data loss, since the symlink carried no user data (→ ADR-0047
+		// D5). A readlink mismatch (on-disk drifted from the record) falls through to the ordinary
+		// foreign-symlink handling below instead (copy→symlink direction stays a structure
+		// mismatch/conflict; this arm never fires for it since Method would be "copy").
+		if !preRemoved[e.Target] {
+			preRemoved[e.Target] = true
+			plan.PreRemove = append(plan.PreRemove, RemoveAction{Kind: RemoveUnlink, Entry: prevByTarget[e.Target], TargetAbs: targetAbs})
+		}
+		plan.Copies = append(plan.Copies, CopyAction{Entry: e, TargetAbs: targetAbs, Src: LinkDest(e)})
+		return nil
 	case err == nil:
-		// target exists: first check whether the src structure and kind match.
+		// target exists: check whether the src structure and kind match. A symlink target that
+		// fell through the method-change arm above (unrecorded or drifted) is treated as a foreign,
+		// non-directory occupant here — consistent with copyStructureMismatch's IsDir()==false
+		// handling for symlinks.
 		mismatch, err := copyStructureMismatch(e, info, fs)
 		if err != nil {
 			return err
