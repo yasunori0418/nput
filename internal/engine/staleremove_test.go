@@ -150,40 +150,91 @@ func TestStaleRemoveContinuesAfterDrift(t *testing.T) {
 	}
 }
 
-// TestPreRemoveDriftErrors covers preRemove's post-plan drift re-check: unlike removeStale,
-// a drifted ancestor is not safe to skip (children were planned as unconditional new
-// placements assuming the ancestor is gone), so preRemove aborts loudly instead of keeping
-// the drifted link (→ staleremove.go, ADR-0046). Rollback shares this executor with apply
-// (→ generations.go), so the same error-stop semantics apply on the rollback path too.
+// TestPreRemoveDriftErrors covers preRemove's post-plan drift re-check across the same drift
+// equivalence classes as TestStaleRemoveDriftKeepsAndWarns (readlink mismatch / non-symlink file /
+// non-symlink dir / missing target). Unlike removeStale, a drifted ancestor is not safe to skip
+// (children were planned as unconditional new placements assuming the ancestor is gone), so
+// preRemove aborts loudly for every class instead of keeping the drifted link (→ staleremove.go,
+// ADR-0046). Rollback shares this executor with apply (→ generations.go), so the same error-stop
+// semantics apply on the rollback path too.
 func TestPreRemoveDriftErrors(t *testing.T) {
-	dir := realTempDir(t)
-	recordedDest := realTempDir(t)
-	targetAbs := filepath.Join(dir, "skills")
+	recordedDest := realTempDir(t) // the dest the previous-generation record points at
 
-	// Drifted since planning: swapped to a foreign dest → readlink mismatch.
-	foreign := realTempDir(t)
-	if err := os.Symlink(foreign, targetAbs); err != nil {
-		t.Fatal(err)
+	cases := []struct {
+		name  string
+		setup func(t *testing.T, targetAbs string) (wantExists bool, wantReadlink string)
+	}{
+		{
+			name: "foreign symlink (readlink mismatch)",
+			setup: func(t *testing.T, targetAbs string) (bool, string) {
+				foreign := realTempDir(t)
+				if err := os.Symlink(foreign, targetAbs); err != nil {
+					t.Fatal(err)
+				}
+				return true, foreign
+			},
+		},
+		{
+			name: "non-symlink regular file",
+			setup: func(t *testing.T, targetAbs string) (bool, string) {
+				if err := os.WriteFile(targetAbs, []byte("user"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				return true, ""
+			},
+		},
+		{
+			name: "non-symlink directory",
+			setup: func(t *testing.T, targetAbs string) (bool, string) {
+				if err := os.Mkdir(targetAbs, 0o755); err != nil {
+					t.Fatal(err)
+				}
+				return true, ""
+			},
+		},
+		{
+			name: "missing target",
+			setup: func(t *testing.T, targetAbs string) (bool, string) {
+				return false, ""
+			},
+		},
 	}
 
-	var warns []string
-	a := staleErr_applier(&warns)
-	act := staleErr_action(recordedDest, ".claude/skills", targetAbs)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := realTempDir(t)
+			targetAbs := filepath.Join(dir, "skills")
+			wantExists, wantReadlink := tc.setup(t, targetAbs)
 
-	err := a.preRemove([]planner.RemoveAction{act})
-	if err == nil || !strings.Contains(err.Error(), "changed after planning") {
-		t.Fatalf("expected ancestor-drift error, got %v", err)
-	}
-	// Error stop, not skip: no warning, no removal record, target left untouched.
-	if len(warns) != 0 {
-		t.Errorf("warnings = %v, want none (preRemove errors instead of warning)", warns)
-	}
-	if len(a.result.Removed) != 0 {
-		t.Errorf("Removed = %v, want none", a.result.Removed)
-	}
-	got, rerr := os.Readlink(targetAbs)
-	if rerr != nil || got != foreign {
-		t.Errorf("drifted ancestor after error = %q (err %v), want untouched %q", got, rerr, foreign)
+			var warns []string
+			a := staleErr_applier(&warns)
+			act := staleErr_action(recordedDest, ".claude/skills", targetAbs)
+
+			err := a.preRemove([]planner.RemoveAction{act})
+			if err == nil || !strings.Contains(err.Error(), "changed after planning") {
+				t.Fatalf("expected ancestor-drift error, got %v", err)
+			}
+			// Error stop, not skip: no warning, no removal record, target left untouched.
+			if len(warns) != 0 {
+				t.Errorf("warnings = %v, want none (preRemove errors instead of warning)", warns)
+			}
+			if len(a.result.Removed) != 0 {
+				t.Errorf("Removed = %v, want none", a.result.Removed)
+			}
+			_, lerr := os.Lstat(targetAbs)
+			if wantExists && lerr != nil {
+				t.Errorf("drifted target should be left untouched: %v", lerr)
+			}
+			if !wantExists && !os.IsNotExist(lerr) {
+				t.Errorf("missing target should stay absent: lstat err = %v", lerr)
+			}
+			if wantReadlink != "" {
+				got, rerr := os.Readlink(targetAbs)
+				if rerr != nil || got != wantReadlink {
+					t.Errorf("drifted ancestor after error = %q (err %v), want untouched %q", got, rerr, wantReadlink)
+				}
+			}
+		})
 	}
 }
 
