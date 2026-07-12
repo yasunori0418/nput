@@ -334,6 +334,8 @@ nput apply <name> [-f <ep>] [--root <p>]
         ドリフトした entry だけ再張りする（完全 no-op にしない・→ ADR-0017）
      e. manifest.json を新旧 diff → 配置を塞ぐ自己記録 stale（祖先 symlink・実 dir target・method 変更）を配置前除去
         （PreRemove・migration・→ ADR-0046, ADR-0047）→ 新規/張替を配置 → 保守的 stale 除去（ネイティブ FS）
+        ※ e の 4 段（PreRemove / 配置 / copy 反映 / stale 除去）のいずれかが途中失敗すると、この run が行った
+           FS 変更を全てインメモリ undo ジャーナルで巻き戻し pre-apply 状態へ戻す（→ ADR-0044, 後述「途中失敗時の巻き戻し」）
      f. nix-env --profile <profileDir>/profile --set <link-farm>（サブプロセス・コミット点）
      g. --set 成功後に <profileDir>/.pending を削除（世代リンクが gcroot を引き継ぐ・→ ADR-0011）
 ```
@@ -589,11 +591,34 @@ engine が**ネイティブ FS 操作**で行う（`ln` / `rsync` は使わな�
    - out-of-store:      配置元 = marker の絶対パス
 ```
 
-- 既存 symlink の張替えは **unlink + symlink の 2 操作**で行う（rename ベースの atomic swap は採らない）。間でクラッシュすると target が一時消失しうるが、**冪等な再実行で収束**する（ADR-0006「積まれる世代は常に完全適用済み」と整合・→ ADR-0017）。
+- 既存 symlink の張替えは **unlink + symlink の 2 操作**で行う（rename ベースの atomic swap は採らない）。間でクラッシュすると target が一時消失しうるが、**冪等な再実行で収束**する（ADR-0006「積まれる世代は常に完全適用済み」と整合・→ ADR-0017）。クラッシュ（SIGKILL・電源断）以外でこの run 自身が後続の段でエラーを検知した場合は、unlink 前の張替え先を undo ジャーナルが記録しており re-symlink で復元する（→ ADR-0044）。
 - target に通常ファイルまたはディレクトリが存在する場合はエラーで停止（上書きしない）。ただし実 dir は §0.5 の条件を満たせば例外的に PreRemove で除去して配置する（→ ADR-0047）
 - subpath がファイル・ディレクトリどちらでも同じ処理
 - 別 config（別 profile）が同一 target を狙うのは基本「衝突させない前提」。後勝ちを許容しつつ foreign symlink 上書きは warning で可視化する（→ ADR-0015）
 - method 変更 copy→symlink は自動移行しない（ユーザー編集済み copy データの保護を優先し、従来通り conflict のまま・→ ADR-0047 D5）
+
+### 途中失敗時の巻き戻し（インメモリ undo ジャーナル・→ ADR-0044）
+
+apply / rollback が PreRemove・配置（symlink / copy）・stale 除去のいずれかの段で途中失敗すると、その run が行った FS 変更を**全て**巻き戻し、pre-apply 状態へ復元する（「失敗した apply は FS に痕跡を残さない」）。フラグなし・常時有効。
+
+```
+各段（PreRemove / place / copy 反映 / stale 除去）の FS 書き込みごとに、インメモリの undo ジャーナルへ逆操作を 1 件記録する:
+  新規配置 symlink / copy         → 削除
+  張替え（unlink 前に旧リンク先を捕捉）→ 旧リンク先で symlink を再作成
+  stale 除去したリンク            → 前世代 manifest の記録 dest で symlink を再作成
+  PreRemove の Unlink             → 記録 dest で symlink を再作成
+  PreRemove の Rmdir              → 空 dir を再作成
+  --recopy の rename 退避         → 退避物を rename back（成功時は退避物を削除）
+
+いずれかの段でエラーが発生したら、それまでに記録したジャーナルを逆順（LIFO）で巻き戻してからエラーを返す。
+nix-env --set（コミット）が成功した後はジャーナルを破棄する（--set 自体の失敗は巻き戻し対象外・冪等再実行で収束）。
+```
+
+- **巻き戻し自体の失敗は best-effort 続行**: 個々の逆操作が失敗してもジャーナルの残りの巻き戻しは続行する。全ての巻き戻し試行が終わった時点で、元の apply エラーと巻き戻せなかった項目の一覧を stderr へ全報告して停止する（`reportConflicts` と同じ「全件列挙してから 1 本の集約エラー」の形）。
+- **報告は常時 stderr**（失敗経路のため沈黙対象外・既定 silent の対象にしない・→ ADR-0031）。
+- **クラッシュ（SIGKILL・電源断）は対象外**。undo ジャーナルはプロセスメモリ上にのみ存在し、永続 WAL は持たない。この場合は変わらず「世代未コミット + 冪等再実行で収束」（ADR-0006, ADR-0017）が保証を担う。
+- 世代スキップ経路の drift 修復（repairDrift）も同じ機構で巻き戻される。ただし ADR-0046/0047 の不変条件により、この経路が PreRemove を受け取ることは構造的に無い。
+- `rollback` も apply と同じ機構（PreRemove → place → stale 除去）で途中失敗時に巻き戻す。プロファイルポインタ移動（`--switch-generation`）はこの時点で全 FS 変更が成功済みのため巻き戻し対象外。
 
 ### copy モード（place-once・ユーザー管理）
 
@@ -627,12 +652,15 @@ place-once（copy は触らない）と保守的 stale 除去（copy は消さ�
 
 ```
 config 内の各 copy entry について:
-  target が存在 → 削除してから <src>/<subpath> を再コピー（mode 保存 + owner-write 付与・symlink 複製は通常 copy と同じ）
+  target が存在 → 同一親ディレクトリ内の一時名へ rename 退避してから <src>/<subpath> を再コピー
+                  （mode 保存 + owner-write 付与・symlink 複製は通常 copy と同じ）。この apply run が
+                  最終的に成功すれば退避物を削除、途中失敗して巻き戻すときは rename back（→ ADR-0044）
   target が不在 → 通常の place-once コピー
 ```
 
 - 全 copy entry を**無条件**に上書き（差分判定なし）。ローカル編集は破棄され src 内容に戻る。上書き target をレポート表示。
 - symlink 部の通常 apply（stale 除去 + 世代コミット）は同時に行う。copy は世代外のまま（世代を増やさない）。
+- 上書きは削除ではなく**rename 退避**で行う（rename はメタデータ操作のみで ENOSPC 下でも退避物が壊れない・→ ADR-0044）。同一 apply run 内で後続の段が失敗した場合、退避物から元の内容が復元される（後述「途中失敗時の巻き戻し」）。
 
 **reset（`nput reset <name> [target...]`）** — 配置物を無い状態へ戻す FS-only teardown。
 
@@ -966,6 +994,8 @@ devShells.default = pkgs.mkShell {
 | 同一 `target` で method が symlink→copy に変更、前世代が記録した symlink で on-disk が記録通り | 配置前に除去（PreRemove）し copy を新規配置（silent・`-v` で可視・readlink drift 時は通常の foreign 判定へフォールバック・→ ADR-0047 D5）|
 | 同一 `target` で method が copy→symlink に変更 | 自動移行しない。エラーで停止（`target` に既存ファイルとして扱う・`--backup` が脱出ハッチ・→ ADR-0047 D5）|
 | PreRemove 対象（祖先 symlink / 実 dir 配下 leaf・dir / method 変更 symlink）が計画後に drift（記録不一致・ENOTEMPTY 等）| skip せずエラーで停止（冪等再実行で収束・→ ADR-0046 §3, ADR-0047 D3）|
+| apply / rollback が PreRemove・配置・stale 除去のいずれかの段で途中失敗（`--set` 到達前）| この run が行った FS 変更を全てインメモリ undo ジャーナルで巻き戻し pre-apply 状態へ復元してから停止（exit 1・フラグなし常時有効・→ ADR-0044, 前述「途中失敗時の巻き戻し」）|
+| 巻き戻し（undo）自体が一部失敗（対象が既に他プロセスに変更された等）| 失敗項目はスキップして残りの巻き戻しを続行（best-effort）。元の apply エラー + 未復元項目一覧を stderr に全報告して停止（→ ADR-0044）|
 | `subpath` がディレクトリのとき `target` に通常ファイルが既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）|
 | `subpath` がファイルのとき `target` がディレクトリとして既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）|
 | copy モードで `target` が既存（前世代 manifest に entry あり = nput 配置済み）| place-once により何もしない（上書きしない）。`apply --recopy` 時のみ無条件上書き（→ ADR-0020）|
