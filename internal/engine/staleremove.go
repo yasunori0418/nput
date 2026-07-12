@@ -56,7 +56,11 @@ func (a *applier) removeStale(actions []planner.RemoveAction) error {
 // It also prunes ancestors left empty by the unlink (→ Issue #174); unlike the drift check
 // above, a prune failure does not abort — the migration itself already succeeded, so a
 // leftover empty dir is a cosmetic miss, not a correctness hazard for the child placements
-// that follow.
+// that follow. Because this runs before Place, an outer ancestor that the removed ancestor
+// symlink happened to be the sole occupant of can be momentarily pruned here and then
+// recreated fresh by Place's ensureParentDir moments later; that transient prune+recreate
+// is invisible on disk (the end state is unchanged) but shows up in result.Pruned, which
+// callers should read as "emptied at some point during this apply," not "stayed removed."
 func (a *applier) preRemove(actions []planner.RemoveAction) error {
 	for _, act := range actions {
 		if !reverifyStale(act) {
@@ -81,11 +85,14 @@ func (a *applier) preRemove(actions []planner.RemoveAction) error {
 //
 // Stop conditions: root itself is never removed; a non-empty ancestor (ENOTEMPTY) is
 // left in place and the walk stops there (conservative — never touches directories the
-// removal did not empty); a symlink ancestor stops the walk without touching it (rmdir
-// on a symlink targets the link itself, not what it points at, and a symlink ancestor
-// means the walk has left the tree this removal actually emptied). Pruned dirs are
-// folded into result.Pruned, surfaced only under -v like the rest of the placement
-// report (→ ADR-0031).
+// removal did not empty); a symlink *anywhere in dir's path from root* stops the walk
+// without touching it. This must be a full re-check from root on every iteration, not
+// just an Lstat of dir itself: Lstat resolves intermediate path components, so once any
+// ancestor component is a symlink, "dir" as a path silently resolves through it into a
+// foreign subtree — Remove(dir) would then rmdir *through* the symlink and delete real
+// directories outside root's tree that this removal never emptied (the ADR-0015 style
+// pollution this walk must not reopen). Pruned dirs are folded into result.Pruned,
+// surfaced only under -v like the rest of the placement report (→ ADR-0031).
 func (a *applier) pruneEmptyAncestors(removedAbs string) error {
 	root := filepath.Clean(a.root)
 	dir := filepath.Dir(removedAbs)
@@ -94,17 +101,17 @@ func (a *applier) pruneEmptyAncestors(removedAbs string) error {
 		if dir == root || !isWithinRoot(root, dir) {
 			return nil
 		}
-		info, err := os.Lstat(dir)
+		hasSymlink, err := pathHasSymlinkComponent(root, dir)
 		if err != nil {
-			if os.IsNotExist(err) {
-				return nil
-			}
-			return fmt.Errorf("nput: cannot lstat ancestor directory (%s): %w", dir, err)
+			return err
 		}
-		if info.Mode()&os.ModeSymlink != 0 {
+		if hasSymlink {
 			return nil
 		}
 		if err := os.Remove(dir); err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
 			// non-empty dir → ENOTEMPTY on Linux, EEXIST on some BSD/Darwin rmdir(2) implementations;
 			// both mean "left something behind, stop here" rather than a real failure.
 			if errors.Is(err, syscall.ENOTEMPTY) || errors.Is(err, syscall.EEXIST) {
@@ -115,6 +122,35 @@ func (a *applier) pruneEmptyAncestors(removedAbs string) error {
 		a.result.Pruned = append(a.result.Pruned, dir)
 		dir = filepath.Dir(dir)
 	}
+}
+
+// pathHasSymlinkComponent reports whether any path component strictly between root and
+// dir (dir itself included) is a symlink, lstat-ing each component from root downward
+// rather than the resolved dir path so an ancestor symlink is caught before Remove(dir)
+// would silently resolve through it (→ pruneEmptyAncestors).
+func pathHasSymlinkComponent(root, dir string) (bool, error) {
+	rel, err := filepath.Rel(root, dir)
+	if err != nil {
+		return false, fmt.Errorf("nput: cannot resolve %q relative to root (%s): %w", dir, root, err)
+	}
+	cur := root
+	for _, comp := range strings.Split(rel, string(filepath.Separator)) {
+		if comp == "" || comp == "." {
+			continue
+		}
+		cur = filepath.Join(cur, comp)
+		info, err := os.Lstat(cur)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return false, nil
+			}
+			return false, fmt.Errorf("nput: cannot lstat ancestor directory (%s): %w", cur, err)
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // isWithinRoot reports whether dir is root or a descendant of root, guarding the
