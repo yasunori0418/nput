@@ -313,7 +313,7 @@ func TestRollbackAncestorPreRemoveErrorSkipsSwitch(t *testing.T) {
 	// not merely to any early return — e.g. a future planner change that routed this setup to
 	// Conflicts instead of PreRemove would also make Rollback error out before switchFn, and a
 	// bare err != nil check would pass despite never reaching the code this test targets.
-	if err == nil || !strings.Contains(err.Error(), "cannot remove ancestor symlink for migration") {
+	if err == nil || !strings.Contains(err.Error(), "cannot remove recorded symlink for migration") {
 		t.Fatalf("expected a preRemove unlink error, got %v", err)
 	}
 	if switched != 0 {
