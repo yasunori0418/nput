@@ -392,7 +392,10 @@ func reportResult(res *engine.Result, name string) {
 	for _, t := range res.Removed {
 		fmt.Fprintf(os.Stderr, "  removed  %s\n", t)
 	}
-	if len(res.Placed)+len(res.Replaced)+len(res.Copied)+len(res.Recopied)+len(res.Removed) == 0 {
+	for _, t := range res.Pruned {
+		fmt.Fprintf(os.Stderr, "  pruned   %s\n", t)
+	}
+	if len(res.Placed)+len(res.Replaced)+len(res.Copied)+len(res.Recopied)+len(res.Removed)+len(res.Pruned) == 0 {
 		fmt.Fprintln(os.Stderr, "  no-op")
 	}
 }

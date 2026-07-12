@@ -87,6 +87,7 @@ type Result struct {
 	Copied     []string // copy targets newly copied via place-once
 	Recopied   []string // existing copy targets overwritten/re-copied by --recopy (→ ADR-0020)
 	Removed    []string // stale-removed targets
+	Pruned     []string // empty ancestor directories rmdir-ed after a removal (→ Issue #174, #172 (D4))
 	Skipped    bool     // skipped on try-lock contention (NoWait path)
 	DryRun     bool     // read-only preview (Placed etc. are "to be placed" plans · → ADR-0023)
 	Conflicts  []string // conflicts detected in dryrun ("target: reason" · used by the CLI to decide exit 2 · → ADR-0006)
