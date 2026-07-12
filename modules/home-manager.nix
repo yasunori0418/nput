@@ -45,9 +45,7 @@ in
     # activation helper and honors --dry-run (DRY_RUN_CMD). nput.backup.enable wires --backup=<suffix>
     # onto the same invocation (→ ADR-0045); the suffix is shell-quoted since it is user-supplied.
     home.activation.nput = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      run ${lib.getExe nputPackage} apply --manifest ${manifest}${
-        lib.optionalString cfg.backup.enable " --backup=${lib.escapeShellArg cfg.backup.suffix}"
-      }
+      run ${lib.getExe nputPackage} apply --manifest ${manifest}${lib.optionalString cfg.backup.enable " --backup=${lib.escapeShellArg cfg.backup.suffix}"}
     '';
   };
 }
