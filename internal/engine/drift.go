@@ -53,6 +53,11 @@ func generationUnchanged(profileLink, newLinkFarm string) (bool, error) {
 // affected target, which changes the link-farm derivation. So generationUnchanged is never true
 // for a plan with a non-empty PreRemove, and the gen-skip branch above is not taken. The drift
 // repair therefore has no pre-removal to run.
+//
+// plan.Backup has no such invariant: apply --backup's rename-aside fires on a foreign occupant at
+// a target, which can appear at any time regardless of whether the manifest/derivation changed (a
+// foreign tool can drop a file at the target between shell re-entries). So a gen-skip run backs up
+// and places fresh exactly like normal apply, instead of asserting Backup is empty (→ ADR-0045, issue #169).
 func (a *applier) repairDrift(plan planner.Plan, recopy bool) error {
 	// Defensive guard for the invariant the doc comment relies on: any PreRemove source changes the
 	// manifest (hence the derivation) at its target, so it can never reach the gen-skip path with a
@@ -60,6 +65,9 @@ func (a *applier) repairDrift(plan planner.Plan, recopy bool) error {
 	// nest/place through stale content still occupying the target — fail loudly instead (→ ADR-0046, ADR-0047).
 	if len(plan.PreRemove) > 0 {
 		return fmt.Errorf("nput: internal invariant violated: generation-skip drift repair received %d pre-removal(s) (→ ADR-0046, ADR-0047)", len(plan.PreRemove))
+	}
+	if err := a.backup(plan.Backup); err != nil {
+		return err
 	}
 	drifted := make([]planner.PlaceAction, 0, len(plan.Place))
 	for _, act := range plan.Place {
