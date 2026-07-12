@@ -6,6 +6,12 @@
 - 改訂対象: **ADR-0015 §4**「target の祖先 component が symlink なら配置前に一律 error 停止」を「**foreign 祖先のみ error / 自己記録 stale 祖先は migration（配置前除去）**」へ改訂。**ADR-0015 §2**「前世代 manifest 記録の symlink は置換可（silent・後勝ち）」の判定を祖先へ拡張。
 - 起点: dotfiles 側での実遭遇（#170）と、次期マイルストーンの grilling セッション（2026-07-11）で設計確定
 
+> **2026-07-12 改訂注記（#173）**: 本 ADR §3 の「engine は PreRemove → place → copies → removeStale の順で流す」は、
+> apply（`internal/engine/engine.go`）のみ実装され `Rollback()`（`internal/engine/generations.go`）は `plan.PreRemove` を
+> 実行せず捨てていた。ADR-0046 の移行（祖先 symlink 世代 ⇄ per-file 世代）を跨ぐ rollback はこの経路を通るため、apply と同じ
+> PreRemove 実行が要る。`Rollback()` に `a.preRemove(plan.PreRemove)` を `place` の前段として追加し、drift 時の error 停止を含む
+> §3 の意味論を rollback にも揃えた（→ #173, ADR-0015 §5 改訂注記）。
+
 ## 背景
 
 `.claude/skills` のような**全体 symlink** entry を、配下に子 entry をネストする形（`.claude/skills/foo`, `.claude/skills/bar`, …）へ移行しようとすると、apply が丸ごと失敗する。原因は 2 段に分かれる。
