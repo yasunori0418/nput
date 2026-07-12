@@ -576,8 +576,13 @@ func TestComputeTableDriven(t *testing.T) {
 			// independently a stale entry in prev.Entries under the ordinary remove-side loop (it
 			// was never added to preRemoved, since the dir classification failed before dedup-ing
 			// it). This is harmless: engine.Apply stops before removeStale on any conflict, so this
-			// planned removal never executes (→ ADR-0047).
-			want: want{conflicts: 1, remove: []string{".claude/hooks/foo/main.sh"}},
+			// planned removal never executes (→ ADR-0047). --backup is disabled in this case, so
+			// markDirEntriesPreRemoved is not invoked either (→ ADR-0045).
+			want: want{
+				conflicts:     1,
+				conflictKinds: []ConflictKind{ConflictDirMigrationFailed},
+				remove:        []string{".claude/hooks/foo/main.sh"},
+			},
 		},
 		{
 			// Real directory whose new generation still records a nested child at the same relative
@@ -662,18 +667,6 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{placeNew: []string{".config/foo"}, backup: []string{".config/foo"}},
 		},
 		{
-			// apply --backup with no --backup=<suffix> uses the default "nput-backup" suffix; the
-			// backup destination check reads "<target>.nput-backup" (verified indirectly by NOT
-			// pre-populating that path — if the code used a different default this would conflict
-			// instead of placing cleanly, and want would need conflicts:1).
-			name: "backup enabled, default suffix (no custom Suffix given)",
-			prev: nil,
-			next: mani(sl(srcB, ".config/foo")),
-			fs:   fakeFS{abs(".config/foo"): reg()},
-			opts: Options{Backup: true},
-			want: want{placeNew: []string{".config/foo"}, backup: []string{".config/foo"}},
-		},
-		{
 			// apply --backup with a custom suffix: the backup destination is "<target>.<suffix>", not
 			// the default "<target>.nput-backup" — proven by pre-populating the DEFAULT-suffix path
 			// with a foreign entity the plan must never touch, while the custom-suffix path stays free.
@@ -740,6 +733,26 @@ func TestComputeTableDriven(t *testing.T) {
 				abs(".claude"):               dir(),
 				abs(".claude/hooks"):         dir(),
 				abs(".claude/hooks/foo.txt"): reg(), // foreign regular file leaf → normally makes the whole dir conflict
+			},
+			opts: Options{Backup: true},
+			want: want{placeNew: []string{".claude/hooks"}, backup: []string{".claude/hooks"}},
+		},
+		{
+			// apply --backup on a dir migration failure must not also schedule the dir's safe
+			// (recorded ∧ stale) leaves on the remove-side: the whole dir is renamed aside as one
+			// unit, so a leaf recorded by prev is neither a lingering Remove candidate nor a
+			// "drifted after planning" false warning at execution time (→ ADR-0045). "safe.sh" alone
+			// would normally be a clean RemoveUnlink candidate (classifyDirMigration would accept it
+			// individually), but "foo.txt" forces the whole-dir backup path, which must also absorb
+			// "safe.sh" out of the remove side rather than leaving it stranded there.
+			name: "backup enabled, real dir target with foreign leaf: sibling recorded-stale leaf must not linger on remove side",
+			prev: mani(sl(srcA, ".claude/hooks/safe.sh")),
+			next: mani(sl(srcB, ".claude/hooks")),
+			fs: fakeFS{
+				abs(".claude"):               dir(),
+				abs(".claude/hooks"):         dir(),
+				abs(".claude/hooks/foo.txt"): reg(),     // foreign regular file leaf → forces whole-dir backup
+				abs(".claude/hooks/safe.sh"): sym(srcA), // recorded ∧ stale on its own, but dropped by next
 			},
 			opts: Options{Backup: true},
 			want: want{placeNew: []string{".claude/hooks"}, backup: []string{".claude/hooks"}},

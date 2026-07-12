@@ -143,6 +143,10 @@ const (
 	// ConflictCopyStructureMismatch is a copy entry whose src structure (dir/file) mismatches the
 	// existing target kind (→ ADR-0020).
 	ConflictCopyStructureMismatch
+	// ConflictDirMigrationFailed is a real directory occupying a symlink target where at least one
+	// leaf beneath it (any depth) is not safely migratable — a regular file, a foreign or
+	// record-mismatched symlink, or a self-contradictory kept symlink (→ ADR-0047 D2, issue #175).
+	ConflictDirMigrationFailed
 	// ConflictBackupTargetExists is apply --backup's rename-aside destination (<target>.<suffix>)
 	// already occupied by a leftover from a previous backup (→ ADR-0045). Stops rather than
 	// silently overwriting a prior backup, so the user notices before it is lost.
@@ -542,7 +546,21 @@ func classifyRealDirTarget(plan *Plan, e manifest.Entry, targetAbs string, prevB
 		return err
 	}
 	if reason != "" {
-		return appendBackupOrConflict(plan, e, targetAbs, fmt.Sprintf("target directory cannot be fully migrated: %s (→ ADR-0047)", reason), ConflictUnspecified, fs, opts)
+		// Under apply --backup the whole occupying directory is renamed aside as one unit (§ doc
+		// comment above), so every prev entry recorded beneath it — safe or foreign alike — leaves
+		// with it. Mark them preRemoved *before* delegating so the remove-side loop below does not
+		// also try to stale-remove them: at execution time the dir is already gone (renamed), so
+		// removeStale's reverifyStale would see ENOENT and misreport a "drifted after planning"
+		// warning for something that was actually backed up, not drifted (→ ADR-0045). Gated on
+		// opts.Backup: on the plain-conflict path (--backup disabled) a recorded-stale leaf under the
+		// failed dir is deliberately left as an ordinary Remove candidate — harmless since
+		// engine.Apply stops before removeStale on any conflict — and marking it preRemoved here
+		// would incorrectly suppress that existing, tested behavior (→ TestComputeTableDriven "real
+		// dir target, one real file mixed in → conflict").
+		if opts.Backup {
+			markDirEntriesPreRemoved(filepath.Clean(e.Target), prevByTarget, preRemoved)
+		}
+		return appendBackupOrConflict(plan, e, targetAbs, fmt.Sprintf("target directory cannot be fully migrated: %s (→ ADR-0047)", reason), ConflictDirMigrationFailed, fs, opts)
 	}
 	plan.PreRemove = append(plan.PreRemove, dirActions...)
 	plan.PreRemove = append(plan.PreRemove, RemoveAction{Kind: RemoveRmdir, TargetAbs: targetAbs})
@@ -553,6 +571,22 @@ func classifyRealDirTarget(plan *Plan, e manifest.Entry, targetAbs string, prevB
 	}
 	plan.Place = append(plan.Place, PlaceAction{Entry: e, TargetAbs: targetAbs, Dest: LinkDest(e), Kind: PlaceNew})
 	return nil
+}
+
+// markDirEntriesPreRemoved marks every prevByTarget entry whose target lies beneath dirRel (any
+// depth) as preRemoved, without emitting any RemoveAction for them. Used when apply --backup is
+// about to rename a whole occupying directory aside as one unit (→ classifyRealDirTarget, ADR-0045):
+// every recorded entry beneath it — the ones classifyDirMigration would have deemed safe to unlink,
+// and the ones that made the migration fail — leaves with the directory in a single rename, so none
+// of them should also be scheduled (or left unscheduled but re-verified) by the remove-side loop.
+func markDirEntriesPreRemoved(dirRel string, prevByTarget map[string]manifest.Entry, preRemoved map[string]bool) {
+	for target := range prevByTarget {
+		rel, err := filepath.Rel(dirRel, target)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue
+		}
+		preRemoved[target] = true
+	}
 }
 
 // classifyDirMigration walks an occupying real directory (dirAbs, root-relative dirRel) that a

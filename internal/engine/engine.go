@@ -490,6 +490,8 @@ func conflictGuidance(kind planner.ConflictKind) string {
 		return "the manifest keeps both this ancestor and an entry nested beneath it; fix the entry definitions"
 	case planner.ConflictCopyStructureMismatch:
 		return "the copy entry's structure no longer matches the existing target; fix the entry definition"
+	case planner.ConflictDirMigrationFailed:
+		return "move or remove the directory's non-migratable contents manually (or use --backup to back up the whole directory), then re-apply"
 	case planner.ConflictBackupTargetExists:
 		return "a previous --backup was left at \"<target>.<suffix>\"; move or remove it manually, then re-run --backup"
 	default:
