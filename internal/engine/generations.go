@@ -182,20 +182,25 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	a.profile = prof
 	a.root = root
 	a.emitWarnings(plan.Warnings, false)
-	if err := a.preRemove(plan.PreRemove); err != nil {
+	// Each stage journals its own FS writes; a failure in any of the three unwinds everything
+	// this Rollback call has done so far before returning (→ ADR-0044, same shape as Apply).
+	if err := a.runJournaled(func() error { return a.preRemove(plan.PreRemove) }); err != nil {
 		return nil, err
 	}
-	if err := a.place(plan.Place); err != nil {
+	if err := a.runJournaled(func() error { return a.place(plan.Place) }); err != nil {
 		return nil, err
 	}
-	if err := a.removeStale(plan.Remove); err != nil {
+	if err := a.runJournaled(func() error { return a.removeStale(plan.Remove) }); err != nil {
 		return nil, err
 	}
 
-	// 7. finally move the profile pointer to N-1 (→ docs/spec.md rollback step 3).
+	// 7. finally move the profile pointer to N-1 (→ docs/spec.md rollback step 3). Not unwound on
+	//    failure: every FS write up to this point already succeeded, so there is nothing to roll
+	//    back — only the pointer move itself failed, and re-running Rollback retries it (→ ADR-0044 §2).
 	if err := switchFn(prof.Profile, prev.Number); err != nil {
 		return nil, fmt.Errorf("nput: failed to move the profile pointer (--switch-generation %d): %w", prev.Number, err)
 	}
+	a.discardJournal()
 
 	return &RollbackResult{Result: *a.result, From: cur.Number, To: prev.Number}, nil
 }

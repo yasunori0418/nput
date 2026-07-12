@@ -224,9 +224,13 @@ func Apply(opts Options) (*Result, error) {
 			// When the previous generation's link-farm cannot be resolved, fall back to the safe side: normal apply (commit a new generation).
 			a.opts.Warnf("nput: could not resolve the previous generation's link-farm; recommitting without a generation skip: %v", err)
 		} else if same {
-			if err := a.repairDrift(plan, opts.Recopy); err != nil {
+			// The drift repair's re-links are journaled the same as normal placement (→ ADR-0044); this
+			// path commits no generation, so there is no commit success to discard the journal on —
+			// discard immediately once the repair itself succeeds (nothing here to roll back further).
+			if err := a.runJournaled(func() error { return a.repairDrift(plan, opts.Recopy) }); err != nil {
 				return nil, err
 			}
+			a.discardJournal()
 			a.result.GenerationSkipped = true
 			a.cleanupPending()
 			return a.result, nil
@@ -239,20 +243,25 @@ func Apply(opts Options) (*Result, error) {
 	//    lands on an empty/absent target · local exception to ADR-0006 · → ADR-0046, ADR-0047),
 	//    then new / re-link, then stale removal last (→ ADR-0006). copy branches: on --recopy overwrite
 	//    all copy targets unconditionally, normally place-once (new copy only when target is absent) (→ ADR-0020).
-	if err := a.preRemove(plan.PreRemove); err != nil {
+	//    Each stage journals its own FS writes; a failure in any of the four unwinds everything this
+	//    run has done so far (across all four, not just the failing stage) before returning (→ ADR-0044).
+	if err := a.runJournaled(func() error { return a.preRemove(plan.PreRemove) }); err != nil {
 		return nil, err
 	}
-	if err := a.place(plan.Place); err != nil {
+	if err := a.runJournaled(func() error { return a.place(plan.Place) }); err != nil {
 		return nil, err
 	}
-	if err := a.materializeCopies(plan, opts.Recopy); err != nil {
+	if err := a.runJournaled(func() error { return a.materializeCopies(plan, opts.Recopy) }); err != nil {
 		return nil, err
 	}
-	if err := a.removeStale(plan.Remove); err != nil {
+	if err := a.runJournaled(func() error { return a.removeStale(plan.Remove) }); err != nil {
 		return nil, err
 	}
 
-	// 9. generation commit (→ docs/spec.md execution flow 2f).
+	// 9. generation commit (→ docs/spec.md execution flow 2f). A commit failure is NOT unwound: every
+	//    FS write up to this point already succeeded, so there is nothing wrong to roll back — the run
+	//    simply fails to advance the generation, and idempotent re-apply converges (→ ADR-0006, ADR-0017,
+	//    ADR-0044 §2).
 	commit := opts.Commit
 	if commit == nil {
 		commit = nixEnvCommit
@@ -260,6 +269,7 @@ func Apply(opts Options) (*Result, error) {
 	if err := commit(a.profile.Profile, a.opts.LinkFarm); err != nil {
 		return nil, fmt.Errorf("nput: generation commit (nix-env --set) failed: %w", err)
 	}
+	a.discardJournal()
 
 	// 10. remove .pending after --set succeeds (the generation link inherits the gcroot · → ADR-0011, ADR-0025).
 	a.cleanupPending()
@@ -284,6 +294,21 @@ type applier struct {
 	profile  paths.Profile
 	root     string
 	result   *Result
+	journal  []undoOp
+}
+
+// runJournaled runs an FS-mutating stage and unwinds the journal recorded so far — by this
+// stage and any earlier ones in the same Apply/Rollback call — if it fails (→ ADR-0044). Stages
+// covered: preRemove, place, materializeCopies, removeStale, repairDrift. A stage succeeding
+// simply leaves its journal entries in place for the next stage (or for the final discard on
+// commit success); nothing here decides when the journal is discarded — that is the caller's
+// job once every stage in the call has succeeded and (for Apply) commit has landed.
+func (a *applier) runJournaled(stage func() error) error {
+	if err := stage(); err != nil {
+		a.unwind(err)
+		return err
+	}
+	return nil
 }
 
 // dryRun is the read-only short-circuit of apply --dryrun (→ ADR-0006, ADR-0023). It resolves
