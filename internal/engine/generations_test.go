@@ -162,6 +162,78 @@ func TestRollbackNoPreviousErrors(t *testing.T) {
 	}
 }
 
+// TestRollbackConflictReportsAll verifies that Rollback, like Apply, lists every planner-detected
+// conflict to stderr (with guidance) before returning a single count-bearing aggregate error
+// (→ #176, grilling 2026-07-12 D6). gen1(target) has {b, c}; gen2(current/baseline) has {a}; both
+// b and c are occupied by regular files on disk, so rolling back to gen1 conflicts on both.
+func TestRollbackConflictReportsAll(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	srcA := makeSrc(t, "x")
+	srcB := makeSrc(t, "x")
+	srcC := makeSrc(t, "x")
+
+	prof := paths.Resolve(state, "vim", manifest.RootKindHome, root, true)
+	if err := os.MkdirAll(prof.Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	lf1 := writeLinkFarm(t, homeManifest(
+		storeEntry(srcB, ".", "b"),
+		storeEntry(srcC, ".", "c"),
+	))
+	lf2 := writeLinkFarm(t, homeManifest(storeEntry(srcA, ".", "a")))
+
+	if err := os.Symlink(lf1, paths.GenerationLink(prof.Profile, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(lf2, paths.GenerationLink(prof.Profile, 2)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(lf2, prof.Profile); err != nil {
+		t.Fatal(err)
+	}
+
+	// Current FS = gen2: only a. b/c are occupied by regular files (foreign entity conflicts on rollback).
+	if err := os.Symlink(srcA, filepath.Join(root, "a")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "b"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "c"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var warns []string
+	_, err := Rollback(RollbackOptions{
+		Name: "vim", RootKind: manifest.RootKindHome, RootOverride: root, StateDir: state,
+		ListGenerations: func(string) ([]Generation, error) {
+			return []Generation{{Number: 1}, {Number: 2, Current: true}}, nil
+		},
+		SwitchGeneration: func(string, int) error { return nil },
+		Warnf:            collectFormatted(&warns),
+	})
+	if err == nil {
+		t.Fatal("expected a conflict error, got nil")
+	}
+	if !strings.Contains(err.Error(), "2 conflict") {
+		t.Errorf("aggregate error = %q, want it to mention the conflict count (2)", err.Error())
+	}
+	for _, target := range []string{"b", "c"} {
+		found := false
+		for _, w := range warns {
+			if strings.Contains(w, "target: "+target) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected a conflict line mentioning target %q, warns = %v", target, warns)
+		}
+	}
+}
+
 // TestRollbackNoProfileErrors verifies that rollback stops with an error when profileDir is absent (never applied).
 func TestRollbackNoProfileErrors(t *testing.T) {
 	root := realTempDir(t)
