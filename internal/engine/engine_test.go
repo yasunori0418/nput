@@ -2,6 +2,7 @@ package engine
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -74,6 +75,14 @@ func fakeCommit(captured *[][2]string) CommitFunc {
 func collectWarnings(buf *[]string) func(string, ...any) {
 	return func(format string, args ...any) {
 		*buf = append(*buf, format)
+	}
+}
+
+// collectFormatted is like collectWarnings but stores the formatted message (args applied),
+// used where a test needs to assert on interpolated content such as a target path.
+func collectFormatted(buf *[]string) func(string, ...any) {
+	return func(format string, args ...any) {
+		*buf = append(*buf, fmt.Sprintf(format, args...))
 	}
 }
 
@@ -225,11 +234,25 @@ func TestApplyAncestorSymlinkError(t *testing.T) {
 	}
 	lf := writeLinkFarm(t, projectManifest(storeEntry(src, ".", ".claude/skills/nix")))
 
+	var warns []string
 	_, err := Apply(Options{
 		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
+		Warnf: collectFormatted(&warns),
 	})
-	if err == nil || !strings.Contains(err.Error(), "symlink") {
-		t.Fatalf("expected ancestor symlink error, got %v", err)
+	// The aggregate error is a count-bearing summary; the ancestor-symlink detail is reported via
+	// Warnf (→ #176, grilling 2026-07-12 D6).
+	if err == nil || !strings.Contains(err.Error(), "1 conflict") {
+		t.Fatalf("expected a 1-conflict aggregate error, got %v", err)
+	}
+	found := false
+	for _, w := range warns {
+		if strings.Contains(w, "symlink") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected a conflict line mentioning the ancestor symlink, warns = %v", warns)
 	}
 }
 
@@ -1079,5 +1102,99 @@ func TestApplyCleanupPendingRemoveFailureWarns(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("expected a .pending cleanup warning, warns = %v", warns)
+	}
+}
+
+// TestApplyConflictReportsAll verifies that a non-dryrun Apply lists every planner-detected
+// conflict to stderr (with a one-line guidance each) before returning a single count-bearing
+// aggregate error, instead of stopping at the first conflict only (→ #176, grilling 2026-07-12 D6).
+func TestApplyConflictReportsAll(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "sub/file")
+	lf := writeLinkFarm(t, homeManifest(
+		storeEntry(src, "sub", ".one"),
+		storeEntry(src, "sub", ".two"),
+	))
+
+	// Occupy both targets with regular files (symlink mode cannot overwrite → conflict each).
+	if err := os.WriteFile(filepath.Join(root, ".one"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".two"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var warns []string
+	_, err := Apply(Options{
+		LinkFarm: lf, Name: "cfg", RootKind: manifest.RootKindHome,
+		RootOverride: root, StateDir: state, Warnf: collectFormatted(&warns),
+	})
+	if err == nil {
+		t.Fatal("expected a conflict error, got nil")
+	}
+	if !strings.Contains(err.Error(), "2 conflict") {
+		t.Errorf("aggregate error = %q, want it to mention the conflict count (2)", err.Error())
+	}
+
+	for _, target := range []string{".one", ".two"} {
+		found := false
+		for _, w := range warns {
+			if strings.Contains(w, target) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected a conflict line mentioning %q, warns = %v", target, warns)
+		}
+	}
+	// Each conflict line is followed by a one-line guidance (foreign entity → manual move/remove).
+	guidanceCount := 0
+	for _, w := range warns {
+		if strings.Contains(w, "move or remove the existing file/directory manually") {
+			guidanceCount++
+		}
+	}
+	if guidanceCount != 2 {
+		t.Errorf("guidance line count = %d, want 2 (one per conflict), warns = %v", guidanceCount, warns)
+	}
+}
+
+// TestApplyConflictMatchesDryRun verifies that the non-dryrun conflict set (reported via Warnf)
+// and the --dryrun conflict set (Result.Conflicts) agree on the same plan (→ #176).
+func TestApplyConflictMatchesDryRun(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "sub/file")
+	lf := writeLinkFarm(t, homeManifest(
+		storeEntry(src, "sub", ".one"),
+		storeEntry(src, "sub", ".two"),
+	))
+	if err := os.WriteFile(filepath.Join(root, ".one"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".two"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	dry, err := Apply(Options{
+		LinkFarm: lf, Name: "cfg", RootKind: manifest.RootKindHome,
+		RootOverride: root, StateDir: state, DryRun: true,
+	})
+	if err != nil {
+		t.Fatalf("Apply dryrun: %v", err)
+	}
+	if len(dry.Conflicts) != 2 {
+		t.Fatalf("dryrun Conflicts = %v, want 2 entries", dry.Conflicts)
+	}
+
+	var warns []string
+	_, err = Apply(Options{
+		LinkFarm: lf, Name: "cfg", RootKind: manifest.RootKindHome,
+		RootOverride: root, StateDir: state, Warnf: collectFormatted(&warns),
+	})
+	if err == nil || !strings.Contains(err.Error(), "2 conflict") {
+		t.Fatalf("expected a 2-conflict aggregate error, got %v", err)
 	}
 }
