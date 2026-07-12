@@ -43,11 +43,15 @@ func (a *applier) place(actions []planner.PlaceAction) error {
 			if err := os.Remove(act.TargetAbs); err != nil {
 				return fmt.Errorf("nput: cannot remove existing symlink (%s): %w", act.TargetAbs, err)
 			}
+			// Journaled immediately after the unlink, before the re-symlink: if the symlink
+			// creation below fails, undoRelinkOld's own os.Remove tolerates the target already
+			// being absent and still recreates it at prevDest — so this target is restorable even
+			// when this run never got as far as writing the new symlink (→ ADR-0044).
+			a.journalRelinkedSymlink(act.TargetAbs, prevDest)
 			a.result.Replaced = append(a.result.Replaced, act.Entry.Target)
 			if err := os.Symlink(act.Dest, act.TargetAbs); err != nil {
 				return fmt.Errorf("nput: cannot create symlink (%s -> %s): %w", act.TargetAbs, act.Dest, err)
 			}
-			a.journalRelinkedSymlink(act.TargetAbs, prevDest)
 			continue
 		}
 

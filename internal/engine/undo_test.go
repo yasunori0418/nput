@@ -155,7 +155,7 @@ func TestUnwindReversesJournalInLIFOOrder(t *testing.T) {
 	var warns []string
 	a := &applier{opts: Options{Warnf: collectWarnings(&warns)}, result: &Result{}}
 	a.journalRelinkedSymlink(child, childDest) // pushed first (child unlinked first)
-	a.journalRemovedEmptyDir(parent)           // pushed second (parent rmdir-ed second)
+	a.journalRemovedEmptyDir(parent, 0o755)    // pushed second (parent rmdir-ed second)
 
 	a.unwind(errors.New("simulated failure"))
 
