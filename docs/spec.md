@@ -723,21 +723,21 @@ entry 階層を変更するたびに空 dir が積もり、後続配置を塞ぐ
 - **root 自体は絶対に消さない**。親チェーンの走査は root 境界で必ず停止する。
 - **祖先チェーンに symlink が現れたら、それに触れず停止する**（symlink 自体を rmdir すると
   リンクそのものを消してしまい実体には触れないため、安全側に倒して何もしない）。
-- **適用範囲は全除去経路**: removeStale（apply / rollback から共用）・PreRemove・
+- **適用範囲は最終段の除去経路**: removeStale（apply / rollback から共用）・
   `reset` の symlink 除去・copy target 削除。除去した target ごとに独立して walk するため、
   別 entry が同じ dir を共有していれば非空として自然に残る。
-- **PreRemove 経由は Place より前に走る**ため、祖先 symlink の除去で外側の dir が
-  一時的に空になった場合、その場で剪定されたうえで直後の Place（`ensureParentDir` の
-  `mkdir -p`）が同じ dir を作り直すことがある（→ ADR-0046）。最終的な FS 状態は不変
-  （実体として消えたままにはならない）だが、`-v` レポートの `pruned <path>` には
-  「この apply の途中で一度空になった」事実として現れる。
+- **PreRemove は本剪定ヘルパを呼ばない**（→ ADR-0047 §5）。PreRemove の各除去（Unlink /
+  Rmdir）は必ず直後の配置で同じ場所に何かが再配置される前提のため、剪定しても即座に
+  作り直されるだけで無駄な往復になる。一般化後（実 dir target migration）は 1 回の
+  PreRemove 呼び出しで複数の Unlink/Rmdir を bottom-up 順に処理するため、途中で祖先剪定を
+  挟むと、まだ実行していない後続の明示的 Rmdir アクションの対象を先取りして消してしまい
+  レポートが不正確になる。実 dir migration で除去する dir チェーンは、そもそも planner の
+  `classifyDirMigration` が子から親まで明示的に `RemoveAction`(`Kind = RemoveRmdir`) として
+  列挙済みであり、剪定ヘルパによる探索的な追加除去を必要としない。
 - **出力規律**: 剪定は意図された掃除であり warning にはしない。既定 silent、`-v` で
   配置レポートに `pruned <path>` として可視化する（→ ADR-0031）。剪定ヘルパ自体の失敗
-  （権限エラー等の異常系。ENOTEMPTY は上記の通り対象外）は、PreRemove を含む全経路で
-  warning にとどめ、除去自体（target の unlink）は成功として扱う。剪定対象は target 除去
-  で既に空になった祖先であり、後続の子配置が使う dir とは別物のため、剪定失敗は子配置の
-  安全性を損なわない（drift 時に一律 error 停止する D3 の対象＝ancestor symlink 自体の
-  再検証とは別軸・→ ADR-0046）。空 dir の残置は cosmetic な取りこぼしに過ぎない。
+  （権限エラー等の異常系。ENOTEMPTY は上記の通り対象外）は、呼び出し元の既存ポリシーに従う:
+  removeStale / `reset` は warning で残置。空 dir の残置は cosmetic な取りこぼしに過ぎない。
 
 ### GC とストレージ解放
 

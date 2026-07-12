@@ -61,6 +61,12 @@ ADR-0046 §3 で導入した「PreRemove は最終段の removeStale と違い�
 
 `planner.FS` に `ReadDir(path string) ([]os.DirEntry, error)` を追加し、実 dir 配下の走査を可能にする。走査は lstat ベースで symlink の中へ降りない（ADR-0046 §2 と同じ安全規則）。
 
+### 5. PreRemove は空祖先ディレクトリ剪定（#174）を呼ばない
+
+`preRemove`（engine 実行段）は、Unlink・Rmdir どちらの成功時も #174 の `pruneEmptyAncestors` ヘルパを呼ばない。理由は、PreRemove の各アクションは必ず直後の `place` / `materializeCopies` による再配置を前提としており、剪定してもその場で作り直されるだけの無駄な往復になるため。加えて、一般化後は 1 バッチ内に複数の Unlink/Rmdir が bottom-up 順で積まれており（`classifyDirMigration` が子から親まで明示的に列挙する）、途中のアクション成功時に `pruneEmptyAncestors` を呼ぶと、まだ実行していない後続の明示的 Rmdir アクションの対象を先取りして消してしまい、レポート（`result.Pruned`）が不正確になる、または祖先チェーンの外側（placement target とは無関係な祖先）まで意図せず剪定してしまう。
+
+空祖先ディレクトリ剪定そのものは #174 の役割のまま **最終段 `removeStale` と `reset`** に閉じており、PreRemove 段は「配置を妨げる自己記録 stale を計画通りに除去する」責務に純化する。
+
 ## 根拠
 
 - **空 dir を由来問わず許す**のは、rmdir が空でしか成功せずデータ損失が原理的にゼロなため。ユーザーは config でその target を（symlink または copy として）宣言済みであり、nput が作ったかどうかの判別コストを払う理由がない。
@@ -72,7 +78,7 @@ ADR-0046 §3 で導入した「PreRemove は最終段の removeStale と違い�
 ## 影響
 
 - **`internal/planner/planner.go`**: `RemoveAction.Kind`（`RemoveUnlink`/`RemoveRmdir`）追加。`FS.ReadDir` 追加（`osFS` 実装含む）。`Compute` の実 dir 分岐（symlink method・target が実 dir のとき `classifyDirMigration` で判定）追加。`classifyCopy` に method 変更（symlink→copy）の migration 分岐を追加。
-- **`internal/engine/staleremove.go`**: `preRemove` を `RemoveAction.Kind` で分岐。Rmdir は事前空チェックなしで `os.Remove` の結果を再検証として使う。Unlink・Rmdir とも drift は一律 error 停止。
+- **`internal/engine/staleremove.go`**: `preRemove` を `RemoveAction.Kind` で分岐。Rmdir は事前空チェックなしで `os.Remove` の結果を再検証として使う。Unlink・Rmdir とも drift は一律 error 停止。`preRemove` は #174 の `pruneEmptyAncestors` を呼ばない（§5）。
 - **`internal/engine/drift.go`**: gen-skip 経路の `plan.PreRemove` 空不変条件チェックを一般化後の全 PreRemove 発生源に対応するようコメント更新（判定ロジック自体は変更なし: 全発生源が manifest 差分を伴い derivation を変えるため引き続き gen-skip 経路に到達しない）。
 - **`internal/engine/engine.go`**: dryrun の PreRemove レポートを Kind で分岐（Rmdir は `Entry` を持たないため `result.Pruned` へ、Unlink は従来通り `result.Removed` へ）。
 - **`docs/adr/0046-*.md`**: 改訂対象の back-reference 注記を追記。
