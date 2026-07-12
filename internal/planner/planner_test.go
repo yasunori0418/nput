@@ -130,6 +130,7 @@ type want struct {
 	remove       []string
 	preRemove    []string // RemoveUnlink actions, by Entry.Target
 	preRemoveDir []string // RemoveRmdir actions, by root-relative TargetAbs
+	backup       []string // BackupAction entries, by Entry.Target (→ ADR-0045)
 	warns        []WarnKind
 	conflicts    int
 	// conflictKinds asserts plan.Conflicts[i].Kind in order (nil = skip; the conflicts count
@@ -188,6 +189,14 @@ func copyTargets(p Plan) []string {
 	return out
 }
 
+func backupTargets(p Plan) []string {
+	var out []string
+	for _, a := range p.Backup {
+		out = append(out, a.Entry.Target)
+	}
+	return out
+}
+
 func warnKinds(p Plan) []WarnKind {
 	var out []WarnKind
 	for _, w := range p.Warnings {
@@ -240,6 +249,7 @@ func TestComputeTableDriven(t *testing.T) {
 		prev *manifest.Manifest
 		next *manifest.Manifest
 		fs   fakeFS
+		opts Options // zero value = normal apply (backup disabled)
 		want want
 	}{
 		{
@@ -642,6 +652,109 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{conflicts: 1},
 		},
 		{
+			// apply --backup: a regular file occupying a symlink target is backed up instead of
+			// conflicting, and the entry places fresh (→ ADR-0045, issue #169).
+			name: "backup enabled, regular file at symlink target → backup + placeNew",
+			prev: nil,
+			next: mani(sl(srcB, ".config/foo")),
+			fs:   fakeFS{abs(".config/foo"): reg()},
+			opts: Options{Backup: true},
+			want: want{placeNew: []string{".config/foo"}, backup: []string{".config/foo"}},
+		},
+		{
+			// apply --backup with no --backup=<suffix> uses the default "nput-backup" suffix; the
+			// backup destination check reads "<target>.nput-backup" (verified indirectly by NOT
+			// pre-populating that path — if the code used a different default this would conflict
+			// instead of placing cleanly, and want would need conflicts:1).
+			name: "backup enabled, default suffix (no custom Suffix given)",
+			prev: nil,
+			next: mani(sl(srcB, ".config/foo")),
+			fs:   fakeFS{abs(".config/foo"): reg()},
+			opts: Options{Backup: true},
+			want: want{placeNew: []string{".config/foo"}, backup: []string{".config/foo"}},
+		},
+		{
+			// apply --backup with a custom suffix: the backup destination is "<target>.<suffix>", not
+			// the default "<target>.nput-backup" — proven by pre-populating the DEFAULT-suffix path
+			// with a foreign entity the plan must never touch, while the custom-suffix path stays free.
+			name: "backup enabled, custom suffix",
+			prev: nil,
+			next: mani(sl(srcB, ".config/foo")),
+			fs: fakeFS{
+				abs(".config/foo"):             reg(),
+				abs(".config/foo.nput-backup"): reg(), // must be left alone; custom suffix is used instead
+			},
+			opts: Options{Backup: true, Suffix: "bak"},
+			want: want{placeNew: []string{".config/foo"}, backup: []string{".config/foo"}},
+		},
+		{
+			// apply --backup: the backup destination itself already exists (a leftover from an
+			// earlier backup) → conflict rather than silently clobbering it (→ ADR-0045).
+			name: "backup enabled, backup destination already exists → conflict",
+			prev: nil,
+			next: mani(sl(srcB, ".config/foo")),
+			fs: fakeFS{
+				abs(".config/foo"):             reg(),
+				abs(".config/foo.nput-backup"): reg(),
+			},
+			opts: Options{Backup: true},
+			want: want{conflicts: 1, conflictKinds: []ConflictKind{ConflictBackupTargetExists}},
+		},
+		{
+			// apply --backup: a copy structure mismatch is backed up instead of conflicting.
+			name: "backup enabled, copy structure mismatch → backup + copy",
+			prev: nil,
+			next: mani(cp(srcA, ".config/foo")),
+			fs:   fakeFS{srcA: dir(), abs(".config/foo"): reg()},
+			opts: Options{Backup: true},
+			want: want{copies: []string{".config/foo"}, backup: []string{".config/foo"}},
+		},
+		{
+			// apply --backup: a copy target occupied by a foreign real file is backed up and a fresh
+			// copy placed, instead of the usual skip+WarnCopyForeign (→ ADR-0045).
+			name: "backup enabled, copy foreign file → backup + copy (no WarnCopyForeign)",
+			prev: nil,
+			next: mani(cp(srcA, ".config/foo")),
+			fs:   fakeFS{srcA: reg(), abs(".config/foo"): reg()},
+			opts: Options{Backup: true},
+			want: want{copies: []string{".config/foo"}, backup: []string{".config/foo"}},
+		},
+		{
+			// apply --backup: method changed copy→symlink is backed up instead of the usual
+			// non-migrated conflict — --backup is the escape hatch ADR-0047 D5 promised.
+			name: "backup enabled, method change copy→symlink → backup + placeNew",
+			prev: mani(cp(srcA, ".config/tool.conf")),
+			next: mani(sl(srcB, ".config/tool.conf")),
+			fs:   fakeFS{abs(".config/tool.conf"): reg()},
+			opts: Options{Backup: true},
+			want: want{placeNew: []string{".config/tool.conf"}, backup: []string{".config/tool.conf"}},
+		},
+		{
+			// apply --backup: a real directory target that fails full migration (a foreign leaf
+			// mixed in) is backed up whole rather than partially migrated — consistent with
+			// ADR-0047's "no partial removal" stance (→ ADR-0045, issue #169).
+			name: "backup enabled, real dir target with foreign leaf → backup whole dir + placeNew",
+			prev: nil,
+			next: mani(sl(srcB, ".claude/hooks")),
+			fs: fakeFS{
+				abs(".claude"):               dir(),
+				abs(".claude/hooks"):         dir(),
+				abs(".claude/hooks/foo.txt"): reg(), // foreign regular file leaf → normally makes the whole dir conflict
+			},
+			opts: Options{Backup: true},
+			want: want{placeNew: []string{".claude/hooks"}, backup: []string{".claude/hooks"}},
+		},
+		{
+			// apply --backup does NOT extend to ancestor-symlink conflicts (out of scope per issue
+			// #169 / ADR-0045): a foreign ancestor symlink still stops the world even with --backup.
+			name: "backup enabled, foreign ancestor symlink → still conflict (out of scope)",
+			prev: nil,
+			next: mani(sl(srcB, ".claude/skills/nix")),
+			fs:   fakeFS{abs(".claude"): sym("/some/store")},
+			opts: Options{Backup: true},
+			want: want{conflicts: 1, conflictKinds: []ConflictKind{ConflictForeignAncestor}},
+		},
+		{
 			// mixed: new + silent re-link + foreign warning + stale removal + mismatch kept.
 			name: "mixed plan",
 			prev: mani(sl(srcA, "keep"), sl(srcA, "drop"), sl(srcA, "mism")),
@@ -665,7 +778,7 @@ func TestComputeTableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plan, err := Compute(tt.prev, tt.next, root, tt.fs)
+			plan, err := Compute(tt.prev, tt.next, root, tt.fs, tt.opts)
 			if err != nil {
 				t.Fatalf("Compute: unexpected error: %v", err)
 			}
@@ -676,6 +789,7 @@ func TestComputeTableDriven(t *testing.T) {
 			sortedEq(t, "remove", removeTargets(plan), tt.want.remove)
 			sortedEq(t, "preRemove", preRemoveTargets(plan), tt.want.preRemove)
 			sortedEq(t, "preRemoveDir", preRemoveDirTargets(plan), tt.want.preRemoveDir)
+			sortedEq(t, "backup", backupTargets(plan), tt.want.backup)
 			warnEq(t, warnKinds(plan), tt.want.warns)
 			if len(plan.Conflicts) != tt.want.conflicts {
 				t.Errorf("conflicts = %d, want %d (%v)", len(plan.Conflicts), tt.want.conflicts, plan.Conflicts)
@@ -725,7 +839,7 @@ func TestComputeDirMigrationPreRemoveOrderIsBottomUp(t *testing.T) {
 		abs(".claude/hooks/foo/sub/leaf.sh"): sym(src),
 	}
 
-	plan, err := Compute(prev, next, root, fs)
+	plan, err := Compute(prev, next, root, fs, Options{})
 	if err != nil {
 		t.Fatalf("Compute: unexpected error: %v", err)
 	}
@@ -777,7 +891,7 @@ func TestComputeDirMigrationPreRemoveOrderIsBottomUp(t *testing.T) {
 func TestComputeUnknownMethodErrors(t *testing.T) {
 	e := sl("/nix/store/x", ".config/foo")
 	e.Method = "bogus"
-	_, err := Compute(nil, mani(e), root, fakeFS{})
+	_, err := Compute(nil, mani(e), root, fakeFS{}, Options{})
 	if err == nil {
 		t.Fatal("expected error for unknown method, got nil")
 	}
@@ -786,7 +900,7 @@ func TestComputeUnknownMethodErrors(t *testing.T) {
 // TestComputeAncestorDirNotSymlink confirms that no conflict arises when the ancestor is a regular directory.
 func TestComputeAncestorDirNotSymlink(t *testing.T) {
 	plan, err := Compute(nil, mani(sl("/nix/store/x", ".config/foo")), root,
-		fakeFS{abs(".config"): dir()})
+		fakeFS{abs(".config"): dir()}, Options{})
 	if err != nil {
 		t.Fatalf("Compute: %v", err)
 	}

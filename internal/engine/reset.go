@@ -124,7 +124,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		}
 	}
 	symManifest := &manifest.Manifest{SchemaVersion: prev.SchemaVersion, Root: prev.Root, Entries: symEntries}
-	plan, err := planner.Compute(symManifest, nil, root, planner.OSFS)
+	plan, err := planner.Compute(symManifest, nil, root, planner.OSFS, planner.Options{})
 	if err != nil {
 		return nil, err
 	}
