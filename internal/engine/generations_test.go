@@ -233,6 +233,13 @@ func TestRollbackAncestorMigration(t *testing.T) {
 	if len(res.Removed) != 1 || res.Removed[0] != ".claude/skills" {
 		t.Errorf("Removed = %v, want [.claude/skills]", res.Removed)
 	}
+	placed := map[string]bool{}
+	for _, p := range res.Placed {
+		placed[p] = true
+	}
+	if len(res.Placed) != 2 || !placed[".claude/skills/foo"] || !placed[".claude/skills/bar"] {
+		t.Errorf("Placed = %v, want [.claude/skills/foo .claude/skills/bar]", res.Placed)
+	}
 }
 
 // TestRollbackAncestorPreRemoveErrorSkipsSwitch verifies the Rollback-level wiring of preRemove's
