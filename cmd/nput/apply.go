@@ -24,6 +24,7 @@ func newApplyCmd() *cobra.Command {
 			"--all applies all of nput.* in lexical order; --project-root / --home-root / --system-root narrow by root mode.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			flagBackupEnabled = cmd.Flags().Changed("backup")
 			if flagApplyAll {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: apply cannot combine <name> with --all")
@@ -47,6 +48,9 @@ func newApplyCmd() *cobra.Command {
 		"Show place/replace/remove/conflict/no-op with zero side effects (exit 2 on conflict; see ADR-0006)")
 	cmd.Flags().StringVar(&flagManifest, "manifest", "",
 		"Apply a pre-built manifest (link-farm path) directly (host/module activation seam; no entrypoint discovery or nix eval/build; see ADR-0026)")
+	cmd.Flags().StringVar(&flagBackup, "backup", "",
+		"Back up an occupying foreign entity to \"<target>.<suffix>\" before placing, instead of stopping on conflict (bare --backup uses suffix \"nput-backup\"; \"=\" form required for a custom suffix, e.g. --backup=bak; see ADR-0045)")
+	cmd.Flags().Lookup("backup").NoOptDefVal = "nput-backup"
 	return cmd
 }
 
@@ -66,6 +70,8 @@ func runApplyManifest(name string) error {
 		RootOverride: flagRoot,
 		NoWait:       flagNoWait,
 		Recopy:       flagRecopy,
+		Backup:       flagBackupEnabled,
+		BackupSuffix: flagBackup,
 	})
 	if err != nil {
 		if errors.Is(err, engine.ErrSkipped) {
@@ -120,6 +126,8 @@ func runApply(name string) error {
 			FixedRoot:    fixedRoot,
 			RootOverride: flagRoot,
 			Recopy:       flagRecopy,
+			Backup:       flagBackupEnabled,
+			BackupSuffix: flagBackup,
 			DryRun:       true,
 			Build:        dryBuildFunc(ep, system, name),
 		})
@@ -169,6 +177,9 @@ func printApplyPlan(res *engine.Result) {
 	for _, t := range res.Removed {
 		fmt.Printf("remove\t%s\n", t)
 	}
+	for _, t := range res.BackedUp {
+		fmt.Printf("backup\t%s\n", t)
+	}
 	for _, c := range res.Conflicts {
 		fmt.Printf("conflict\t%s\n", c)
 	}
@@ -184,6 +195,8 @@ func applyOne(ep *entrypoint, system, name, rootKind, fixedRoot string) (*engine
 		RootOverride: flagRoot,
 		NoWait:       flagNoWait,
 		Recopy:       flagRecopy,
+		Backup:       flagBackupEnabled,
+		BackupSuffix: flagBackup,
 		Build:        buildFunc(ep, system, name),
 	})
 }
@@ -269,6 +282,8 @@ func runApplyAllDryRun(ep *entrypoint, system string, selected []string, roots m
 			FixedRoot:    ri.Root,
 			RootOverride: flagRoot,
 			Recopy:       flagRecopy,
+			Backup:       flagBackupEnabled,
+			BackupSuffix: flagBackup,
 			DryRun:       true,
 			Build:        dryBuildFunc(ep, system, name),
 		})
@@ -395,7 +410,10 @@ func reportResult(res *engine.Result, name string) {
 	for _, t := range res.Pruned {
 		fmt.Fprintf(os.Stderr, "  pruned   %s\n", t)
 	}
-	if len(res.Placed)+len(res.Replaced)+len(res.Copied)+len(res.Recopied)+len(res.Removed)+len(res.Pruned) == 0 {
+	for _, t := range res.BackedUp {
+		fmt.Fprintf(os.Stderr, "  backedUp %s\n", t)
+	}
+	if len(res.Placed)+len(res.Replaced)+len(res.Copied)+len(res.Recopied)+len(res.Removed)+len(res.Pruned)+len(res.BackedUp) == 0 {
 		fmt.Fprintln(os.Stderr, "  no-op")
 	}
 }

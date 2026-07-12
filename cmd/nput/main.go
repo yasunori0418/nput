@@ -31,6 +31,14 @@ var (
 	flagHomeRoot    bool   // --home-root: apply --all modifier; apply only homeRoot configs
 	flagSystemRoot  bool   // --system-root: apply --all modifier; apply only systemRoot configs (future seam)
 	flagManifest    string // --manifest: apply a pre-built manifest (link-farm) directly (for module activation)
+	// flagBackup / flagBackupEnabled are --backup[=suffix] (apply modifier; → ADR-0045, issue #169): a
+	// cobra optional-value flag (NoOptDefVal = "nput-backup"). Bare --backup sets flagBackup to the
+	// default suffix; --backup=<suffix> (the "=" form only — cobra's NoOptDefVal treats a bare next
+	// token as a positional arg, not a space-separated value) sets it to <suffix>. flagBackupEnabled
+	// distinguishes "flag absent" from "flag present" (flagBackup alone can't: its value is never empty
+	// either way), set from cmd.Flags().Changed("backup") in apply's RunE.
+	flagBackup        string
+	flagBackupEnabled bool
 )
 
 // exitError is an error carrying a specific exit code that cobra RunE returns (→ docs/spec.md exit code table).
