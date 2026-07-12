@@ -255,7 +255,7 @@ func TestRollbackAncestorPreRemoveErrorSkipsSwitch(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	srcNew := realTempDir(t)
+	srcNew := realTempDir(t) // stays empty: preRemove errors before place ever reads its contents
 
 	prof := paths.Resolve(state, "c", manifest.RootKindHome, root, true)
 	if err := os.MkdirAll(prof.Dir, 0o755); err != nil {
@@ -302,8 +302,12 @@ func TestRollbackAncestorPreRemoveErrorSkipsSwitch(t *testing.T) {
 		},
 		SwitchGeneration: func(_ string, gen int) error { switched = gen; return nil },
 	})
-	if err == nil {
-		t.Fatal("expected a preRemove unlink error, got nil")
+	// The message pins the failure to preRemove's os.Remove path specifically (staleremove.go),
+	// not merely to any early return — e.g. a future planner change that routed this setup to
+	// Conflicts instead of PreRemove would also make Rollback error out before switchFn, and a
+	// bare err != nil check would pass despite never reaching the code this test targets.
+	if err == nil || !strings.Contains(err.Error(), "cannot remove ancestor symlink for migration") {
+		t.Fatalf("expected a preRemove unlink error, got %v", err)
 	}
 	if switched != 0 {
 		t.Errorf("SwitchGeneration was called (switched=%d), want it skipped when preRemove fails", switched)
