@@ -89,6 +89,10 @@ type want struct {
 	preRemove    []string
 	warns        []WarnKind
 	conflicts    int
+	// conflictKinds asserts plan.Conflicts[i].Kind in order (nil = skip; the conflicts count
+	// alone does not catch a Kind mix-up such as ForeignAncestor ↔ SelfContradictoryAncestor,
+	// both assigned from the same keptInNext branch · → #176).
+	conflictKinds []ConflictKind
 }
 
 func placeTargets(p Plan, kind PlaceKind) []string {
@@ -209,7 +213,7 @@ func TestComputeTableDriven(t *testing.T) {
 			prev: nil,
 			next: mani(sl(srcB, ".config/foo")),
 			fs:   fakeFS{abs(".config/foo"): reg()},
-			want: want{conflicts: 1},
+			want: want{conflicts: 1, conflictKinds: []ConflictKind{ConflictForeignEntity}},
 		},
 		{
 			// An ancestor component is a symlink: cannot nest under it, conflict (→ ADR-0015).
@@ -217,7 +221,7 @@ func TestComputeTableDriven(t *testing.T) {
 			prev: nil,
 			next: mani(sl(srcB, ".claude/skills/nix")),
 			fs:   fakeFS{abs(".claude"): sym("/some/store")},
-			want: want{conflicts: 1},
+			want: want{conflicts: 1, conflictKinds: []ConflictKind{ConflictForeignAncestor}},
 		},
 		{
 			// Self-recorded stale ancestor symlink (prev recorded .claude/skills, on-disk matches, next
@@ -302,7 +306,7 @@ func TestComputeTableDriven(t *testing.T) {
 				abs(".claude"):        dir(),
 				abs(".claude/skills"): sym("/foreign"),
 			},
-			want: want{conflicts: 1, warns: []WarnKind{WarnStaleMismatch}},
+			want: want{conflicts: 1, conflictKinds: []ConflictKind{ConflictForeignAncestor}, warns: []WarnKind{WarnStaleMismatch}},
 		},
 		{
 			// The new generation keeps the ancestor whole-tree symlink AND a nested child
@@ -316,8 +320,9 @@ func TestComputeTableDriven(t *testing.T) {
 				abs(".claude/skills"): sym(srcA),
 			},
 			want: want{
-				placeReplace: []string{".claude/skills"},
-				conflicts:    1,
+				placeReplace:  []string{".claude/skills"},
+				conflicts:     1,
+				conflictKinds: []ConflictKind{ConflictSelfContradictoryAncestor},
 			},
 		},
 		{
@@ -416,7 +421,7 @@ func TestComputeTableDriven(t *testing.T) {
 			prev: nil,
 			next: mani(cp(srcA, ".config/foo")),
 			fs:   fakeFS{srcA: dir(), abs(".config/foo"): reg()},
-			want: want{conflicts: 1},
+			want: want{conflicts: 1, conflictKinds: []ConflictKind{ConflictCopyStructureMismatch}},
 		},
 		{
 			// structure mismatch (src file × target dir): conflict.
@@ -424,7 +429,7 @@ func TestComputeTableDriven(t *testing.T) {
 			prev: nil,
 			next: mani(cp(srcA, ".config/foo")),
 			fs:   fakeFS{srcA: reg(), abs(".config/foo"): dir()},
-			want: want{conflicts: 1},
+			want: want{conflicts: 1, conflictKinds: []ConflictKind{ConflictCopyStructureMismatch}},
 		},
 		{
 			// copy exists, recorded, dir/dir match: no-op.
@@ -471,6 +476,22 @@ func TestComputeTableDriven(t *testing.T) {
 			warnEq(t, warnKinds(plan), tt.want.warns)
 			if len(plan.Conflicts) != tt.want.conflicts {
 				t.Errorf("conflicts = %d, want %d (%v)", len(plan.Conflicts), tt.want.conflicts, plan.Conflicts)
+			}
+			if tt.want.conflictKinds != nil {
+				got := make([]ConflictKind, len(plan.Conflicts))
+				for i, c := range plan.Conflicts {
+					got[i] = c.Kind
+				}
+				if len(got) != len(tt.want.conflictKinds) {
+					t.Errorf("conflict kinds = %v, want %v", got, tt.want.conflictKinds)
+				} else {
+					for i := range got {
+						if got[i] != tt.want.conflictKinds[i] {
+							t.Errorf("conflict kinds = %v, want %v", got, tt.want.conflictKinds)
+							break
+						}
+					}
+				}
 			}
 		})
 	}

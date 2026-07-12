@@ -245,14 +245,21 @@ func TestApplyAncestorSymlinkError(t *testing.T) {
 		t.Fatalf("expected a 1-conflict aggregate error, got %v", err)
 	}
 	found := false
+	guided := false
 	for _, w := range warns {
-		if strings.Contains(w, "symlink") {
+		if strings.Contains(w, "cannot nest beneath it") {
 			found = true
-			break
+		}
+		// ConflictForeignAncestor guidance (no previous generation recorded this ancestor · → #176).
+		if strings.Contains(w, "check what created this symlink") {
+			guided = true
 		}
 	}
 	if !found {
 		t.Errorf("expected a conflict line mentioning the ancestor symlink, warns = %v", warns)
+	}
+	if !guided {
+		t.Errorf("expected the ConflictForeignAncestor guidance line, warns = %v", warns)
 	}
 }
 
@@ -1196,5 +1203,129 @@ func TestApplyConflictMatchesDryRun(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "2 conflict") {
 		t.Fatalf("expected a 2-conflict aggregate error, got %v", err)
+	}
+}
+
+// TestApplySelfContradictoryAncestorGuidance verifies that a new generation which keeps a
+// self-recorded ancestor symlink AND defines an entry nested beneath it (self-contradictory
+// manifest) reports the ConflictSelfContradictoryAncestor guidance via Warnf (→ #176, grilling
+// 2026-07-12 D6).
+func TestApplySelfContradictoryAncestorGuidance(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+
+	// First generation: a whole-tree symlink at .claude/skills.
+	srcOld := makeSrc(t, "x")
+	lf1 := writeLinkFarm(t, projectManifest(storeEntry(srcOld, ".", ".claude/skills")))
+	var commits [][2]string
+	if _, err := Apply(Options{
+		LinkFarm: lf1, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(&commits),
+	}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+
+	// Second generation: keeps .claude/skills itself AND defines a child beneath it (self-contradictory).
+	srcNew := makeSrc(t, "x")
+	lf2 := writeLinkFarm(t, projectManifest(
+		storeEntry(srcNew, ".", ".claude/skills"),
+		storeEntry(srcNew, ".", ".claude/skills/foo"),
+	))
+	var warns []string
+	_, err := Apply(Options{
+		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state,
+		Commit: fakeCommit(&commits), Warnf: collectFormatted(&warns),
+	})
+	if err == nil || !strings.Contains(err.Error(), "1 conflict") {
+		t.Fatalf("expected a 1-conflict aggregate error, got %v", err)
+	}
+	found := false
+	for _, w := range warns {
+		if strings.Contains(w, "the manifest keeps both this ancestor and an entry nested beneath it") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected the ConflictSelfContradictoryAncestor guidance line, warns = %v", warns)
+	}
+}
+
+// TestApplyCopyStructureMismatchGuidance verifies that a copy entry whose src structure (dir)
+// mismatches an existing target (regular file) reports the ConflictCopyStructureMismatch guidance
+// via Warnf (→ #176, grilling 2026-07-12 D6).
+func TestApplyCopyStructureMismatchGuidance(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "sub/file")
+	lf := writeLinkFarm(t, homeManifest(copyEntry(src, "sub", ".foo")))
+
+	// Occupy the copy target with a regular file while the copy src (sub) is a directory (structure mismatch).
+	if err := os.WriteFile(filepath.Join(root, ".foo"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var warns []string
+	_, err := Apply(Options{
+		LinkFarm: lf, Name: "cfg", RootKind: manifest.RootKindHome,
+		RootOverride: root, StateDir: state, Warnf: collectFormatted(&warns),
+	})
+	if err == nil || !strings.Contains(err.Error(), "1 conflict") {
+		t.Fatalf("expected a 1-conflict aggregate error, got %v", err)
+	}
+	found := false
+	for _, w := range warns {
+		if strings.Contains(w, "the copy entry's structure no longer matches the existing target") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected the ConflictCopyStructureMismatch guidance line, warns = %v", warns)
+	}
+}
+
+// TestApplyConflictMixedKindsPairGuidanceCorrectly verifies that when conflicts of different
+// kinds are reported together, each conflict line is immediately followed by its own kind's
+// guidance (no mis-pairing across kinds · → #176).
+func TestApplyConflictMixedKindsPairGuidanceCorrectly(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "x")
+
+	// .foreignEntity: a regular file occupies a symlink target (ConflictForeignEntity).
+	// .claude/skills/nix: nests beneath a foreign ancestor symlink (ConflictForeignAncestor).
+	lf := writeLinkFarm(t, projectManifest(
+		storeEntry(src, ".", ".foreignEntity"),
+		storeEntry(src, ".", ".claude/skills/nix"),
+	))
+	if err := os.WriteFile(filepath.Join(root, ".foreignEntity"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(realTempDir(t), filepath.Join(root, ".claude")); err != nil {
+		t.Fatal(err)
+	}
+
+	var warns []string
+	_, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
+		Warnf: collectFormatted(&warns),
+	})
+	if err == nil || !strings.Contains(err.Error(), "2 conflict") {
+		t.Fatalf("expected a 2-conflict aggregate error, got %v", err)
+	}
+
+	// Each conflict line (target: X) must be immediately followed by its own kind's guidance,
+	// not the other conflict's.
+	for i, w := range warns {
+		switch {
+		case strings.Contains(w, "target: .foreignEntity"):
+			if i+1 >= len(warns) || !strings.Contains(warns[i+1], "move or remove the existing file/directory manually") {
+				t.Errorf("conflict line %q not immediately followed by ConflictForeignEntity guidance, next = %v", w, warns[i+1:])
+			}
+		case strings.Contains(w, "target: .claude/skills/nix"):
+			if i+1 >= len(warns) || !strings.Contains(warns[i+1], "check what created this symlink") {
+				t.Errorf("conflict line %q not immediately followed by ConflictForeignAncestor guidance, next = %v", w, warns[i+1:])
+			}
+		}
 	}
 }
