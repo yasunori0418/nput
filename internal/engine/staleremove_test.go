@@ -208,6 +208,8 @@ func TestPreRemoveDriftErrors(t *testing.T) {
 
 			var warns []string
 			a := staleErr_applier(&warns)
+			// preRemove only touches act.TargetAbs directly (no parent-dir walk), so targetAbs
+			// need not sit under a ".claude" parent matching the entry target's shape.
 			act := staleErr_action(recordedDest, ".claude/skills", targetAbs)
 
 			err := a.preRemove([]planner.RemoveAction{act})

@@ -235,6 +235,86 @@ func TestRollbackAncestorMigration(t *testing.T) {
 	}
 }
 
+// TestRollbackAncestorPreRemoveErrorSkipsSwitch verifies the Rollback-level wiring of preRemove's
+// error path: same setup as TestRollbackAncestorMigration, but the ancestor symlink's parent dir
+// is read-only, so preRemove's os.Remove fails. Rollback must propagate the error instead of
+// swallowing it and must not move the profile pointer — a regression a unit test on preRemove
+// alone (TestPreRemoveDriftErrors) cannot catch, since it never exercises the Rollback() call
+// site added by this fix (→ #173). (A pre-plan drift setup cannot be used here: it would make
+// planner.Compute itself see a mismatch and route to Conflicts instead of PreRemove, never
+// reaching this call site — → planner.go recordedLink.)
+func TestRollbackAncestorPreRemoveErrorSkipsSwitch(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("permission-denied unlink cannot be induced as root")
+	}
+	root := realTempDir(t)
+	state := realTempDir(t)
+	srcOld := realTempDir(t)
+	for _, name := range []string{"foo", "bar"} {
+		if err := os.WriteFile(filepath.Join(srcOld, name), []byte("old"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srcNew := realTempDir(t)
+
+	prof := paths.Resolve(state, "c", manifest.RootKindHome, root, true)
+	if err := os.MkdirAll(prof.Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// gen1 (N-1): nested per-file children pointing at srcOld.
+	lf1 := writeLinkFarm(t, homeManifest(
+		storeEntry(srcOld, "foo", ".claude/skills/foo"),
+		storeEntry(srcOld, "bar", ".claude/skills/bar"),
+	))
+	// gen2 (N, current): whole-tree ancestor symlink recorded at .claude/skills → srcNew.
+	lf2 := writeLinkFarm(t, homeManifest(storeEntry(srcNew, ".", ".claude/skills")))
+
+	if err := os.Symlink(lf1, paths.GenerationLink(prof.Profile, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(lf2, paths.GenerationLink(prof.Profile, 2)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(lf2, prof.Profile); err != nil {
+		t.Fatal(err)
+	}
+
+	// Current FS = gen2: .claude/skills is a whole-tree symlink to srcNew (invariant holds, no drift).
+	claudeDir := filepath.Join(root, ".claude")
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(srcNew, filepath.Join(claudeDir, "skills")); err != nil {
+		t.Fatal(err)
+	}
+	// Removing a directory entry requires write on its parent; drop it to force the unlink to fail.
+	if err := os.Chmod(claudeDir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(claudeDir, 0o755) }) // restore so TempDir cleanup can recurse
+
+	var switched int
+	_, err := Rollback(RollbackOptions{
+		Name: "c", RootKind: manifest.RootKindHome, RootOverride: root, StateDir: state,
+		ListGenerations: func(string) ([]Generation, error) {
+			return []Generation{{Number: 1}, {Number: 2, Current: true}}, nil
+		},
+		SwitchGeneration: func(_ string, gen int) error { switched = gen; return nil },
+	})
+	if err == nil {
+		t.Fatal("expected a preRemove unlink error, got nil")
+	}
+	if switched != 0 {
+		t.Errorf("SwitchGeneration was called (switched=%d), want it skipped when preRemove fails", switched)
+	}
+	// The ancestor symlink must be left untouched (unlink failed, not silently skipped).
+	got, rerr := os.Readlink(filepath.Join(claudeDir, "skills"))
+	if rerr != nil || got != srcNew {
+		t.Errorf(".claude/skills after error = %q (err %v), want untouched %q", got, rerr, srcNew)
+	}
+}
+
 // TestRollbackNoPreviousErrors verifies that rollback stops with an error when the current generation is the oldest (no previous generation).
 func TestRollbackNoPreviousErrors(t *testing.T) {
 	root := realTempDir(t)
