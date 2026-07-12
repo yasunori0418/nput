@@ -92,6 +92,14 @@ ADR-0046 §3 で導入した「PreRemove は最終段の removeStale と違い�
 > 自動巻き戻しされる（Unlink → 記録 dest で symlink 再作成・Rmdir → `os.Mkdir` で再作成）。本 ADR の migration 判定
 > 条件（D1〜D5）・drift 時 error 停止（D3）自体は不変（→ ADR-0044）。
 
+> **2026-07-12 改訂注記（ADR-0045）**: 本 ADR §2 が「copy→symlink は自動移行しない。`--backup`（#169・別 issue）が
+> 脱出ハッチになる」と予告した動作は #169（ADR-0045）で実装された。`apply --backup` は copy→symlink の method 変更
+> だけでなく、本 ADR がスコープ外のまま残した「配置を塞ぐ記録外（foreign）実体」全般（symlink モードの foreign
+> 実 file/dir・実 dir migration 失敗・copy 構造不一致・copy foreign skip）を、ユーザーの明示 opt-in のもとで
+> `<target>.<suffix>` へ rename 退避してから配置する。本 ADR の migration 判定条件（D1〜D5。「foreign は対象外」の
+> 既定・祖先 symlink conflict の扱い）自体は不変 — `--backup` はこれらの conflict を消すのではなく、conflict の代わりに
+> 退避という選択肢を追加するオプトイン層である（→ ADR-0045）。
+
 ## 棄却した代替案
 
 - **全面反転（home-manager 型の remove→place の完全対称・2 段化）**: 依存除去のみ前段化する現行方式（ADR-0006 の本流順序は不変）ではなく、独立 stale 除去まで含めて全面的に「先に全部消してから全部置く」設計にすると、rename（target A 削除 + B 追加）のような独立除去まで前段化することになる。除去後・配置前でクラッシュすると新旧どちらのパスにも実体が無い瞬間が生じる（home-manager はこれを受容しているが、nput は成功時の挙動を home-manager と同一に保ちながらクラッシュ耐性は上位互換にしたい）。依存除去のみ前段化すれば、この窓は開かない。
