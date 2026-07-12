@@ -178,7 +178,6 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		return nil, err
 	}
 	res.RemovedSymlinks = a.result.Removed // actually removed (excludes those kept due to drift)
-	res.Pruned = a.result.Pruned
 
 	removedCopies := make([]string, 0, len(copyTargets))
 	for i, targetAbs := range copyTargets {
@@ -187,11 +186,11 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		}
 		removedCopies = append(removedCopies, res.RemovedCopies[i])
 		if err := a.pruneEmptyAncestors(targetAbs); err != nil {
-			warnf("nput: could not prune an empty ancestor directory: %v", err)
+			a.opts.Warnf("nput: could not prune an empty ancestor directory: %v", err)
 		}
 	}
 	res.RemovedCopies = removedCopies
-	res.Pruned = a.result.Pruned
+	res.Pruned = a.result.Pruned // covers both the symlink half (removeStale) and the copy half above
 
 	return res, nil
 }
