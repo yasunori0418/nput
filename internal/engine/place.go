@@ -12,6 +12,16 @@ import (
 // rejected as conflicts by the planner · → ADR-0015), wrapping any failure with the
 // target path for diagnosability. Shared by all place-execution entry points that write
 // to targetAbs (place, placeCopies, recopyAll).
+//
+// The directories it creates are NOT journaled for undo (→ ADR-0044 §1 scope note): unwind
+// removing the leaf symlink/copy it made room for already returns the target to "absent" from
+// the caller's perspective, and any now-empty intermediate directories left behind are
+// indistinguishable from the plain mkdir -p residue apply has always left after non-rollback
+// runs (e.g. an entry deleted from config the next run down) — a case the existing
+// pruneEmptyAncestors backstop, not the undo journal, already exists to sweep up on the next
+// removal/apply. Adding mkdir/rmdir entries here would track a directory that may be shared by
+// several journal entries (multiple leaves under the same fresh parent), complicating dedup for
+// a cosmetic leftover with no data-loss risk.
 func ensureParentDir(targetAbs string) error {
 	if err := os.MkdirAll(filepath.Dir(targetAbs), 0o755); err != nil {
 		return fmt.Errorf("nput: cannot create parent directory (%s): %w", filepath.Dir(targetAbs), err)

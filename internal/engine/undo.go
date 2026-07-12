@@ -151,7 +151,11 @@ func undoOne(op undoOp) error {
 	case undoMkdir:
 		mode := op.mode
 		if mode == 0 {
-			mode = 0o755 // defensive fallback: the removal site always captures a real mode before recording this op.
+			// Defensive fallback for the case the removal site's Lstat failed to capture a mode
+			// (see journalRemovedEmptyDir's callers). A genuinely mode-0o000 directory would also
+			// hit this branch and come back as 0o755 instead — an accepted, vanishingly rare edge
+			// case, not a real invariant violation.
+			mode = 0o755
 		}
 		return os.Mkdir(op.path, mode)
 	default:

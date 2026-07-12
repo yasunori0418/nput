@@ -36,6 +36,8 @@
 
 journal のエントリは「何を」「どこへ」だけで逆操作が定まる十分な情報（対象パス・旧リンク先・一時退避パスなど）を持つ。unwind は journal スライスの末尾から先頭へ辿ることで、生成順と厳密に逆の順序で実行される（例: PreRemove で消した祖先 symlink の下に子を新規配置していた場合、子の削除 → 祖先の再作成、という正しい順序になる）。
 
+**スコープ外**: `ensureParentDir`（配置直前の `mkdir -p` 相当）が新規作成する中間ディレクトリは journal 化しない。unwind が leaf（symlink / copy）を削除すれば、その target は呼び出し側から見て「不在」に戻り、残る空の中間ディレクトリは非 rollback run が残す通常の mkdir -p 残骸（例: 次世代で entry が config から消えたケース）と区別がつかない cosmetic な取りこぼしに過ぎない。既存の `pruneEmptyAncestors`（Issue #174）が次回の除去・apply で回収する対象であり、undo ジャーナルの責務ではない。複数 leaf が同じ新規親ディレクトリを共有するケースの dedup を journal 側に持ち込むコストに対し、データ損失リスクがゼロであることを踏まえた判断。
+
 ### 2. unwind の発火範囲は PreRemove〜removeStale（+ 世代スキップの repairDrift）。commit 成功後は対象外
 
 journal を破棄せず持ち越すのは **FS 変更を行う 4 段 + 世代スキップの drift 修復**、つまり `preRemove` / `place` / `materializeCopies`（`placeCopies` / `recopyAll`）/ `removeStale` / `repairDrift` の呼び出し中に発生したエラーに限る。これらのいずれかが `error` を返したら、その `Apply` / `Rollback` 呼び出しは即座に unwind してから元エラーを返す。
