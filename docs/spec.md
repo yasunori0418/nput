@@ -332,7 +332,8 @@ nput apply <name> [-f <ep>] [--root <p>]
      c. profileDir の前世代 manifest.json を読む（無ければ初回 = 削除対象ゼロ）
      d. project mode かつ新 link-farm が前世代と同一なら新世代は積まない（世代スキップ）。ただし各 target を lstat 検査し、
         ドリフトした entry だけ再張りする（完全 no-op にしない・→ ADR-0017）
-     e. manifest.json を新旧 diff → 自己記録 stale 祖先 symlink を配置前除去（PreRemove・ネスト移行・→ ADR-0046）→ 新規/張替を配置 → 保守的 stale 除去（ネイティブ FS）
+     e. manifest.json を新旧 diff → 配置を塞ぐ自己記録 stale（祖先 symlink・実 dir target・method 変更）を配置前除去
+        （PreRemove・migration・→ ADR-0046, ADR-0047）→ 新規/張替を配置 → 保守的 stale 除去（ネイティブ FS）
      f. nix-env --profile <profileDir>/profile --set <link-farm>（サブプロセス・コミット点）
      g. --set 成功後に <profileDir>/.pending を削除（世代リンクが gcroot を引き継ぐ・→ ADR-0011）
 ```
@@ -570,7 +571,16 @@ engine が**ネイティブ FS 操作**で行う（`ln` / `rsync` は使わな�
      → その祖先を配置前に除去（PreRemove）し、配下子を新規配置してネスト移行する（silent・`-v` で可視・→ ADR-0046）
    - foreign（記録なし / 記録 dest と不一致 / 前世代なし）または次世代にも祖先が残る自己矛盾
      → エラーで停止（配下にネストできない。store 汚染 / dangling を防ぐ・→ ADR-0015 §4, ADR-0046）
-1. target の親ディレクトリを作成（mkdir -p 相当。緩和対象の祖先 symlink は PreRemove 除去済み・foreign は 0 で弾き済み）
+0.5. target 自身が実 dir のとき、配下（任意深さ）の全 leaf を判定する（→ ADR-0047）:
+   - 全 leaf が「recorded ∧ stale な symlink（自身の前世代が記録・on-disk 一致・次世代に無い）」
+     または「空の sub dir（由来を問わない）」なら → target 全体を配置前に除去（PreRemove: leaf は Unlink・
+     dir は子から親へ Rmdir・silent・`-v` で可視）してから symlink を新規配置
+   - 上記以外の leaf が 1 つでもある（中身のある実 file/dir・foreign symlink・次世代にも残る自己矛盾）
+     → target 全体をエラーで停止（部分除去はしない・→ ADR-0047 D2）
+0.6. target と同一 target で method が symlink→copy に変わるとき、前世代が記録した symlink で on-disk が
+   記録通りなら → 配置前に除去（PreRemove・silent）してから copy を新規配置（→ ADR-0047 D5）。
+   readlink drift（on-disk が記録と不一致）は移行せず通常の foreign 判定へフォールバックする。
+1. target の親ディレクトリを作成（mkdir -p 相当。緩和対象の祖先 symlink / 実 dir target は PreRemove 除去済み・foreign は 0 で弾き済み）
 2. target が既存 symlink のとき:
    - 自身の前世代 manifest が記録した symlink → そのまま置き換える（silent）
    - 記録の無い symlink（foreign = 他 nput profile / 他ツール / 手動）→ warning を出して置き換える（後勝ち・→ ADR-0015）
@@ -580,9 +590,10 @@ engine が**ネイティブ FS 操作**で行う（`ln` / `rsync` は使わな�
 ```
 
 - 既存 symlink の張替えは **unlink + symlink の 2 操作**で行う（rename ベースの atomic swap は採らない）。間でクラッシュすると target が一時消失しうるが、**冪等な再実行で収束**する（ADR-0006「積まれる世代は常に完全適用済み」と整合・→ ADR-0017）。
-- target に通常ファイルまたはディレクトリが存在する場合はエラーで停止（上書きしない）
+- target に通常ファイルまたはディレクトリが存在する場合はエラーで停止（上書きしない）。ただし実 dir は §0.5 の条件を満たせば例外的に PreRemove で除去して配置する（→ ADR-0047）
 - subpath がファイル・ディレクトリどちらでも同じ処理
 - 別 config（別 profile）が同一 target を狙うのは基本「衝突させない前提」。後勝ちを許容しつつ foreign symlink 上書きは warning で可視化する（→ ADR-0015）
+- method 変更 copy→symlink は自動移行しない（ユーザー編集済み copy データの保護を優先し、従来通り conflict のまま・→ ADR-0047 D5）
 
 ### copy モード（place-once・ユーザー管理）
 
@@ -946,10 +957,15 @@ devShells.default = pkgs.mkShell {
 | `src` が存在しないストアパス（path / set）| Nix 評価時にエラー |
 | `src` が marker でローカルパスが存在しない | engine 実行時にエラーで停止 |
 | `subpath` が `src` 内に存在しないパス | engine 実行時にエラーで停止 |
-| `target` に通常ファイル・ディレクトリが既存（symlink モード）| conflict。全件を stderr へ列挙して停止（上書きしない・→ 後述「conflict の全件報告」）|
+| `target` に通常ファイルが既存（symlink モード）| conflict。全件を stderr へ列挙して停止（上書きしない・→ 後述「conflict の全件報告」）|
+| `target` が実 dir で既存（symlink モード）、配下（任意深さ）の全 leaf が recorded∧stale な symlink または空 sub dir（由来問わず）| dir 全体を配置前に除去（PreRemove: leaf は Unlink・dir は子から親へ Rmdir）し新規配置（silent・`-v` で可視・`--dryrun` は非 conflict の remove・→ ADR-0047）|
+| `target` が実 dir で既存（symlink モード）、配下に中身のある実 file/dir・foreign symlink・次世代にも残る自己矛盾 symlink が 1 つでもある | conflict。dir 全体を停止し全件を stderr へ列挙（部分除去はしない・`--dryrun` も conflict・→ ADR-0047, 後述「conflict の全件報告」）|
 | `target` の祖先 component が foreign symlink（記録なし / 記録 dest と不一致 / 前世代なし）、または次世代にも祖先が残る自己矛盾 | conflict。engine 実行時に全件を stderr へ列挙して停止（lstat walk・`--dryrun` も conflict・→ ADR-0015 §4, ADR-0046, 後述「conflict の全件報告」）|
 | `target` の祖先 component が自己記録 stale symlink（前世代 manifest が記録・on-disk 一致・次世代に無い）| 祖先を配置前に除去（PreRemove）し配下子を新規配置してネスト移行（silent・`-v` で可視・`--dryrun` は非 conflict の remove・→ ADR-0046）|
 | `target` に foreign symlink が既存（自身の前世代 manifest に記録なし・別 config / 別ツール / 手動）| warning を出して後勝ちで置き換える（→ ADR-0015）|
+| 同一 `target` で method が symlink→copy に変更、前世代が記録した symlink で on-disk が記録通り | 配置前に除去（PreRemove）し copy を新規配置（silent・`-v` で可視・readlink drift 時は通常の foreign 判定へフォールバック・→ ADR-0047 D5）|
+| 同一 `target` で method が copy→symlink に変更 | 自動移行しない。エラーで停止（`target` に既存ファイルとして扱う・`--backup` が脱出ハッチ・→ ADR-0047 D5）|
+| PreRemove 対象（祖先 symlink / 実 dir 配下 leaf・dir / method 変更 symlink）が計画後に drift（記録不一致・ENOTEMPTY 等）| skip せずエラーで停止（冪等再実行で収束・→ ADR-0046 §3, ADR-0047 D3）|
 | `subpath` がディレクトリのとき `target` に通常ファイルが既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）|
 | `subpath` がファイルのとき `target` がディレクトリとして既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）|
 | copy モードで `target` が既存（前世代 manifest に entry あり = nput 配置済み）| place-once により何もしない（上書きしない）。`apply --recopy` 時のみ無条件上書き（→ ADR-0020）|

@@ -11,6 +11,14 @@
 > 実行せず捨てていた。ADR-0046 の移行（祖先 symlink 世代 ⇄ per-file 世代）を跨ぐ rollback はこの経路を通るため、apply と同じ
 > PreRemove 実行が要る。`Rollback()` に `a.preRemove(plan.PreRemove)` を `place` の前段として追加し、drift 時の error 停止を含む
 > §3 の意味論を rollback にも揃えた（→ #173, ADR-0015 §5 改訂注記）。
+>
+> **2026-07-12 改訂注記（ADR-0047）**: 本 ADR の「配置 target の**祖先**が自己記録 stale symlink のとき配置前に除去
+> （PreRemove）してネスト移行する」設計自体は不変。ただし PreRemove の対象は「祖先 symlink」から「配置を塞ぐ自己記録
+> stale 全般」へ一般化された: **target 自身**が実 dir で配下全 leaf が recorded∧stale または空 dir なら migration
+> （中身のある foreign・自己矛盾 leaf が 1 つでもあれば dir 全体 conflict・部分除去はしない）、および同一 target での
+> method 変更 symlink→copy も migration 対象になった（copy→symlink は非対称に conflict のまま）。`Plan.PreRemove` の
+> 要素は `RemoveAction{Kind, Entry, TargetAbs}` に拡張され、`Kind = RemoveRmdir` は `Entry` を持たない空 dir 除去を表す。
+> drift 時に skip せず error 停止する意味論（§3）は一般化後の全 PreRemove 発生源に共通して適用される（→ ADR-0047）。
 
 ## 背景
 
