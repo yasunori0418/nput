@@ -174,9 +174,11 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 		return nil, fmt.Errorf("nput: %s (target: %s)", c.Reason, c.Entry.Target)
 	}
 
-	// 6. reflect the plan onto the real FS. PreRemove first (unlink self-recorded stale ancestor
-	//    symlinks so nested children land in a real dir · same order as Apply · → engine.go, ADR-0046),
-	//    then new/re-link, then stale removal last (→ ADR-0006).
+	// 6. reflect the plan onto the real FS: same PreRemove-first ordering as Apply (unlink
+	//    self-recorded stale ancestor symlinks so nested children land in a real dir · →
+	//    engine.go, ADR-0046), then new/re-link, then stale removal last (→ ADR-0006). Unlike
+	//    Apply, Rollback has no materializeCopies step, so copy entries in plan.Copies are not
+	//    reflected onto the FS (pre-existing gap, out of scope here · → issue #178).
 	a := &applier{opts: Options{Warnf: warnf}, result: &Result{Root: root, ProfileDir: prof.Dir}}
 	a.profile = prof
 	a.root = root

@@ -143,7 +143,9 @@ func TestRollbackReconverges(t *testing.T) {
 // (N, current) back to a per-file generation (N-1): baseline (N) records the ancestor symlink,
 // target (N-1) records the nested children, so the plan carries a PreRemove for the ancestor and
 // the children are placed fresh into the real directory. Before the fix Rollback dropped
-// plan.PreRemove and this migration failed with an EEXIST/EROFS conflict (→ ADR-0046, issue #173).
+// plan.PreRemove, so place ran with the ancestor symlink still present: ensureParentDir's
+// MkdirAll on the symlinked dir was a no-op, and os.Symlink for the nested child then resolved
+// through it into srcNew (store-equivalent) and failed with EEXIST/EROFS (→ ADR-0046, issue #173).
 func TestRollbackAncestorMigration(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
