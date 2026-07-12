@@ -55,9 +55,15 @@ func (a *applier) removeStale(actions []planner.RemoveAction) error {
 // instead of skipping for both Unlink and Rmdir (→ ADR-0017, ADR-0046, ADR-0047 D3); an idempotent
 // re-run re-plans against the current FS and converges.
 //
-// It also prunes ancestors left empty by an Unlink (→ Issue #174); unlike the drift check above,
-// a prune failure does not abort — the removal itself already succeeded, so a leftover empty dir
-// is a cosmetic miss, not a correctness hazard for the child placements that follow.
+// Unlike removeStale / reset — where a removal can be the final state of that target — PreRemove
+// never walks pruneEmptyAncestors (Issue #174's ancestor-pruning helper). Every PreRemove action
+// exists to clear the way for a placement (place / materializeCopies) that runs immediately
+// afterward in the same Apply, at or beneath the same directory: pruning outer ancestors here
+// would just have that placement step's ensureParentDir immediately recreate them, and — for the
+// generalized real-dir-target and multi-leaf migrations (→ ADR-0047) — pruning mid-batch would
+// race the planner's own explicit, already-ordered bottom-up Rmdir actions for the same
+// directories (classifyDirMigration lists children before parents up to the placement target
+// itself; nothing outside that tree needs pruning here).
 func (a *applier) preRemove(actions []planner.RemoveAction) error {
 	for _, act := range actions {
 		switch act.Kind {
@@ -65,21 +71,19 @@ func (a *applier) preRemove(actions []planner.RemoveAction) error {
 			// No pre-check of emptiness: os.Remove on a non-empty dir simply fails with ENOTEMPTY,
 			// which IS the re-verification (TOCTOU-safe without a separate stat+readdir race · → ADR-0047 D3).
 			//
-			// A sibling Unlink earlier in this same batch can already have pruned this exact
-			// directory via pruneEmptyAncestors below (e.g. the last child under a dir-migration
-			// leaf was just unlinked, emptying — and pruning — its parent before the planner's own
-			// explicit Rmdir for that parent runs). That is not drift: the directory achieving
-			// "does not exist" is the Rmdir's goal already met by another path in the same plan, so
-			// IsNotExist is a success, not an error (→ ADR-0047 D3, issue #175).
-			if err := os.Remove(act.TargetAbs); err != nil && !os.IsNotExist(err) {
-				if errors.Is(err, syscall.ENOTEMPTY) || errors.Is(err, syscall.EEXIST) {
-					return fmt.Errorf("nput: directory gained content after planning; cannot migrate this placement target safely (%s); re-run apply to converge", act.TargetAbs)
-				}
+			// IsNotExist is tolerated as success (not drift, not an error): preRemove does not walk
+			// pruneEmptyAncestors (see the doc comment above), so nothing in the normal path removes
+			// a directory out from under a still-pending RemoveRmdir action — but treating "already
+			// gone" as success rather than a hard error keeps this branch robust without relying on
+			// that invariant.
+			err := os.Remove(act.TargetAbs)
+			switch {
+			case err == nil, os.IsNotExist(err):
+				a.result.Pruned = append(a.result.Pruned, act.TargetAbs)
+			case errors.Is(err, syscall.ENOTEMPTY), errors.Is(err, syscall.EEXIST):
+				return fmt.Errorf("nput: directory gained content after planning; cannot migrate this placement target safely (%s); re-run apply to converge", act.TargetAbs)
+			default:
 				return fmt.Errorf("nput: cannot remove empty directory for migration (%s): %w", act.TargetAbs, err)
-			}
-			a.result.Pruned = append(a.result.Pruned, act.TargetAbs)
-			if err := a.pruneEmptyAncestors(act.TargetAbs); err != nil {
-				a.opts.Warnf("nput: could not prune an empty ancestor directory: %v", err)
 			}
 		default: // planner.RemoveUnlink
 			if !reverifyStale(act) {
@@ -89,9 +93,6 @@ func (a *applier) preRemove(actions []planner.RemoveAction) error {
 				return fmt.Errorf("nput: cannot remove recorded symlink for migration (%s): %w", act.TargetAbs, err)
 			}
 			a.result.Removed = append(a.result.Removed, act.Entry.Target)
-			if err := a.pruneEmptyAncestors(act.TargetAbs); err != nil {
-				a.opts.Warnf("nput: could not prune an empty ancestor directory: %v", err)
-			}
 		}
 	}
 	return nil
