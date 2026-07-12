@@ -446,13 +446,20 @@ func TestApplyDirMigrationInterruptedAfterPreRemoveReRunConverges(t *testing.T) 
 	// An ordinary re-run apply must re-plan against this partially-migrated FS (target absent, no
 	// PreRemove needed this time) and converge to the fully-migrated state without erroring.
 	lf2 := writeLinkFarm(t, projectManifest(storeEntry(srcNew, ".", ".claude/hooks")))
-	if _, err := Apply(Options{
+	res, err := Apply(Options{
 		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("re-run Apply after simulated crash: %v", err)
 	}
-	got, err := os.Readlink(filepath.Join(root, ".claude", "hooks"))
-	if err != nil || got != srcNew {
-		t.Fatalf("re-run readlink = %q, err %v; want %q", got, err, srcNew)
+	got, rerr := os.Readlink(filepath.Join(root, ".claude", "hooks"))
+	if rerr != nil || got != srcNew {
+		t.Fatalf("re-run readlink = %q, err %v; want %q", got, rerr, srcNew)
+	}
+	// The target was already absent going into the re-run (the simulated crash's PreRemove already
+	// cleared it), so this second Apply must take the plain PlaceNew path, not PreRemove again —
+	// confirming the crash window truly left nothing further for PreRemove to do.
+	if len(res.Removed) != 0 || len(res.Pruned) != 0 {
+		t.Errorf("re-run Removed/Pruned = %v/%v, want both empty (no PreRemove needed against an already-absent target)", res.Removed, res.Pruned)
 	}
 }
