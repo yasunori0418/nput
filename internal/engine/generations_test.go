@@ -139,6 +139,81 @@ func TestRollbackReconverges(t *testing.T) {
 	}
 }
 
+// TestRollbackSwitchGenerationFailureDoesNotUnwind verifies Rollback's own asymmetry, mirroring
+// Apply's commit-failure asymmetry (→ ADR-0044 §2): every FS write (PreRemove/place/removeStale)
+// has already succeeded by the time SwitchGeneration runs, so a failure there is not rolled back —
+// discardJournal is only reached after SwitchGeneration succeeds. Same setup as
+// TestRollbackReconverges, but SwitchGeneration fails.
+func TestRollbackSwitchGenerationFailureDoesNotUnwind(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	srcA := makeSrc(t, "x")
+	srcB := makeSrc(t, "x")
+	srcC := makeSrc(t, "x")
+
+	prof := paths.Resolve(state, "vim", manifest.RootKindHome, root, true)
+	if err := os.MkdirAll(prof.Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	lf1 := writeLinkFarm(t, homeManifest(
+		storeEntry(srcA, ".", "a"),
+		storeEntry(srcB, ".", "b"),
+	))
+	lf2 := writeLinkFarm(t, homeManifest(
+		storeEntry(srcA, ".", "a"),
+		storeEntry(srcC, ".", "c"),
+	))
+
+	if err := os.Symlink(lf1, paths.GenerationLink(prof.Profile, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(lf2, paths.GenerationLink(prof.Profile, 2)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(lf2, prof.Profile); err != nil {
+		t.Fatal(err)
+	}
+
+	// Current FS = gen2: place a→srcA, c→srcC.
+	if err := os.Symlink(srcA, filepath.Join(root, "a")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(srcC, filepath.Join(root, "c")); err != nil {
+		t.Fatal(err)
+	}
+
+	var warns []string
+	_, err := Rollback(RollbackOptions{
+		Name:         "vim",
+		RootKind:     manifest.RootKindHome,
+		RootOverride: root,
+		StateDir:     state,
+		ListGenerations: func(string) ([]Generation, error) {
+			return []Generation{{Number: 1}, {Number: 2, Current: true}}, nil
+		},
+		SwitchGeneration: func(string, int) error { return os.ErrPermission },
+		Warnf:            collectFormatted(&warns),
+	})
+	if err == nil {
+		t.Fatal("expected the SwitchGeneration failure to propagate, got nil")
+	}
+
+	// All FS writes already succeeded before SwitchGeneration ran, and must survive untouched:
+	// b was newly placed (re-converged to gen1) and c was stale-removed. Neither is rolled back.
+	if dest, rerr := os.Readlink(filepath.Join(root, "b")); rerr != nil || dest != srcB {
+		t.Errorf("b must survive a SwitchGeneration failure untouched: dest=%q, err=%v, want %q", dest, rerr, srcB)
+	}
+	if _, lerr := os.Lstat(filepath.Join(root, "c")); !os.IsNotExist(lerr) {
+		t.Errorf("c's stale removal must survive a SwitchGeneration failure, lstat err = %v", lerr)
+	}
+	for _, w := range warns {
+		if strings.Contains(w, "rolled back this run's filesystem changes") {
+			t.Errorf("warns = %v, must not report a rollback for a SwitchGeneration-only failure", warns)
+		}
+	}
+}
+
 // TestRollbackAncestorMigration verifies rollback from a whole-tree-ancestor-symlink generation
 // (N, current) back to a per-file generation (N-1): baseline (N) records the ancestor symlink,
 // target (N-1) records the nested children, so the plan carries a PreRemove for the ancestor and
