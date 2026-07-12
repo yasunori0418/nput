@@ -233,8 +233,10 @@ func Apply(opts Options) (*Result, error) {
 		}
 	}
 
-	// 8. reflect the plan onto the real FS. PreRemove first (unlink self-recorded stale ancestor
-	//    symlinks so nested children land in a real dir · local exception to ADR-0006 · → ADR-0046),
+	// 8. reflect the plan onto the real FS. PreRemove first (clear whatever self-recorded stale
+	//    filesystem object occupies a placement target — an ancestor symlink, a real directory
+	//    fully migratable, or a symlink replaced by a symlink→copy method change — so placement
+	//    lands on an empty/absent target · local exception to ADR-0006 · → ADR-0046, ADR-0047),
 	//    then new / re-link, then stale removal last (→ ADR-0006). copy branches: on --recopy overwrite
 	//    all copy targets unconditionally, normally place-once (new copy only when target is absent) (→ ADR-0020).
 	if err := a.preRemove(plan.PreRemove); err != nil {
@@ -325,6 +327,16 @@ func (a *applier) dryRun() (*Result, error) {
 		a.result.Copied = append(a.result.Copied, c.Entry.Target)
 	}
 	for _, r := range plan.PreRemove {
+		if r.Kind == planner.RemoveRmdir {
+			// Rmdir actions carry no manifest Entry (nothing was ever recorded for a bare
+			// directory); report the root-relative directory path instead (→ ADR-0047, issue #175).
+			rel, err := filepath.Rel(a.root, r.TargetAbs)
+			if err != nil {
+				rel = r.TargetAbs
+			}
+			a.result.Pruned = append(a.result.Pruned, rel)
+			continue
+		}
 		a.result.Removed = append(a.result.Removed, r.Entry.Target)
 	}
 	for _, r := range plan.Remove {

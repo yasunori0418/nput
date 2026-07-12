@@ -47,16 +47,19 @@ func generationUnchanged(profileLink, newLinkFarm string) (bool, error) {
 //     generations" · ADR-0022). On --recopy, recopyAll overwrites unconditionally (recopy is
 //     an opt-in outside generations).
 //
-// plan.PreRemove is structurally empty on this path: an ancestor→children migration changes the
-// manifest, hence the link-farm derivation, so generationUnchanged is never true and the gen-skip
-// branch is not taken (→ ADR-0046). The drift repair therefore has no pre-removal to run.
+// plan.PreRemove is structurally empty on this path: every PreRemove source — ancestor→children
+// migration, an occupying real directory fully migrated, or a symlink→copy method change (→
+// ADR-0046, ADR-0047) — requires the new manifest to differ from the previous generation's at the
+// affected target, which changes the link-farm derivation. So generationUnchanged is never true
+// for a plan with a non-empty PreRemove, and the gen-skip branch above is not taken. The drift
+// repair therefore has no pre-removal to run.
 func (a *applier) repairDrift(plan planner.Plan, recopy bool) error {
-	// Defensive guard for the invariant the doc comment relies on: a migration changes the manifest
-	// (hence the derivation), so it can never reach the gen-skip path with a non-empty PreRemove.
-	// If that ever breaks, silently dropping the pre-removal would let place nest children through a
-	// live ancestor symlink — fail loudly instead (→ ADR-0046).
+	// Defensive guard for the invariant the doc comment relies on: any PreRemove source changes the
+	// manifest (hence the derivation) at its target, so it can never reach the gen-skip path with a
+	// non-empty PreRemove. If that ever breaks, silently dropping the pre-removal would let place
+	// nest/place through stale content still occupying the target — fail loudly instead (→ ADR-0046, ADR-0047).
 	if len(plan.PreRemove) > 0 {
-		return fmt.Errorf("nput: internal invariant violated: generation-skip drift repair received %d ancestor pre-removal(s) (→ ADR-0046)", len(plan.PreRemove))
+		return fmt.Errorf("nput: internal invariant violated: generation-skip drift repair received %d pre-removal(s) (→ ADR-0046, ADR-0047)", len(plan.PreRemove))
 	}
 	drifted := make([]planner.PlaceAction, 0, len(plan.Place))
 	for _, act := range plan.Place {
