@@ -23,20 +23,24 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
-// FS abstracts the lstat/readlink probes the planner needs, so diff
+// FS abstracts the lstat/readlink/readdir probes the planner needs, so diff
 // classification is a pure function over (manifests, FS state) and can be
 // table-tested with a fake FS without touching the real filesystem
-// (→ ADR-0006, docs/spec.md "targets and safety invariant of stale removal").
+// (→ ADR-0006, ADR-0047, docs/spec.md "targets and safety invariant of stale removal").
 type FS interface {
 	Lstat(path string) (os.FileInfo, error)
 	Readlink(path string) (string, error)
+	// ReadDir lists path's immediate children (a real directory target). Used only
+	// to classify an occupying real directory for PreRemove migration (→ ADR-0047).
+	ReadDir(path string) ([]os.DirEntry, error)
 }
 
 // osFS is the real-filesystem FS used at engine runtime.
 type osFS struct{}
 
-func (osFS) Lstat(path string) (os.FileInfo, error) { return os.Lstat(path) }
-func (osFS) Readlink(path string) (string, error)   { return os.Readlink(path) }
+func (osFS) Lstat(path string) (os.FileInfo, error)     { return os.Lstat(path) }
+func (osFS) Readlink(path string) (string, error)       { return os.Readlink(path) }
+func (osFS) ReadDir(path string) ([]os.DirEntry, error) { return os.ReadDir(path) }
 
 // OSFS probes the real filesystem (engine runtime).
 var OSFS FS = osFS{}
@@ -70,10 +74,30 @@ type CopyAction struct {
 	Src       string // LinkDest(Entry): <src>/<subpath> (copy source)
 }
 
-// RemoveAction is a stale symlink that satisfies the conservative invariant at
-// plan time (recorded by prev AND on-disk points to the recorded dest). The
-// stale-remover re-verifies this against the real FS before unlinking.
+// RemoveKind distinguishes what a RemoveAction removes: an entry-recorded symlink
+// (Unlink) versus an empty directory left behind by removals (Rmdir; → ADR-0047).
+type RemoveKind int
+
+const (
+	// RemoveUnlink removes a stale symlink recorded by Entry (the original, entry-driven case).
+	RemoveUnlink RemoveKind = iota
+	// RemoveRmdir removes an empty directory that occupies a placement target or is left
+	// empty by a migration. Entry is the zero value: rmdir has no manifest record to
+	// re-verify against, so the engine re-checks emptiness at unlink time instead (→ ADR-0047).
+	RemoveRmdir
+)
+
+// RemoveAction is a stale filesystem object that satisfies the conservative invariant
+// at plan time. For Kind == RemoveUnlink: a symlink recorded by prev AND on-disk points
+// to the recorded dest (Entry is populated; the stale-remover re-verifies this against
+// the real FS before unlinking). For Kind == RemoveRmdir: an empty directory (Entry is
+// the zero value; the engine re-verifies emptiness immediately before rmdir · → ADR-0047).
+//
+// Execution order is expressed by slice order: the planner appends children before their
+// parents, so consumers that walk a RemoveAction slice front-to-back naturally unlink
+// leaves first and rmdir from the deepest directory upward (bottom-up).
 type RemoveAction struct {
+	Kind      RemoveKind
 	Entry     manifest.Entry
 	TargetAbs string
 }
@@ -240,8 +264,35 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 				plan.Warnings = append(plan.Warnings, Warning{Kind: WarnForeignReplace, Target: e.Target})
 			}
 			plan.Place = append(plan.Place, PlaceAction{Entry: e, TargetAbs: targetAbs, Dest: LinkDest(e), Kind: kind})
+		case err == nil && info.IsDir():
+			// A real directory occupies the target: fully migratable only when every leaf beneath
+			// it is a self-recorded stale symlink or an empty subdirectory (→ ADR-0047, issue #175).
+			// A copy-placed target is out of scope (copy targets never appear here — this arm only
+			// runs for the symlink-method branch).
+			dirActions, reason, derr := classifyDirMigration(filepath.Clean(e.Target), targetAbs, prevByTarget, nextByTarget, fs)
+			if derr != nil {
+				return Plan{}, derr
+			}
+			if reason != "" {
+				plan.Conflicts = append(plan.Conflicts, Conflict{
+					Entry:     e,
+					TargetAbs: targetAbs,
+					Reason:    fmt.Sprintf("target directory cannot be fully migrated: %s (→ ADR-0047)", reason),
+				})
+				continue
+			}
+			plan.PreRemove = append(plan.PreRemove, dirActions...)
+			plan.PreRemove = append(plan.PreRemove, RemoveAction{Kind: RemoveRmdir, TargetAbs: targetAbs})
+			// Dedup against the remove-side loop below: each unlinked child is also a stale entry
+			// in prev.Entries, and must not be scheduled there a second time (→ ADR-0046 dedup convention).
+			for _, da := range dirActions {
+				if da.Kind == RemoveUnlink {
+					preRemoved[da.Entry.Target] = true
+				}
+			}
+			plan.Place = append(plan.Place, PlaceAction{Entry: e, TargetAbs: targetAbs, Dest: LinkDest(e), Kind: PlaceNew})
 		case err == nil:
-			// A regular file / directory is not overwritten (→ docs/spec.md error spec).
+			// A regular file is not overwritten (→ docs/spec.md error spec).
 			plan.Conflicts = append(plan.Conflicts, Conflict{
 				Entry:     e,
 				TargetAbs: targetAbs,
@@ -402,6 +453,65 @@ func copyStructureMismatch(e manifest.Entry, targetInfo os.FileInfo, fs FS) (boo
 		return false, fmt.Errorf("nput: cannot lstat copy src (%s): %w", LinkDest(e), err)
 	}
 	return srcInfo.IsDir() != targetInfo.IsDir(), nil
+}
+
+// classifyDirMigration walks an occupying real directory (dirAbs, root-relative dirRel) that a
+// symlink-method entry wants to place at, and decides whether the whole tree beneath it is
+// safely removable so the entry can be placed as a new symlink (→ ADR-0047, issue #175, #172 D2).
+//
+// A directory is fully migratable only when every leaf beneath it, at any depth, is one of:
+//   - a symlink this profile's own previous generation recorded and the new generation drops
+//     (recorded ∧ ¬kept) — scheduled as a RemoveUnlink
+//   - an empty subdirectory, regardless of provenance (rmdir only ever succeeds on empty, so this
+//     is data-loss-free even for dirs nput never created) — scheduled as a RemoveRmdir
+//
+// Any other leaf — a regular file, a foreign or record-mismatched symlink, or a symlink the new
+// generation still keeps at the same target (self-contradictory manifest) — makes the *whole*
+// directory a conflict; no partial removal is scheduled (the caller discards dirActions when
+// reason != ""). The walk is lstat-based and never descends into a symlink (a symlink is
+// classified as a leaf, matching the ancestor-walk safety rule in ancestorSymlink · → ADR-0046 §2).
+//
+// The returned actions are ordered children-before-parents (leaves and inner-dir rmdirs appended
+// depth-first before the walk returns to its caller), so executing them in slice order naturally
+// unlinks leaves first and rmdirs from the deepest directory upward.
+func classifyDirMigration(dirRel, dirAbs string, prevByTarget, nextByTarget map[string]manifest.Entry, fs FS) (actions []RemoveAction, reason string, err error) {
+	children, err := fs.ReadDir(dirAbs)
+	if err != nil {
+		return nil, "", fmt.Errorf("nput: cannot read directory (%s): %w", dirAbs, err)
+	}
+	for _, de := range children {
+		childAbs := filepath.Join(dirAbs, de.Name())
+		childRel := filepath.Join(dirRel, de.Name())
+
+		info, lerr := fs.Lstat(childAbs)
+		if lerr != nil {
+			return nil, "", fmt.Errorf("nput: cannot lstat (%s): %w", childAbs, lerr)
+		}
+
+		switch {
+		case info.Mode()&os.ModeSymlink != 0:
+			if _, kept := nextByTarget[childRel]; kept {
+				return nil, fmt.Sprintf("%q is a symlink the new generation still keeps (self-contradictory manifest)", childRel), nil
+			}
+			if !recordedLink(childRel, childAbs, prevByTarget, fs) {
+				return nil, fmt.Sprintf("%q is a foreign or record-mismatched symlink", childRel), nil
+			}
+			actions = append(actions, RemoveAction{Kind: RemoveUnlink, Entry: prevByTarget[childRel], TargetAbs: childAbs})
+		case info.IsDir():
+			sub, subReason, serr := classifyDirMigration(childRel, childAbs, prevByTarget, nextByTarget, fs)
+			if serr != nil {
+				return nil, "", serr
+			}
+			if subReason != "" {
+				return nil, subReason, nil
+			}
+			actions = append(actions, sub...)
+			actions = append(actions, RemoveAction{Kind: RemoveRmdir, TargetAbs: childAbs})
+		default:
+			return nil, fmt.Sprintf("%q is a regular file", childRel), nil
+		}
+	}
+	return actions, "", nil
 }
 
 // ancestorSymlink walks the target's ancestor components under root and returns the first

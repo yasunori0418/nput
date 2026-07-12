@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,6 +40,35 @@ func (f fakeFS) Readlink(path string) (string, error) {
 	return e.dest, nil
 }
 
+// ReadDir lists path's immediate children by scanning the flat fakeFS map for keys one
+// path component below path (path itself need not exist as a "dir" entry in the map;
+// only its children's presence matters, matching how the table-driven tests populate fs).
+func (f fakeFS) ReadDir(path string) ([]os.DirEntry, error) {
+	prefix := path + string(os.PathSeparator)
+	seen := map[string]fakeEntry{}
+	for p, e := range f {
+		if !strings.HasPrefix(p, prefix) {
+			continue
+		}
+		rest := p[len(prefix):]
+		if idx := strings.IndexRune(rest, os.PathSeparator); idx >= 0 {
+			rest = rest[:idx]
+		}
+		if rest == "" {
+			continue
+		}
+		if _, ok := seen[rest]; !ok {
+			seen[rest] = e
+		}
+	}
+	out := make([]os.DirEntry, 0, len(seen))
+	for name, e := range seen {
+		out = append(out, fakeDirEntry{name: name, mode: e.mode})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name() < out[j].Name() })
+	return out, nil
+}
+
 type fakeInfo struct {
 	name string
 	mode os.FileMode
@@ -50,6 +80,18 @@ func (i fakeInfo) Mode() os.FileMode  { return i.mode }
 func (i fakeInfo) ModTime() time.Time { return time.Time{} }
 func (i fakeInfo) IsDir() bool        { return i.mode&os.ModeDir != 0 }
 func (i fakeInfo) Sys() any           { return nil }
+
+type fakeDirEntry struct {
+	name string
+	mode os.FileMode
+}
+
+func (e fakeDirEntry) Name() string      { return e.name }
+func (e fakeDirEntry) IsDir() bool       { return e.mode&os.ModeDir != 0 }
+func (e fakeDirEntry) Type() os.FileMode { return e.mode.Type() }
+func (e fakeDirEntry) Info() (os.FileInfo, error) {
+	return fakeInfo{name: e.name, mode: e.mode}, nil
+}
 
 // --- manifest helpers -------------------------------------------------------
 
@@ -86,7 +128,8 @@ type want struct {
 	placeForeign []string
 	copies       []string
 	remove       []string
-	preRemove    []string
+	preRemove    []string // RemoveUnlink actions, by Entry.Target
+	preRemoveDir []string // RemoveRmdir actions, by root-relative TargetAbs
 	warns        []WarnKind
 	conflicts    int
 	// conflictKinds asserts plan.Conflicts[i].Kind in order (nil = skip; the conflicts count
@@ -116,7 +159,23 @@ func removeTargets(p Plan) []string {
 func preRemoveTargets(p Plan) []string {
 	var out []string
 	for _, a := range p.PreRemove {
-		out = append(out, a.Entry.Target)
+		if a.Kind == RemoveUnlink {
+			out = append(out, a.Entry.Target)
+		}
+	}
+	return out
+}
+
+func preRemoveDirTargets(p Plan) []string {
+	var out []string
+	for _, a := range p.PreRemove {
+		if a.Kind == RemoveRmdir {
+			rel, err := filepath.Rel(root, a.TargetAbs)
+			if err != nil {
+				rel = a.TargetAbs
+			}
+			out = append(out, rel)
+		}
 	}
 	return out
 }
@@ -440,6 +499,107 @@ func TestComputeTableDriven(t *testing.T) {
 			want: want{},
 		},
 		{
+			// Real directory occupying the target, all children recorded ∧ stale (self-recorded by
+			// this profile's previous generation, dropped by the new one): fully migratable — every
+			// child is scheduled RemoveUnlink, the now-empty dir itself RemoveRmdir, and the entry
+			// places as a new symlink (→ ADR-0047, issue #175).
+			name: "real dir target, all children recorded+stale → migrate (preRemove unlink+rmdir)",
+			prev: mani(sl(srcA, ".claude/hooks/foo/main.sh"), sl(srcA, ".claude/hooks/bar/main.sh")),
+			next: mani(sl(srcB, ".claude/hooks")),
+			fs: fakeFS{
+				abs(".claude"):                   dir(),
+				abs(".claude/hooks"):             dir(),
+				abs(".claude/hooks/foo"):         dir(),
+				abs(".claude/hooks/foo/main.sh"): sym(srcA),
+				abs(".claude/hooks/bar"):         dir(),
+				abs(".claude/hooks/bar/main.sh"): sym(srcA),
+			},
+			want: want{
+				placeNew: []string{".claude/hooks"},
+				preRemove: []string{
+					".claude/hooks/foo/main.sh",
+					".claude/hooks/bar/main.sh",
+				},
+				preRemoveDir: []string{
+					".claude/hooks/foo",
+					".claude/hooks/bar",
+					".claude/hooks",
+				},
+			},
+		},
+		{
+			// Real directory containing only an empty subdirectory (no leaf entries at all): empty
+			// dirs are migratable regardless of provenance, since rmdir only ever succeeds when empty
+			// (data-loss-free even for dirs nput never created · → ADR-0047 D2).
+			name: "real dir target, empty subdir of unknown provenance → migrate (rmdir only)",
+			prev: nil,
+			next: mani(sl(srcB, ".claude/hooks")),
+			fs: fakeFS{
+				abs(".claude"):             dir(),
+				abs(".claude/hooks"):       dir(),
+				abs(".claude/hooks/empty"): dir(),
+			},
+			want: want{
+				placeNew: []string{".claude/hooks"},
+				preRemoveDir: []string{
+					".claude/hooks/empty",
+					".claude/hooks",
+				},
+			},
+		},
+		{
+			// Real directory with one foreign real file mixed among otherwise-migratable children:
+			// the whole directory is a conflict, and critically NONE of the migratable siblings are
+			// partially removed (no dirActions leak into the plan on failure · → ADR-0047).
+			name: "real dir target, one real file mixed in → conflict (no partial removal)",
+			prev: mani(sl(srcA, ".claude/hooks/foo/main.sh")),
+			next: mani(sl(srcB, ".claude/hooks")),
+			fs: fakeFS{
+				abs(".claude"):                   dir(),
+				abs(".claude/hooks"):             dir(),
+				abs(".claude/hooks/foo"):         dir(),
+				abs(".claude/hooks/foo/main.sh"): sym(srcA),
+				abs(".claude/hooks/README"):      reg(),
+			},
+			// The dir-migration classification for ".claude/hooks" discards its dirActions on
+			// conflict (no partial removal from *that* walk), but ".claude/hooks/foo/main.sh" is
+			// independently a stale entry in prev.Entries under the ordinary remove-side loop (it
+			// was never added to preRemoved, since the dir classification failed before dedup-ing
+			// it). This is harmless: engine.Apply stops before removeStale on any conflict, so this
+			// planned removal never executes (→ ADR-0047).
+			want: want{conflicts: 1, remove: []string{".claude/hooks/foo/main.sh"}},
+		},
+		{
+			// Real directory whose new generation still records a nested child at the same relative
+			// target as a dir-child symlink (self-contradictory manifest): the dir-migration
+			// classification for ".claude/hooks" itself conflicts (child kept in next), but
+			// ".claude/hooks/foo" is also independently present in next.Entries and gets classified
+			// on its own merits by the ordinary per-entry loop (a recorded symlink, unaffected by
+			// its ancestor still being a real, unmigrated directory) → PlaceReplace. Harmless for the
+			// same reason as above: the conflict blocks engine.Apply before any placement runs.
+			name: "real dir target, child kept in next → conflict (self-contradictory)",
+			prev: mani(sl(srcA, ".claude/hooks/foo")),
+			next: mani(sl(srcB, ".claude/hooks"), sl(srcB, ".claude/hooks/foo")),
+			fs: fakeFS{
+				abs(".claude"):           dir(),
+				abs(".claude/hooks"):     dir(),
+				abs(".claude/hooks/foo"): sym(srcA),
+			},
+			want: want{conflicts: 1, placeReplace: []string{".claude/hooks/foo"}},
+		},
+		{
+			// Real directory with a foreign (record-mismatched) symlink child: conflict.
+			name: "real dir target, foreign symlink child → conflict",
+			prev: nil,
+			next: mani(sl(srcB, ".claude/hooks")),
+			fs: fakeFS{
+				abs(".claude"):           dir(),
+				abs(".claude/hooks"):     dir(),
+				abs(".claude/hooks/foo"): sym("/foreign"),
+			},
+			want: want{conflicts: 1},
+		},
+		{
 			// mixed: new + silent re-link + foreign warning + stale removal + mismatch kept.
 			name: "mixed plan",
 			prev: mani(sl(srcA, "keep"), sl(srcA, "drop"), sl(srcA, "mism")),
@@ -473,6 +633,7 @@ func TestComputeTableDriven(t *testing.T) {
 			sortedEq(t, "copies", copyTargets(plan), tt.want.copies)
 			sortedEq(t, "remove", removeTargets(plan), tt.want.remove)
 			sortedEq(t, "preRemove", preRemoveTargets(plan), tt.want.preRemove)
+			sortedEq(t, "preRemoveDir", preRemoveDirTargets(plan), tt.want.preRemoveDir)
 			warnEq(t, warnKinds(plan), tt.want.warns)
 			if len(plan.Conflicts) != tt.want.conflicts {
 				t.Errorf("conflicts = %d, want %d (%v)", len(plan.Conflicts), tt.want.conflicts, plan.Conflicts)
