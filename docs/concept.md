@@ -18,6 +18,8 @@ home-manager は強力だが、全てを管理対象にすることを前提と�
 - あるツールの更新が別のツールの設定を壊す「共倒れ」が発生しうる
 - 更新のタイミングをツールごとに制御できない
 
+「全体管理」というモデルレベルの問題とは別に、配置エンジンの意味論そのものにも差がある（自己記録の manifest を持つかどうかに起因する所有判定・自動移行・安全性の違い。→「既存ツールとの比較」内「home-manager `home.file` との配置意味論の差」）。
+
 ### モジュール抽象がユーザーから配置の制御を奪う
 
 home-manager / NixOS / nix-darwin / system-manager はいずれも **Nix モジュールシステムで配置を宣言し、
@@ -330,6 +332,17 @@ lib（コア）は何にも依存しない（nixpkgs のみ）
 nput とほぼ同一のツールは存在しない。構成要素（symlink farm / nix profile / out-of-store / 任意パス symlink）は
 すべて既存だが、それらを「取得手段非依存 + 生成しない + エントリ個別適用 + HM 非依存の純粋関数コア +
 クロスプラットフォーム共通スキーマ + 任意パス配置 × 世代管理」として束ねたものは無い。
+
+### home-manager `home.file` との配置意味論の差
+
+home-manager の `home.file`（`files.nix`）と nput はどちらも「symlink を配置し前世代との diff で stale を除去する」という同型のモデルを持つ。しかし nput は配置のたびに**自己記録の manifest**（前世代 `manifest.json`）を持つのに対し、home-manager の cleanup 判定は on-disk の readlink パターンマッチに依存する。この一次情報の有無が、以下の観点で意味論の差として表れる（home-manager の現行実装〔2026-07 時点〕との比較）。
+
+1. **同名 leaf を含む per-file → dir symlink 遷移の自動移行**: `foo/main.sh`（per-file 配置）を `foo`（dir symlink）へ定義変更したとき、home-manager は cleanup の存在判定が新世代の dir symlink を辿って旧 leaf の残存を誤認し、部分適用で失敗しうる。nput は manifest 記録との一致判定（recorded ∧ stale）で安全に自動移行する（→ ADR-0046, ADR-0047）。
+2. **所有判定の厳密さ**: home-manager は readlink の glob パターンマッチ（`*-home-manager-files/*` 相当）で「自分が置いたものか」を判定する。nput は「記録した配置先 + on-disk の readlink が記録 dest と完全一致」で判定する。この厳密さが、実 dir target 配下の recorded ∧ stale leaf を漏れなく検出する自動移行の土台になっている。
+3. **祖先 symlink の安全性**: home-manager は配置先の祖先 component が symlink でも無検査で辿る（`os.MkdirAll` 相当が書込可能な先なら無警告で汚染し、read-only な先なら部分適用停止になりうる）。nput は foreign な祖先 symlink を conflict で停止し、自己記録の stale 祖先symlink のみ配置前除去（PreRemove）で migration する（→ ADR-0046）。
+4. **rename 可用性 + fail-fast drift**: home-manager は cleanup（除去）を配置より先に行うため、rename 相当（旧 target 削除 + 新 target 追加）の適用中にクラッシュすると、新旧どちらのパスにも実体が無い瞬間が生じうる。nput は「配置を塞ぐ依存除去のみ」を前段化し、独立した stale 除去は本流どおり最後に行う（ADR-0006 の「新規・張替を先に、stale 除去を最後に」は不変）。前段化した除去が drift（記録との不一致）を検出した場合は skip せず error で停止し、握りつぶさない（→ ADR-0047）。
+
+home-manager の空 dir 剪定・conflict 全件報告は nput も同等の挙動を持つ（パリティ項目・HM 超えではない）。method 変更（symlink → copy）を跨ぐ自動移行や、copy を含めた `reset` によるロールバックは copy という概念自体が home-manager に存在しないカテゴリであり、比較の対象外である。
 
 特に **system-manager** とは、パッケージ / systemd / `/etc` というドメインこそ重なるが、
 「モジュールで隠す」か「純粋関数でユーザーが握る」かというアプローチが思想レベルで異なるため競合しない。
