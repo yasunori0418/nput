@@ -86,6 +86,12 @@ ADR-0046 §3 で導入した「PreRemove は最終段の removeStale と違い�
 - **`docs/spec.md`**: 配置動作仕様（実 dir target の migration・method 変更）・エラー仕様表・実行フローへ反映。
 - **cross-epic**: #173（Rollback への PreRemove 配線）は本 ADR の一般化 executor（`preRemove`）をそのまま利用できる設計にしてある。マージ順による rebase 調整は後工程。#176（conflict 全件報告）はスコープ外のまま。#168（undo ジャーナル）は本 ADR の Unlink/Rmdir 両方を undo 対象に含める前提で設計する。
 
+> **2026-07-12 改訂注記（ADR-0044）**: 本 ADR が影響節で予告した「#168（undo ジャーナル）は本 ADR の Unlink/Rmdir
+> 両方を undo 対象に含める前提で設計する」は #168（ADR-0044）で実装された。PreRemove の `RemoveUnlink`（記録
+> symlink 除去）・`RemoveRmdir`（空 dir 除去）はいずれも apply / Rollback 途中失敗時にインメモリ undo ジャーナルで
+> 自動巻き戻しされる（Unlink → 記録 dest で symlink 再作成・Rmdir → `os.Mkdir` で再作成）。本 ADR の migration 判定
+> 条件（D1〜D5）・drift 時 error 停止（D3）自体は不変（→ ADR-0044）。
+
 ## 棄却した代替案
 
 - **全面反転（home-manager 型の remove→place の完全対称・2 段化）**: 依存除去のみ前段化する現行方式（ADR-0006 の本流順序は不変）ではなく、独立 stale 除去まで含めて全面的に「先に全部消してから全部置く」設計にすると、rename（target A 削除 + B 追加）のような独立除去まで前段化することになる。除去後・配置前でクラッシュすると新旧どちらのパスにも実体が無い瞬間が生じる（home-manager はこれを受容しているが、nput は成功時の挙動を home-manager と同一に保ちながらクラッシュ耐性は上位互換にしたい）。依存除去のみ前段化すれば、この窓は開かない。
