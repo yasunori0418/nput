@@ -422,7 +422,7 @@ func TestApplyDirMigrationInterruptedAfterPreRemoveReRunConverges(t *testing.T) 
 	srcNew := realTempDir(t)
 	next := projectManifest(storeEntry(srcNew, ".", ".claude/hooks"))
 	prev := projectManifest(storeEntry(srcOld, ".", ".claude/hooks/foo"))
-	plan, err := planner.Compute(&prev, &next, root, planner.OSFS)
+	plan, err := planner.Compute(&prev, &next, root, planner.OSFS, planner.Options{})
 	if err != nil {
 		t.Fatalf("planner.Compute: %v", err)
 	}

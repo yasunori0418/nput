@@ -102,6 +102,17 @@ type RemoveAction struct {
 	TargetAbs string
 }
 
+// BackupAction renames an occupying foreign filesystem object aside (TargetAbs →
+// BackupAbs = <target>.<suffix>) before placement, when apply --backup is enabled
+// (→ ADR-0045, issue #169). It runs after PreRemove and before Place/Copies: once the
+// rename lands, TargetAbs is absent, so the entry's placement follows the ordinary
+// "target absent" arm (PlaceNew / a new CopyAction) without further special-casing.
+type BackupAction struct {
+	Entry     manifest.Entry
+	TargetAbs string
+	BackupAbs string // <target>.<suffix>
+}
+
 // Conflict is a placement target the engine must stop on: occupied by a non-symlink
 // (regular file / directory) or nested under a symlinked ancestor (→ ADR-0015).
 type Conflict struct {
@@ -132,6 +143,10 @@ const (
 	// ConflictCopyStructureMismatch is a copy entry whose src structure (dir/file) mismatches the
 	// existing target kind (→ ADR-0020).
 	ConflictCopyStructureMismatch
+	// ConflictBackupTargetExists is apply --backup's rename-aside destination (<target>.<suffix>)
+	// already occupied by a leftover from a previous backup (→ ADR-0045). Stops rather than
+	// silently overwriting a prior backup, so the user notices before it is lost.
+	ConflictBackupTargetExists
 )
 
 // WarnKind enumerates non-fatal conditions the planner surfaces to the user.
@@ -158,10 +173,12 @@ type Warning struct {
 }
 
 // Plan is the computed place/replace/remove plan plus non-fatal warnings and
-// fatal conflicts. The engine executes PreRemove → Place / Copies → Remove
+// fatal conflicts. The engine executes PreRemove → Backup → Place / Copies → Remove
 // ("new/re-link first, stale removal last"; PreRemove is a local ordering exception
 // that unlinks self-recorded stale ancestor symlinks *before* placement so children
-// nest into a real directory; → ADR-0006, ADR-0046); a non-empty Conflicts means apply must stop.
+// nest into a real directory; Backup is a further exception under apply --backup that
+// renames a foreign occupant aside so placement lands on an absent target;
+// → ADR-0006, ADR-0044, ADR-0045, ADR-0046); a non-empty Conflicts means apply must stop.
 type Plan struct {
 	Place  []PlaceAction
 	Copies []CopyAction
@@ -171,8 +188,35 @@ type Plan struct {
 	// manual rm. Populated only for ancestors the previous generation recorded and the new
 	// generation drops (recorded ∧ stale); foreign or still-kept ancestors stay Conflicts (→ ADR-0046).
 	PreRemove []RemoveAction
+	// Backup renames a foreign occupant aside (<target>.<suffix>) before placement, only when
+	// apply --backup is enabled (→ ADR-0045). Populated instead of the Conflict/skip that would
+	// otherwise be emitted for a foreign regular file/directory, a fully-foreign real dir target,
+	// a copy structure mismatch, a copy foreign skip, or a copy→symlink method change. Ancestor
+	// symlink conflicts stay out of scope regardless of --backup (→ issue #169).
+	Backup    []BackupAction
 	Conflicts []Conflict
 	Warnings  []Warning
+}
+
+// Options configures Compute's optional behaviors. The zero value is normal apply
+// (backup disabled) (→ ADR-0045, issue #169).
+type Options struct {
+	// Backup enables apply --backup: a foreign occupant that would otherwise be a Conflict
+	// (or, for a copy target, a skip+WarnCopyForeign) is instead renamed aside to
+	// "<target>.<Suffix>" and the entry is placed fresh. Ancestor-symlink conflicts are
+	// unaffected regardless of this flag (→ ADR-0045).
+	Backup bool
+	// Suffix is the backup rename suffix (Backup's target becomes "<target>.<Suffix>").
+	// Empty defaults to "nput-backup" (→ ADR-0045).
+	Suffix string
+}
+
+// backupSuffix returns opts.Suffix, defaulting to "nput-backup" when empty (→ ADR-0045).
+func backupSuffix(opts Options) string {
+	if opts.Suffix == "" {
+		return "nput-backup"
+	}
+	return opts.Suffix
 }
 
 // LinkDest returns the destination the entry's symlink should point to (<src>/<subpath>).
@@ -186,8 +230,9 @@ func LinkDest(e manifest.Entry) string {
 // Compute diffs the previous-generation manifest (prev; nil means first apply)
 // against the new manifest (next), relative to root and FS state, and computes
 // the place/replace/remove plan as pure logic. It has no side effects; the FS
-// changes are applied by the engine (place + stale-remover).
-func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
+// changes are applied by the engine (place + stale-remover). opts configures
+// optional behaviors (apply --backup; the zero Options is normal apply · → ADR-0045).
+func Compute(prev, next *manifest.Manifest, root string, fs FS, opts Options) (Plan, error) {
 	var plan Plan
 
 	// --- place / replace side: classify each new-generation entry against the current FS ---
@@ -245,7 +290,7 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 
 		// Branch the place-once / re-link classification per method.
 		if e.Method == manifest.MethodCopy {
-			if err := classifyCopy(&plan, e, targetAbs, prevByTarget, preRemoved, fs); err != nil {
+			if err := classifyCopy(&plan, e, targetAbs, prevByTarget, preRemoved, fs, opts); err != nil {
 				return Plan{}, err
 			}
 			continue
@@ -269,17 +314,15 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			// it is a self-recorded stale symlink or an empty subdirectory (→ ADR-0047, issue #175).
 			// A copy-placed target is out of scope (copy targets never appear here — this arm only
 			// runs for the symlink-method branch).
-			if err := classifyRealDirTarget(&plan, e, targetAbs, prevByTarget, nextByTarget, preRemoved, fs); err != nil {
+			if err := classifyRealDirTarget(&plan, e, targetAbs, prevByTarget, nextByTarget, preRemoved, fs, opts); err != nil {
 				return Plan{}, err
 			}
 		case err == nil:
-			// A regular file is not overwritten (→ docs/spec.md error spec).
-			plan.Conflicts = append(plan.Conflicts, Conflict{
-				Entry:     e,
-				TargetAbs: targetAbs,
-				Reason:    "target already has an existing file/directory (will not overwrite)",
-				Kind:      ConflictForeignEntity,
-			})
+			// A regular file is not overwritten (→ docs/spec.md error spec), unless apply --backup
+			// is enabled, in which case it is renamed aside and the entry placed fresh (→ ADR-0045).
+			if err := appendBackupOrConflict(&plan, e, targetAbs, "target already has an existing file/directory (will not overwrite)", ConflictForeignEntity, fs, opts); err != nil {
+				return Plan{}, err
+			}
 		case os.IsNotExist(err):
 			plan.Place = append(plan.Place, PlaceAction{Entry: e, TargetAbs: targetAbs, Dest: LinkDest(e), Kind: PlaceNew})
 		default:
@@ -369,14 +412,14 @@ func recordedLink(target, targetAbs string, prevByTarget map[string]manifest.Ent
 //
 //	target absent                     → CopyAction (new place-once copy)
 //	target is a self-recorded stale symlink (method changed symlink→copy) → PreRemove(Unlink) + CopyAction (→ ADR-0047 D5)
-//	target exists, structure mismatch → conflict (subpath dir × target file / subpath file × target dir)
+//	target exists, structure mismatch → conflict, or backup + CopyAction under apply --backup (→ ADR-0045)
 //	target exists, recorded           → no-op (placed by nput in a previous generation; place-once leaves it untouched)
-//	target exists, foreign            → skip + WarnCopyForeign (unrecorded real file; masking prevention)
+//	target exists, foreign            → skip + WarnCopyForeign, or backup + CopyAction under apply --backup (→ ADR-0045)
 //
 // recopy (apply --recopy) is a separate path that breaks place-once: the engine
 // overwrites the manifest's copy entry directly. The planner only does the
 // normal place-once classification (→ ADR-0020).
-func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget map[string]manifest.Entry, preRemoved map[string]bool, fs FS) error {
+func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget map[string]manifest.Entry, preRemoved map[string]bool, fs FS, opts Options) error {
 	info, err := fs.Lstat(targetAbs)
 	switch {
 	case err == nil && info.Mode()&os.ModeSymlink != 0 && prevByTarget[e.Target].Method == manifest.MethodSymlink && recordedLink(e.Target, targetAbs, prevByTarget, fs):
@@ -402,17 +445,14 @@ func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget m
 			return err
 		}
 		if mismatch {
-			plan.Conflicts = append(plan.Conflicts, Conflict{
-				Entry:     e,
-				TargetAbs: targetAbs,
-				Reason:    "copy src structure and target kind mismatch (dir↔file; will not overwrite)",
-				Kind:      ConflictCopyStructureMismatch,
-			})
-			return nil
+			return appendBackupOrConflict(plan, e, targetAbs, "copy src structure and target kind mismatch (dir↔file; will not overwrite)", ConflictCopyStructureMismatch, fs, opts)
 		}
 		// place-once: leave a copy recorded by the previous generation untouched. An unrecorded real file gets a foreign warning.
 		if pe, ok := prevByTarget[e.Target]; ok && pe.Method == manifest.MethodCopy {
 			return nil
+		}
+		if opts.Backup {
+			return appendBackup(plan, e, targetAbs, fs, opts)
 		}
 		plan.Warnings = append(plan.Warnings, Warning{Kind: WarnCopyForeign, Target: e.Target})
 		return nil
@@ -422,6 +462,40 @@ func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget m
 	default:
 		return fmt.Errorf("nput: cannot lstat copy target (%s): %w", targetAbs, err)
 	}
+}
+
+// appendBackupOrConflict is the shared decision point for every foreign-occupant conflict site
+// (symlink method's foreign regular file, copy method's structure mismatch): under normal apply
+// it appends the Conflict the caller describes; under apply --backup it instead schedules a
+// rename-aside of targetAbs and places the entry fresh (→ ADR-0045, issue #169).
+func appendBackupOrConflict(plan *Plan, e manifest.Entry, targetAbs, reason string, kind ConflictKind, fs FS, opts Options) error {
+	if !opts.Backup {
+		plan.Conflicts = append(plan.Conflicts, Conflict{Entry: e, TargetAbs: targetAbs, Reason: reason, Kind: kind})
+		return nil
+	}
+	return appendBackup(plan, e, targetAbs, fs, opts)
+}
+
+// appendBackup schedules targetAbs to be renamed aside to "<targetAbs>.<suffix>" and appends the
+// entry's fresh placement (as if the target had always been absent), under apply --backup
+// (→ ADR-0045, issue #169). It conflicts instead (ConflictBackupTargetExists) when the rename
+// destination is itself already occupied — by a leftover from an earlier backup, most likely —
+// rather than silently clobbering it.
+func appendBackup(plan *Plan, e manifest.Entry, targetAbs string, fs FS, opts Options) error {
+	backupAbs := targetAbs + "." + backupSuffix(opts)
+	if _, err := fs.Lstat(backupAbs); err == nil {
+		plan.Conflicts = append(plan.Conflicts, Conflict{
+			Entry:     e,
+			TargetAbs: targetAbs,
+			Reason:    fmt.Sprintf("backup destination already exists (%s); remove or move it manually before re-running --backup", backupAbs),
+			Kind:      ConflictBackupTargetExists,
+		})
+		return nil
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("nput: cannot lstat backup destination (%s): %w", backupAbs, err)
+	}
+	plan.Backup = append(plan.Backup, BackupAction{Entry: e, TargetAbs: targetAbs, BackupAbs: backupAbs})
+	return appendAbsentPlacement(plan, e, targetAbs)
 }
 
 // appendAbsentPlacement records the placement for an entry whose target is known to be absent
@@ -456,22 +530,19 @@ func copyStructureMismatch(e manifest.Entry, targetInfo os.FileInfo, fs FS) (boo
 // classifyRealDirTarget classifies a symlink-method entry whose target is occupied by a real
 // directory (→ ADR-0047, issue #175). Mirrors classifyCopy's role for the copy-method branch:
 // it owns the full decision — walk the tree via classifyDirMigration, emit a Conflict on
-// failure, or on success append the PreRemove actions (children before the target itself),
-// dedup the unlinked children against the remove-side loop's preRemoved map (→ ADR-0046 dedup
-// convention: each unlinked child is also a stale entry in prev.Entries and must not be
-// scheduled there a second time), and append the new-symlink Place action.
-func classifyRealDirTarget(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget, nextByTarget map[string]manifest.Entry, preRemoved map[string]bool, fs FS) error {
+// failure (or, under apply --backup, rename the whole occupying directory aside in one piece
+// rather than partially migrating it — consistent with ADR-0047's "no partial removal" stance
+// · → ADR-0045, issue #169), or on success append the PreRemove actions (children before the
+// target itself), dedup the unlinked children against the remove-side loop's preRemoved map
+// (→ ADR-0046 dedup convention: each unlinked child is also a stale entry in prev.Entries and
+// must not be scheduled there a second time), and append the new-symlink Place action.
+func classifyRealDirTarget(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget, nextByTarget map[string]manifest.Entry, preRemoved map[string]bool, fs FS, opts Options) error {
 	dirActions, reason, err := classifyDirMigration(filepath.Clean(e.Target), targetAbs, prevByTarget, nextByTarget, fs)
 	if err != nil {
 		return err
 	}
 	if reason != "" {
-		plan.Conflicts = append(plan.Conflicts, Conflict{
-			Entry:     e,
-			TargetAbs: targetAbs,
-			Reason:    fmt.Sprintf("target directory cannot be fully migrated: %s (→ ADR-0047)", reason),
-		})
-		return nil
+		return appendBackupOrConflict(plan, e, targetAbs, fmt.Sprintf("target directory cannot be fully migrated: %s (→ ADR-0047)", reason), ConflictUnspecified, fs, opts)
 	}
 	plan.PreRemove = append(plan.PreRemove, dirActions...)
 	plan.PreRemove = append(plan.PreRemove, RemoveAction{Kind: RemoveRmdir, TargetAbs: targetAbs})

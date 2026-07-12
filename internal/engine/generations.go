@@ -165,7 +165,7 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	}
 
 	// 5. compute the plan for N∖N-1 stale removal · N-1 entry re-placement with the planner (reusing the apply engine with (baseline, target) substituted).
-	plan, err := planner.Compute(baseline, target, root, planner.OSFS)
+	plan, err := planner.Compute(baseline, target, root, planner.OSFS, planner.Options{})
 	if err != nil {
 		return nil, err
 	}
