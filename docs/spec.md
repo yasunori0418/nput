@@ -944,12 +944,12 @@ devShells.default = pkgs.mkShell {
 | `src` が存在しないストアパス（path / set）| Nix 評価時にエラー |
 | `src` が marker でローカルパスが存在しない | engine 実行時にエラーで停止 |
 | `subpath` が `src` 内に存在しないパス | engine 実行時にエラーで停止 |
-| `target` に通常ファイル・ディレクトリが既存（symlink モード）| エラーで停止（上書きしない）|
-| `target` の祖先 component が foreign symlink（記録なし / 記録 dest と不一致 / 前世代なし）、または次世代にも祖先が残る自己矛盾 | engine 実行時にエラーで停止（lstat walk・`--dryrun` は conflict・→ ADR-0015 §4, ADR-0046）|
+| `target` に通常ファイル・ディレクトリが既存（symlink モード）| conflict。全件を stderr へ列挙して停止（上書きしない・→ 後述「conflict の全件報告」）|
+| `target` の祖先 component が foreign symlink（記録なし / 記録 dest と不一致 / 前世代なし）、または次世代にも祖先が残る自己矛盾 | conflict。engine 実行時に全件を stderr へ列挙して停止（lstat walk・`--dryrun` も conflict・→ ADR-0015 §4, ADR-0046, 後述「conflict の全件報告」）|
 | `target` の祖先 component が自己記録 stale symlink（前世代 manifest が記録・on-disk 一致・次世代に無い）| 祖先を配置前に除去（PreRemove）し配下子を新規配置してネスト移行（silent・`-v` で可視・`--dryrun` は非 conflict の remove・→ ADR-0046）|
 | `target` に foreign symlink が既存（自身の前世代 manifest に記録なし・別 config / 別ツール / 手動）| warning を出して後勝ちで置き換える（→ ADR-0015）|
-| `subpath` がディレクトリのとき `target` に通常ファイルが既存（copy モード）| エラーで停止 |
-| `subpath` がファイルのとき `target` がディレクトリとして既存（copy モード）| エラーで停止 |
+| `subpath` がディレクトリのとき `target` に通常ファイルが既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）|
+| `subpath` がファイルのとき `target` がディレクトリとして既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）|
 | copy モードで `target` が既存（前世代 manifest に entry あり = nput 配置済み）| place-once により何もしない（上書きしない）。`apply --recopy` 時のみ無条件上書き（→ ADR-0020）|
 | copy モードで `target` に foreign 実ファイルが既存（前世代 manifest に entry なし）| place-once で skip しつつ **warning** で可視化（masking 防止・symlink の foreign 警告と対称・apply は止めない・→ ADR-0022）|
 | 世代スキップ時に copy `target` が不在（project mode）| lstat ドリフト修復で place-once 再マテリアライズ。内容が異なるだけ（編集済み）の場合は不可触（→ ADR-0022）|
@@ -974,6 +974,17 @@ devShells.default = pkgs.mkShell {
 | project mode で git リポジトリ外かつ `--root` 未指定（git toplevel 解決失敗）| engine 実行時にエラーで停止 |
 | project mode で `git` が PATH に無い | engine 実行時にエラーで停止 |
 | `nix-command` / `flakes` experimental-features が未有効 | CLI が前提条件と有効化方法を案内して停止（`--extra-experimental-features` 自動付与はしない・→ ADR-0025）|
+
+### conflict の全件報告（→ grilling 2026-07-12 D6）
+
+`apply` / `rollback` が conflict で停止するとき、`planner.Compute` が収集した **`plan.Conflicts` の全件**を stderr へ列挙してから停止する（`--dryrun` の `Result.Conflicts` と同じ集合。HM の `checkLinkTargets` と対称）。1 件ずつ「修正 → 再実行 → 次の 1 件…」を強いられないよう、1 回の実行で全ての衝突箇所を可視化する。各行には conflict 種別に応じた 1 行の対処ガイダンスが付く：
+
+- foreign 実体（`target` に記録外の通常ファイル・ディレクトリ）→ 手動で退避・削除してから再実行
+- foreign 祖先 symlink（記録なし / 記録 dest と不一致 / 前世代なし）→ そのリンクを作った主体（別 config / 別ツール / 手動操作）を確認
+- 自己矛盾 manifest（次世代にも祖先 symlink が残ったまま配下 target を定義）→ entry 定義を見直す（祖先と配下のどちらかに一本化）
+- copy 構造不一致（`subpath` の dir/file 種別と既存 `target` の種別が食い違う）→ entry 定義を見直す
+
+停止時の `error` は列挙の後に返す**件数付き集約メッセージ 1 本**（例: `nput: N conflict(s) detected; stopped without placing (see above)`）で、個別 conflict の詳細は本文ではなく直前の stderr 列挙が担う。終了コードは不変（`apply` 非 dryrun は `1`・`--dryrun` は `2`）。`--json`（epic #126）の `Conflicts` 配列も同じ全件集合と整合させる。
 
 ---
 
