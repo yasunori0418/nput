@@ -237,53 +237,6 @@ func TestApplyRecopyMidBatchFailureRestoresAsideFile(t *testing.T) {
 	}
 }
 
-// TestApplyUnwindBestEffortReportsUnrestorableItem verifies that when unwind cannot restore one
-// journal entry (its parent directory was itself removed by an intervening, unrelated FS change),
-// Apply's own aggregate failure message is still surfaced via Warnf, and everything else in the
-// journal is still restored despite that one failure (→ ADR-0044 §3). This drives applier.unwind
-// directly (rather than through the full Apply call) to construct the "one entry became
-// unrestorable" condition deterministically, since provoking it through Apply's own execution
-// would require a genuine external race.
-func TestApplyUnwindBestEffortReportsUnrestorableItem(t *testing.T) {
-	root := realTempDir(t)
-	restorableDest := realTempDir(t)
-	restorable := filepath.Join(root, "a")
-	unrestorableDest := realTempDir(t)
-	unrestorable := filepath.Join(root, "sub", "b")
-
-	// Simulate removeStale having already removed both recorded symlinks (the forward operations
-	// this journal describes: undoRelinkOld recreates them at their recorded dest), then something
-	// else removing "sub" entirely before the failure that triggers unwind — making "sub/b"
-	// impossible to recreate (os.Symlink into a missing parent fails with ENOENT, a real error, not
-	// the tolerated "already gone" case that undoUnlinkNew treats as success).
-	var warns []string
-	a := &applier{opts: Options{Warnf: collectFormatted(&warns)}, result: &Result{}}
-	a.journalRelinkedSymlink(restorable, restorableDest)
-	a.journalRelinkedSymlink(unrestorable, unrestorableDest)
-
-	a.unwind(os.ErrInvalid)
-
-	foundRollbackMsg, foundUnrestorablePath := false, false
-	for _, w := range warns {
-		if strings.Contains(w, "rolled back this run's filesystem changes") {
-			foundRollbackMsg = true
-		}
-		if strings.Contains(w, unrestorable) {
-			foundUnrestorablePath = true
-		}
-	}
-	if !foundRollbackMsg {
-		t.Errorf("warns = %v, want a rollback-reported message", warns)
-	}
-	if !foundUnrestorablePath {
-		t.Errorf("warns = %v, want the unrestorable path named", warns)
-	}
-	got, rerr := os.Readlink(restorable)
-	if rerr != nil || got != restorableDest {
-		t.Errorf("the restorable entry (\"a\") must still be undone despite \"sub/b\" failing: readlink=%q, err=%v, want %q", got, rerr, restorableDest)
-	}
-}
-
 // TestPreRemoveJournalRmdirThenUnlinkOrder directly exercises preRemove with a batch containing
 // both a RemoveUnlink and a RemoveRmdir (the shape classifyDirMigration produces: children before
 // parents), verifying the journal records them such that unwind restores the parent directory
@@ -324,5 +277,75 @@ func TestPreRemoveJournalRmdirThenUnlinkOrder(t *testing.T) {
 	got, rerr := os.Readlink(leaf)
 	if rerr != nil || got != leafDest {
 		t.Fatalf("leaf symlink must be recreated inside the recreated parent: readlink=%q, err=%v, want %q", got, rerr, leafDest)
+	}
+}
+
+// TestApplyCommitFailureDoesNotUnwind verifies ADR-0044 §2's asymmetry: a commit (`nix-env --set`)
+// failure is NOT rolled back, unlike every FS-mutating stage before it. Every FS write for this run
+// already succeeded by the time commit runs, so there is nothing wrong to undo — the run simply
+// fails to advance the generation, and idempotent re-apply converges (→ ADR-0006, ADR-0017).
+func TestApplyCommitFailureDoesNotUnwind(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := realTempDir(t)
+
+	lf := writeLinkFarm(t, projectManifest(storeEntry(src, ".", "a")))
+	failingCommit := func(string, string) error { return os.ErrPermission }
+
+	var warns []string
+	_, err := Apply(Options{
+		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: failingCommit,
+		Warnf: collectFormatted(&warns),
+	})
+	if err == nil {
+		t.Fatal("expected the commit failure to propagate, got nil")
+	}
+
+	// The placement must survive untouched — commit failure is not an unwind trigger.
+	got, rerr := os.Readlink(filepath.Join(root, "a"))
+	if rerr != nil || got != src {
+		t.Errorf("placement must survive a commit failure untouched: readlink=%q, err=%v, want %q", got, rerr, src)
+	}
+	for _, w := range warns {
+		if strings.Contains(w, "rolled back this run's filesystem changes") {
+			t.Errorf("warns = %v, must not report a rollback for a commit-only failure", warns)
+		}
+	}
+}
+
+// TestApplyCommitFailureLeavesRecopyAsideFile verifies the same asymmetry for --recopy: a commit
+// failure after a successful rename-aside overwrite must leave the aside file in place (neither
+// cleaned up by discardJournal, which only runs after a successful commit, nor renamed back by
+// unwind, which commit failure does not trigger) — the fresh copy stays live and recoverable from
+// its pre-apply content is still sitting in the aside file for manual inspection if needed.
+func TestApplyCommitFailureLeavesRecopyAsideFile(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	copySrc := makeSrc(t, "tool.conf")
+
+	lf1 := writeLinkFarm(t, projectManifest(copyEntry(copySrc, "tool.conf", "tool.conf")))
+	if _, err := Apply(Options{LinkFarm: lf1, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil)}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+
+	// A distinct link-farm (home mode has no generation-skip concept in the first place, but a
+	// second, content-identical project-mode link-farm would still hit generationUnchanged and skip
+	// straight to repairDrift, bypassing commit entirely) — home mode side-steps that branch so
+	// this Apply call actually reaches step 9 (commit) and can be made to fail there.
+	lf2 := writeLinkFarm(t, homeManifest(copyEntry(copySrc, "tool.conf", "tool.conf")))
+	failingCommit := func(string, string) error { return os.ErrPermission }
+	_, err := Apply(Options{
+		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, Commit: failingCommit, Recopy: true,
+	})
+	if err == nil {
+		t.Fatal("expected the commit failure to propagate, got nil")
+	}
+
+	data, rerr := os.ReadFile(filepath.Join(root, "tool.conf"))
+	if rerr != nil || string(data) != "content" {
+		t.Errorf("the fresh recopy must survive a commit failure: data=%q, err=%v", data, rerr)
+	}
+	if _, lerr := os.Lstat(filepath.Join(root, "tool.conf.nput-recopy-aside")); lerr != nil {
+		t.Errorf("the aside file must survive (neither cleaned up nor renamed back) after a commit failure, lstat err = %v", lerr)
 	}
 }
