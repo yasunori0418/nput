@@ -170,8 +170,7 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 		return nil, err
 	}
 	if len(plan.Conflicts) > 0 {
-		c := plan.Conflicts[0]
-		return nil, fmt.Errorf("nput: %s (target: %s)", c.Reason, c.Entry.Target)
+		return nil, reportConflicts(warnf, plan.Conflicts)
 	}
 
 	// 6. reflect the plan onto the real FS (new/re-link first, stale removal last · → ADR-0006).
