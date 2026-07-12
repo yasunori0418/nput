@@ -84,7 +84,27 @@ type Conflict struct {
 	Entry     manifest.Entry
 	TargetAbs string
 	Reason    string
+	Kind      ConflictKind
 }
+
+// ConflictKind classifies a Conflict for caller-side guidance (→ docs/spec.md エラー仕様 ·
+// grilling 2026-07-12 D6). Kept distinct from the free-form Reason string so guidance
+// selection does not depend on message text.
+type ConflictKind int
+
+const (
+	// ConflictForeignEntity is a regular file/directory occupying a symlink target (→ ADR-0006).
+	ConflictForeignEntity ConflictKind = iota
+	// ConflictForeignAncestor is a symlinked ancestor component not recorded by this profile's
+	// own previous generation (unrecorded / mismatched dest / no previous generation · → ADR-0015 §4).
+	ConflictForeignAncestor
+	// ConflictSelfContradictoryAncestor is a symlinked ancestor still kept by the new generation
+	// while a descendant entry also targets beneath it (→ ADR-0015 §4, ADR-0046).
+	ConflictSelfContradictoryAncestor
+	// ConflictCopyStructureMismatch is a copy entry whose src structure (dir/file) mismatches the
+	// existing target kind (→ ADR-0020).
+	ConflictCopyStructureMismatch
+)
 
 // WarnKind enumerates non-fatal conditions the planner surfaces to the user.
 type WarnKind int
@@ -182,10 +202,15 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			}
 			// foreign ancestor, or the new generation still keeps the ancestor (self-contradictory):
 			// the ancestor symlink cannot be removed, so nesting stays a conflict (→ ADR-0015, ADR-0046).
+			kind := ConflictForeignAncestor
+			if keptInNext {
+				kind = ConflictSelfContradictoryAncestor
+			}
 			plan.Conflicts = append(plan.Conflicts, Conflict{
 				Entry:     e,
 				TargetAbs: targetAbs,
 				Reason:    fmt.Sprintf("ancestor %q is a symlink; cannot nest beneath it (→ ADR-0015)", offenderAbs),
+				Kind:      kind,
 			})
 			continue
 		}
@@ -217,6 +242,7 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 				Entry:     e,
 				TargetAbs: targetAbs,
 				Reason:    "target already has an existing file/directory (will not overwrite)",
+				Kind:      ConflictForeignEntity,
 			})
 		case os.IsNotExist(err):
 			plan.Place = append(plan.Place, PlaceAction{Entry: e, TargetAbs: targetAbs, Dest: LinkDest(e), Kind: PlaceNew})
@@ -327,6 +353,7 @@ func classifyCopy(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget m
 				Entry:     e,
 				TargetAbs: targetAbs,
 				Reason:    "copy src structure and target kind mismatch (dir↔file; will not overwrite)",
+				Kind:      ConflictCopyStructureMismatch,
 			})
 			return nil
 		}
