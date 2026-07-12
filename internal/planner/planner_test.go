@@ -90,7 +90,7 @@ func (e fakeDirEntry) Name() string      { return e.name }
 func (e fakeDirEntry) IsDir() bool       { return e.mode&os.ModeDir != 0 }
 func (e fakeDirEntry) Type() os.FileMode { return e.mode.Type() }
 func (e fakeDirEntry) Info() (os.FileInfo, error) {
-	return fakeInfo{name: e.name, mode: e.mode}, nil
+	return fakeInfo(e), nil
 }
 
 // --- manifest helpers -------------------------------------------------------
