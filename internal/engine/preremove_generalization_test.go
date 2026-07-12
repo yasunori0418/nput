@@ -48,6 +48,38 @@ func TestApplyPerFileToDirSymlinkMigratesSameNamedLeaf(t *testing.T) {
 	if len(res.Conflicts) != 0 {
 		t.Errorf("Conflicts = %v, want none", res.Conflicts)
 	}
+	// The leaf must be reported exactly once as Removed (Unlink). Both the intermediate
+	// ".claude/hooks/foo" directory AND the placement target ".claude/hooks" itself are
+	// legitimately Rmdir-ed and reported in Pruned exactly once each — not twice each. A prior
+	// bug double-reported them: preRemove's own pruneEmptyAncestors walk (triggered by the
+	// leaf's Unlink, or by an inner Rmdir's success) raced the planner's own explicit,
+	// already-ordered RemoveRmdir actions for the same directories, recording each directory
+	// from two paths (→ ADR-0047, issue #175). preRemove no longer walks pruneEmptyAncestors at
+	// all, since every directory a migration needs cleared is already an explicit RemoveRmdir
+	// planner action and the placement step that follows recreates the target immediately.
+	if len(res.Removed) != 1 || res.Removed[0] != ".claude/hooks/foo/main.sh" {
+		t.Errorf("Removed = %v, want exactly [.claude/hooks/foo/main.sh]", res.Removed)
+	}
+	wantPruned := []string{
+		filepath.Join(root, ".claude", "hooks", "foo"),
+		filepath.Join(root, ".claude", "hooks"),
+	}
+	if len(res.Pruned) != len(wantPruned) {
+		t.Errorf("Pruned = %v, want exactly %v (no double-report)", res.Pruned, wantPruned)
+	} else {
+		seen := map[string]bool{}
+		for _, p := range res.Pruned {
+			if seen[p] {
+				t.Errorf("Pruned = %v contains a duplicate: %s", res.Pruned, p)
+			}
+			seen[p] = true
+		}
+		for _, want := range wantPruned {
+			if !seen[want] {
+				t.Errorf("Pruned = %v, missing %s", res.Pruned, want)
+			}
+		}
+	}
 }
 
 // TestApplyDirSymlinkRoundTripsThroughPerFile verifies the reverse and back: dir symlink →
@@ -283,22 +315,21 @@ func TestApplyMethodChangeSymlinkToCopyDriftFallsBackToForeign(t *testing.T) {
 	}
 }
 
-// TestApplyDirMigrationRmdirDriftErrors verifies D3: if a directory the plan scheduled for Rmdir
-// gains content between planning and the PreRemove pass (a directory the plan believed empty),
-// os.Remove's ENOTEMPTY is surfaced as a loud error — not a silent skip — since children were
-// already planned as unconditional new placements assuming the target is clear.
-func TestApplyDirMigrationRmdirDriftErrors(t *testing.T) {
+// TestApplyDirMigrationNonEmptySubdirIsConflictAtPlanTime verifies the plan-time half of D3's
+// safety net: a subdirectory that is non-empty *before Apply even plans* makes the planner
+// classify the whole occupying directory as non-migratable (a real-file leaf), so Apply reports
+// a conflict rather than ever scheduling an Rmdir for it. The complementary runtime half — an
+// Rmdir action scheduled at plan time whose target gains content in the window before preRemove
+// executes it (true TOCTOU) — is exercised directly against applier.preRemove in
+// TestPreRemoveRmdirDriftErrorsDirectly, since Apply's own planning step cannot be paused
+// mid-flight to inject content after a snapshot it already took.
+func TestApplyDirMigrationNonEmptySubdirIsConflictAtPlanTime(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
 
 	if err := os.MkdirAll(filepath.Join(root, "hooks", "empty"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-
-	// Race: something drops a file into the "empty" subdir after planning would have seen it
-	// empty. We can't hook mid-Apply, so instead drive the lower-level preRemove entrypoint
-	// directly with a plan that (correctly, at plan time) expected "hooks/empty" to be empty,
-	// then falsify that expectation on disk before executing — reproducing the drift window.
 	if err := os.WriteFile(filepath.Join(root, "hooks", "empty", "surprise"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -308,11 +339,6 @@ func TestApplyDirMigrationRmdirDriftErrors(t *testing.T) {
 	_, err := Apply(Options{
 		LinkFarm: lf, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
 	})
-	// Since the file is present *before* planning even runs, the planner itself detects "hooks"
-	// as non-migratable (a real file leaf) and reports a conflict rather than reaching the Rmdir
-	// drift path. This confirms the plan-time classification already refuses to schedule an
-	// Rmdir for a non-empty directory (the drift path is only reachable via a true TOCTOU race,
-	// which is exercised at the unit level in staleremove_test.go-style direct preRemove calls).
 	if err == nil {
 		t.Fatal("expected a conflict/error, got nil")
 	}
@@ -374,12 +400,14 @@ func TestPreRemoveUnlinkDriftErrorsDirectly(t *testing.T) {
 	}
 }
 
-// TestApplyDirMigrationIdempotentReRunConverges verifies ADR-0017 idempotence: if a dir migration
-// apply is interrupted after PreRemove but before the generation commits (simulated here by
-// directly driving preRemove + place without a commit, then re-running the full Apply), a
-// subsequent apply re-plans against the now-partially-migrated FS and converges to the same final
-// state as an uninterrupted apply.
-func TestApplyDirMigrationIdempotentReRunConverges(t *testing.T) {
+// TestApplyDirMigrationInterruptedAfterPreRemoveReRunConverges verifies ADR-0017 idempotence for
+// a genuinely partial-migration crash window: PreRemove runs (the occupying directory's
+// recorded-stale child is unlinked and the now-empty directory rmdir-ed) but the process stops
+// there, before place/commit — the real crash window the generalized PreRemove opens (→ ADR-0047,
+// issue #175 §8). A subsequent ordinary Apply must re-plan against that partially-migrated FS
+// (the target now absent, not a real directory) and converge to the same fully-migrated state as
+// an uninterrupted apply.
+func TestApplyDirMigrationInterruptedAfterPreRemoveReRunConverges(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
 	srcOld := realTempDir(t)
@@ -392,24 +420,39 @@ func TestApplyDirMigrationIdempotentReRunConverges(t *testing.T) {
 	}
 
 	srcNew := realTempDir(t)
+	next := projectManifest(storeEntry(srcNew, ".", ".claude/hooks"))
+	prev := projectManifest(storeEntry(srcOld, ".", ".claude/hooks/foo"))
+	plan, err := planner.Compute(&prev, &next, root, planner.OSFS)
+	if err != nil {
+		t.Fatalf("planner.Compute: %v", err)
+	}
+	if len(plan.Conflicts) != 0 {
+		t.Fatalf("plan.Conflicts = %v, want none", plan.Conflicts)
+	}
+
+	// Simulate a crash: run only PreRemove (unlink the recorded-stale child, rmdir the now-empty
+	// dirs including the placement target itself), then stop — no place, no commit. The target is
+	// now absent from the FS, and the previous generation's manifest.json (the profile link) still
+	// points at generation 1 since --set never ran.
+	a := &applier{opts: Options{Warnf: func(string, ...any) {}}, result: &Result{}}
+	a.root = root
+	if err := a.preRemove(plan.PreRemove); err != nil {
+		t.Fatalf("simulated partial preRemove: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(root, ".claude", "hooks")); !os.IsNotExist(err) {
+		t.Fatalf("setup: .claude/hooks must be absent after the simulated crash, lstat err = %v", err)
+	}
+
+	// An ordinary re-run apply must re-plan against this partially-migrated FS (target absent, no
+	// PreRemove needed this time) and converge to the fully-migrated state without erroring.
 	lf2 := writeLinkFarm(t, projectManifest(storeEntry(srcNew, ".", ".claude/hooks")))
-	optsRepeat := Options{LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil)}
-
-	// First (successful, uninterrupted) run reaches the fully migrated state.
-	if _, err := Apply(optsRepeat); err != nil {
-		t.Fatalf("migration Apply: %v", err)
+	if _, err := Apply(Options{
+		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
+	}); err != nil {
+		t.Fatalf("re-run Apply after simulated crash: %v", err)
 	}
-	got1, err := os.Readlink(filepath.Join(root, ".claude", "hooks"))
-	if err != nil || got1 != srcNew {
-		t.Fatalf("post-migration readlink = %q, err %v; want %q", got1, err, srcNew)
-	}
-
-	// Re-running apply against the already-converged FS must be a clean no-op re-link, not an error.
-	if _, err := Apply(optsRepeat); err != nil {
-		t.Fatalf("idempotent re-run: %v", err)
-	}
-	got2, err := os.Readlink(filepath.Join(root, ".claude", "hooks"))
-	if err != nil || got2 != srcNew {
-		t.Fatalf("re-run readlink = %q, err %v; want %q", got2, err, srcNew)
+	got, err := os.Readlink(filepath.Join(root, ".claude", "hooks"))
+	if err != nil || got != srcNew {
+		t.Fatalf("re-run readlink = %q, err %v; want %q", got, err, srcNew)
 	}
 }

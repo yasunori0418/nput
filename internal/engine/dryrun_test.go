@@ -121,3 +121,52 @@ func TestApplyDryRunAncestorMigration(t *testing.T) {
 		t.Errorf("child should not be created in dryrun, lstat err = %v", err)
 	}
 }
+
+// TestApplyDryRunRealDirMigration verifies dryrun's reporting of a real-dir-target migration
+// (→ ADR-0047, issue #175): the occupying directory's recorded-stale leaf is packed into
+// Removed (Kind == RemoveUnlink), the now-empty directory itself into Pruned as an absolute
+// path (Kind == RemoveRmdir, matching the real-run convention — result.Pruned is always
+// absolute), the entry into Placed, and the FS is left untouched.
+func TestApplyDryRunRealDirMigration(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	srcOld := realTempDir(t)
+
+	lf1 := writeLinkFarm(t, projectManifest(storeEntry(srcOld, ".", ".claude/hooks/foo")))
+	if _, err := Apply(Options{
+		LinkFarm: lf1, Name: "c", RootOverride: root, StateDir: state, Commit: fakeCommit(nil),
+	}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+
+	srcNew := realTempDir(t)
+	lf2 := writeLinkFarm(t, projectManifest(storeEntry(srcNew, ".", ".claude/hooks")))
+	res, err := Apply(Options{
+		LinkFarm: lf2, Name: "c", RootOverride: root, StateDir: state, DryRun: true,
+	})
+	if err != nil {
+		t.Fatalf("dryrun Apply: %v", err)
+	}
+	if len(res.Conflicts) != 0 {
+		t.Errorf("Conflicts = %v, want none (a fully recorded-stale real dir is a migration, not a conflict)", res.Conflicts)
+	}
+	if len(res.Removed) != 1 || res.Removed[0] != ".claude/hooks/foo" {
+		t.Errorf("Removed = %v, want [.claude/hooks/foo]", res.Removed)
+	}
+	wantPruned := filepath.Join(root, ".claude", "hooks")
+	if len(res.Pruned) != 1 || res.Pruned[0] != wantPruned {
+		t.Errorf("Pruned = %v, want [%s] (absolute path, matching the real-run convention)", res.Pruned, wantPruned)
+	}
+	if len(res.Placed) != 1 || res.Placed[0] != ".claude/hooks" {
+		t.Errorf("Placed = %v, want [.claude/hooks]", res.Placed)
+	}
+
+	// FS untouched: the occupying real directory and its recorded-stale child are both still present.
+	info, err := os.Lstat(filepath.Join(root, ".claude", "hooks"))
+	if err != nil || info.Mode()&os.ModeSymlink != 0 {
+		t.Errorf(".claude/hooks should still be a real directory in dryrun (err %v)", err)
+	}
+	if got, err := os.Readlink(filepath.Join(root, ".claude", "hooks", "foo")); err != nil || got != srcOld {
+		t.Errorf(".claude/hooks/foo should be untouched in dryrun = %q (err %v); want symlink to %q", got, err, srcOld)
+	}
+}

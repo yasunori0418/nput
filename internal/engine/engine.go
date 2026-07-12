@@ -329,12 +329,10 @@ func (a *applier) dryRun() (*Result, error) {
 	for _, r := range plan.PreRemove {
 		if r.Kind == planner.RemoveRmdir {
 			// Rmdir actions carry no manifest Entry (nothing was ever recorded for a bare
-			// directory); report the root-relative directory path instead (→ ADR-0047, issue #175).
-			rel, err := filepath.Rel(a.root, r.TargetAbs)
-			if err != nil {
-				rel = r.TargetAbs
-			}
-			a.result.Pruned = append(a.result.Pruned, rel)
+			// directory); report the absolute directory path instead, matching the real-run
+			// convention (result.Pruned is always absolute — staleremove.go's preRemove /
+			// pruneEmptyAncestors · → ADR-0047, issue #175).
+			a.result.Pruned = append(a.result.Pruned, r.TargetAbs)
 			continue
 		}
 		a.result.Removed = append(a.result.Removed, r.Entry.Target)
