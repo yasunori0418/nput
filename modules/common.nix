@@ -38,5 +38,31 @@ in
         error (→ docs/spec.md "entries schema").
       '';
     };
+
+    backup = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkEnableOption ''
+            back up an occupying foreign entity to "<target>.<suffix>" before placing it,
+            instead of stopping on conflict (wires activation's apply --backup; → ADR-0045)
+          '';
+          suffix = lib.mkOption {
+            type = lib.types.str;
+            default = "nput-backup";
+            description = ''
+              The backup rename suffix (activation wires apply --backup=<suffix>). The
+              backup destination becomes "<target>.<suffix>" (→ ADR-0045).
+            '';
+          };
+        };
+      };
+      default = { };
+      description = ''
+        apply --backup wiring: renames an occupying foreign entity aside instead of
+        conflicting (→ ADR-0045). This is a placement modifier orthogonal to `entries`
+        and does not touch the manifest v1 contract (lib/types.nix) — activation only
+        adds `--backup=<suffix>` to the `nput apply --manifest` invocation when enabled.
+      '';
+    };
   };
 }

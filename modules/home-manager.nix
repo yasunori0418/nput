@@ -42,9 +42,12 @@ in
     # Kick the engine from home.activation. Since the pre-built link-farm is passed via --manifest,
     # no nix eval/build is done inside activation (this is not the entrypoint path). Run it after
     # writeBoundary so it does not collide in ordering with home.file's symlink placement. `run` is home-manager's
-    # activation helper and honors --dry-run (DRY_RUN_CMD).
+    # activation helper and honors --dry-run (DRY_RUN_CMD). nput.backup.enable wires --backup=<suffix>
+    # onto the same invocation (→ ADR-0045); the suffix is shell-quoted since it is user-supplied.
     home.activation.nput = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      run ${lib.getExe nputPackage} apply --manifest ${manifest}
+      run ${lib.getExe nputPackage} apply --manifest ${manifest}${
+        lib.optionalString cfg.backup.enable " --backup=${lib.escapeShellArg cfg.backup.suffix}"
+      }
     '';
   };
 }
