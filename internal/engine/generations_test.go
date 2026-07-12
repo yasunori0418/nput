@@ -242,6 +242,99 @@ func TestRollbackAncestorMigration(t *testing.T) {
 	}
 }
 
+// TestRollbackMidBatchFailureRollsBackPreRemoveMigration verifies Rollback's own undo-journal
+// wiring (→ ADR-0044, issue #168): same ancestor-migration setup as TestRollbackAncestorMigration
+// (PreRemove unlinks the whole-tree symlink so the per-file child can be placed), plus an
+// unrelated second entry in the same target manifest whose placement is blocked by a
+// permission-denied parent directory. Both PreRemove's ancestor unlink AND the child placement it
+// enabled must be rolled back when the later, unrelated placement fails — Rollback must not leave
+// the migration half-done, unlike relying solely on a subsequent idempotent re-run to converge.
+func TestRollbackMidBatchFailureRollsBackPreRemoveMigration(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("permission-denied placement cannot be induced as root")
+	}
+	root := realTempDir(t)
+	state := realTempDir(t)
+	srcOld := realTempDir(t)
+	if err := os.WriteFile(filepath.Join(srcOld, "foo"), []byte("old"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	srcNew := realTempDir(t)
+
+	prof := paths.Resolve(state, "c", manifest.RootKindHome, root, true)
+	if err := os.MkdirAll(prof.Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	blockWrite(t, filepath.Join(root, "ro"))
+
+	// gen1 (N-1, rollback target): the per-file child, plus an unrelated entry whose parent denies
+	// write access so its placement fails after the ancestor migration has already succeeded.
+	lf1 := writeLinkFarm(t, homeManifest(
+		storeEntry(srcOld, "foo", ".claude/skills/foo"),
+		storeEntry(realTempDir(t), ".", "ro/leaf"),
+	))
+	// gen2 (N, current/baseline): whole-tree ancestor symlink at .claude/skills → srcNew.
+	lf2 := writeLinkFarm(t, homeManifest(storeEntry(srcNew, ".", ".claude/skills")))
+
+	if err := os.Symlink(lf1, paths.GenerationLink(prof.Profile, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(lf2, paths.GenerationLink(prof.Profile, 2)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(lf2, prof.Profile); err != nil {
+		t.Fatal(err)
+	}
+
+	// Current FS = gen2: .claude/skills is a whole-tree symlink to srcNew.
+	claudeDir := filepath.Join(root, ".claude")
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(srcNew, filepath.Join(claudeDir, "skills")); err != nil {
+		t.Fatal(err)
+	}
+
+	var switched int
+	var warns []string
+	_, err := Rollback(RollbackOptions{
+		Name: "c", RootKind: manifest.RootKindHome, RootOverride: root, StateDir: state,
+		ListGenerations: func(string) ([]Generation, error) {
+			return []Generation{{Number: 1}, {Number: 2, Current: true}}, nil
+		},
+		SwitchGeneration: func(_ string, gen int) error { switched = gen; return nil },
+		Warnf:            collectFormatted(&warns),
+	})
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+	if switched != 0 {
+		t.Errorf("SwitchGeneration was called (switched=%d), want it skipped when placement fails", switched)
+	}
+
+	// The whole migration must be undone: .claude/skills is the ancestor symlink again, and the
+	// child that PreRemove made room for is gone (undone in the correct order: unlink the child
+	// first, then recreate the ancestor symlink where PreRemove had cleared it).
+	info, serr := os.Lstat(filepath.Join(claudeDir, "skills"))
+	if serr != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf(".claude/skills must be restored as the ancestor symlink, got mode %v, err %v", info, serr)
+	}
+	got, rerr := os.Readlink(filepath.Join(claudeDir, "skills"))
+	if rerr != nil || got != srcNew {
+		t.Errorf("restored ancestor readlink = %q, err %v; want %q", got, rerr, srcNew)
+	}
+	foundRollbackMsg := false
+	for _, w := range warns {
+		if strings.Contains(w, "rolled back this run's filesystem changes") {
+			foundRollbackMsg = true
+		}
+	}
+	if !foundRollbackMsg {
+		t.Errorf("warns = %v, want a rollback-reported message", warns)
+	}
+}
+
 // TestRollbackAncestorPreRemoveErrorSkipsSwitch verifies the Rollback-level wiring of preRemove's
 // error path: same setup as TestRollbackAncestorMigration, but the ancestor symlink's parent dir
 // is read-only, so preRemove's os.Remove fails. Rollback must propagate the error instead of
