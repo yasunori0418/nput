@@ -21,6 +21,13 @@
 > migration** へ改訂した。§2 の「前世代 manifest 記録の symlink は置換可（silent・後勝ち）」判定を祖先へ拡張し、緩和対象の祖先は配置**前**に
 > 除去（`Plan.PreRemove`）してから配下子を新規配置する。foreign 祖先・自己矛盾（次世代にも祖先が残る）・`prev == nil` は**従来通り
 > error 停止**で store 汚染の担保は不変（→ ADR-0046）。
+>
+> **2026-07-12 改訂注記（#173）**: 本 ADR §5 の rollback 実行段（「`N ∖ N-1` の entry を保守的に stale 除去 → N-1 の entry を
+> place/replace」）は、ADR-0046 で新設された `Plan.PreRemove` の実行を欠いたまま出荷されていた（`internal/engine/generations.go` の
+> `Rollback()` が `plan.PreRemove` を捨てて `place` → `removeStale` のみ実行するバグ）。ADR-0046 の移行（祖先 symlink 世代 ⇄
+> per-file 世代）を跨ぐ rollback は、apply と同じく **PreRemove → place/replace → stale 除去**の順で反映しないと収束しない。
+> `Rollback()` に `a.preRemove(plan.PreRemove)` を `place` の前段として追加し修正した（apply の実行順・drift 時 error 停止の意味論と
+> 同一・→ #173）。
 
 ## 背景
 

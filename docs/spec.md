@@ -744,7 +744,9 @@ profile の各世代は GC root。`nix-env --profile <profileDir>/profile --dele
 - **standalone（home mode）**: `nput rollback <name>` で前世代に戻す。nput は profile dir 自体ではなく任意 root に配置するため、
   profile ポインタ移動だけでは FS が変わらず**再配置が必須**。stale 除去の diff は次の基準・順序で行う（→ ADR-0015）:
   1. `baseline` = 現世代 N の manifest（FS の現状）／ `target` = 戻る世代 N-1 の manifest。
-  2. `N ∖ N-1` の entry を保守的に stale 除去 → N-1 の entry を place/replace。
+  2. `(baseline, target)` で planner を計算し、apply と同順（**PreRemove → place/replace → stale 除去**）で FS へ反映する。
+     N が自己記録の祖先 symlink を配下ネスト entries へ移行した世代なら、`plan.PreRemove` は戻り先 N-1 の祖先 symlink を
+     塞いでいる自己記録 symlink を配置前除去する（apply の PreRemove と同一実行経路・drift 時は同じく error 停止・→ ADR-0046）。
   3. **最後に** `nix-env --profile <profileDir>/profile --rollback`（または `--switch-generation N-1`）で profile ポインタを移す。
   ポインタを先に動かすと baseline が N-2 へずれ stale 除去が誤るため、FS 収束を先に・ポインタ移動を最後にする。apply エンジンを
   `(baseline, target)` 差し替えで再利用する。任意世代切替・世代 GC は `nix-env --profile <profileDir>/profile` 系 / `nix-collect-garbage` を使う。
