@@ -200,6 +200,8 @@ nput apply                     # name 省略時は nput.default を適用（flak
 nput apply <name>              # nput.<name> をビルドし新世代を作って適用
 nput apply <name> --dryrun     # dry-run。副作用ゼロで place/replace/remove/conflict/no-op を表示
 nput apply <name> --recopy     # 通常 apply に加え config 内の全 copy target を src から無条件上書き再コピー（→ ADR-0020）
+nput apply <name> --backup           # 既存の記録外実体を <target>.nput-backup へ rename 退避してから配置（既定 suffix・→ ADR-0045）
+nput apply <name> --backup=<suffix>  # 退避 suffix を明示（"=" 区切り必須・スペース区切り不可・→ ADR-0045）
 nput apply --manifest <link-farm>  # ビルド済み link-farm を直接適用（entrypoint 発見・eval/build なし・host/module activation seam・→ ADR-0026）
 nput reset <name> [target...]  # 配置物を無い状態へ戻す。target 省略で全 entry、指定でその entry のみ。名指し必須（--all 非対応）（→ ADR-0020, ADR-0021）
 nput reset <name> --dryrun     # 副作用ゼロで削除対象（symlink / copy target）を表示して exit（confirm/flock なし・→ ADR-0021）
@@ -226,6 +228,8 @@ nput init <template>           # nix flake init -t <nput>#<template> のラッ�
 --home-root         # --all の修飾。homeRoot の config のみ適用
 --system-root       # --all の修飾。systemRoot の config のみ適用（system mode は未実装のため当面マッチなし・将来 seam）
 --recopy            # apply の修飾。config 内の全 copy target を src から無条件上書き再コピー（→ ADR-0020）
+--backup[=<suffix>] # apply 専用。既存の記録外実体を <target>.<suffix> へ rename 退避してから配置（cobra NoOptDefVal。
+                    # 値なし = suffix "nput-backup"。suffix 指定は "=" 区切り必須・スペース区切り不可・→ ADR-0045）
 --manifest <path>   # apply 専用。ビルド済み link-farm を直接適用（entrypoint 発見・eval/build なし・host/module activation seam・→ ADR-0026）
 -y, --yes           # reset の確認プロンプトをスキップ（スクリプト / CI 用・→ ADR-0020）
 ```
@@ -240,11 +244,12 @@ nput init <template>           # nix flake init -t <nput>#<template> のラッ�
 - `rollback` は **名指し必須**（`--all` 非対応）。全 config を一斉に戻すのは破壊的で footgun、途中失敗で状態が不揃いになり得るため（→ ADR-0018）。
 - `list-generations --all` は home mode の全 config の世代を一覧（読み取り専用）。`gitignore --all` は projectRoot の全 config の target を **ソート + 重複除去**して出力する（repo の `.gitignore` は 1 つなので一括列挙が自然・→ ADR-0018）。
 - `apply <name> --recopy` は通常 apply に加え **config 内の全 copy target を現 `src`/`subpath` から無条件に上書き再コピー**する（→ ADR-0020）。copy は世代外で hash 追跡しないため差分判定はせず無条件。上書きした target をレポート表示し、フラグ自体が opt-in なので確認は出さない。**ローカルの copy 編集は破棄され src 内容に戻る**（= upstream 追従の意図）。symlink 部の世代コミット挙動は不変（copy は世代を増やさない）。
+- `apply <name> --backup[=<suffix>]` は、配置を塞ぐ既存の**記録外**実体（foreign な通常ファイル / ディレクトリ・copy 構造不一致・copy foreign 実ファイル・method 変更 copy→symlink）を `<target>.<suffix>` へ rename 退避してから配置する、conflict の脱出ハッチ（→ ADR-0045, issue #169）。値なし = suffix `nput-backup`。suffix 指定は cobra `NoOptDefVal` の制約で **`=` 区切り必須**（`--backup=bak`。スペース区切り `--backup bak` は次の位置引数として扱われ suffix にならない）。**祖先 symlink conflict は対象外のまま**（構造問題であり退避では解消しない・→ ADR-0015, ADR-0046）。退避発動は warning 級で**常時 stderr** に出す。退避先 `<target>.<suffix>` が既に存在する（前回の退避物が残っている）ときは conflict で停止し、黙って上書きしない。退避も途中失敗時の undo ジャーナル対象（→「途中失敗時の巻き戻し」節）。**`reset` は退避物を復元しない**（ユーザー所有物として残置。復元は手動 `mv`）。
 - `reset <name> [target...]` は配置物を**無い状態へ戻す** teardown（→ ADR-0020）。symlink は stale 除去と同じ**保守的不変条件**（nput 管理・記録通りのみ・foreign は warning で残す）で除去し、**copy target も削除**する（copy を消す唯一の明示手段）。symlink・copy いずれの除去後も空親ディレクトリ剪定を適用する（→「空親ディレクトリ剪定」節）。データ損失リスクのため**確認プロンプト**を出すか `--yes` で同意を要求し、削除 target をレポート表示する。**profile / 世代は触らない FS-only teardown** で、config が entry を残す限り次の apply で再配置される（transient・project mode は ADR-0017 の lstat 検査で復帰）。恒久除去は config から entry を消して apply、profile 完全除去は `nix-env --profile <profileDir>/profile --delete-generations`。home / project 両モード可。
 - `reset` は **名指し必須（`--all` 非対応）**（一斉撤去は破壊的 footgun・`rollback --all` 却下と一貫・→ ADR-0018, ADR-0021）。複数撤去は名指しを複数回。**解決後 `profileDir` 単位の blocking flock を取得**して並行 apply / reset と直列化する（→ ADR-0013, ADR-0021）。profileDir 確定のため **rootKind 先取り eval → root 解決**を build しないコマンドでも先行する（apply と共通の前段・`--root` 時は同じ roothash キー・→ ADR-0024）。
 - `reset <name> --dryrun` は**副作用ゼロ**で削除対象（symlink / copy target）を表示して exit する（FS 削除・confirm・flock いずれも行わない・`apply --dryrun` と対称・→ ADR-0021）。終了コードは削除対象の有無に依らず 0。
-- `apply --all --recopy` は**合成可**。`--all`（必要なら `--project-root` 等フィルタ）が選んだ各 config に `--recopy` を適用する（`--recopy` は apply 修飾で `--all` と直交・→ ADR-0021）。
-- `apply <name> --dryrun` は FS 書込・`--set`・flock いずれも行わない読み取り専用。`conflict` があれば非ゼロ終了（CI の事前 gate に使える）（→ ADR-0006）。
+- `apply --all --recopy` は**合成可**。`--all`（必要なら `--project-root` 等フィルタ）が選んだ各 config に `--recopy` を適用する（`--recopy` は apply 修飾で `--all` と直交・→ ADR-0021）。`--all --backup[=<suffix>]` も同様に合成可（`--backup` も apply 修飾・→ ADR-0045）。
+- `apply <name> --dryrun` は FS 書込・`--set`・flock いずれも行わない読み取り専用。`conflict` があれば非ゼロ終了（CI の事前 gate に使える）（→ ADR-0006）。**`--dryrun --backup` は組み合わせ可**で、`--backup` 無しなら conflict（exit 2）になる箇所が「backup + 配置予定」の非 conflict プランへ変わる（exit 0・→ ADR-0045）。退避先が既存の場合は `--backup` 下でも conflict のまま。
 - `gitignore <name>` は配置 target を `.gitignore` 向けに列挙して stdout に出力するだけで、ファイルは書き込まない。更新責務はプロジェクト管理者（→ ADR-0005）。出力は **root 相対 target に先頭 `/` を付けたアンカー形式**（例: `/.claude/skills/nix`）で 1 行 1 件。project mode の root = git toplevel = `.gitignore` 置き場所なので先頭 `/` が正しくアンカーし、別階層の同名パスを誤って無視しない。ディレクトリ / ファイルとも末尾 `/` は付けない（→ ADR-0013）。
 - `gitignore` は **project mode 限定**。単体 `gitignore <name>` も project mode の config のみ受理し、**非 project config（home / fixed）を指定したらエラーで停止**する（出力のアンカー形式が git toplevel = `.gitignore` 置き場所を前提とし、home / fixed では意味を成さないため）。`rollback` / `list-generations` が home mode 限定なのと対称（→ ADR-0023）。
 - `gitignore` は **`method` を区別せず全 target を列挙**する（copy target も含む・→ ADR-0019）。project mode の copy target も ephemeral 扱いで、各 clone で place-once で再マテリアライズされ**編集は clone local / 使い捨て**（`git clean` で消える）。copy を committed（vendoring）にするのは nput の責務外（手動コミット）で、project mode の ephemeral 原則は崩さない（→ ADR-0019）。
@@ -582,6 +587,11 @@ engine が**ネイティブ FS 操作**で行う（`ln` / `rsync` は使わな�
 0.6. target と同一 target で method が symlink→copy に変わるとき、前世代が記録した symlink で on-disk が
    記録通りなら → 配置前に除去（PreRemove・silent）してから copy を新規配置（→ ADR-0047 D5）。
    readlink drift（on-disk が記録と不一致）は移行せず通常の foreign 判定へフォールバックする。
+0.7. `apply --backup` 有効時、上記 0〜0.6 が「エラーで停止」または「copy foreign スキップ」と判定した
+   記録外実体（foreign な通常ファイル/ディレクトリ・実 dir migration 失敗・copy 構造不一致・
+   copy foreign 実ファイル・method 変更 copy→symlink）を、配置前に `<target>.<suffix>` へ rename 退避
+   （Backup。PreRemove の後・配置の前）してから新規配置する（→ ADR-0045）。祖先 symlink conflict は
+   対象外のまま（構造問題であり退避では解消しない）。退避先が既存なら conflict で停止する。
 1. target の親ディレクトリを作成（mkdir -p 相当。緩和対象の祖先 symlink / 実 dir target は PreRemove 除去済み・foreign は 0 で弾き済み）
 2. target が既存 symlink のとき:
    - 自身の前世代 manifest が記録した symlink → そのまま置き換える（silent）
@@ -595,20 +605,21 @@ engine が**ネイティブ FS 操作**で行う（`ln` / `rsync` は使わな�
 - target に通常ファイルまたはディレクトリが存在する場合はエラーで停止（上書きしない）。ただし実 dir は §0.5 の条件を満たせば例外的に PreRemove で除去して配置する（→ ADR-0047）
 - subpath がファイル・ディレクトリどちらでも同じ処理
 - 別 config（別 profile）が同一 target を狙うのは基本「衝突させない前提」。後勝ちを許容しつつ foreign symlink 上書きは warning で可視化する（→ ADR-0015）
-- method 変更 copy→symlink は自動移行しない（ユーザー編集済み copy データの保護を優先し、従来通り conflict のまま・→ ADR-0047 D5）
+- method 変更 copy→symlink は自動移行しない（ユーザー編集済み copy データの保護を優先し、従来通り conflict のまま・→ ADR-0047 D5）。`--backup` を付ければ conflict の代わりに退避 + 配置される（→ ADR-0045）
 
 ### 途中失敗時の巻き戻し（インメモリ undo ジャーナル・→ ADR-0044）
 
-apply / rollback が PreRemove・配置（symlink / copy）・stale 除去のいずれかの段で途中失敗すると、その run が行った FS 変更を**全て**巻き戻し、pre-apply 状態へ復元する（「失敗した apply は FS に痕跡を残さない」）。フラグなし・常時有効。
+apply / rollback が PreRemove・Backup（`--backup`）・配置（symlink / copy）・stale 除去のいずれかの段で途中失敗すると、その run が行った FS 変更を**全て**巻き戻し、pre-apply 状態へ復元する（「失敗した apply は FS に痕跡を残さない」）。フラグなし・常時有効。
 
 ```
-各段（PreRemove / place / copy 反映 / stale 除去）の FS 書き込みごとに、インメモリの undo ジャーナルへ逆操作を 1 件記録する:
+各段（PreRemove / Backup / place / copy 反映 / stale 除去）の FS 書き込みごとに、インメモリの undo ジャーナルへ逆操作を 1 件記録する:
   新規配置 symlink / copy         → 削除
   張替え（unlink 前に旧リンク先を捕捉）→ 旧リンク先で symlink を再作成
   stale 除去したリンク            → 前世代 manifest の記録 dest で symlink を再作成
   PreRemove の Unlink             → 記録 dest で symlink を再作成
   PreRemove の Rmdir              → 空 dir を再作成
   --recopy の rename 退避         → 退避物を rename back（成功時は退避物を削除）
+  --backup の rename 退避         → 退避物を rename back（成功時も退避物は削除せず残置・→ ADR-0045）
 
 いずれかの段でエラーが発生したら、それまでに記録したジャーナルを逆順（LIFO）で巻き戻してからエラーを返す。
 nix-env --set（コミット）が成功した後はジャーナルを破棄する（--set 自体の失敗は巻き戻し対象外・冪等再実行で収束）。
@@ -617,8 +628,8 @@ nix-env --set（コミット）が成功した後はジャーナルを破棄す�
 - **巻き戻し自体の失敗は best-effort 続行**: 個々の逆操作が失敗してもジャーナルの残りの巻き戻しは続行する。全ての巻き戻し試行が終わった時点で、元の apply エラーと巻き戻せなかった項目の一覧を stderr へ全報告して停止する（`reportConflicts` と同じ「全件列挙してから 1 本の集約エラー」の形）。
 - **報告は常時 stderr**（失敗経路のため沈黙対象外・既定 silent の対象にしない・→ ADR-0031）。
 - **クラッシュ（SIGKILL・電源断）は対象外**。undo ジャーナルはプロセスメモリ上にのみ存在し、永続 WAL は持たない。この場合は変わらず「世代未コミット + 冪等再実行で収束」（ADR-0006, ADR-0017）が保証を担う。
-- 世代スキップ経路の drift 修復（repairDrift）も同じ機構で巻き戻される。ただし ADR-0046/0047 の不変条件により、この経路が PreRemove を受け取ることは構造的に無い。
-- `rollback` も apply と同じ機構（PreRemove → place → stale 除去）で途中失敗時に巻き戻す。プロファイルポインタ移動（`--switch-generation`）はこの時点で全 FS 変更が成功済みのため巻き戻し対象外。
+- 世代スキップ経路の drift 修復（repairDrift）も同じ機構で巻き戻される。PreRemove は ADR-0046/0047 の不変条件によりこの経路に到達しないが、**Backup（`--backup`）はその不変条件の対象外**（target の記録外実体の出現は manifest/derivation の変化を伴わず、shell 再入間でも起こり得るため）で、drift 修復の一環として通常 apply と同じく退避 + 配置される。
+- `rollback` も apply と同じ機構（PreRemove → place → stale 除去）で途中失敗時に巻き戻す。プロファイルポインタ移動（`--switch-generation`）はこの時点で全 FS 変更が成功済みのため巻き戻し対象外。`rollback` に `--backup` 相当のフラグはなく、Backup ステージは常に空。
 
 ### copy モード（place-once・ユーザー管理）
 
@@ -632,12 +643,12 @@ subpath がファイルの場合:
   target が存在するとき: 何もしない
 ```
 
-- **foreign 実ファイルの skip は warning で可視化する**: target が存在し**かつ前世代 manifest にこの copy entry が無い**（= nput が置いていない foreign ファイル）のとき、place-once により skip するが **warning を出す**（「target に既存ファイルがあり copy をスキップした」）。symlink の foreign 警告（→ ADR-0015）と対称化し、「nput が中身を置いた」と誤認する masking を防ぐ。上書きはせず apply 全体も止めない（→ ADR-0022）。「自分が置いたか」は前世代 manifest の entry 有無で判別し、内容は判別しない。
+- **foreign 実ファイルの skip は warning で可視化する**: target が存在し**かつ前世代 manifest にこの copy entry が無い**（= nput が置いていない foreign ファイル）のとき、place-once により skip するが **warning を出す**（「target に既存ファイルがあり copy をスキップした」）。symlink の foreign 警告（→ ADR-0015）と対称化し、「nput が中身を置いた」と誤認する masking を防ぐ。上書きはせず apply 全体も止めない（→ ADR-0022）。「自分が置いたか」は前世代 manifest の entry 有無で判別し、内容は判別しない。**`apply --backup` 有効時はこの skip + warning の代わりに、target を `<target>.<suffix>` へ退避してから copy を新規配置する**（→ ADR-0045）。
+- `subpath` がディレクトリのとき `target` に通常ファイルが存在する場合、または `subpath` がファイルのとき `target` がディレクトリの場合は構造不一致でエラーで停止するが、**`apply --backup` 有効時は退避してから copy を新規配置する**（→ ADR-0045）。
 - **place-once**: 初回マテリアライズ後、target が在れば触らない。ストア更新の反映は **`apply --recopy`（全 copy target を src から無条件上書き）**、または `reset <name> [target]` で撤去後に再 apply で行う（→ ADR-0020）。
 - **mode は保存しつつ owner-write を付与する**（例: `0444 → 0644` / `0555 → 0755`・→ ADR-0016）。store パスは read-only（0444 / 0555）のため、そのまま保存すると編集できない。copy は「store から切り離してユーザーが所有・編集する」用途なので、perm の相対構造（実行ビット・group/other）は保ちつつ所有者が編集できる状態にする。
 - **src ツリー内の symlink は symlink のまま複製する**（deref しない。循環・サイズ膨張回避・→ ADR-0016）。ただし store 内への絶対 symlink を複製すると **store 依存（read-only / GC 後 dangling）が残る**点に注意。相対 symlink はそのまま保つ。
 - 世代管理の対象外。ロールバックされない。
-- `subpath` がディレクトリのとき `target` に通常ファイルが存在する場合、または `subpath` がファイルのとき `target` がディレクトリの場合は、構造の不一致としてエラーで停止。
 
 ### out-of-store symlink
 
@@ -830,9 +841,13 @@ FS を自動収束させる（nput profile は前進のみ＝旧内容の新世�
 ```
 nput.enable  :: bool          # デフォルト: false
 nput.entries :: attrsOf entry # デフォルト: {}（属性キー = target・→ ADR-0014）
+nput.backup.enable :: bool    # デフォルト: false（→ ADR-0045）
+nput.backup.suffix :: str     # デフォルト: "nput-backup"（→ ADR-0045）
 ```
 
 モジュールは自分の性質で root を pin する（HM → `homeRoot` / devShell → `projectRoot`）ため、モジュール利用者は `root` を再指定しない（→ ADR-0003, ADR-0007）。
+
+`nput.backup`（submodule・全モジュール共通）は activation の `nput apply --manifest` 起動へ `--backup=<suffix>` を配線する（→ ADR-0045, issue #169）。`enable = true` かつ `suffix` 省略で既定 `nput-backup` が使われる。`entries`（manifest v1 契約・`lib/types.nix`）とは独立な起動配線レイヤーのオプションで、manifest 自体には影響しない。
 
 > **HM モジュールの profile 粒度（MVP）**（→ ADR-0024, ADR-0025）: `nput.entries` は**単一 attrset = 単一 manifest = 1 profile（固定名 `default`）**で、`<name>` 次元を持たない。**standalone / CLI が entrypoint の `nput.<name>` で複数の独立 profile（役割分離・個別 rollback）を持てるのに対し、HM モジュール経由では役割分離はできない**。役割ごとに分けたいユーザーは standalone CLI 経路を使う。HM の複数 profile 化（`nput.configs.<name>.entries` 等）は将来拡張の seam として残す（HM の低い positioning〔ADR-0007〕に鑑み MVP では背負わない）。
 
@@ -985,21 +1000,23 @@ devShells.default = pkgs.mkShell {
 | `src` が存在しないストアパス（path / set）| Nix 評価時にエラー |
 | `src` が marker でローカルパスが存在しない | engine 実行時にエラーで停止 |
 | `subpath` が `src` 内に存在しないパス | engine 実行時にエラーで停止 |
-| `target` に通常ファイルが既存（symlink モード）| conflict。全件を stderr へ列挙して停止（上書きしない・→ 後述「conflict の全件報告」）|
+| `target` に通常ファイルが既存（symlink モード）| conflict。全件を stderr へ列挙して停止（上書きしない・→ 後述「conflict の全件報告」）。`apply --backup` 有効時は `<target>.<suffix>` へ退避してから新規配置（→ ADR-0045）|
 | `target` が実 dir で既存（symlink モード）、配下（任意深さ）の全 leaf が recorded∧stale な symlink または空 sub dir（由来問わず）| dir 全体を配置前に除去（PreRemove: leaf は Unlink・dir は子から親へ Rmdir）し新規配置（silent・`-v` で可視・`--dryrun` は非 conflict の remove・→ ADR-0047）|
-| `target` が実 dir で既存（symlink モード）、配下に中身のある実 file/dir・foreign symlink・次世代にも残る自己矛盾 symlink が 1 つでもある | conflict。dir 全体を停止し全件を stderr へ列挙（部分除去はしない・`--dryrun` も conflict・→ ADR-0047, 後述「conflict の全件報告」）|
+| `target` が実 dir で既存（symlink モード）、配下に中身のある実 file/dir・foreign symlink・次世代にも残る自己矛盾 symlink が 1 つでもある | conflict。dir 全体を停止し全件を stderr へ列挙（部分除去はしない・`--dryrun` も conflict・→ ADR-0047, 後述「conflict の全件報告」）。`apply --backup` 有効時は dir 全体を `<target>.<suffix>` へ 1 回で退避してから新規配置（部分退避はしない・→ ADR-0045）|
 | `target` の祖先 component が foreign symlink（記録なし / 記録 dest と不一致 / 前世代なし）、または次世代にも祖先が残る自己矛盾 | conflict。engine 実行時に全件を stderr へ列挙して停止（lstat walk・`--dryrun` も conflict・→ ADR-0015 §4, ADR-0046, 後述「conflict の全件報告」）|
 | `target` の祖先 component が自己記録 stale symlink（前世代 manifest が記録・on-disk 一致・次世代に無い）| 祖先を配置前に除去（PreRemove）し配下子を新規配置してネスト移行（silent・`-v` で可視・`--dryrun` は非 conflict の remove・→ ADR-0046）|
 | `target` に foreign symlink が既存（自身の前世代 manifest に記録なし・別 config / 別ツール / 手動）| warning を出して後勝ちで置き換える（→ ADR-0015）|
 | 同一 `target` で method が symlink→copy に変更、前世代が記録した symlink で on-disk が記録通り | 配置前に除去（PreRemove）し copy を新規配置（silent・`-v` で可視・readlink drift 時は通常の foreign 判定へフォールバック・→ ADR-0047 D5）|
 | 同一 `target` で method が copy→symlink に変更 | 自動移行しない。エラーで停止（`target` に既存ファイルとして扱う・`--backup` が脱出ハッチ・→ ADR-0047 D5）|
 | PreRemove 対象（祖先 symlink / 実 dir 配下 leaf・dir / method 変更 symlink）が計画後に drift（記録不一致・ENOTEMPTY 等）| skip せずエラーで停止（冪等再実行で収束・→ ADR-0046 §3, ADR-0047 D3）|
-| apply / rollback が PreRemove・配置・stale 除去のいずれかの段で途中失敗（`--set` 到達前）| この run が行った FS 変更を全てインメモリ undo ジャーナルで巻き戻し pre-apply 状態へ復元してから停止（exit 1・フラグなし常時有効・→ ADR-0044, 前述「途中失敗時の巻き戻し」）|
+| `apply --backup` 有効時、退避先 `<target>.<suffix>` が既に存在（前回の退避物が残っている）| conflict。全件を stderr へ列挙して停止（黙って上書きしない・→ ADR-0045, 後述「conflict の全件報告」）|
+| `apply --backup` は祖先 symlink conflict（foreign / 自己矛盾）には適用されない | 従来通り conflict のまま（構造問題であり退避では解消しない・→ ADR-0015, ADR-0046, ADR-0045）|
+| apply / rollback が PreRemove・Backup（`--backup`）・配置・stale 除去のいずれかの段で途中失敗（`--set` 到達前）| この run が行った FS 変更を全てインメモリ undo ジャーナルで巻き戻し pre-apply 状態へ復元してから停止（exit 1・フラグなし常時有効・→ ADR-0044, 前述「途中失敗時の巻き戻し」）|
 | 巻き戻し（undo）自体が一部失敗（対象が既に他プロセスに変更された等）| 失敗項目はスキップして残りの巻き戻しを続行（best-effort）。元の apply エラー + 未復元項目一覧を stderr に全報告して停止（→ ADR-0044）|
-| `subpath` がディレクトリのとき `target` に通常ファイルが既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）|
-| `subpath` がファイルのとき `target` がディレクトリとして既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）|
+| `subpath` がディレクトリのとき `target` に通常ファイルが既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）。`apply --backup` 有効時は退避してから copy を新規配置（→ ADR-0045）|
+| `subpath` がファイルのとき `target` がディレクトリとして既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）。`apply --backup` 有効時は退避してから copy を新規配置（→ ADR-0045）|
 | copy モードで `target` が既存（前世代 manifest に entry あり = nput 配置済み）| place-once により何もしない（上書きしない）。`apply --recopy` 時のみ無条件上書き（→ ADR-0020）|
-| copy モードで `target` に foreign 実ファイルが既存（前世代 manifest に entry なし）| place-once で skip しつつ **warning** で可視化（masking 防止・symlink の foreign 警告と対称・apply は止めない・→ ADR-0022）|
+| copy モードで `target` に foreign 実ファイルが既存（前世代 manifest に entry なし）| place-once で skip しつつ **warning** で可視化（masking 防止・symlink の foreign 警告と対称・apply は止めない・→ ADR-0022）。`apply --backup` 有効時は skip の代わりに退避してから copy を新規配置（warning は出さない・→ ADR-0045）|
 | 世代スキップ時に copy `target` が不在（project mode）| lstat ドリフト修復で place-once 再マテリアライズ。内容が異なるだけ（編集済み）の場合は不可触（→ ADR-0022）|
 | stale 除去で copy entry が消えた | copy target は削除せず、orphan を警告で通知。明示撤去は `reset`（→ ADR-0020）|
 | `reset` で対象 entry の配置物が既に無い | no-op（既に無い状態・エラーにしない・→ ADR-0020）|
@@ -1027,10 +1044,11 @@ devShells.default = pkgs.mkShell {
 
 `apply` / `rollback` が conflict で停止するとき、`planner.Compute` が収集した **`plan.Conflicts` の全件**を stderr へ列挙してから停止する（`--dryrun` の `Result.Conflicts` と同じ集合。HM の `checkLinkTargets` と対称）。1 件ずつ「修正 → 再実行 → 次の 1 件…」を強いられないよう、1 回の実行で全ての衝突箇所を可視化する。各行には conflict 種別に応じた 1 行の対処ガイダンスが付く：
 
-- foreign 実体（`target` に記録外の通常ファイル・ディレクトリ）→ 手動で退避・削除してから再実行
+- foreign 実体（`target` に記録外の通常ファイル・ディレクトリ）→ 手動で退避・削除してから再実行（または `apply --backup` で自動退避・→ ADR-0045）
 - foreign 祖先 symlink（記録なし / 記録 dest と不一致 / 前世代なし）→ そのリンクを作った主体（別 config / 別ツール / 手動操作）を確認
 - 自己矛盾 manifest（次世代にも祖先 symlink が残ったまま配下 target を定義）→ entry 定義を見直す（祖先と配下のどちらかに一本化）
-- copy 構造不一致（`subpath` の dir/file 種別と既存 `target` の種別が食い違う）→ entry 定義を見直す
+- copy 構造不一致（`subpath` の dir/file 種別と既存 `target` の種別が食い違う）→ entry 定義を見直す（または `apply --backup` で自動退避）
+- backup 退避先が既存（`apply --backup` 有効時、`<target>.<suffix>` に前回の退避物が残っている）→ 手動で退避物を移動・削除してから再実行（→ ADR-0045）
 
 停止時の `error` は列挙の後に返す**件数付き集約メッセージ 1 本**（例: `nput: N conflict(s) detected; stopped without placing (see above)`）で、個別 conflict の詳細は本文ではなく直前の stderr 列挙が担う。終了コードは不変（`apply` 非 dryrun は `1`・`--dryrun` は `2`）。`--json`（epic #126）の `Conflicts` 配列も同じ全件集合と整合させる。
 

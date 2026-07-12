@@ -88,3 +88,12 @@ ADR-0046 §5・ADR-0047 影響節が seam として残した「PreRemove を und
 - **rename ベースの atomic スナップショット（apply 前に対象ツリー全体を退避）**: target ごとに一時コピーを作る必要があり、大きなツリーではコストが跳ねる。undo ジャーナルは「変更した分だけ」逆操作を記録するため、変更量に比例したコストで済む。
 - **unwind 失敗時に即中断**: 1 個の失敗で残りの巻き戻しを諦めると、まだ戻せたはずの項目まで未復元のまま放置される。best-effort 続行の方が pre-apply 状態への近さを最大化する。
 - **PreRemove を undo 対象外にする（ADR-0046/0047 の移行は冪等再実行の収束のみに委ねる）**: ADR-0046 §5 が容認した選択だが、本 ADR で undo ジャーナルを実装する以上、PreRemove だけ例外的に粗い保証のままにする理由がない。一般化する方が意味論として一貫する。
+
+> **2026-07-12 改訂注記（ADR-0045）**: 本 ADR §5 影響節が予告した「#169（`--backup`）は本 ADR に完全直列 stack。
+> `--backup` の退避操作も journal 化対象になる」は #169（ADR-0045）で実装された。`apply --backup` の rename 退避は
+> Plan の新しいステージ `Backup`（PreRemove → Backup → Place / Copies → 除去）として実行され、新しい undo kind
+> `undoRestoreBackup` で本 ADR の journal/unwind 機構にそのまま乗る。ただし commit 成功後の扱いは非対称: `--recopy`
+> の退避物（`undoRestoreRename`）は成功時に `discardJournal` が削除するが、`--backup` の退避物は成功時も削除せず
+> 永続的に残す（ユーザー所有物として引き渡す・→ ADR-0045 §5）。この非対称のために `undoRestoreRename` とは別の
+> undo kind を割り当てている。本 ADR の journal/unwind の骨格（逆順 LIFO・best-effort 続行・commit 後は対象外）
+> 自体は不変。
