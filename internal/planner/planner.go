@@ -93,8 +93,12 @@ type Conflict struct {
 type ConflictKind int
 
 const (
+	// ConflictUnspecified is the zero value: a Kind left unset. It must never be produced by
+	// Compute (every Conflict{} literal below sets Kind explicitly); guarded against by falling
+	// through to a generic guidance rather than silently reading as ConflictForeignEntity.
+	ConflictUnspecified ConflictKind = iota
 	// ConflictForeignEntity is a regular file/directory occupying a symlink target (→ ADR-0006).
-	ConflictForeignEntity ConflictKind = iota
+	ConflictForeignEntity
 	// ConflictForeignAncestor is a symlinked ancestor component not recorded by this profile's
 	// own previous generation (unrecorded / mismatched dest / no previous generation · → ADR-0015 §4).
 	ConflictForeignAncestor
