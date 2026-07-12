@@ -33,6 +33,11 @@ const (
 	// undoRestoreRename renames tmpPath back to path (recopyAll's rename-aside of an existing
 	// copy target before overwriting it — → ADR-0044 §1, ADR-0047 D5 boundary).
 	undoRestoreRename
+	// undoRestoreBackup renames tmpPath (the apply --backup aside) back to path, identically to
+	// undoRestoreRename's inverse. Kept as a distinct kind solely so discardJournal does not sweep
+	// it up on success: a backup aside is user-owned, kept as-is, not transient overwrite debris
+	// (→ ADR-0045, issue #169).
+	undoRestoreBackup
 	// undoMkdir recreates the empty directory removed at path (PreRemove's RemoveRmdir → ADR-0047).
 	undoMkdir
 )
@@ -71,6 +76,14 @@ func (a *applier) journalRenamedAside(path, tmpPath string) {
 	a.journal = append(a.journal, undoOp{kind: undoRestoreRename, path: path, tmpPath: tmpPath})
 }
 
+// journalBackedUp records an apply --backup rename-aside: path's pre-placement occupant was moved
+// to tmpPath (= "<path>.<suffix>") before the fresh placement landed at path (→ ADR-0045, issue
+// #169). Unlike journalRenamedAside, the aside is never cleaned up on success — it is the user's
+// backup, not overwrite debris (→ discardJournal).
+func (a *applier) journalBackedUp(path, tmpPath string) {
+	a.journal = append(a.journal, undoOp{kind: undoRestoreBackup, path: path, tmpPath: tmpPath})
+}
+
 // journalRemovedEmptyDir records an empty directory this run rmdir-ed (PreRemove's RemoveRmdir →
 // ADR-0047), capturing its mode so undo recreates it identically rather than with a fixed default.
 func (a *applier) journalRemovedEmptyDir(path string, mode os.FileMode) {
@@ -82,7 +95,10 @@ func (a *applier) journalRemovedEmptyDir(path string, mode os.FileMode) {
 // rollback's job, not this run's · → ADR-0044 §2). A recopy rename-aside entry's tmpPath still
 // holds the pre-overwrite content at this point (undo was never triggered), so it is cleaned up
 // here rather than left to linger — a warning-only best-effort, since the fresh copy already
-// landed successfully and a leftover aside file is cosmetic, not a correctness issue.
+// landed successfully and a leftover aside file is cosmetic, not a correctness issue. An
+// apply --backup aside (undoRestoreBackup) is deliberately excluded from this sweep: the backup is
+// user-owned and stays on disk indefinitely, not cleaned up by nput (reset does not restore it
+// either · → ADR-0045, issue #169).
 func (a *applier) discardJournal() {
 	for _, op := range a.journal {
 		if op.kind != undoRestoreRename {
@@ -143,7 +159,7 @@ func undoOne(op undoOp) error {
 		return os.Symlink(op.prevDest, op.path)
 	case undoRemoveCopy:
 		return os.RemoveAll(op.path)
-	case undoRestoreRename:
+	case undoRestoreRename, undoRestoreBackup:
 		if err := os.RemoveAll(op.path); err != nil {
 			return err
 		}

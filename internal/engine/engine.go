@@ -63,6 +63,12 @@ type Options struct {
 	// Recopy is the apply --recopy modifier (unconditionally overwrite/re-copy all copy targets in the config from src · → ADR-0020).
 	// An opt-in path that breaks place-once. The normal apply of the symlink part (stale removal + generation commit) is unchanged.
 	Recopy bool
+	// Backup is the apply --backup modifier: a foreign occupant that would otherwise be a conflict
+	// (or a copy foreign skip) is renamed aside to "<target>.<BackupSuffix>" and the entry placed
+	// fresh, instead of stopping (→ ADR-0045, issue #169).
+	Backup bool
+	// BackupSuffix is the apply --backup rename suffix. Empty defaults to "nput-backup" (→ ADR-0045).
+	BackupSuffix string
 	// DryRun is a side-effect-free read-only preview (apply --dryrun · → ADR-0006, ADR-0023).
 	// When true it runs the planner read-only, packs the plan into Result and returns,
 	// taking none of FS writes / --set / flock / pending gcroot. It builds (src resolution) but does not place.
@@ -88,6 +94,7 @@ type Result struct {
 	Recopied   []string // existing copy targets overwritten/re-copied by --recopy (→ ADR-0020)
 	Removed    []string // stale-removed targets
 	Pruned     []string // empty ancestor directories rmdir-ed after a removal (→ Issue #174, #172 (D4))
+	BackedUp   []string // targets renamed aside to "<target>.<suffix>" under apply --backup (→ ADR-0045)
 	Skipped    bool     // skipped on try-lock contention (NoWait path)
 	DryRun     bool     // read-only preview (Placed etc. are "to be placed" plans · → ADR-0023)
 	Conflicts  []string // conflicts detected in dryrun ("target: reason" · used by the CLI to decide exit 2 · → ADR-0006)
@@ -199,7 +206,7 @@ func Apply(opts Options) (*Result, error) {
 	prev := a.loadPrevManifest()
 
 	// 6. compute the place/replace/remove plan with the planner (pure logic · → internal/planner).
-	plan, err := planner.Compute(prev, a.manifest, a.root, planner.OSFS)
+	plan, err := planner.Compute(prev, a.manifest, a.root, planner.OSFS, a.plannerOptions())
 	if err != nil {
 		return nil, err
 	}
@@ -241,11 +248,16 @@ func Apply(opts Options) (*Result, error) {
 	//    filesystem object occupies a placement target — an ancestor symlink, a real directory
 	//    fully migratable, or a symlink replaced by a symlink→copy method change — so placement
 	//    lands on an empty/absent target · local exception to ADR-0006 · → ADR-0046, ADR-0047),
-	//    then new / re-link, then stale removal last (→ ADR-0006). copy branches: on --recopy overwrite
-	//    all copy targets unconditionally, normally place-once (new copy only when target is absent) (→ ADR-0020).
-	//    Each stage journals its own FS writes; a failure in any of the four unwinds everything this
-	//    run has done so far (across all four, not just the failing stage) before returning (→ ADR-0044).
+	//    then Backup (apply --backup: rename a foreign occupant aside so placement lands on an
+	//    absent target · → ADR-0045), then new / re-link, then stale removal last (→ ADR-0006).
+	//    copy branches: on --recopy overwrite all copy targets unconditionally, normally
+	//    place-once (new copy only when target is absent) (→ ADR-0020).
+	//    Each stage journals its own FS writes; a failure in any of the five unwinds everything this
+	//    run has done so far (across all five, not just the failing stage) before returning (→ ADR-0044).
 	if err := a.runJournaled(func() error { return a.preRemove(plan.PreRemove) }); err != nil {
+		return nil, err
+	}
+	if err := a.runJournaled(func() error { return a.backup(plan.Backup) }); err != nil {
 		return nil, err
 	}
 	if err := a.runJournaled(func() error { return a.place(plan.Place) }); err != nil {
@@ -297,6 +309,12 @@ type applier struct {
 	journal  []undoOp
 }
 
+// plannerOptions translates the apply --backup modifier (opts.Backup / opts.BackupSuffix) into
+// planner.Options for planner.Compute (→ ADR-0045, issue #169).
+func (a *applier) plannerOptions() planner.Options {
+	return planner.Options{Backup: a.opts.Backup, Suffix: a.opts.BackupSuffix}
+}
+
 // runJournaled runs an FS-mutating stage and unwinds the journal recorded so far — by this
 // stage and any earlier ones in the same Apply/Rollback call — if it fails (→ ADR-0044). Stages
 // covered: preRemove, place, materializeCopies, removeStale, repairDrift. A stage succeeding
@@ -334,7 +352,7 @@ func (a *applier) dryRun() (*Result, error) {
 	}
 
 	prev := a.loadPrevManifest()
-	plan, err := planner.Compute(prev, a.manifest, a.root, planner.OSFS)
+	plan, err := planner.Compute(prev, a.manifest, a.root, planner.OSFS, a.plannerOptions())
 	if err != nil {
 		return nil, err
 	}
@@ -364,6 +382,9 @@ func (a *applier) dryRun() (*Result, error) {
 	}
 	for _, r := range plan.Remove {
 		a.result.Removed = append(a.result.Removed, r.Entry.Target)
+	}
+	for _, b := range plan.Backup {
+		a.result.BackedUp = append(a.result.BackedUp, b.Entry.Target)
 	}
 	for _, c := range plan.Conflicts {
 		a.result.Conflicts = append(a.result.Conflicts, fmt.Sprintf("%s: %s", c.Entry.Target, c.Reason))
@@ -469,6 +490,8 @@ func conflictGuidance(kind planner.ConflictKind) string {
 		return "the manifest keeps both this ancestor and an entry nested beneath it; fix the entry definitions"
 	case planner.ConflictCopyStructureMismatch:
 		return "the copy entry's structure no longer matches the existing target; fix the entry definition"
+	case planner.ConflictBackupTargetExists:
+		return "a previous --backup was left at \"<target>.<suffix>\"; move or remove it manually, then re-run --backup"
 	default:
 		return "review the entry definition and the existing target"
 	}
