@@ -483,11 +483,11 @@ func TestComputeTableDriven(t *testing.T) {
 					got[i] = c.Kind
 				}
 				if len(got) != len(tt.want.conflictKinds) {
-					t.Errorf("conflict kinds = %v, want %v", got, tt.want.conflictKinds)
+					t.Errorf("conflict kinds length = %d, want %d (got %v, want %v)", len(got), len(tt.want.conflictKinds), got, tt.want.conflictKinds)
 				} else {
 					for i := range got {
 						if got[i] != tt.want.conflictKinds[i] {
-							t.Errorf("conflict kinds = %v, want %v", got, tt.want.conflictKinds)
+							t.Errorf("conflict kinds[%d] = %v, want %v (full: got %v, want %v)", i, got[i], tt.want.conflictKinds[i], got, tt.want.conflictKinds)
 							break
 						}
 					}
