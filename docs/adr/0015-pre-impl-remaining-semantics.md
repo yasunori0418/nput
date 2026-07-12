@@ -28,6 +28,12 @@
 > per-file 世代）を跨ぐ rollback は、apply と同じく **PreRemove → place/replace → stale 除去**の順で反映しないと収束しない。
 > `Rollback()` に `a.preRemove(plan.PreRemove)` を `place` の前段として追加し修正した（apply の実行順・drift 時 error 停止の意味論と
 > 同一・→ #173）。
+>
+> **2026-07-12 改訂注記（ADR-0047）**: 本 ADR §2 の「前世代 manifest 記録の symlink は置換可（silent・後勝ち）」判定は、
+> **同一 method（symlink→symlink）だけでなく method 横断（symlink→copy）へも拡張**された。同一 target で method が
+> symlink から copy へ変わったとき、前世代が記録した symlink で on-disk が記録通りなら配置前に除去して copy を新規配置する
+> （symlink はユーザーデータを持たないため損失ゼロ）。copy→symlink 方向は非対称に**自動化しない**（ユーザー編集済み copy
+> データの保護を優先し、従来通り conflict のまま・→ ADR-0047）。
 
 ## 背景
 
