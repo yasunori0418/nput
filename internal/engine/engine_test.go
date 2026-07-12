@@ -1315,17 +1315,25 @@ func TestApplyConflictMixedKindsPairGuidanceCorrectly(t *testing.T) {
 	}
 
 	// Each conflict line (target: X) must be immediately followed by its own kind's guidance,
-	// not the other conflict's.
+	// not the other conflict's. matched tracks how many of the two expected target lines were
+	// actually found, so a silent no-op (neither switch case firing, e.g. because the target
+	// string changed) fails loudly instead of passing vacuously.
+	matched := 0
 	for i, w := range warns {
 		switch {
 		case strings.Contains(w, "target: .foreignEntity"):
+			matched++
 			if i+1 >= len(warns) || !strings.Contains(warns[i+1], "move or remove the existing file/directory manually") {
 				t.Errorf("conflict line %q not immediately followed by ConflictForeignEntity guidance, next = %v", w, warns[i+1:])
 			}
 		case strings.Contains(w, "target: .claude/skills/nix"):
+			matched++
 			if i+1 >= len(warns) || !strings.Contains(warns[i+1], "check what created this symlink") {
 				t.Errorf("conflict line %q not immediately followed by ConflictForeignAncestor guidance, next = %v", w, warns[i+1:])
 			}
 		}
+	}
+	if matched != 2 {
+		t.Fatalf("expected both conflict target lines to be found, matched = %d, warns = %v", matched, warns)
 	}
 }
