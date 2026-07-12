@@ -146,6 +146,9 @@ func reportResetResult(res *engine.ResetResult, name string) {
 	for _, t := range res.KeptForeign {
 		fmt.Fprintf(os.Stderr, "  kept            %s (foreign / record mismatch)\n", t)
 	}
+	for _, t := range res.Pruned {
+		fmt.Fprintf(os.Stderr, "  pruned          %s\n", t)
+	}
 	if len(res.RemovedSymlinks)+len(res.RemovedCopies) == 0 {
 		fmt.Fprintln(os.Stderr, "  no-op")
 	}

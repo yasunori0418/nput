@@ -57,6 +57,7 @@ type ResetResult struct {
 	RemovedSymlinks []string // removed (in dryrun, to-be-removed) symlink targets
 	RemovedCopies   []string // removed (in dryrun, to-be-removed) copy targets
 	KeptForeign     []string // symlink targets kept for not satisfying the conservative invariant (foreign / record mismatch)
+	Pruned          []string // empty ancestor directories rmdir-ed after a removal (→ Issue #174, #172 (D4); not computed in dryrun)
 	DryRun          bool     // was a read-only preview
 	Aborted         bool     // aborted at the confirmation prompt
 }
@@ -177,6 +178,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 		return nil, err
 	}
 	res.RemovedSymlinks = a.result.Removed // actually removed (excludes those kept due to drift)
+	res.Pruned = a.result.Pruned
 
 	removedCopies := make([]string, 0, len(copyTargets))
 	for i, targetAbs := range copyTargets {
@@ -184,8 +186,12 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 			return nil, fmt.Errorf("nput: cannot remove copy target (%s): %w", targetAbs, err)
 		}
 		removedCopies = append(removedCopies, res.RemovedCopies[i])
+		if err := a.pruneEmptyAncestors(targetAbs); err != nil {
+			warnf("nput: could not prune an empty ancestor directory: %v", err)
+		}
 	}
 	res.RemovedCopies = removedCopies
+	res.Pruned = a.result.Pruned
 
 	return res, nil
 }
