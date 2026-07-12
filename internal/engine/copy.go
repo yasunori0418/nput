@@ -31,11 +31,15 @@ func (a *applier) placeCopies(actions []planner.CopyAction) error {
 		if err := ensureParentDir(act.TargetAbs); err != nil {
 			return err
 		}
+		// Journaled before copyTree, not after: copyTree can write a partial tree (e.g. some
+		// files copied before a later one fails), and os.RemoveAll tolerates a fully- or
+		// partially-absent target, so recording the undo up front means a mid-copy failure still
+		// gets its partial tree cleaned up on unwind instead of leaving debris (→ ADR-0044).
+		a.journalPlacedCopy(act.TargetAbs)
 		if err := copyTree(act.Src, act.TargetAbs); err != nil {
 			return fmt.Errorf("nput: copy placement failed (%s -> %s): %w", act.Src, act.TargetAbs, err)
 		}
 		a.result.Copied = append(a.result.Copied, act.Entry.Target)
-		a.journalPlacedCopy(act.TargetAbs)
 	}
 	return nil
 }
@@ -55,15 +59,23 @@ func (a *applier) recopyAll() error {
 		}
 		targetAbs := filepath.Join(a.root, filepath.Clean(e.Target))
 		existed := false
-		aside := ""
 		if _, err := os.Lstat(targetAbs); err == nil {
 			existed = true
-			aside = asidePath(targetAbs)
+			aside := asidePath(targetAbs)
 			if err := os.Rename(targetAbs, aside); err != nil {
 				return fmt.Errorf("nput: cannot move aside recopy target (%s): %w", targetAbs, err)
 			}
+			// Journaled immediately after the rename-aside, before the fresh copy: if copyTree
+			// below fails partway, undoRestoreRename's os.RemoveAll tolerates a partial/absent
+			// target and still renames the aside back, restoring the pre-apply content instead of
+			// leaving it stranded under the aside name (→ ADR-0044).
+			a.journalRenamedAside(targetAbs, aside)
 		} else if !os.IsNotExist(err) {
 			return fmt.Errorf("nput: cannot lstat recopy target (%s): %w", targetAbs, err)
+		} else {
+			// Same reasoning as placeCopies: journal before copyTree so a mid-copy failure still
+			// gets its partial tree cleaned up on unwind (→ ADR-0044).
+			a.journalPlacedCopy(targetAbs)
 		}
 
 		if err := ensureParentDir(targetAbs); err != nil {
@@ -74,10 +86,8 @@ func (a *applier) recopyAll() error {
 		}
 		if existed {
 			a.result.Recopied = append(a.result.Recopied, e.Target)
-			a.journalRenamedAside(targetAbs, aside)
 		} else {
 			a.result.Copied = append(a.result.Copied, e.Target)
-			a.journalPlacedCopy(targetAbs)
 		}
 	}
 	return nil

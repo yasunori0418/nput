@@ -41,9 +41,10 @@ const (
 // already succeeded (→ ADR-0044).
 type undoOp struct {
 	kind     undoKind
-	path     string // the target path the forward operation wrote to
-	prevDest string // undoRelinkOld: the symlink destination to restore
-	tmpPath  string // undoRestoreRename: the aside path holding the pre-overwrite content
+	path     string      // the target path the forward operation wrote to
+	prevDest string      // undoRelinkOld: the symlink destination to restore
+	tmpPath  string      // undoRestoreRename: the aside path holding the pre-overwrite content
+	mode     os.FileMode // undoMkdir: the removed directory's mode, to recreate it identically
 }
 
 // journalPlacedSymlink records a freshly created symlink (target was absent) for undo (→ ADR-0044).
@@ -70,9 +71,10 @@ func (a *applier) journalRenamedAside(path, tmpPath string) {
 	a.journal = append(a.journal, undoOp{kind: undoRestoreRename, path: path, tmpPath: tmpPath})
 }
 
-// journalRemovedEmptyDir records an empty directory this run rmdir-ed (PreRemove's RemoveRmdir → ADR-0047).
-func (a *applier) journalRemovedEmptyDir(path string) {
-	a.journal = append(a.journal, undoOp{kind: undoMkdir, path: path})
+// journalRemovedEmptyDir records an empty directory this run rmdir-ed (PreRemove's RemoveRmdir →
+// ADR-0047), capturing its mode so undo recreates it identically rather than with a fixed default.
+func (a *applier) journalRemovedEmptyDir(path string, mode os.FileMode) {
+	a.journal = append(a.journal, undoOp{kind: undoMkdir, path: path, mode: mode})
 }
 
 // discardJournal drops the accumulated journal once it no longer needs undoing: after a
@@ -147,7 +149,11 @@ func undoOne(op undoOp) error {
 		}
 		return os.Rename(op.tmpPath, op.path)
 	case undoMkdir:
-		return os.Mkdir(op.path, 0o755)
+		mode := op.mode
+		if mode == 0 {
+			mode = 0o755 // defensive fallback: the removal site always captures a real mode before recording this op.
+		}
+		return os.Mkdir(op.path, mode)
 	default:
 		return fmt.Errorf("nput: internal error: unknown undo kind %d", op.kind)
 	}

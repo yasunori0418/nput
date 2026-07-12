@@ -78,11 +78,19 @@ func (a *applier) preRemove(actions []planner.RemoveAction) error {
 			// gone" as success rather than a hard error keeps this branch robust without relying on
 			// that invariant. It is NOT folded into result.Pruned: Pruned means "this run rmdir-ed
 			// it", and a dir that was already gone before this run touched it was not (→ diff-review).
+			//
+			// The mode is captured before the removal purely so undo can recreate an identical
+			// directory (→ ADR-0044); os.Remove itself, not this Lstat, is what re-verifies
+			// emptiness against drift (TOCTOU-safe per the comment above).
+			mode := os.FileMode(0o755)
+			if info, lerr := os.Lstat(act.TargetAbs); lerr == nil {
+				mode = info.Mode().Perm()
+			}
 			err := os.Remove(act.TargetAbs)
 			switch {
 			case err == nil:
 				a.result.Pruned = append(a.result.Pruned, act.TargetAbs)
-				a.journalRemovedEmptyDir(act.TargetAbs)
+				a.journalRemovedEmptyDir(act.TargetAbs, mode)
 			case os.IsNotExist(err):
 				// already absent; the Rmdir's goal is met, nothing to report.
 			case errors.Is(err, syscall.ENOTEMPTY), errors.Is(err, syscall.EEXIST):
@@ -135,6 +143,12 @@ func (a *applier) pruneEmptyAncestors(removedAbs string) error {
 		if hasSymlink {
 			return nil
 		}
+		// The mode is captured before the removal purely so undo can recreate an identical
+		// directory (→ ADR-0044); it plays no role in the TOCTOU-safe emptiness re-check below.
+		mode := os.FileMode(0o755)
+		if info, lerr := os.Lstat(dir); lerr == nil {
+			mode = info.Mode().Perm()
+		}
 		if err := os.Remove(dir); err != nil {
 			if os.IsNotExist(err) {
 				return nil
@@ -147,7 +161,7 @@ func (a *applier) pruneEmptyAncestors(removedAbs string) error {
 			return fmt.Errorf("nput: cannot remove empty ancestor directory (%s): %w", dir, err)
 		}
 		a.result.Pruned = append(a.result.Pruned, dir)
-		a.journalRemovedEmptyDir(dir)
+		a.journalRemovedEmptyDir(dir, mode)
 		dir = filepath.Dir(dir)
 	}
 }
