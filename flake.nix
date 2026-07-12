@@ -249,6 +249,9 @@
                       src = fakeSrc;
                       subpath = "skills/nix";
                     };
+                    # nput.backup.enable の wiring 確認（→ ADR-0045, issue #169）。suffix 省略時は
+                    # submodule 既定値 "nput-backup" が activation に渡ることを検証する。
+                    nput.backup.enable = true;
                   }
                 ];
               };
@@ -272,6 +275,11 @@
               # (3) nput.entries が manifest に流れていること（target = 属性キー）。
               grep -q '".claude/skills/nix"' "$manifest/manifest.json" \
                 || { echo "FAIL: nput.entries が manifest に反映されていません"; cat "$manifest/manifest.json"; exit 1; }
+
+              # (4) nput.backup.enable が --backup=<既定 suffix> として同じ apply 起動に配線されること
+              #     （→ ADR-0045, issue #169）。
+              grep -q -- '--backup=nput-backup' "$script" \
+                || { echo "FAIL: activation が --backup=<suffix> を配線していません"; cat "$script"; exit 1; }
 
               touch "$out"
             '';
