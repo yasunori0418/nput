@@ -53,7 +53,7 @@ explicitly:
 - **A self-recorded manifest, not readlink pattern-matching.** nput's placement engine
   tracks what it placed in a manifest from the previous generation, so it can safely
   auto-migrate cases home-manager's `home.file` (as of 2026-07) cannot — e.g. a per-file
-  target becoming a directory symlink. See [`docs/concept.md`](docs/concept.md#home-manager-home-file-との配置意味論の差)
+  target becoming a directory symlink. See [`docs/concept.md`](docs/concept.md#home-manager-homefile-との配置意味論の差)
   for the full comparison.
 
 ---

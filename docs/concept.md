@@ -342,7 +342,7 @@ home-manager の `home.file`（`files.nix`）と nput はどちらも「symlink 
 3. **祖先 symlink の安全性**: home-manager は配置先の祖先 component が symlink でも無検査で辿る（`os.MkdirAll` 相当が書込可能な先なら無警告で汚染し、read-only な先なら部分適用停止になりうる）。nput は foreign な祖先 symlink を conflict で停止し、自己記録の stale 祖先symlink のみ配置前除去（PreRemove）で migration する（→ ADR-0046）。
 4. **rename 可用性 + fail-fast drift**: home-manager は cleanup（除去）を配置より先に行うため、rename 相当（旧 target 削除 + 新 target 追加）の適用中にクラッシュすると、新旧どちらのパスにも実体が無い瞬間が生じうる。nput は「配置を塞ぐ依存除去のみ」を前段化し、独立した stale 除去は本流どおり最後に行う（ADR-0006 の「新規・張替を先に、stale 除去を最後に」は不変）。前段化した除去が drift（記録との不一致）を検出した場合は skip せず error で停止し、握りつぶさない（→ ADR-0047）。
 
-home-manager の空 dir 剪定・conflict 全件報告は nput も同等の挙動を持つ（パリティ項目・HM 超えではない）。method 変更（symlink → copy）を跨ぐ自動移行や、copy を含めた `reset` によるロールバックは copy という概念自体が home-manager に存在しないカテゴリであり、比較の対象外である。
+home-manager の空 dir 剪定・conflict 全件報告は nput も同等の挙動を持つ（パリティ項目・HM 超えではない。→ `docs/spec.md`「空親ディレクトリ剪定」「conflict の全件報告」）。method 変更（symlink → copy）を跨ぐ自動移行や、copy を含めた `reset` によるロールバックは copy という概念自体が home-manager に存在しないカテゴリであり、比較の対象外である。
 
 特に **system-manager** とは、パッケージ / systemd / `/etc` というドメインこそ重なるが、
 「モジュールで隠す」か「純粋関数でユーザーが握る」かというアプローチが思想レベルで異なるため競合しない。

@@ -25,7 +25,7 @@ nput は **フェッチ**(Nix 評価：`src` は store パス)と **配置**(固
 - **設定生成をしない。** nput はモジュールオプションを設定ファイルへ翻訳しない。リポジトリにすでにある内容を配置する。
 - **独立した単位。** 各配置 config(`nput.<name>`)はそれ自体が独立した Nix profile。役割ごとに独立して更新・適用でき、ある更新が別へ波及しない。
 - **home-manager 非依存。** `lib/` コアは nixpkgs のみに依存する。standalone で動き、module 統合(home-manager、devShell、将来の NixOS / nix-darwin)はエンジンを *起動するだけ* の薄い配線であって、自身でファイルを配置することはない。
-- **readlink パターンマッチではなく自己記録の manifest。** nput の配置エンジンは前世代の manifest に「自分が何を置いたか」を記録するため、home-manager の `home.file`(2026-07 時点)では原理的に困難な自動移行——例えば per-file 配置がディレクトリ symlink に変わるケース——を安全に行える。詳細は [`docs/concept.md`](docs/concept.md#home-manager-home-file-との配置意味論の差) を参照。
+- **readlink パターンマッチではなく自己記録の manifest。** nput の配置エンジンは前世代の manifest に「自分が何を置いたか」を記録するため、home-manager の `home.file`(2026-07 時点)では原理的に困難な自動移行——例えば per-file 配置がディレクトリ symlink に変わるケース——を安全に行える。詳細は [`docs/concept.md`](docs/concept.md#home-manager-homefile-との配置意味論の差) を参照。
 
 ---
 
