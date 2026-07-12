@@ -574,14 +574,14 @@ func TestRemoveStaleLeavesForeignFileNonEmptyAncestorInPlace(t *testing.T) {
 	}
 }
 
-// TestApplyAncestorSelfRecordedMigrationPrunesOuterAncestor verifies PreRemove's ancestor
-// unlink also runs the pruning walk (Issue #174): PreRemove runs before Place, so when
-// unlinking the ancestor symlink leaves "outer/" momentarily empty, the walk prunes it right
-// there — res.Pruned reports it — and the following Place step (ensureParentDir's MkdirAll)
-// recreates it fresh to hold the migrated child. The net effect is a real (non-symlink)
-// "outer/" directory at the end, exactly as before, so the transient prune+recreate is
-// invisible on disk; only res.Pruned reveals it happened.
-func TestApplyAncestorSelfRecordedMigrationPrunesOuterAncestor(t *testing.T) {
+// TestApplyAncestorSelfRecordedMigrationDoesNotPruneOuterAncestor verifies PreRemove's
+// ancestor unlink does NOT run the pruning walk (→ ADR-0047 §5): every PreRemove removal is
+// followed by a placement into the same spot, so pruning "outer/" just to have Place's
+// ensureParentDir recreate it would be a wasted round-trip, and it would pollute res.Pruned
+// with a dir that never stayed removed. "outer/" is left in place across the unlink and
+// simply reused by the following Place; res.Pruned stays empty (pruning belongs to
+// removeStale / reset only).
+func TestApplyAncestorSelfRecordedMigrationDoesNotPruneOuterAncestor(t *testing.T) {
 	root := realTempDir(t)
 	state := realTempDir(t)
 	srcOld := realTempDir(t)
@@ -611,12 +611,12 @@ func TestApplyAncestorSelfRecordedMigrationPrunesOuterAncestor(t *testing.T) {
 	if len(res.Removed) != 1 || res.Removed[0] != "outer/skills" {
 		t.Errorf("Removed = %v, want [outer/skills] (the pre-removed ancestor)", res.Removed)
 	}
-	if len(res.Pruned) != 1 || res.Pruned[0] != filepath.Join(root, "outer") {
-		t.Errorf("Pruned = %v, want [%s] (outer/ momentarily emptied by the ancestor unlink, then recreated by Place)", res.Pruned, filepath.Join(root, "outer"))
+	if len(res.Pruned) != 0 {
+		t.Errorf("Pruned = %v, want none (PreRemove does not prune; outer/ is reused by Place · ADR-0047 §5)", res.Pruned)
 	}
 
 	// outer/skills is now a real directory holding the migrated child; outer/ survives on
-	// disk as a real directory (recreated by Place after the transient prune above).
+	// disk as a real directory (never removed — PreRemove leaves it for Place to reuse).
 	info, err := os.Lstat(filepath.Join(root, "outer"))
 	if err != nil {
 		t.Fatalf("outer/ must survive: %v", err)
@@ -630,11 +630,13 @@ func TestApplyAncestorSelfRecordedMigrationPrunesOuterAncestor(t *testing.T) {
 	}
 }
 
-// TestPreRemovePruneCalledDirectly verifies pruneEmptyAncestors is actually invoked from
-// preRemove's unlink loop (Issue #174), independent of the apply-level refill guarantee
+// TestPreRemoveDoesNotPruneAncestors verifies pruneEmptyAncestors is NOT invoked from
+// preRemove's unlink loop (→ ADR-0047 §5), independent of the apply-level refill guarantee
 // above. It drives preRemove directly against a two-level ancestor chain where nothing
-// refills the freed space, so a successful prune is observable in isolation.
-func TestPreRemovePruneCalledDirectly(t *testing.T) {
+// refills the freed space: the emptied "outer/" must survive untouched and result.Pruned
+// must stay empty — exploratory pruning from PreRemove would pre-consume targets of the
+// planner's own explicit Rmdir actions and double-register them in Pruned.
+func TestPreRemoveDoesNotPruneAncestors(t *testing.T) {
 	root := realTempDir(t)
 	dest := realTempDir(t)
 
@@ -655,11 +657,13 @@ func TestPreRemovePruneCalledDirectly(t *testing.T) {
 		t.Fatalf("preRemove: %v", err)
 	}
 
-	if len(a.result.Pruned) != 1 || a.result.Pruned[0] != filepath.Join(root, "outer") {
-		t.Errorf("Pruned = %v, want [%s] (outer/ emptied by the ancestor unlink)", a.result.Pruned, filepath.Join(root, "outer"))
+	if len(a.result.Pruned) != 0 {
+		t.Errorf("Pruned = %v, want none (preRemove must not call the pruning walk · ADR-0047 §5)", a.result.Pruned)
 	}
-	if _, err := os.Lstat(filepath.Join(root, "outer")); !os.IsNotExist(err) {
-		t.Errorf("outer/ should have been pruned away, lstat err = %v", err)
+	if info, err := os.Lstat(filepath.Join(root, "outer")); err != nil {
+		t.Errorf("outer/ must survive the preRemove untouched: %v", err)
+	} else if !info.IsDir() {
+		t.Errorf("outer/ must remain a real directory, got mode %v", info.Mode())
 	}
 }
 
