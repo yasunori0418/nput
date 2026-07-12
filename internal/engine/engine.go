@@ -203,8 +203,7 @@ func Apply(opts Options) (*Result, error) {
 		return nil, err
 	}
 	if len(plan.Conflicts) > 0 {
-		c := plan.Conflicts[0]
-		return nil, fmt.Errorf("nput: %s (target: %s)", c.Reason, c.Entry.Target)
+		return nil, reportConflicts(a.opts.Warnf, plan.Conflicts)
 	}
 	a.emitWarnings(plan.Warnings, opts.Recopy)
 
@@ -407,6 +406,36 @@ func (a *applier) loadPrevManifest() *manifest.Manifest {
 		return nil
 	}
 	return m
+}
+
+// reportConflicts lists every planner-detected conflict to stderr (warnf), each followed by a
+// one-line guidance for that conflict's kind, then returns a single count-bearing aggregate error
+// (exit code stays 1 · → docs/spec.md エラー仕様, grilling 2026-07-12 D6). Mirrors the dryrun path
+// (a.dryRun packs the same plan.Conflicts into Result.Conflicts in full), so apply / Rollback no
+// longer stop at the first conflict only.
+func reportConflicts(warnf func(format string, args ...any), conflicts []planner.Conflict) error {
+	for _, c := range conflicts {
+		warnf("nput: conflict: %s (target: %s)", c.Reason, c.Entry.Target)
+		warnf("nput:   → %s", conflictGuidance(c.Kind))
+	}
+	return fmt.Errorf("nput: %d conflict(s) detected; stopped without placing (see above)", len(conflicts))
+}
+
+// conflictGuidance returns the one-line remediation hint for a conflict kind (→ docs/spec.md
+// エラー仕様, grilling 2026-07-12 D6; HM checkLinkTargets に倣う).
+func conflictGuidance(kind planner.ConflictKind) string {
+	switch kind {
+	case planner.ConflictForeignEntity:
+		return "move or remove the existing file/directory manually, then re-apply"
+	case planner.ConflictForeignAncestor:
+		return "check what created this symlink (another config / tool / manual placement)"
+	case planner.ConflictSelfContradictoryAncestor:
+		return "the manifest keeps both this ancestor and an entry nested beneath it; fix the entry definitions"
+	case planner.ConflictCopyStructureMismatch:
+		return "the copy entry's structure no longer matches the existing target; fix the entry definition"
+	default:
+		return "review the entry definition and the existing target"
+	}
 }
 
 // emitWarnings emits the non-fatal warnings computed by the planner to stderr (opts.Warnf).
