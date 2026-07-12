@@ -32,6 +32,7 @@ func (a *applier) removeStale(actions []planner.RemoveAction) error {
 			return fmt.Errorf("nput: cannot remove stale symlink (%s): %w", act.TargetAbs, err)
 		}
 		a.result.Removed = append(a.result.Removed, act.Entry.Target)
+		a.journalRelinkedSymlink(act.TargetAbs, planner.LinkDest(act.Entry))
 		if err := a.pruneEmptyAncestors(act.TargetAbs); err != nil {
 			a.opts.Warnf("nput: could not prune an empty ancestor directory: %v", err)
 		}
@@ -81,6 +82,7 @@ func (a *applier) preRemove(actions []planner.RemoveAction) error {
 			switch {
 			case err == nil:
 				a.result.Pruned = append(a.result.Pruned, act.TargetAbs)
+				a.journalRemovedEmptyDir(act.TargetAbs)
 			case os.IsNotExist(err):
 				// already absent; the Rmdir's goal is met, nothing to report.
 			case errors.Is(err, syscall.ENOTEMPTY), errors.Is(err, syscall.EEXIST):
@@ -96,6 +98,7 @@ func (a *applier) preRemove(actions []planner.RemoveAction) error {
 				return fmt.Errorf("nput: cannot remove recorded symlink for migration (%s): %w", act.TargetAbs, err)
 			}
 			a.result.Removed = append(a.result.Removed, act.Entry.Target)
+			a.journalRelinkedSymlink(act.TargetAbs, planner.LinkDest(act.Entry))
 		}
 	}
 	return nil
@@ -144,6 +147,7 @@ func (a *applier) pruneEmptyAncestors(removedAbs string) error {
 			return fmt.Errorf("nput: cannot remove empty ancestor directory (%s): %w", dir, err)
 		}
 		a.result.Pruned = append(a.result.Pruned, dir)
+		a.journalRemovedEmptyDir(dir)
 		dir = filepath.Dir(dir)
 	}
 }

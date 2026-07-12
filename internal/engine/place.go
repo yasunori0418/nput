@@ -36,15 +36,25 @@ func (a *applier) place(actions []planner.PlaceAction) error {
 		case planner.PlaceReplace, planner.PlaceForeign:
 			// Re-link is unlink + symlink (no rename-based atomic swap · → ADR-0017).
 			// The foreign-overwrite warning is already emitted via planner.Warnings by emitWarnings (→ ADR-0015).
+			prevDest, err := os.Readlink(act.TargetAbs)
+			if err != nil {
+				return fmt.Errorf("nput: cannot read existing symlink before re-link (%s): %w", act.TargetAbs, err)
+			}
 			if err := os.Remove(act.TargetAbs); err != nil {
 				return fmt.Errorf("nput: cannot remove existing symlink (%s): %w", act.TargetAbs, err)
 			}
 			a.result.Replaced = append(a.result.Replaced, act.Entry.Target)
+			if err := os.Symlink(act.Dest, act.TargetAbs); err != nil {
+				return fmt.Errorf("nput: cannot create symlink (%s -> %s): %w", act.TargetAbs, act.Dest, err)
+			}
+			a.journalRelinkedSymlink(act.TargetAbs, prevDest)
+			continue
 		}
 
 		if err := os.Symlink(act.Dest, act.TargetAbs); err != nil {
 			return fmt.Errorf("nput: cannot create symlink (%s -> %s): %w", act.TargetAbs, act.Dest, err)
 		}
+		a.journalPlacedSymlink(act.TargetAbs)
 	}
 	return nil
 }

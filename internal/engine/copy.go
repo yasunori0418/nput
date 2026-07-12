@@ -35,15 +35,19 @@ func (a *applier) placeCopies(actions []planner.CopyAction) error {
 			return fmt.Errorf("nput: copy placement failed (%s -> %s): %w", act.Src, act.TargetAbs, err)
 		}
 		a.result.Copied = append(a.result.Copied, act.Entry.Target)
+		a.journalPlacedCopy(act.TargetAbs)
 	}
 	return nil
 }
 
 // recopyAll is the copy overwrite path of apply --recopy (→ ADR-0020, docs/spec.md "recopy").
-// For every copy entry in the config, if the target exists it is removed and then
-// re-copied unconditionally (no diff check · local edits are discarded). It does not use
-// the place-once classification (planner.Copies) but scans the manifest directly; ancestor
-// symlinks / structural mismatches are already rejected by the planner's conflict gate before apply.
+// For every copy entry in the config, if the target exists it is renamed aside within the same
+// parent directory (a metadata-only operation that survives ENOSPC · → ADR-0044) and then
+// re-copied unconditionally (no diff check · local edits are discarded); the aside copy is
+// removed once the fresh copy lands, or renamed back if anything after it in this Apply fails and
+// the journal is unwound. It does not use the place-once classification (planner.Copies) but
+// scans the manifest directly; ancestor symlinks / structural mismatches are already rejected by
+// the planner's conflict gate before apply.
 func (a *applier) recopyAll() error {
 	for _, e := range a.manifest.Entries {
 		if e.Method != manifest.MethodCopy {
@@ -51,10 +55,12 @@ func (a *applier) recopyAll() error {
 		}
 		targetAbs := filepath.Join(a.root, filepath.Clean(e.Target))
 		existed := false
+		aside := ""
 		if _, err := os.Lstat(targetAbs); err == nil {
 			existed = true
-			if err := os.RemoveAll(targetAbs); err != nil {
-				return fmt.Errorf("nput: cannot remove recopy target (%s): %w", targetAbs, err)
+			aside = asidePath(targetAbs)
+			if err := os.Rename(targetAbs, aside); err != nil {
+				return fmt.Errorf("nput: cannot move aside recopy target (%s): %w", targetAbs, err)
 			}
 		} else if !os.IsNotExist(err) {
 			return fmt.Errorf("nput: cannot lstat recopy target (%s): %w", targetAbs, err)
@@ -68,11 +74,21 @@ func (a *applier) recopyAll() error {
 		}
 		if existed {
 			a.result.Recopied = append(a.result.Recopied, e.Target)
+			a.journalRenamedAside(targetAbs, aside)
 		} else {
 			a.result.Copied = append(a.result.Copied, e.Target)
+			a.journalPlacedCopy(targetAbs)
 		}
 	}
 	return nil
+}
+
+// asidePath returns a same-parent-directory temporary name for targetAbs, used by recopyAll to
+// move an existing copy target aside before overwriting it (→ ADR-0044 §1). Renaming within the
+// same directory is a metadata-only operation that cannot fail partway under ENOSPC, unlike a
+// remove-then-recopy that would lose the pre-overwrite content if the recopy itself then failed.
+func asidePath(targetAbs string) string {
+	return targetAbs + ".nput-recopy-aside"
 }
 
 // copyTree natively copies src (file / directory / symlink) to dst
