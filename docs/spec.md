@@ -240,7 +240,7 @@ nput init <template>           # nix flake init -t <nput>#<template> のラッ�
 - `rollback` は **名指し必須**（`--all` 非対応）。全 config を一斉に戻すのは破壊的で footgun、途中失敗で状態が不揃いになり得るため（→ ADR-0018）。
 - `list-generations --all` は home mode の全 config の世代を一覧（読み取り専用）。`gitignore --all` は projectRoot の全 config の target を **ソート + 重複除去**して出力する（repo の `.gitignore` は 1 つなので一括列挙が自然・→ ADR-0018）。
 - `apply <name> --recopy` は通常 apply に加え **config 内の全 copy target を現 `src`/`subpath` から無条件に上書き再コピー**する（→ ADR-0020）。copy は世代外で hash 追跡しないため差分判定はせず無条件。上書きした target をレポート表示し、フラグ自体が opt-in なので確認は出さない。**ローカルの copy 編集は破棄され src 内容に戻る**（= upstream 追従の意図）。symlink 部の世代コミット挙動は不変（copy は世代を増やさない）。
-- `reset <name> [target...]` は配置物を**無い状態へ戻す** teardown（→ ADR-0020）。symlink は stale 除去と同じ**保守的不変条件**（nput 管理・記録通りのみ・foreign は warning で残す）で除去し、**copy target も削除**する（copy を消す唯一の明示手段）。データ損失リスクのため**確認プロンプト**を出すか `--yes` で同意を要求し、削除 target をレポート表示する。**profile / 世代は触らない FS-only teardown** で、config が entry を残す限り次の apply で再配置される（transient・project mode は ADR-0017 の lstat 検査で復帰）。恒久除去は config から entry を消して apply、profile 完全除去は `nix-env --profile <profileDir>/profile --delete-generations`。home / project 両モード可。
+- `reset <name> [target...]` は配置物を**無い状態へ戻す** teardown（→ ADR-0020）。symlink は stale 除去と同じ**保守的不変条件**（nput 管理・記録通りのみ・foreign は warning で残す）で除去し、**copy target も削除**する（copy を消す唯一の明示手段）。symlink・copy いずれの除去後も空親ディレクトリ剪定を適用する（→「空親ディレクトリ剪定」節）。データ損失リスクのため**確認プロンプト**を出すか `--yes` で同意を要求し、削除 target をレポート表示する。**profile / 世代は触らない FS-only teardown** で、config が entry を残す限り次の apply で再配置される（transient・project mode は ADR-0017 の lstat 検査で復帰）。恒久除去は config から entry を消して apply、profile 完全除去は `nix-env --profile <profileDir>/profile --delete-generations`。home / project 両モード可。
 - `reset` は **名指し必須（`--all` 非対応）**（一斉撤去は破壊的 footgun・`rollback --all` 却下と一貫・→ ADR-0018, ADR-0021）。複数撤去は名指しを複数回。**解決後 `profileDir` 単位の blocking flock を取得**して並行 apply / reset と直列化する（→ ADR-0013, ADR-0021）。profileDir 確定のため **rootKind 先取り eval → root 解決**を build しないコマンドでも先行する（apply と共通の前段・`--root` 時は同じ roothash キー・→ ADR-0024）。
 - `reset <name> --dryrun` は**副作用ゼロ**で削除対象（symlink / copy target）を表示して exit する（FS 削除・confirm・flock いずれも行わない・`apply --dryrun` と対称・→ ADR-0021）。終了コードは削除対象の有無に依らず 0。
 - `apply --all --recopy` は**合成可**。`--all`（必要なら `--project-root` 等フィルタ）が選んだ各 config に `--recopy` を適用する（`--recopy` は apply 修飾で `--all` と直交・→ ADR-0021）。
@@ -698,6 +698,27 @@ host（`home-manager --rollback` 等）に一本化する。`nput rollback <name
 |---|---|
 | symlink（store / out-of-store）| **除去する**（ただし上記の保守的不変条件を満たすもののみ）|
 | copy | **除去しない**（ユーザー所有データ）。ただし orphan を警告で通知する |
+
+#### 空親ディレクトリ剪定（→ Issue #174, epic #172 D4）
+
+target を除去した後、その親ディレクトリチェーンを root 方向へ保守的に剪定する
+（HM の `rmdir -p --ignore-fail-on-non-empty` 対称）。nput は配置時に親 dir を
+`mkdir -p` 相当で自動作成するが manifest には記録しないため、剪定しないと
+entry 階層を変更するたびに空 dir が積もり、後続配置を塞ぐ conflict の温床になる。
+
+- **空のときだけ** rmdir する。rmdir は空ディレクトリでしか成功しないため、
+  非空（`ENOTEMPTY`。一部 rmdir(2) 実装では `EEXIST`）は**成功扱いとして黙って残す**
+  （追加ロック不要・TOCTOU 安全。並行書き込みで非空になれば rmdir がそこで失敗し自然に停止する）。
+- **root 自体は絶対に消さない**。親チェーンの走査は root 境界で必ず停止する。
+- **祖先チェーンに symlink が現れたら、それに触れず停止する**（symlink 自体を rmdir すると
+  リンクそのものを消してしまい実体には触れないため、安全側に倒して何もしない）。
+- **適用範囲は全除去経路**: removeStale（apply / rollback から共用）・PreRemove・
+  `reset` の symlink 除去・copy target 削除。除去した target ごとに独立して walk するため、
+  別 entry が同じ dir を共有していれば非空として自然に残る。
+- **出力規律**: 剪定は意図された掃除であり warning にはしない。既定 silent、`-v` で
+  配置レポートに `pruned <path>` として可視化する（→ ADR-0031）。剪定ヘルパ自体の失敗
+  （権限エラー等の異常系。ENOTEMPTY は上記の通り対象外）は、呼び出し元の既存ポリシーに従う:
+  removeStale / `reset` は warning で残置、PreRemove は D3 の一律 error 停止に従う。
 
 ### GC とストレージ解放
 
