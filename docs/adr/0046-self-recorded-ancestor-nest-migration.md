@@ -19,6 +19,12 @@
 > method 変更 symlink→copy も migration 対象になった（copy→symlink は非対称に conflict のまま）。`Plan.PreRemove` の
 > 要素は `RemoveAction{Kind, Entry, TargetAbs}` に拡張され、`Kind = RemoveRmdir` は `Entry` を持たない空 dir 除去を表す。
 > drift 時に skip せず error 停止する意味論（§3）は一般化後の全 PreRemove 発生源に共通して適用される（→ ADR-0047）。
+>
+> **2026-07-12 改訂注記（ADR-0044）**: 本 ADR §5 が「#168 に hard 依存させず本 ADR 単独で出荷する」とし、undo ジャー
+> ナルを PreRemove の seam としてのみ残していた点は、#168（ADR-0044）で実装が完了した。apply / Rollback が PreRemove
+> の Unlink（祖先 symlink 除去）を実行した後に途中失敗すると、その Unlink はインメモリ undo ジャーナルにより自動で
+> 巻き戻される（記録 dest で symlink を再作成）。§5 の「#168 マージ後は中間失敗が atomic に巻き戻る」という記述が
+> そのまま実現された形であり、§3 の drift 時 error 停止・§1〜§4 の緩和条件自体は不変（→ ADR-0044）。
 
 ## 背景
 
