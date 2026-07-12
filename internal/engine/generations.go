@@ -174,11 +174,16 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 		return nil, fmt.Errorf("nput: %s (target: %s)", c.Reason, c.Entry.Target)
 	}
 
-	// 6. reflect the plan onto the real FS (new/re-link first, stale removal last · → ADR-0006).
+	// 6. reflect the plan onto the real FS. PreRemove first (unlink self-recorded stale ancestor
+	//    symlinks so nested children land in a real dir · same order as Apply · → engine.go, ADR-0046),
+	//    then new/re-link, then stale removal last (→ ADR-0006).
 	a := &applier{opts: Options{Warnf: warnf}, result: &Result{Root: root, ProfileDir: prof.Dir}}
 	a.profile = prof
 	a.root = root
 	a.emitWarnings(plan.Warnings, false)
+	if err := a.preRemove(plan.PreRemove); err != nil {
+		return nil, err
+	}
 	if err := a.place(plan.Place); err != nil {
 		return nil, err
 	}
