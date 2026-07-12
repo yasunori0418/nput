@@ -39,39 +39,52 @@ func (a *applier) removeStale(actions []planner.RemoveAction) error {
 	return nil
 }
 
-// preRemove unlinks the self-recorded stale ancestor symlinks the planner scheduled for
-// migration, re-verifying the conservative invariant against the real FS right before each
-// unlink. It runs *before* place so nested children land in a real directory instead of
-// resolving through the previous farm's symlink (local ordering exception to ADR-0006 · → ADR-0046).
-// Removed ancestors are folded into result.Removed: the migration is silent by default and
-// surfaced only under -v, never as a warning (→ ADR-0031).
+// preRemove removes the self-recorded stale filesystem objects the planner scheduled to clear a
+// placement target: ancestor symlinks (→ ADR-0046), and — generalized under ADR-0047 — leaf
+// symlinks and now-empty directories beneath an occupying real directory, and a symlink replaced
+// by method change (symlink→copy). It runs *before* place so the target lands empty/absent
+// instead of resolving through stale content (local ordering exception to ADR-0006). Removed
+// objects are folded into result.Removed (Unlink) / result.Pruned (Rmdir): the migration is
+// silent by default and surfaced only under -v, never as a warning (→ ADR-0031).
 //
-// Unlike removeStale — the last stage, where keeping a drifted link is harmless — a drifted
-// ancestor here is *not* safe to skip: the children under it were planned as unconditional new
-// placements that assume the ancestor is gone, so continuing would nest them through the drifted
-// symlink (e.g. one swapped to a foreign, writable dir) and re-open the ADR-0015 §4 pollution that
-// place/ensureParentDir do not re-guard. So on drift it aborts loudly instead of skipping; an
-// idempotent re-run re-plans against the current FS and converges (→ ADR-0017, ADR-0046).
+// Unlike removeStale — the last stage, where keeping a drifted link is harmless — drift here is
+// *not* safe to skip: placement was planned assuming these objects are gone (children as
+// unconditional new placements, or the target itself as absent), so continuing on drift would
+// nest/place through it (e.g. a symlink swapped to a foreign, writable dir) and re-open the
+// ADR-0015 §4 pollution that place/ensureParentDir do not re-guard. So on drift it aborts loudly
+// instead of skipping for both Unlink and Rmdir (→ ADR-0017, ADR-0046, ADR-0047 D3); an idempotent
+// re-run re-plans against the current FS and converges.
 //
-// It also prunes ancestors left empty by the unlink (→ Issue #174); unlike the drift check
-// above, a prune failure does not abort — the migration itself already succeeded, so a
-// leftover empty dir is a cosmetic miss, not a correctness hazard for the child placements
-// that follow. Because this runs before Place, an outer ancestor that the removed ancestor
-// symlink happened to be the sole occupant of can be momentarily pruned here and then
-// recreated fresh by Place's ensureParentDir moments later; that transient prune+recreate
-// is invisible on disk (the end state is unchanged) but shows up in result.Pruned, which
-// callers should read as "emptied at some point during this apply," not "stayed removed."
+// It also prunes ancestors left empty by an Unlink (→ Issue #174); unlike the drift check above,
+// a prune failure does not abort — the removal itself already succeeded, so a leftover empty dir
+// is a cosmetic miss, not a correctness hazard for the child placements that follow.
 func (a *applier) preRemove(actions []planner.RemoveAction) error {
 	for _, act := range actions {
-		if !reverifyStale(act) {
-			return fmt.Errorf("nput: ancestor symlink changed after planning; cannot migrate its nesting safely (%s); re-run apply to converge", act.Entry.Target)
-		}
-		if err := os.Remove(act.TargetAbs); err != nil {
-			return fmt.Errorf("nput: cannot remove ancestor symlink for migration (%s): %w", act.TargetAbs, err)
-		}
-		a.result.Removed = append(a.result.Removed, act.Entry.Target)
-		if err := a.pruneEmptyAncestors(act.TargetAbs); err != nil {
-			a.opts.Warnf("nput: could not prune an empty ancestor directory: %v", err)
+		switch act.Kind {
+		case planner.RemoveRmdir:
+			// No pre-check of emptiness: os.Remove on a non-empty dir simply fails with ENOTEMPTY,
+			// which IS the re-verification (TOCTOU-safe without a separate stat+readdir race · → ADR-0047 D3).
+			if err := os.Remove(act.TargetAbs); err != nil {
+				if errors.Is(err, syscall.ENOTEMPTY) || errors.Is(err, syscall.EEXIST) {
+					return fmt.Errorf("nput: directory gained content after planning; cannot migrate this placement target safely (%s); re-run apply to converge", act.TargetAbs)
+				}
+				return fmt.Errorf("nput: cannot remove empty directory for migration (%s): %w", act.TargetAbs, err)
+			}
+			a.result.Pruned = append(a.result.Pruned, act.TargetAbs)
+			if err := a.pruneEmptyAncestors(act.TargetAbs); err != nil {
+				a.opts.Warnf("nput: could not prune an empty ancestor directory: %v", err)
+			}
+		default: // planner.RemoveUnlink
+			if !reverifyStale(act) {
+				return fmt.Errorf("nput: recorded symlink changed after planning; cannot migrate this placement target safely (%s); re-run apply to converge", act.Entry.Target)
+			}
+			if err := os.Remove(act.TargetAbs); err != nil {
+				return fmt.Errorf("nput: cannot remove recorded symlink for migration (%s): %w", act.TargetAbs, err)
+			}
+			a.result.Removed = append(a.result.Removed, act.Entry.Target)
+			if err := a.pruneEmptyAncestors(act.TargetAbs); err != nil {
+				a.opts.Warnf("nput: could not prune an empty ancestor directory: %v", err)
+			}
 		}
 	}
 	return nil
