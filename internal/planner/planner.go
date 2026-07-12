@@ -269,28 +269,9 @@ func Compute(prev, next *manifest.Manifest, root string, fs FS) (Plan, error) {
 			// it is a self-recorded stale symlink or an empty subdirectory (→ ADR-0047, issue #175).
 			// A copy-placed target is out of scope (copy targets never appear here — this arm only
 			// runs for the symlink-method branch).
-			dirActions, reason, derr := classifyDirMigration(filepath.Clean(e.Target), targetAbs, prevByTarget, nextByTarget, fs)
-			if derr != nil {
-				return Plan{}, derr
+			if err := classifyRealDirTarget(&plan, e, targetAbs, prevByTarget, nextByTarget, preRemoved, fs); err != nil {
+				return Plan{}, err
 			}
-			if reason != "" {
-				plan.Conflicts = append(plan.Conflicts, Conflict{
-					Entry:     e,
-					TargetAbs: targetAbs,
-					Reason:    fmt.Sprintf("target directory cannot be fully migrated: %s (→ ADR-0047)", reason),
-				})
-				continue
-			}
-			plan.PreRemove = append(plan.PreRemove, dirActions...)
-			plan.PreRemove = append(plan.PreRemove, RemoveAction{Kind: RemoveRmdir, TargetAbs: targetAbs})
-			// Dedup against the remove-side loop below: each unlinked child is also a stale entry
-			// in prev.Entries, and must not be scheduled there a second time (→ ADR-0046 dedup convention).
-			for _, da := range dirActions {
-				if da.Kind == RemoveUnlink {
-					preRemoved[da.Entry.Target] = true
-				}
-			}
-			plan.Place = append(plan.Place, PlaceAction{Entry: e, TargetAbs: targetAbs, Dest: LinkDest(e), Kind: PlaceNew})
 		case err == nil:
 			// A regular file is not overwritten (→ docs/spec.md error spec).
 			plan.Conflicts = append(plan.Conflicts, Conflict{
@@ -470,6 +451,37 @@ func copyStructureMismatch(e manifest.Entry, targetInfo os.FileInfo, fs FS) (boo
 		return false, fmt.Errorf("nput: cannot lstat copy src (%s): %w", LinkDest(e), err)
 	}
 	return srcInfo.IsDir() != targetInfo.IsDir(), nil
+}
+
+// classifyRealDirTarget classifies a symlink-method entry whose target is occupied by a real
+// directory (→ ADR-0047, issue #175). Mirrors classifyCopy's role for the copy-method branch:
+// it owns the full decision — walk the tree via classifyDirMigration, emit a Conflict on
+// failure, or on success append the PreRemove actions (children before the target itself),
+// dedup the unlinked children against the remove-side loop's preRemoved map (→ ADR-0046 dedup
+// convention: each unlinked child is also a stale entry in prev.Entries and must not be
+// scheduled there a second time), and append the new-symlink Place action.
+func classifyRealDirTarget(plan *Plan, e manifest.Entry, targetAbs string, prevByTarget, nextByTarget map[string]manifest.Entry, preRemoved map[string]bool, fs FS) error {
+	dirActions, reason, err := classifyDirMigration(filepath.Clean(e.Target), targetAbs, prevByTarget, nextByTarget, fs)
+	if err != nil {
+		return err
+	}
+	if reason != "" {
+		plan.Conflicts = append(plan.Conflicts, Conflict{
+			Entry:     e,
+			TargetAbs: targetAbs,
+			Reason:    fmt.Sprintf("target directory cannot be fully migrated: %s (→ ADR-0047)", reason),
+		})
+		return nil
+	}
+	plan.PreRemove = append(plan.PreRemove, dirActions...)
+	plan.PreRemove = append(plan.PreRemove, RemoveAction{Kind: RemoveRmdir, TargetAbs: targetAbs})
+	for _, da := range dirActions {
+		if da.Kind == RemoveUnlink {
+			preRemoved[da.Entry.Target] = true
+		}
+	}
+	plan.Place = append(plan.Place, PlaceAction{Entry: e, TargetAbs: targetAbs, Dest: LinkDest(e), Kind: PlaceNew})
+	return nil
 }
 
 // classifyDirMigration walks an occupying real directory (dirAbs, root-relative dirRel) that a
