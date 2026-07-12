@@ -150,6 +150,43 @@ func TestStaleRemoveContinuesAfterDrift(t *testing.T) {
 	}
 }
 
+// TestPreRemoveDriftErrors covers preRemove's post-plan drift re-check: unlike removeStale,
+// a drifted ancestor is not safe to skip (children were planned as unconditional new
+// placements assuming the ancestor is gone), so preRemove aborts loudly instead of keeping
+// the drifted link (→ staleremove.go, ADR-0046). Rollback shares this executor with apply
+// (→ generations.go), so the same error-stop semantics apply on the rollback path too.
+func TestPreRemoveDriftErrors(t *testing.T) {
+	dir := realTempDir(t)
+	recordedDest := realTempDir(t)
+	targetAbs := filepath.Join(dir, "skills")
+
+	// Drifted since planning: swapped to a foreign dest → readlink mismatch.
+	foreign := realTempDir(t)
+	if err := os.Symlink(foreign, targetAbs); err != nil {
+		t.Fatal(err)
+	}
+
+	var warns []string
+	a := staleErr_applier(&warns)
+	act := staleErr_action(recordedDest, ".claude/skills", targetAbs)
+
+	err := a.preRemove([]planner.RemoveAction{act})
+	if err == nil || !strings.Contains(err.Error(), "changed after planning") {
+		t.Fatalf("expected ancestor-drift error, got %v", err)
+	}
+	// Error stop, not skip: no warning, no removal record, target left untouched.
+	if len(warns) != 0 {
+		t.Errorf("warnings = %v, want none (preRemove errors instead of warning)", warns)
+	}
+	if len(a.result.Removed) != 0 {
+		t.Errorf("Removed = %v, want none", a.result.Removed)
+	}
+	got, rerr := os.Readlink(targetAbs)
+	if rerr != nil || got != foreign {
+		t.Errorf("drifted ancestor after error = %q (err %v), want untouched %q", got, rerr, foreign)
+	}
+}
+
 // TestStaleRemoveUnlinkError covers the os.Remove failure path: the invariant still
 // holds (reverify passes), but the unlink fails, so removeStale returns a wrapped error
 // and records no removal. Permission-denied is induced by an unwritable parent dir;
