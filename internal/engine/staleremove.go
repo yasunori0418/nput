@@ -64,7 +64,14 @@ func (a *applier) preRemove(actions []planner.RemoveAction) error {
 		case planner.RemoveRmdir:
 			// No pre-check of emptiness: os.Remove on a non-empty dir simply fails with ENOTEMPTY,
 			// which IS the re-verification (TOCTOU-safe without a separate stat+readdir race · → ADR-0047 D3).
-			if err := os.Remove(act.TargetAbs); err != nil {
+			//
+			// A sibling Unlink earlier in this same batch can already have pruned this exact
+			// directory via pruneEmptyAncestors below (e.g. the last child under a dir-migration
+			// leaf was just unlinked, emptying — and pruning — its parent before the planner's own
+			// explicit Rmdir for that parent runs). That is not drift: the directory achieving
+			// "does not exist" is the Rmdir's goal already met by another path in the same plan, so
+			// IsNotExist is a success, not an error (→ ADR-0047 D3, issue #175).
+			if err := os.Remove(act.TargetAbs); err != nil && !os.IsNotExist(err) {
 				if errors.Is(err, syscall.ENOTEMPTY) || errors.Is(err, syscall.EEXIST) {
 					return fmt.Errorf("nput: directory gained content after planning; cannot migrate this placement target safely (%s); re-run apply to converge", act.TargetAbs)
 				}
