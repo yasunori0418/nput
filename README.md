@@ -436,6 +436,7 @@ nput init <template>           # wrapper over `nix flake init -t github:yasunori
 --root <path>       # override the resolved root in any mode
 --no-wait           # on lock contention, skip instead of waiting (for shellHook; explicit apply blocks by default)
 -v, --verbose       # print the placement report (summary + per-target lines); default is silent on success
+--version           # print the embedded version and exit (cobra default format `nput version X.Y.Z`; no short flag, since -v is --verbose)
 --debug             # reveal the internal nix commands on stderr (for troubleshooting)
 --project-root      # --all qualifier: only projectRoot configs (also --home-root / --system-root)
 --recopy            # apply qualifier: overwrite every copy target from src
