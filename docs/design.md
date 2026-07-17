@@ -471,6 +471,8 @@ NixOS VM テスト（`runNixOSTest`）はモジュール経路を実装する段
 
 **キャッシュ投入（cachix push）**（→ ADR-0012 §4, ADR-0028）: `nput` バイナリを cachix `yasunori0418` に投入する `cachix-push` workflow を別途置く。`main` への push のうち nix / Go 入力（`**.nix` / `**.go` / `go.mod` / `go.sum` / `flake.lock` / `dev/flake.lock`）が変わったとき + `workflow_dispatch` で起動し、flake-check と同じ os×system 3環境マトリクスで `nix build .#packages.<system>.nput` をネイティブビルドする。投入は `setup-nix` の `cachix-action`（authToken 指定）の自動 push に任せる。tag push ではなく main 追従でキャッシュする（ADR-0028）。
 
+**リリース（release）**（→ ADR-0042, ADR-0027）: リリースは bump PR のマージが駆動する。`bump-version.yml`（`workflow_dispatch`）が非 main ブランチ上で `VERSION` を書き換えてコミット・push し（手元で `VERSION` を編集して PR を作る手動経路も同格に有効）、通常の PR フローでマージする。マージで `VERSION` が変わると `release.yml` が発火する（`main` への push のうち `paths: ["VERSION"]` で絞り、加えて `workflow_dispatch`）。`release.yml` は `VERSION` を読み取り `softprops/action-gh-release`（コミット SHA pin・ADR-0027 の action pin 慣行）で **タグ `vX.Y.Z` 作成 + `generate_release_notes: true` による自動生成ノート + GitHub Release 作成** を行う。`permissions` は `contents: write` のみに絞る。成果物（バイナリ）は添付しない（→ ADR-0042 §4）が、将来必要になったときの追加位置（nix build ステップ + `files:`）を workflow コメントに seam として残す。冪等挙動: タグに既存 Release があれば action-gh-release がそれを更新するだけで（新規タグ・Release は作らない）、同一 `VERSION` の再実行はタグ位置を動かさず本文再生成のみになる。required status check（ADR-0030）の対象外（merge gate ではなく main push 後のリリース作業）。
+
 ---
 
 ## 設計上の判断

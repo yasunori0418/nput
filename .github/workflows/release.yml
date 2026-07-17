@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    # bump PR のマージで VERSION が変わったときだけ発火する（→ ADR-0042 §3）。
+    # VERSION は semver プレーンテキスト 1 行（→ ADR-0042 §1）。
+    paths:
+      - "VERSION"
+  workflow_dispatch:
+
+# タグ作成 + Release 作成に必要な contents: write のみに絞る（→ ADR-0042 §3）。
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+
+      # 成果物は添付しない（nix 前提ツールで単体バイナリの需要が薄い・→ ADR-0042 §4）。
+      # 将来バイナリ配布が必要になったら、この step の前に nix build のジョブ／ステップを足し、
+      # 下の action-gh-release に `files:` を追加してビルド成果物を添付する（seam はここ）。
+      #
+      # 冪等挙動: action-gh-release はタグに既存 Release があればそれを更新する（新規タグ・
+      # Release は作らない）。同一 VERSION を再実行（workflow_dispatch など）してもタグ位置は
+      # 動かず、generate_release_notes による本文再生成のみが起きる。エラーにはならず安全に冪等。
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          generate_release_notes: true
