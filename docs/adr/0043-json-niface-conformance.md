@@ -75,6 +75,8 @@ niface#1 の grilling で niface 側の仕様も確定した（batch エンベ�
 - `reset --json` は破壊的操作の確認を機械消費で扱えないため **`--yes` を必須**とし、無ければ prompt せず `status:"error"`・非 0 で fail fast する。
 - **実装の着手**は niface の正式成果物（`spec/v1/spec.md`・`schema/v1/envelope.schema.json`〔single / batch 統合の単一 schema〕・`go` module〔`Envelope[TItem,TChange,TInfo]` 汎用型・`DeriveID`・`Subject` / `SubjectResult` 型〕・`testdata/v1/id-vectors.json` 適合ベクタ）の完成、および ADR-0042 の VERSION + `--version` を前提とする。本 ADR は決定の記録であり、実装は前提成果物の完成後に #130 以降で進める。
 
+> **2026-07-17 追記**: 本節の `Envelope[TItem,TChange,TInfo]`（3 型パラメータ）は niface 確定版の `go` module で `Envelope[TItem,TChange,TInfo,TEnvInfo]`（4 型パラメータ）に更新された。トップレベル `info`（実行全体・主体に紐づかないツール固有情報。§2 / niface ADR-0018）用の `TEnvInfo` が、主体ごとの `result.info` 用 `TInfo` から分離されたことによる（`Result` 側は `[TItem,TChange,TInfo]` の 3 パラメータのまま）。sub-issue #126 / #130 は既に 4 型パラメータで記述済み。決定の骨子は不変で、実装は 4 型パラメータでインスタンス化する。
+
 ## 根拠
 
 - **恒常原則にする理由**: niface 準拠を「今回の `--json` 機能」に閉じた決定にすると、将来機能が独自形状に逸れる余地が残り、ncompose 合成の前提（規格が契約）が崩れる。北極星に向けては「全 JSON 出力が niface 準拠」を制約として明文化しておく必要がある。
