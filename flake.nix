@@ -57,6 +57,10 @@
     let
       # flake output（lib）とテスト入力で同一実体を共有する（self 参照を避ける）。
       nputLib = import ./lib;
+      # バージョンの一次情報はリポジトリ直下の VERSION（semver 1 行・→ ADR-0042）。
+      # flake / Go バイナリの双方をこの単一ソースから導出し二重管理しない。
+      # 末尾改行を落として semver 文字列だけを取り出す（nixos-unstable の lib.strings.trim）。
+      version = inputs.nixpkgs.lib.strings.trim (builtins.readFile ./VERSION);
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -115,11 +119,17 @@
           # doCheck で go test（engine の unit + tmpdir 統合テスト）を回す。
           packages.nput = pkgs.buildGoModule {
             pname = "nput";
-            version = "0.0.0";
+            inherit version;
             src = goSrc;
             vendorHash = "sha256-7K17JaXFsjf163g5PXCb5ng2gYdotnZ2IDKk8KFjNj0=";
             doCheck = true;
             env.GOTOOLCHAIN = "local";
+            # VERSION の値を cmd/nput の main.version へ埋め込む（→ ADR-0042）。ldflags 未設定の
+            # 素の go build では main.version は "dev" のまま（後続 #130 が tool.version の供給源として読む）。
+            ldflags = [
+              "-X"
+              "main.version=${version}"
+            ];
             # 既存 go test と同じ対象（unit + tmpdir 統合）を -coverprofile 付きで回し、func サマリを
             # build ログへ出す。計測・レポート出力のみで閾値ゲートは持たない（テスト追加 PR の
             # マージ順依存を避ける → タスク規約）。`go test ./...` は default checkPhase と同等の対象。

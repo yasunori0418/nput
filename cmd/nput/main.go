@@ -17,6 +17,13 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
+// version is the nput version, wired to cobra's Version field and shown by `nput --version`
+// (→ ADR-0042). The nix build injects the VERSION file's value via ldflags (-X main.version=...);
+// a plain `go build` without ldflags leaves it "dev" so the CLI still works out of tree. The
+// variable name (main.version) is a fixed contract: #130 reads it through a DTO as the source of
+// tool.version for the niface envelope — do not rename.
+var version = "dev"
+
 // Global flags (→ docs/spec.md "global flags").
 var (
 	flagFile        string // -f/--file: specify the entrypoint explicitly
@@ -75,6 +82,9 @@ func newRootCmd() *cobra.Command {
 		Use:   "nput",
 		Short: "Place fetched git repositories at arbitrary paths via symlink or copy.",
 		Long:  rootCmdLong,
+		// `nput --version` / `nput version` print the embedded version. Leave SetVersionTemplate
+		// unset: cobra's default template ("nput version X.Y.Z\n") is exactly what we want (→ ADR-0042).
+		Version: version,
 		// Errors are printed exactly once in main, so suppress cobra's automatic usage/error display.
 		SilenceUsage:  true,
 		SilenceErrors: true,
