@@ -133,6 +133,9 @@
             # 既存 go test と同じ対象（unit + tmpdir 統合）を -coverprofile 付きで回し、func サマリを
             # build ログへ出す。計測・レポート出力のみで閾値ゲートは持たない（テスト追加 PR の
             # マージ順依存を避ける → タスク規約）。`go test ./...` は default checkPhase と同等の対象。
+            # この custom checkPhase は go test へ ldflags を渡さない。TestVersionDefault が
+            # main.version="dev" を前提にしているため、default checkPhase へ戻すと（ldflags が test
+            # ビルドにも波及し version が埋まって）当該テストが壊れる点に注意（→ ADR-0042）。
             checkPhase = ''
               runHook preCheck
               go test -coverprofile="$TMPDIR/cover.out" ./...
@@ -144,6 +147,21 @@
             postInstall = ''
               install -Dm644 "$TMPDIR/cover.out" "$out/share/nput/coverage/cover.out"
               install -Dm644 "$TMPDIR/coverage-func.txt" "$out/share/nput/coverage/coverage-func.txt"
+            '';
+            # ldflags 経由の埋め込み配線（VERSION → main.version → バイナリ）を build 内で smoke する
+            # （→ ADR-0042）。go test は ldflags 未設定で走る（上記 checkPhase）ため埋め込みを観測できず、
+            # -X のキー名ミス・trim 漏れが unit テストを素通りする。installCheck でビルド済みバイナリの
+            # `--version` 出力に VERSION の値が入ることを確認し、二重管理防止の核心を機械検証する。
+            # ネイティブビルド前提（本 flake は cross を持たない）。
+            doInstallCheck = true;
+            installCheckPhase = ''
+              runHook preInstallCheck
+              got=$("$out/bin/nput" --version)
+              case "$got" in
+                "nput version ${version}") : ;;
+                *) echo "FAIL: nput --version = '$got', want 'nput version ${version}'"; exit 1 ;;
+              esac
+              runHook postInstallCheck
             '';
             meta = {
               description = "Place fetched git repositories at arbitrary paths via symlink or copy.";
