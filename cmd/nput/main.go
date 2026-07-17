@@ -24,6 +24,8 @@ import (
 // tool.version for the niface envelope — do not rename.
 var version = "dev"
 
+// Note: cobra's Version field adds only a `--version` flag, not a `version` subcommand.
+
 // Global flags (→ docs/spec.md "global flags").
 var (
 	flagFile        string // -f/--file: specify the entrypoint explicitly
@@ -82,8 +84,10 @@ func newRootCmd() *cobra.Command {
 		Use:   "nput",
 		Short: "Place fetched git repositories at arbitrary paths via symlink or copy.",
 		Long:  rootCmdLong,
-		// `nput --version` / `nput version` print the embedded version. Leave SetVersionTemplate
-		// unset: cobra's default template ("nput version X.Y.Z\n") is exactly what we want (→ ADR-0042).
+		// `nput --version` prints the embedded version (a flag only — cobra does not add a `version`
+		// subcommand). Leave SetVersionTemplate unset: cobra's default template ("nput version X.Y.Z\n")
+		// is exactly what we want (→ ADR-0042). No `-v` shorthand: -v is already --verbose (below), and
+		// cobra skips the shorthand on that collision.
 		Version: version,
 		// Errors are printed exactly once in main, so suppress cobra's automatic usage/error display.
 		SilenceUsage:  true,
