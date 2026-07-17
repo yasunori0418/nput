@@ -223,6 +223,8 @@ nput init <template>           # nix flake init -t <nput>#<template> のラッ�
                     # 明示時は全モードで profileDir を上書き後 root の <roothash> でキー（→ ADR-0023）
 --no-wait           # flock 競合時に待たず skip（shellHook 用。既定は明示 apply=blocking wait・→ ADR-0013）
 -v, --verbose       # 配置レポート（サマリ + per-target 行）を出力（既定は成功時沈黙・→ ADR-0031）
+--version           # 埋め込みバージョンを表示して終了（cobra 既定書式 `nput version X.Y.Z`。
+                    # -v は --verbose に割当済みのため短縮形なし・→ ADR-0042）
 --debug             # 内部実行する nix コマンドを stderr に開示（troubleshooting 用・→ ADR-0031）
 --project-root      # --all の修飾。nput.* のうち projectRoot の config のみ適用（→ ADR-0017）
 --home-root         # --all の修飾。homeRoot の config のみ適用

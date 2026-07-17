@@ -358,6 +358,7 @@ nput init <template>           # `nix flake init -t github:yasunori0418/nput#<te
 --root <path>       # 任意モードで解決済み root を上書き
 --no-wait           # ロック競合時に待たずスキップ(shellHook 用。明示 apply は既定でブロック)
 -v, --verbose       # 配置レポートを出力(サマリ＋target ごとの行)。既定は成功時サイレント
+--version           # 埋め込みバージョンを表示して終了(cobra 既定書式 `nput version X.Y.Z`。-v は --verbose 割当済みのため短縮形なし)
 --debug             # 内部 nix コマンドを stderr に出す(トラブルシュート用)
 --project-root      # --all の限定子: projectRoot config のみ(--home-root / --system-root も同様)
 --recopy            # apply の限定子: 全 copy target を src から上書き
