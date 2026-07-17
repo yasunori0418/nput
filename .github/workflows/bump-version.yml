@@ -1,0 +1,59 @@
+name: Bump Version
+
+# バージョン bump を省力化する workflow（ADR-0042 §2）。VERSION を書き換えて
+# `chore: bump version to X` を bot 名義でコミット・push し、通常の PR フローで
+# マージする（マージが release.yml を駆動する）。
+#
+# これは唯一の経路ではない: 手元で VERSION を直接編集して PR を作る手動経路も
+# 同格に有効。この workflow はその手作業を肩代わりするだけで、bump の正規手段を
+# 独占しない（ADR-0042 §2）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New version (semver, e.g. 0.2.0)"
+        required: true
+        type: string
+
+# git commit / push しか行わないので書き込み権限は contents のみに絞る。
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    # 非 main ブランチ上でのみ実行する（cryoflow 同型）。bump コミットは branch
+    # 上で積み、マージは人間の PR 操作という ADR-0025（main 直コミット禁止）の
+    # 動線に乗せる。main 上で誤起動しても no-op で終わる。
+    if: github.ref_name != 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Bump VERSION and commit
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          # semver（X.Y.Z）以外は受け付けない。不正入力で VERSION を壊さない。
+          if ! printf '%s' "$VERSION_INPUT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::invalid version '$VERSION_INPUT' (expected semver X.Y.Z)"
+            exit 1
+          fi
+
+          printf '%s\n' "$VERSION_INPUT" > VERSION
+
+          # bot 名義でコミットする（github-actions[bot]）。
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # 入力が現在の VERSION と同一なら差分が無く commit できないので早期終了する。
+          if git diff --quiet -- VERSION; then
+            echo "VERSION is already '$VERSION_INPUT'; nothing to commit."
+            exit 0
+          fi
+
+          git add VERSION
+          git commit -m "chore: bump version to $VERSION_INPUT"
+          git push origin "HEAD:$GITHUB_REF_NAME"
