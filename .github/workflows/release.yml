@@ -14,25 +14,60 @@ on:
 permissions:
   contents: write
 
+# 連続 push や push × workflow_dispatch の重複でジョブが並走し、タグ作成・Release 更新が
+# 競合するのを防ぐ。走行中のリリースは走り切らせる（cancel-in-progress: false）。
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    # workflow_dispatch はブランチを問わず起動できるが、リリースは main の内容だけを対象にする
+    # （→ ADR-0042 §3「main push が駆動」）。非 main ブランチからの手動実行で誤ったコミットに
+    # タグ + Release が付くのを防ぐガード。
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Read version
+      # VERSION の内容妥当性はこの workflow より前段のゲート（flake check 等）が保証しないため、
+      # ここで先頭 1 行を取り前後空白を落として正規化し、semver（X.Y.Z）に合致しなければ fail
+      # させる。不正な VERSION で `v` だけのタグや改行入りタグ・GITHUB_OUTPUT への複数行注入を
+      # 早期に弾く（誤ったリリースより fail の方が調査が容易）。
+      - name: Read and validate version
         id: version
-        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          version="$(head -n1 VERSION | tr -d '[:space:]')"
+          if [ -z "$version" ]; then
+            echo "::error::VERSION is empty"
+            exit 1
+          fi
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::VERSION is not a valid semver (X.Y.Z): '$version'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       # 成果物は添付しない（nix 前提ツールで単体バイナリの需要が薄い・→ ADR-0042 §4）。
       # 将来バイナリ配布が必要になったら、この step の前に nix build のジョブ／ステップを足し、
       # 下の action-gh-release に `files:` を追加してビルド成果物を添付する（seam はここ）。
       #
-      # 冪等挙動: action-gh-release はタグに既存 Release があればそれを更新する（新規タグ・
-      # Release は作らない）。同一 VERSION を再実行（workflow_dispatch など）してもタグ位置は
-      # 動かず、generate_release_notes による本文再生成のみが起きる。エラーにはならず安全に冪等。
+      # 冪等挙動: タグに既に GitHub Release があれば action-gh-release はそれを更新する（新規タグ・
+      # Release は作らない）。同一 VERSION を再実行（workflow_dispatch など）してもタグ位置は動かず、
+      # generate_release_notes による本文再生成のみが起きる。エラーにはならず安全に冪等。
+      # ※ タグだけ存在し Release が未作成のケースでは新規 Release を作る（Release がある場合の話）。
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           generate_release_notes: true
+
+      # この workflow は required status check の対象外（→ ADR-0030）で main push 後に単独で走る。
+      # bump PR の緑チェックはリリース成功を意味しないため、タグ + Release が実際に作られたことを
+      # 事後検証し、欠けていれば fail させる（GitHub 既定の失敗メール以外の観測点を持たせる）。
+      - name: Verify release created
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.version.outputs.version }}
+        run: gh release view "$TAG" --json tagName,url --jq '.url'
