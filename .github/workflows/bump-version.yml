@@ -56,4 +56,11 @@ jobs:
 
           git add VERSION
           git commit -m "chore: bump version to $VERSION_INPUT"
-          git push origin "HEAD:$GITHUB_REF_NAME"
+
+          # push が non-fast-forward で reject される（dispatch 後にブランチが
+          # 進んだ場合など）と git の生メッセージしか残らず、運用者に次の一手が
+          # 伝わらない。失敗を捕捉して ::error:: で対処方針を明示し fail-fast する。
+          if ! git push origin "HEAD:$GITHUB_REF_NAME"; then
+            echo "::error::push to '$GITHUB_REF_NAME' failed (likely non-fast-forward). ブランチをリモート最新へ更新（git pull --rebase 等）してから、この workflow を再度 dispatch してください。"
+            exit 1
+          fi
