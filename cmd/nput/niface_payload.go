@@ -370,14 +370,16 @@ func nifaceWarning(w planner.Warning) niface.Warning {
 	case planner.WarnForeignReplace:
 		code, msg = "W_NPUT_FOREIGN_SYMLINK", "overwriting an unrecorded symlink (foreign; last-wins)"
 	case planner.WarnStaleMismatch:
-		code, msg = "W_NPUT_STALE_KEPT", "keeping stale symlink because it mismatches the record"
+		code, msg = "W_NPUT_STALE_MISMATCH", "keeping stale symlink because it mismatches the record"
 	case planner.WarnStaleNonSymlink:
-		code, msg = "W_NPUT_STALE_KEPT", "keeping stale target because it is not a symlink"
+		code, msg = "W_NPUT_STALE_NON_SYMLINK", "keeping stale target because it is not a symlink"
 	case planner.WarnCopyOrphan:
 		code, msg = "W_NPUT_COPY_ORPHAN", "copy entry vanished but the target is not removed (orphan; clear it with reset)"
 	case planner.WarnCopyForeign:
 		code, msg = "W_NPUT_COPY_FOREIGN", "skipped copy because a real file already exists at the copy target (foreign; place-once)"
 	default:
+		// Unreachable today — the switch covers every planner.WarnKind. Kept as a defensive
+		// fallback so a future kind surfaces visibly instead of being silently mis-coded.
 		code, msg = "W_NPUT_WARNING", "unclassified planner warning"
 	}
 	return niface.Warning{Code: code, Message: msg, Detail: map[string]any{"target": w.Target}}
