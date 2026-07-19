@@ -65,6 +65,17 @@ type ResetResult struct {
 	// the CLI to map onto niface warnings; KeptForeign above stays the preview-oriented view of
 	// the same data (→ issue #130, niface ADR-0019).
 	Warnings []planner.Warning
+	// Entries are the selected teardown entries (the previous generation's manifest narrowed by
+	// Targets) — reset's full inventory, so the CLI can list every entry as a niface item with
+	// its method/subpath even when it produced no removal (→ issue #131).
+	Entries []manifest.Entry
+	// FailedTarget / Unreached mirror Result's reached-state contract (→ issue #130 到達状態):
+	// FailedTarget is the root-relative target whose removal failed ("" when the failure was not
+	// entry-scoped), Unreached lists planned removals never attempted because an earlier failure
+	// stopped the run. Both empty on success; when set, the partial ResetResult is returned
+	// alongside the error so the CLI keeps changes complete up to the failure (→ issue #131).
+	FailedTarget string
+	Unreached    []string
 	// GenBefore / GenAfter are the profile generation numbers observed for the run. Reset is an
 	// FS-only teardown that never moves the profile pointer, so before == after; nil when the
 	// profile link is not a parsable generation link (→ issue #130, niface ADR-0015).
@@ -129,6 +140,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	res.Entries = entries
 
 	// 4. for symlinks, compute a conservative-invariant removal plan with the planner (next=nil makes all targets remove candidates).
 	//    copy is a region the planner never removes, so handle it separately.
@@ -187,22 +199,35 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	}
 
 	// 8. reflect onto the real FS. For symlinks reuse staleremove (with post-plan drift re-verification),
-	//    and delete copy targets. Emit warnings for the kept foreign.
+	//    and delete copy targets. Emit warnings for the kept foreign. A mid-teardown failure
+	//    returns the partial ResetResult alongside the error (removed-so-far + the
+	//    FailedTarget/Unreached partition), mirroring Apply's stage-failure contract so the CLI
+	//    can keep changes complete up to the failure point (→ issue #131, niface ADR-0020).
 	a := &applier{opts: Options{Warnf: warnf}, result: &Result{Root: root, ProfileDir: prof.Dir}}
 	a.profile = prof
 	a.root = root
 	a.emitWarnings(plan.Warnings, false)
+	plannedCopies := res.RemovedCopies // preview view: copy removals planned but not yet attempted
 	if err := a.removeStale(plan.Remove); err != nil {
-		return nil, err
+		res.RemovedSymlinks = a.result.Removed
+		res.RemovedCopies = nil // the copy stage was never reached
+		res.Pruned = a.result.Pruned
+		res.FailedTarget = a.result.FailedTarget
+		res.Unreached = resetUnreached(plan.Remove, a.result.Removed, a.result.FailedTarget, plannedCopies)
+		return res, err
 	}
 	res.RemovedSymlinks = a.result.Removed // actually removed (excludes those kept due to drift)
 
 	removedCopies := make([]string, 0, len(copyTargets))
 	for i, targetAbs := range copyTargets {
 		if err := os.RemoveAll(targetAbs); err != nil {
-			return nil, fmt.Errorf("nput: cannot remove copy target (%s): %w", targetAbs, err)
+			res.RemovedCopies = removedCopies
+			res.Pruned = a.result.Pruned
+			res.FailedTarget = plannedCopies[i]
+			res.Unreached = plannedCopies[i+1:]
+			return res, fmt.Errorf("nput: cannot remove copy target (%s): %w", targetAbs, err)
 		}
-		removedCopies = append(removedCopies, res.RemovedCopies[i])
+		removedCopies = append(removedCopies, plannedCopies[i])
 		if err := a.pruneEmptyAncestors(targetAbs); err != nil {
 			a.opts.Warnf("nput: could not prune an empty ancestor directory: %v", err)
 		}
@@ -211,6 +236,28 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	res.Pruned = a.result.Pruned // covers both the symlink half (removeStale) and the copy half above
 
 	return res, nil
+}
+
+// resetUnreached lists the planned removals never attempted once a symlink-stage failure
+// stopped the run: the plan's unlink targets that were neither removed nor the failure
+// itself, followed by every planned copy removal (the copy stage runs strictly after the
+// symlink stage · → issue #131, niface ADR-0020). Drift-kept targets before the failure
+// point are indistinguishable from unattempted ones here and are folded in — the same
+// conservative approximation Apply's fail() makes.
+func resetUnreached(planned []planner.RemoveAction, removed []string, failed string, plannedCopies []string) []string {
+	done := map[string]bool{failed: true}
+	for _, t := range removed {
+		done[t] = true
+	}
+	var out []string
+	for _, act := range planned {
+		if act.Kind != planner.RemoveUnlink || done[act.Entry.Target] {
+			continue
+		}
+		done[act.Entry.Target] = true
+		out = append(out, act.Entry.Target)
+	}
+	return append(out, plannedCopies...)
 }
 
 // selectResetEntries narrows the previous generation's manifest entries by Targets (empty = all entries).
