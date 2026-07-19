@@ -1,0 +1,585 @@
+package main
+
+// Tests for the #131 mutation payloads (apply / reset / rollback): the engine-result → niface
+// items/changes/generation/warnings mapping, the partial-failure partition (niface ADR-0016 /
+// ADR-0020), the error-layer placement (item-borne vs subject-borne · niface §2), and
+// conformance of every emitted shape against niface's checker.
+
+import (
+	"encoding/json"
+	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	niface "github.com/yasunori0418/niface/go"
+	"github.com/yasunori0418/niface/go/conformance"
+
+	"github.com/yasunori0418/nput/internal/engine"
+	"github.com/yasunori0418/nput/internal/manifest"
+	"github.com/yasunori0418/nput/internal/planner"
+)
+
+func ip(n int) *int { return &n }
+
+// mustItemID resolves the entry item id or fails the test.
+func mustItemID(t *testing.T, target string) string {
+	t.Helper()
+	id, err := entryItemID(target)
+	if err != nil {
+		t.Fatalf("entryItemID(%q): %v", target, err)
+	}
+	return id
+}
+
+// findItem returns the item whose info.target matches, failing when absent.
+func findItem(t *testing.T, items []nputItem, target string) nputItem {
+	t.Helper()
+	for _, it := range items {
+		if it.Info != nil && it.Info.Target == target {
+			return it
+		}
+	}
+	t.Fatalf("no item for target %q in %+v", target, items)
+	return nputItem{}
+}
+
+// changesFor returns every change whose itemId belongs to target.
+func changesFor(t *testing.T, changes []nputChange, target string) []nputChange {
+	t.Helper()
+	id := mustItemID(t, target)
+	var out []nputChange
+	for _, c := range changes {
+		if c.ItemID == id {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// emitPayloadDoc runs the payload through the real emit path (command + subject + payload),
+// checks the document against niface's conformance checker, and returns it decoded.
+func emitPayloadDoc(t *testing.T, command string, p *nifacePayload, cmdErr error) map[string]any {
+	t.Helper()
+	checker, err := conformance.NewDefaultChecker()
+	if err != nil {
+		t.Fatalf("conformance.NewDefaultChecker: %v", err)
+	}
+	r, buf := newTestRun(command)
+	r.beginSubject("default")
+	r.setPayload(p)
+	if err := r.emit(cmdErr); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	if findings := checker.Check(buf.Bytes()); len(findings) > 0 {
+		t.Fatalf("conformance findings:\n%s\ndocument: %s", strings.Join(findings, "\n"), buf.String())
+	}
+	return decodeEnvelope(t, buf)
+}
+
+// subjectResultOf digs results[0] out of a decoded envelope.
+func subjectResultOf(t *testing.T, doc map[string]any) map[string]any {
+	t.Helper()
+	results := doc["results"].([]any)
+	if len(results) != 1 {
+		t.Fatalf("results length = %d, want 1", len(results))
+	}
+	return results[0].(map[string]any)
+}
+
+// TestMutationPayloadFullInventory pins the success mapping: every new-manifest entry plus the
+// stale-removed old entry as items (all success), diff-only changes with kind/reversible/info,
+// warnings attached to the warned item, and the generation observation (first apply: before
+// omitted · → issue #131).
+func TestMutationPayloadFullInventory(t *testing.T) {
+	res := &engine.Result{
+		Profile: "/state/nput/default/profile",
+		Entries: []manifest.Entry{
+			{SrcKind: "store", Src: "/nix/store/aaa", Subpath: "conf", Target: ".config/tool", Method: "symlink"},
+			{SrcKind: "store", Src: "/nix/store/bbb", Target: ".config/relinked", Method: "symlink"},
+			{SrcKind: "store", Src: "/nix/store/ccc", Target: ".local/copy", Method: "copy"},
+			{SrcKind: "store", Src: "/nix/store/ddd", Target: ".local/recopied", Method: "copy"},
+			{SrcKind: "store", Src: "/nix/store/eee", Target: ".config/noop", Method: "symlink"},
+		},
+		RemovalEntries: []manifest.Entry{
+			{SrcKind: "store", Src: "/nix/store/old", Subpath: "sub", Target: ".config/old", Method: "symlink"},
+		},
+		Placed:        []string{".config/tool"},
+		Replaced:      []string{".config/relinked"},
+		ReplacedDests: map[string]string{".config/relinked": "/nix/store/prev-bbb"},
+		Copied:        []string{".local/copy"},
+		Recopied:      []string{".local/recopied"},
+		Removed:       []string{".config/old"},
+		GenAfter:      ip(1),
+		Warnings:      []planner.Warning{{Kind: planner.WarnForeignReplace, Target: ".config/relinked"}},
+	}
+	p, err := mutationPayload(res, nil)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+
+	if len(p.items) != 6 {
+		t.Fatalf("items = %d, want 6 (5 new entries + 1 stale-removed old entry)", len(p.items))
+	}
+	for _, it := range p.items {
+		if it.Status != niface.ItemSuccess {
+			t.Errorf("item %s status = %s, want success", it.Info.Target, it.Status)
+		}
+	}
+	old := findItem(t, p.items, ".config/old")
+	if old.Info.Method != "symlink" || old.Info.Subpath != "sub" || old.Label != ".config/old" {
+		t.Errorf("stale-removed old entry item = %+v, want method/subpath from the previous generation", old.Info)
+	}
+
+	if len(p.changes) != 5 {
+		t.Fatalf("changes = %d, want 5 (the no-op entry has none)", len(p.changes))
+	}
+	assertChange := func(target string, kind niface.ChangeKind, reversible bool, old, new string) {
+		t.Helper()
+		cs := changesFor(t, p.changes, target)
+		if len(cs) != 1 {
+			t.Fatalf("changes for %s = %d, want 1", target, len(cs))
+		}
+		c := cs[0]
+		if c.Kind != kind || c.Reversible != reversible {
+			t.Errorf("%s change = kind %s reversible %v, want %s/%v", target, c.Kind, c.Reversible, kind, reversible)
+		}
+		gotOld, gotNew := "", ""
+		if c.Info != nil {
+			gotOld, gotNew = c.Info.Old, c.Info.New
+		}
+		if gotOld != old || gotNew != new {
+			t.Errorf("%s change info = {old:%q new:%q}, want {old:%q new:%q}", target, gotOld, gotNew, old, new)
+		}
+	}
+	assertChange(".config/tool", niface.ChangeAdd, true, "", "/nix/store/aaa/conf")
+	assertChange(".config/relinked", niface.ChangeModify, true, "/nix/store/prev-bbb", "/nix/store/bbb")
+	assertChange(".local/copy", niface.ChangeAdd, true, "", "/nix/store/ccc")
+	assertChange(".local/recopied", niface.ChangeModify, false, "", "/nix/store/ddd")
+	assertChange(".config/old", niface.ChangeRemove, true, "/nix/store/old/sub", "")
+
+	relinked := findItem(t, p.items, ".config/relinked")
+	if len(relinked.Warnings) != 1 || relinked.Warnings[0].Code != "W_NPUT_FOREIGN_SYMLINK" {
+		t.Errorf("relinked item warnings = %+v, want one W_NPUT_FOREIGN_SYMLINK", relinked.Warnings)
+	}
+	if len(p.warnings) != 0 {
+		t.Errorf("subject warnings = %+v, want none (the warned target is an item)", p.warnings)
+	}
+
+	doc := emitPayloadDoc(t, "apply", p, nil)
+	sr := subjectResultOf(t, doc)
+	gen, ok := sr["generation"].(map[string]any)
+	if !ok {
+		t.Fatalf("generation missing in %v", sr)
+	}
+	if _, hasBefore := gen["before"]; hasBefore {
+		t.Errorf("generation.before = %v, want omitted on the first apply", gen["before"])
+	}
+	if gen["after"] != json.Number("1") || gen["profile"] != res.Profile {
+		t.Errorf("generation = %v, want after=1 profile=%s", gen, res.Profile)
+	}
+}
+
+// TestMutationPayloadMethodChangeCoalesces pins the symlink→copy method change: the same
+// target unlinked and re-placed in one run yields one item (the new entry) and one modify
+// change carrying the old symlink dest → new copy source transition (→ issue #131).
+func TestMutationPayloadMethodChangeCoalesces(t *testing.T) {
+	res := &engine.Result{
+		Profile: "/p",
+		Entries: []manifest.Entry{
+			{SrcKind: "store", Src: "/nix/store/new", Target: ".config/x", Method: "copy"},
+		},
+		RemovalEntries: []manifest.Entry{
+			{SrcKind: "store", Src: "/nix/store/old", Target: ".config/x", Method: "symlink"},
+		},
+		Removed: []string{".config/x"},
+		Copied:  []string{".config/x"},
+	}
+	p, err := mutationPayload(res, nil)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	if len(p.items) != 1 {
+		t.Fatalf("items = %d, want 1 (the new entry shadows the removed old one)", len(p.items))
+	}
+	if got := findItem(t, p.items, ".config/x").Info.Method; got != "copy" {
+		t.Errorf("item method = %s, want the new entry's copy", got)
+	}
+	if len(p.changes) != 1 {
+		t.Fatalf("changes = %+v, want the coalesced single modify", p.changes)
+	}
+	c := p.changes[0]
+	if c.Kind != niface.ChangeModify || !c.Reversible || c.Info.Old != "/nix/store/old" || c.Info.New != "/nix/store/new" {
+		t.Errorf("change = %+v info %+v, want reversible modify old→new", c, c.Info)
+	}
+}
+
+// TestMutationPayloadPartialFailure pins the reached-state partition (niface ADR-0016 /
+// ADR-0020): the failed entry carries the classified command error, unreached entries are
+// skipped (and only those), completed entries stay success with their changes, the unwound
+// run carries W_NPUT_UNWOUND at the subject, and the item-borne failure is NOT duplicated
+// into subjectResult.errors[] (niface §2).
+func TestMutationPayloadPartialFailure(t *testing.T) {
+	res := &engine.Result{
+		Profile: "/p",
+		Entries: []manifest.Entry{
+			{SrcKind: "store", Src: "/nix/store/a", Target: "a", Method: "symlink"},
+			{SrcKind: "store", Src: "/nix/store/b", Target: "b", Method: "symlink"},
+			{SrcKind: "store", Src: "/nix/store/c", Target: "c", Method: "symlink"},
+		},
+		Placed:       []string{"a"},
+		FailedTarget: "b",
+		Unreached:    []string{"c"},
+		Unwound:      true,
+		GenBefore:    ip(3),
+		GenAfter:     ip(3),
+	}
+	cmdErr := &os.PathError{Op: "symlink", Path: "/root/b", Err: fs.ErrPermission}
+	p, err := mutationPayload(res, cmdErr)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	if !p.itemBorne {
+		t.Error("itemBorne = false, want true for an entry-scoped failure")
+	}
+
+	if it := findItem(t, p.items, "a"); it.Status != niface.ItemSuccess {
+		t.Errorf("completed item status = %s, want success", it.Status)
+	}
+	failed := findItem(t, p.items, "b")
+	if failed.Status != niface.ItemFailed || failed.Error == nil || failed.Error.Code != "E_PERMISSION" {
+		t.Errorf("failed item = status %s error %+v, want failed + E_PERMISSION", failed.Status, failed.Error)
+	}
+	if it := findItem(t, p.items, "c"); it.Status != niface.ItemSkipped {
+		t.Errorf("unreached item status = %s, want skipped", it.Status)
+	}
+	if cs := changesFor(t, p.changes, "a"); len(cs) != 1 || cs[0].Kind != niface.ChangeAdd {
+		t.Errorf("completed entry changes = %+v, want its add present despite the failure", cs)
+	}
+	var unwound bool
+	for _, w := range p.warnings {
+		if w.Code == "W_NPUT_UNWOUND" {
+			unwound = true
+		}
+	}
+	if !unwound {
+		t.Errorf("subject warnings = %+v, want W_NPUT_UNWOUND for the unwound run", p.warnings)
+	}
+
+	doc := emitPayloadDoc(t, "apply", p, cmdErr)
+	if doc["status"] != "error" {
+		t.Errorf("status = %v, want error", doc["status"])
+	}
+	sr := subjectResultOf(t, doc)
+	if sr["status"] != "error" {
+		t.Errorf("subject status = %v, want error", sr["status"])
+	}
+	if errList, ok := sr["errors"]; ok {
+		t.Errorf("subjectResult.errors = %v, want absent (the failure is item-borne)", errList)
+	}
+	gen := sr["generation"].(map[string]any)
+	if gen["before"] != json.Number("3") || gen["after"] != json.Number("3") {
+		t.Errorf("generation = %v, want an unmoved 3→3 observation", gen)
+	}
+}
+
+// TestMutationPayloadSubjectBorneFailure pins the non-entry-scoped failure (commit / build):
+// no failed item, the full changes stay, and the classified error lands in
+// subjectResult.errors[] (→ ADR-0043 §6).
+func TestMutationPayloadSubjectBorneFailure(t *testing.T) {
+	res := &engine.Result{
+		Profile: "/p",
+		Entries: []manifest.Entry{
+			{SrcKind: "store", Src: "/nix/store/a", Target: "a", Method: "symlink"},
+		},
+		Placed:   []string{"a"},
+		GenAfter: ip(2), GenBefore: ip(2),
+	}
+	cmdErr := errors.New("nput: generation commit (nix-env --set) failed: exit status 1")
+	p, err := mutationPayload(res, cmdErr)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	if p.itemBorne {
+		t.Error("itemBorne = true, want false for a commit failure")
+	}
+	if it := findItem(t, p.items, "a"); it.Status != niface.ItemSuccess {
+		t.Errorf("placed item status = %s, want success (the commit, not the entry, failed)", it.Status)
+	}
+	doc := emitPayloadDoc(t, "apply", p, cmdErr)
+	sr := subjectResultOf(t, doc)
+	errList, ok := sr["errors"].([]any)
+	if !ok || len(errList) != 1 {
+		t.Fatalf("subjectResult.errors = %v, want exactly one subject-borne error", sr["errors"])
+	}
+	if code := errList[0].(map[string]any)["code"]; code != "E_NPUT_FAILED" {
+		t.Errorf("error code = %v, want the generic fallback for a commit failure", code)
+	}
+	items := sr["result"].(map[string]any)["items"].([]any)
+	if len(items) != 1 {
+		t.Errorf("items = %v, want the full inventory alongside the subject error", items)
+	}
+}
+
+// TestMutationPayloadConflicts pins the conflict mapping: each conflicted entry is a failed
+// item with E_NPUT_COLLISION and the planner reason, everything else planned is skipped, and
+// the aggregate command error is not duplicated at the subject layer (→ ADR-0043 §6).
+func TestMutationPayloadConflicts(t *testing.T) {
+	res := &engine.Result{
+		Profile: "/p",
+		Entries: []manifest.Entry{
+			{SrcKind: "store", Src: "/nix/store/a", Target: "a", Method: "symlink"},
+			{SrcKind: "store", Src: "/nix/store/b", Target: "b", Method: "symlink"},
+		},
+		Conflicts: []planner.Conflict{
+			{Entry: manifest.Entry{Target: "a"}, Reason: "a regular file occupies the symlink target", Kind: planner.ConflictForeignEntity},
+		},
+		Unreached: []string{"b"},
+	}
+	cmdErr := errors.New("nput: 1 conflict(s) detected; stopped without placing (see above)")
+	p, err := mutationPayload(res, cmdErr)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	if !p.itemBorne {
+		t.Error("itemBorne = false, want true for a conflict stop")
+	}
+	conflicted := findItem(t, p.items, "a")
+	if conflicted.Status != niface.ItemFailed || conflicted.Error == nil ||
+		conflicted.Error.Code != "E_NPUT_COLLISION" || conflicted.Error.Message != "a regular file occupies the symlink target" {
+		t.Errorf("conflicted item = %+v error %+v, want failed + E_NPUT_COLLISION with the planner reason", conflicted, conflicted.Error)
+	}
+	if it := findItem(t, p.items, "b"); it.Status != niface.ItemSkipped {
+		t.Errorf("non-conflicted item status = %s, want skipped (nothing ran)", it.Status)
+	}
+	if len(p.changes) != 0 {
+		t.Errorf("changes = %+v, want none (the run stopped before any FS action)", p.changes)
+	}
+	doc := emitPayloadDoc(t, "apply", p, cmdErr)
+	sr := subjectResultOf(t, doc)
+	if errList, ok := sr["errors"]; ok {
+		t.Errorf("subjectResult.errors = %v, want absent (conflicts are item-borne)", errList)
+	}
+}
+
+// TestResetPayload pins reset's mapping: items = the selected teardown entries, symlink
+// removals are reversible remove changes with the recorded dest, copy deletions are
+// irreversible removes without info, a kept-foreign target stays success with the
+// W_NPUT_STALE_KEPT warning on its item, and no generation slot is emitted (reset never
+// moves the profile pointer · → issue #131).
+func TestResetPayload(t *testing.T) {
+	res := &engine.ResetResult{
+		Entries: []manifest.Entry{
+			{SrcKind: "store", Src: "/nix/store/s1", Target: "s1", Method: "symlink"},
+			{SrcKind: "store", Src: "/nix/store/s2", Target: "s2", Method: "symlink"},
+			{SrcKind: "store", Src: "/nix/store/c1", Target: "c1", Method: "copy"},
+		},
+		RemovedSymlinks: []string{"s1"},
+		RemovedCopies:   []string{"c1"},
+		KeptForeign:     []string{"s2"},
+		Warnings:        []planner.Warning{{Kind: planner.WarnStaleMismatch, Target: "s2"}},
+	}
+	p, err := resetPayload(res, nil)
+	if err != nil {
+		t.Fatalf("resetPayload: %v", err)
+	}
+	if p.generation != nil {
+		t.Fatalf("generation = %+v, want none for reset", p.generation)
+	}
+	for _, target := range []string{"s1", "s2", "c1"} {
+		if it := findItem(t, p.items, target); it.Status != niface.ItemSuccess {
+			t.Errorf("item %s status = %s, want success", target, it.Status)
+		}
+	}
+	kept := findItem(t, p.items, "s2")
+	if len(kept.Warnings) != 1 || kept.Warnings[0].Code != "W_NPUT_STALE_KEPT" {
+		t.Errorf("kept item warnings = %+v, want one W_NPUT_STALE_KEPT", kept.Warnings)
+	}
+	if cs := changesFor(t, p.changes, "s1"); len(cs) != 1 || cs[0].Kind != niface.ChangeRemove ||
+		!cs[0].Reversible || cs[0].Info == nil || cs[0].Info.Old != "/nix/store/s1" {
+		t.Errorf("symlink removal change = %+v, want reversible remove with the recorded dest", cs)
+	}
+	if cs := changesFor(t, p.changes, "c1"); len(cs) != 1 || cs[0].Kind != niface.ChangeRemove ||
+		cs[0].Reversible || cs[0].Info != nil {
+		t.Errorf("copy removal change = %+v, want irreversible remove without info", cs)
+	}
+	if cs := changesFor(t, p.changes, "s2"); len(cs) != 0 {
+		t.Errorf("kept target changes = %+v, want none (policy inaction is not a diff)", cs)
+	}
+
+	doc := emitPayloadDoc(t, "reset", p, nil)
+	sr := subjectResultOf(t, doc)
+	if gen, ok := sr["generation"]; ok {
+		t.Errorf("generation = %v, want the slot absent for reset", gen)
+	}
+}
+
+// TestResetPayloadPartialFailure pins reset's reached-state partition: removed-so-far keeps
+// its changes, the failing target carries the classified error, and the never-attempted rest
+// is skipped (→ issue #131, niface ADR-0020).
+func TestResetPayloadPartialFailure(t *testing.T) {
+	res := &engine.ResetResult{
+		Entries: []manifest.Entry{
+			{SrcKind: "store", Src: "/nix/store/s1", Target: "s1", Method: "symlink"},
+			{SrcKind: "store", Src: "/nix/store/c1", Target: "c1", Method: "copy"},
+			{SrcKind: "store", Src: "/nix/store/c2", Target: "c2", Method: "copy"},
+		},
+		RemovedSymlinks: []string{"s1"},
+		FailedTarget:    "c1",
+		Unreached:       []string{"c2"},
+	}
+	cmdErr := &os.PathError{Op: "removeall", Path: "/root/c1", Err: fs.ErrPermission}
+	p, err := resetPayload(res, cmdErr)
+	if err != nil {
+		t.Fatalf("resetPayload: %v", err)
+	}
+	if !p.itemBorne {
+		t.Error("itemBorne = false, want true")
+	}
+	if it := findItem(t, p.items, "s1"); it.Status != niface.ItemSuccess {
+		t.Errorf("removed item status = %s, want success", it.Status)
+	}
+	failed := findItem(t, p.items, "c1")
+	if failed.Status != niface.ItemFailed || failed.Error == nil || failed.Error.Code != "E_PERMISSION" {
+		t.Errorf("failed item = %s / %+v, want failed + E_PERMISSION", failed.Status, failed.Error)
+	}
+	if it := findItem(t, p.items, "c2"); it.Status != niface.ItemSkipped {
+		t.Errorf("unreached item status = %s, want skipped", it.Status)
+	}
+	if cs := changesFor(t, p.changes, "s1"); len(cs) != 1 {
+		t.Errorf("removed-so-far changes = %+v, want the remove present despite the failure", cs)
+	}
+	emitPayloadDoc(t, "reset", p, cmdErr)
+}
+
+// --- end-to-end through the real engine on a tmpdir ---
+
+// genCommit fakes nix-env --set with a real generation-link layout, so observeGeneration
+// reads a numeric generation the same way it does under nix.
+func genCommit(gen int) engine.CommitFunc {
+	return func(profileLink, linkFarm string) error {
+		genLink := profileLink + "-" + itoa(gen) + "-link"
+		_ = os.Remove(genLink)
+		if err := os.Symlink(linkFarm, genLink); err != nil {
+			return err
+		}
+		_ = os.Remove(profileLink)
+		return os.Symlink(filepath.Base(genLink), profileLink)
+	}
+}
+
+func itoa(n int) string { return string(rune('0' + n)) }
+
+// writeTestLinkFarm writes a manifest.json-only link-farm for the engine's pre-built path.
+func writeTestLinkFarm(t *testing.T, entries ...manifest.Entry) string {
+	t.Helper()
+	dir := t.TempDir()
+	m := manifest.Manifest{
+		SchemaVersion: 1,
+		Root:          manifest.Root{RootKind: manifest.RootKindHome},
+		Entries:       entries,
+	}
+	data, err := json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, manifest.FileName), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+// TestJSONEndToEndApplyAndResetPayload drives the real engine (tmpdir, injected commit) and
+// checks the emitted envelopes: first apply (add changes, before omitted / after observed),
+// second apply with a dropped entry (stale-removed old entry item + remove change, 1→2
+// generation), then reset (remove changes, no generation slot). The payload reads the same
+// engine result the -v report reads — this is the single-result-source path end to end
+// (→ issue #131 acceptance).
+func TestJSONEndToEndApplyAndResetPayload(t *testing.T) {
+	root := t.TempDir()
+	state := t.TempDir()
+	src := t.TempDir()
+	if err := os.WriteFile(filepath.Join(src, "f"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	keep := manifest.Entry{SrcKind: "store", Src: src, Subpath: "f", Target: ".keep", Method: "symlink"}
+	drop := manifest.Entry{SrcKind: "store", Src: src, Subpath: "f", Target: ".drop", Method: "symlink"}
+	apply := func(gen int, entries ...manifest.Entry) *engine.Result {
+		t.Helper()
+		res, err := engine.Apply(engine.Options{
+			LinkFarm: writeTestLinkFarm(t, entries...), Name: "cfg",
+			RootOverride: root, StateDir: state, Commit: genCommit(gen),
+			Warnf: func(string, ...any) {},
+		})
+		if err != nil {
+			t.Fatalf("Apply: %v", err)
+		}
+		return res
+	}
+
+	// First apply: two adds, no previous generation to observe.
+	res := apply(1, keep, drop)
+	p, err := mutationPayload(res, nil)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	doc := emitPayloadDoc(t, "apply", p, nil)
+	sr := subjectResultOf(t, doc)
+	gen := sr["generation"].(map[string]any)
+	if _, hasBefore := gen["before"]; hasBefore || gen["after"] != json.Number("1") {
+		t.Errorf("first apply generation = %v, want before omitted / after 1", gen)
+	}
+	if items := sr["result"].(map[string]any)["items"].([]any); len(items) != 2 {
+		t.Errorf("items = %v, want both entries", items)
+	}
+	if changes := sr["result"].(map[string]any)["changes"].([]any); len(changes) != 2 {
+		t.Errorf("changes = %v, want two adds", changes)
+	}
+
+	// Second apply drops .drop: its old entry is stale-removed and stays in the inventory.
+	res = apply(2, keep)
+	p, err = mutationPayload(res, nil)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	doc = emitPayloadDoc(t, "apply", p, nil)
+	sr = subjectResultOf(t, doc)
+	gen = sr["generation"].(map[string]any)
+	if gen["before"] != json.Number("1") || gen["after"] != json.Number("2") {
+		t.Errorf("second apply generation = %v, want 1→2", gen)
+	}
+	if len(p.items) != 2 {
+		t.Fatalf("second apply items = %+v, want the kept entry + the stale-removed old entry", p.items)
+	}
+	if cs := changesFor(t, p.changes, ".drop"); len(cs) != 1 || cs[0].Kind != niface.ChangeRemove ||
+		cs[0].Info == nil || cs[0].Info.Old != filepath.Join(src, "f") {
+		t.Errorf(".drop changes = %+v, want one remove with the recorded dest", cs)
+	}
+	if cs := changesFor(t, p.changes, ".keep"); len(cs) != 0 {
+		t.Errorf(".keep changes = %+v, want none (unchanged entry)", cs)
+	}
+
+	// Reset tears the remaining placement down: a reversible remove, no generation slot.
+	resetRes, err := engine.Reset(engine.ResetOptions{
+		Name: "cfg", RootKind: manifest.RootKindHome, RootOverride: root, StateDir: state,
+		Warnf: func(string, ...any) {},
+	})
+	if err != nil {
+		t.Fatalf("Reset: %v", err)
+	}
+	rp, err := resetPayload(resetRes, nil)
+	if err != nil {
+		t.Fatalf("resetPayload: %v", err)
+	}
+	doc = emitPayloadDoc(t, "reset", rp, nil)
+	sr = subjectResultOf(t, doc)
+	if gen, ok := sr["generation"]; ok {
+		t.Errorf("reset generation = %v, want the slot absent", gen)
+	}
+	if cs := changesFor(t, rp.changes, ".keep"); len(cs) != 1 || cs[0].Kind != niface.ChangeRemove || !cs[0].Reversible {
+		t.Errorf("reset changes = %+v, want one reversible remove for .keep", cs)
+	}
+}
