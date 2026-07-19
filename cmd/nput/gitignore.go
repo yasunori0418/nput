@@ -65,8 +65,22 @@ func runGitignore(name string) error {
 	if err != nil {
 		return err
 	}
+	// A read-only enumeration rides in result.info as the anchor-form paths (items stays [] —
+	// the listing is not an execution record · → issue #132, ADR-0043 §5). The line-oriented
+	// default stdout below is untouched (--json is the opt-in second contract).
+	nifaceReport.setPayload(&nifacePayload{info: map[string]any{"paths": gitignoreAnchors(targets)}})
 	printGitignore(targets)
 	return nil
+}
+
+// gitignoreAnchors maps targets into their /-anchor form (non-nil even when empty, so a
+// config without entries still lists "paths": []).
+func gitignoreAnchors(targets []string) []string {
+	anchors := make([]string, 0, len(targets))
+	for _, t := range targets {
+		anchors = append(anchors, gitignoreAnchor(t))
+	}
+	return anchors
 }
 
 // runGitignoreAll lists the targets of all projectRoot configs, sorted and de-duplicated
