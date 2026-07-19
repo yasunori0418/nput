@@ -52,6 +52,12 @@ func runRollback(name string) error {
 		FixedRoot:    fixedRoot,
 		RootOverride: flagRoot,
 	})
+	if res != nil {
+		// The From→To transition rides generation.before/after (GenBefore/GenAfter), not
+		// result.info — no double encoding (→ issue #131, niface ADR-0015). A stage-failure
+		// partial result maps the same way, with the pointer pinned at the unmoved generation.
+		attachMutationPayload(&res.Result, err)
+	}
 	if err != nil {
 		return err
 	}
