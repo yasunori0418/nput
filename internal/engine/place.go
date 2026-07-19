@@ -34,41 +34,42 @@ func ensureParentDir(targetAbs string) error {
 // planner.Compute from the current FS state, so this stays a thin executor that reflects
 // the plan onto the real FS. This slice covers only store / out-of-store symlink placement
 // (copy is a future slice · → Issue #6).
+// Result op lists are appended only after an action's final FS write succeeds, and a failing
+// action records its entry as result.FailedTarget instead, so the lists stay a faithful
+// "completed" record for the reached/unreached partition (→ issue #130 到達状態).
 func (a *applier) place(actions []planner.PlaceAction) error {
 	for _, act := range actions {
 		if err := ensureParentDir(act.TargetAbs); err != nil {
-			return err
+			return a.entryFailed(act.Entry.Target, err)
 		}
 
-		switch act.Kind {
-		case planner.PlaceNew:
-			a.result.Placed = append(a.result.Placed, act.Entry.Target)
-		case planner.PlaceReplace, planner.PlaceForeign:
+		if act.Kind == planner.PlaceReplace || act.Kind == planner.PlaceForeign {
 			// Re-link is unlink + symlink (no rename-based atomic swap · → ADR-0017).
 			// The foreign-overwrite warning is already emitted via planner.Warnings by emitWarnings (→ ADR-0015).
 			prevDest, err := os.Readlink(act.TargetAbs)
 			if err != nil {
-				return fmt.Errorf("nput: cannot read existing symlink before re-link (%s): %w", act.TargetAbs, err)
+				return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: cannot read existing symlink before re-link (%s): %w", act.TargetAbs, err))
 			}
 			if err := os.Remove(act.TargetAbs); err != nil {
-				return fmt.Errorf("nput: cannot remove existing symlink (%s): %w", act.TargetAbs, err)
+				return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: cannot remove existing symlink (%s): %w", act.TargetAbs, err))
 			}
 			// Journaled immediately after the unlink, before the re-symlink: if the symlink
 			// creation below fails, undoRelinkOld's own os.Remove tolerates the target already
 			// being absent and still recreates it at prevDest — so this target is restorable even
 			// when this run never got as far as writing the new symlink (→ ADR-0044).
 			a.journalRelinkedSymlink(act.TargetAbs, prevDest)
-			a.result.Replaced = append(a.result.Replaced, act.Entry.Target)
 			if err := os.Symlink(act.Dest, act.TargetAbs); err != nil {
-				return fmt.Errorf("nput: cannot create symlink (%s -> %s): %w", act.TargetAbs, act.Dest, err)
+				return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: cannot create symlink (%s -> %s): %w", act.TargetAbs, act.Dest, err))
 			}
+			a.result.Replaced = append(a.result.Replaced, act.Entry.Target)
 			continue
 		}
 
 		if err := os.Symlink(act.Dest, act.TargetAbs); err != nil {
-			return fmt.Errorf("nput: cannot create symlink (%s -> %s): %w", act.TargetAbs, act.Dest, err)
+			return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: cannot create symlink (%s -> %s): %w", act.TargetAbs, act.Dest, err))
 		}
 		a.journalPlacedSymlink(act.TargetAbs)
+		a.result.Placed = append(a.result.Placed, act.Entry.Target)
 	}
 	return nil
 }

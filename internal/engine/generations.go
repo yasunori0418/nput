@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -64,6 +65,32 @@ func ProfileFor(opts ProfileOptions) (paths.Profile, string, error) {
 func ListGenerations(profileLink string) ([]Generation, error) {
 	return nixEnvListGenerations(profileLink)
 }
+
+// observeGeneration returns the generation number the profile link currently points at, or nil
+// when it cannot be observed: no profile yet (first apply), or a link whose destination does not
+// parse as the sibling generation link "<base>-<N>-link" that nix-env maintains
+// (→ paths.GenerationLink · issue #130, niface ADR-0015's nil-able Generation.Before/After).
+// A readlink is used instead of nix-env --list-generations because the observation runs on every
+// apply/reset and must stay a cheap, subprocess-free probe.
+func observeGeneration(profileLink string) *int {
+	dest, err := os.Readlink(profileLink)
+	if err != nil {
+		return nil
+	}
+	base := filepath.Base(dest)
+	prefix := filepath.Base(profileLink) + "-"
+	if !strings.HasPrefix(base, prefix) || !strings.HasSuffix(base, "-link") {
+		return nil
+	}
+	n, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(base, prefix), "-link"))
+	if err != nil || n < 0 {
+		return nil
+	}
+	return &n
+}
+
+// intPtr copies n onto the heap for the nil-able generation observation fields (→ issue #130).
+func intPtr(n int) *int { return &n }
 
 // RollbackOptions is the input to Rollback. Rollback is home mode only, but that decision is
 // the CLI's; the engine resolves the profileDir regardless of rootKind and converges to the previous generation.
@@ -173,6 +200,10 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 		return nil, reportConflicts(warnf, plan.Conflicts)
 	}
 
+	// The generation numbers come from the listing rather than a readlink observation: cur/prev
+	// are already identified above, and the pointer only moves at step 7 (→ issue #130, niface
+	// ADR-0015). GenAfter is set after the pointer move below.
+
 	// 6. reflect the plan onto the real FS: same PreRemove-first ordering as Apply (unlink
 	//    self-recorded stale ancestor symlinks so nested children land in a real dir · →
 	//    engine.go, ADR-0046), then new/re-link, then stale removal last (→ ADR-0006). Unlike
@@ -181,6 +212,9 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	a := &applier{opts: Options{Warnf: warnf}, result: &Result{Root: root, ProfileDir: prof.Dir}}
 	a.profile = prof
 	a.root = root
+	a.result.GenBefore = intPtr(cur.Number)
+	// Full inventory = the generation being rolled back to (its entries are the FS end state · → issue #130).
+	a.result.Entries = target.Entries
 	a.emitWarnings(plan.Warnings, false)
 	// Each stage journals its own FS writes; a failure in any of the three unwinds everything
 	// this Rollback call has done so far before returning (→ ADR-0044, same shape as Apply).
@@ -201,6 +235,7 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 		return nil, fmt.Errorf("nput: failed to move the profile pointer (--switch-generation %d): %w", prev.Number, err)
 	}
 	a.discardJournal()
+	a.result.GenAfter = intPtr(prev.Number)
 
 	return &RollbackResult{Result: *a.result, From: cur.Number, To: prev.Number}, nil
 }

@@ -103,6 +103,34 @@ type Result struct {
 	// generation so no commit happens and only drifted entries are lstat-repaired
 	// (→ ADR-0005, ADR-0017, docs/spec.md generation skip).
 	GenerationSkipped bool
+
+	// Entries is the new manifest's full entry inventory, exposed regardless of whether an
+	// entry produced any FS action, so the CLI can list every entry — not just the diff —
+	// as niface items (full-inventory · → issue #130, niface ADR-0016).
+	Entries []manifest.Entry
+	// Warnings are the planner's entry-scoped warnings in structured form (kind + target),
+	// for the CLI to map onto niface item/subject warnings. The human-readable stderr text
+	// is still emitted through Warnf alongside (→ issue #130, niface ADR-0019).
+	Warnings []planner.Warning
+	// FailedTarget is the root-relative target of the entry whose FS action failed, "" when
+	// the failure was not entry-scoped (build / lock / commit ...). When set, this target's
+	// presence in an op list above means the action was attempted, not completed
+	// (→ issue #130 到達状態, niface ADR-0016 / ADR-0020).
+	FailedTarget string
+	// Unreached lists the root-relative targets of planned actions never attempted because
+	// an earlier failure stopped the run (the niface "skipped" partition · → issue #130,
+	// niface ADR-0020). Empty on success.
+	Unreached []string
+	// Unwound reports that the undo journal rolled this run's FS writes back after a failure:
+	// the op lists above then describe performed-then-reverted actions, not surviving state
+	// (→ ADR-0044, issue #130).
+	Unwound bool
+	// GenBefore / GenAfter are the profile generation numbers observed at run start / end.
+	// nil when unobservable — no profile yet (first apply's before), or a profile whose link
+	// does not parse as a generation link (→ issue #130, niface ADR-0015 Generation.Before/After).
+	// Dryrun observes the same untouched pointer twice, so before == after.
+	GenBefore *int
+	GenAfter  *int
 }
 
 // ErrSkipped indicates a skip on the NoWait path because another apply is in progress.
@@ -164,6 +192,14 @@ func Apply(opts Options) (*Result, error) {
 	a.profile = prof
 	a.result.ProfileDir = a.profile.Dir
 
+	// 1.2 observe the profile generation at run start, and again on every return path (deferred),
+	//     so Result carries the before/after generation numbers (nil when unobservable — first
+	//     apply, or a test-substituted commit whose profile link is not a generation link ·
+	//     → issue #130, niface ADR-0015). The dryrun / generation-skip / failure paths never move
+	//     the pointer, so they observe before == after without extra branching.
+	a.result.GenBefore = observeGeneration(a.profile.Profile)
+	defer func() { a.result.GenAfter = observeGeneration(a.profile.Profile) }()
+
 	// 1.5 dryrun is a side-effect-free read-only short-circuit (→ ADR-0006, ADR-0023, docs/spec.md execution flow).
 	//     Up to fixing profileDir it is common with apply, but from here on (mkdir / flock / placement / --set /
 	//     pending gcroot) nothing is done; the planner is run read-only and the plan is packed into Result and returned.
@@ -204,6 +240,9 @@ func Apply(opts Options) (*Result, error) {
 
 	// 5. read the previous generation's manifest (absent = first run = zero stale removals).
 	prev := a.loadPrevManifest()
+
+	// 5.5 expose the new manifest's full entry inventory (not just the diff · → issue #130).
+	a.result.Entries = a.manifest.Entries
 
 	// 6. compute the place/replace/remove plan with the planner (pure logic · → internal/planner).
 	plan, err := planner.Compute(prev, a.manifest, a.root, planner.OSFS, a.plannerOptions())
@@ -254,20 +293,23 @@ func Apply(opts Options) (*Result, error) {
 	//    place-once (new copy only when target is absent) (→ ADR-0020).
 	//    Each stage journals its own FS writes; a failure in any of the five unwinds everything this
 	//    run has done so far (across all five, not just the failing stage) before returning (→ ADR-0044).
+	//    On a stage failure the partial Result is returned alongside the error, carrying the
+	//    reached/unreached partition (FailedTarget / Unreached / Unwound) so the CLI can report
+	//    how far the run got (→ issue #130 到達状態, niface ADR-0016 / ADR-0020).
 	if err := a.runJournaled(func() error { return a.preRemove(plan.PreRemove) }); err != nil {
-		return nil, err
+		return a.fail(plan, err)
 	}
 	if err := a.runJournaled(func() error { return a.backup(plan.Backup) }); err != nil {
-		return nil, err
+		return a.fail(plan, err)
 	}
 	if err := a.runJournaled(func() error { return a.place(plan.Place) }); err != nil {
-		return nil, err
+		return a.fail(plan, err)
 	}
 	if err := a.runJournaled(func() error { return a.materializeCopies(plan, opts.Recopy) }); err != nil {
-		return nil, err
+		return a.fail(plan, err)
 	}
 	if err := a.runJournaled(func() error { return a.removeStale(plan.Remove) }); err != nil {
-		return nil, err
+		return a.fail(plan, err)
 	}
 
 	// 9. generation commit (→ docs/spec.md execution flow 2f). A commit failure is NOT unwound: every
@@ -279,7 +321,10 @@ func Apply(opts Options) (*Result, error) {
 		commit = nixEnvCommit
 	}
 	if err := commit(a.profile.Profile, a.opts.LinkFarm); err != nil {
-		return nil, fmt.Errorf("nput: generation commit (nix-env --set) failed: %w", err)
+		// Not entry-scoped (every planned FS action already succeeded), so no FailedTarget /
+		// Unreached — but the partial Result is still returned so the CLI can see what landed
+		// without a generation advancing (→ issue #130 到達状態).
+		return a.result, fmt.Errorf("nput: generation commit (nix-env --set) failed: %w", err)
 	}
 	a.discardJournal()
 
@@ -324,9 +369,69 @@ func (a *applier) plannerOptions() planner.Options {
 func (a *applier) runJournaled(stage func() error) error {
 	if err := stage(); err != nil {
 		a.unwind(err)
+		a.result.Unwound = true
 		return err
 	}
 	return nil
+}
+
+// entryFailed records the entry-scoped failure position (result.FailedTarget) when err is
+// non-nil, passing err through unchanged so the error-wrap convention (wrap once at the source)
+// is untouched (→ issue #130 到達状態). target == "" (an action with no manifest entry, such as
+// a RemoveRmdir) records nothing. Only the first failure is recorded; a run stops at it anyway.
+func (a *applier) entryFailed(target string, err error) error {
+	if err != nil && target != "" && a.result.FailedTarget == "" {
+		a.result.FailedTarget = target
+	}
+	return err
+}
+
+// fail finalizes a mid-run stage failure: it fills result.Unreached with the planned-but-never-
+// attempted targets (everything in the plan that is neither in a completed-op list nor the
+// FailedTarget) and returns the partial Result alongside err, so the CLI can derive the niface
+// success/failed/skipped item partition (→ issue #130 到達状態, niface ADR-0016 / ADR-0020).
+// Under --recopy the copy execution source is the manifest, not plan.Copies (→ recopyAll), so
+// the manifest's copy entries are walked as well.
+func (a *applier) fail(plan planner.Plan, err error) (*Result, error) {
+	done := map[string]bool{a.result.FailedTarget: true}
+	for _, list := range [][]string{
+		a.result.Placed, a.result.Replaced, a.result.Copied, a.result.Recopied,
+		a.result.Removed, a.result.BackedUp,
+	} {
+		for _, t := range list {
+			done[t] = true
+		}
+	}
+	unreached := func(target string) {
+		if target == "" || done[target] {
+			return
+		}
+		done[target] = true
+		a.result.Unreached = append(a.result.Unreached, target)
+	}
+	for _, r := range plan.PreRemove {
+		unreached(r.Entry.Target)
+	}
+	for _, b := range plan.Backup {
+		unreached(b.Entry.Target)
+	}
+	for _, p := range plan.Place {
+		unreached(p.Entry.Target)
+	}
+	for _, c := range plan.Copies {
+		unreached(c.Entry.Target)
+	}
+	if a.opts.Recopy && a.manifest != nil {
+		for _, e := range a.manifest.Entries {
+			if e.Method == manifest.MethodCopy {
+				unreached(e.Target)
+			}
+		}
+	}
+	for _, r := range plan.Remove {
+		unreached(r.Entry.Target)
+	}
+	return a.result, err
 }
 
 // dryRun is the read-only short-circuit of apply --dryrun (→ ADR-0006, ADR-0023). It resolves
@@ -352,6 +457,7 @@ func (a *applier) dryRun() (*Result, error) {
 	}
 
 	prev := a.loadPrevManifest()
+	a.result.Entries = a.manifest.Entries
 	plan, err := planner.Compute(prev, a.manifest, a.root, planner.OSFS, a.plannerOptions())
 	if err != nil {
 		return nil, err
@@ -499,10 +605,13 @@ func conflictGuidance(kind planner.ConflictKind) string {
 	}
 }
 
-// emitWarnings emits the non-fatal warnings computed by the planner to stderr (opts.Warnf).
-// Warnings are always emitted, regardless of the silent-on-success default or -v (→ docs/spec.md stream discipline · ADR-0015, ADR-0024, ADR-0031).
-// When recopy=true it suppresses the copy foreign skip warning (recopy overwrites foreign too, so
-// "skipped" would be a false report · → ADR-0020).
+// emitWarnings emits the non-fatal warnings computed by the planner to stderr (opts.Warnf) and
+// records them in structured form on the Result (kind + target · → issue #130, niface ADR-0019),
+// so the CLI has the same warnings as data for the machine channel while the human text keeps
+// streaming. Warnings are always emitted, regardless of the silent-on-success default or -v
+// (→ docs/spec.md stream discipline · ADR-0015, ADR-0024, ADR-0031).
+// When recopy=true it suppresses the copy foreign skip warning on both channels (recopy
+// overwrites foreign too, so "skipped" would be a false report · → ADR-0020).
 func (a *applier) emitWarnings(ws []planner.Warning, recopy bool) {
 	for _, w := range ws {
 		switch w.Kind {
@@ -520,5 +629,6 @@ func (a *applier) emitWarnings(ws []planner.Warning, recopy bool) {
 			}
 			a.opts.Warnf("nput: skipped copy because a real file already exists at the copy target (foreign; place-once): %s", w.Target)
 		}
+		a.result.Warnings = append(a.result.Warnings, w)
 	}
 }

@@ -29,7 +29,7 @@ func (a *applier) removeStale(actions []planner.RemoveAction) error {
 			continue
 		}
 		if err := os.Remove(act.TargetAbs); err != nil {
-			return fmt.Errorf("nput: cannot remove stale symlink (%s): %w", act.TargetAbs, err)
+			return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: cannot remove stale symlink (%s): %w", act.TargetAbs, err))
 		}
 		a.result.Removed = append(a.result.Removed, act.Entry.Target)
 		a.journalRelinkedSymlink(act.TargetAbs, planner.LinkDest(act.Entry))
@@ -100,10 +100,10 @@ func (a *applier) preRemove(actions []planner.RemoveAction) error {
 			}
 		default: // planner.RemoveUnlink
 			if !reverifyStale(act) {
-				return fmt.Errorf("nput: recorded symlink changed after planning; cannot migrate this placement target safely (%s); re-run apply to converge", act.Entry.Target)
+				return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: recorded symlink changed after planning; cannot migrate this placement target safely (%s); re-run apply to converge", act.Entry.Target))
 			}
 			if err := os.Remove(act.TargetAbs); err != nil {
-				return fmt.Errorf("nput: cannot remove recorded symlink for migration (%s): %w", act.TargetAbs, err)
+				return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: cannot remove recorded symlink for migration (%s): %w", act.TargetAbs, err))
 			}
 			a.result.Removed = append(a.result.Removed, act.Entry.Target)
 			a.journalRelinkedSymlink(act.TargetAbs, planner.LinkDest(act.Entry))
