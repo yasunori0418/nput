@@ -481,3 +481,78 @@ func TestResetPartialFailureReturnsPartial(t *testing.T) {
 		t.Errorf("Unreached = %v, want [later/c2]", res.Unreached)
 	}
 }
+
+// TestRollbackConflictPartialResult verifies Rollback's conflict stop mirrors Apply's #131
+// contract: the partial RollbackResult (not nil) carries the target generation's inventory,
+// the structured conflicts, the planned-but-never-attempted removals in Unreached, and the
+// pinned, unmoved From == To generation. gen1 (target) has {b, c} both occupied by regular
+// files; gen2 (current) has {a}, whose removal is planned but never runs.
+func TestRollbackConflictPartialResult(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	srcA := makeSrc(t, "x")
+	srcB := makeSrc(t, "x")
+	srcC := makeSrc(t, "x")
+
+	prof := paths.Resolve(state, "vim", manifest.RootKindHome, root, true)
+	if err := os.MkdirAll(prof.Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	lf1 := writeLinkFarm(t, homeManifest(storeEntry(srcB, ".", "b"), storeEntry(srcC, ".", "c")))
+	lf2 := writeLinkFarm(t, homeManifest(storeEntry(srcA, ".", "a")))
+	for link, dest := range map[string]string{
+		paths.GenerationLink(prof.Profile, 1): lf1,
+		paths.GenerationLink(prof.Profile, 2): lf2,
+		prof.Profile:                          lf2,
+	} {
+		if err := os.Symlink(dest, link); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(srcA, filepath.Join(root, "a")); err != nil {
+		t.Fatal(err)
+	}
+	for _, occupied := range []string{"b", "c"} {
+		if err := os.WriteFile(filepath.Join(root, occupied), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var warns []string
+	res, err := Rollback(RollbackOptions{
+		Name: "vim", RootKind: manifest.RootKindHome, RootOverride: root, StateDir: state,
+		ListGenerations: func(string) ([]Generation, error) {
+			return []Generation{{Number: 1}, {Number: 2, Current: true}}, nil
+		},
+		SwitchGeneration: func(string, int) error { return nil },
+		Warnf:            collectFormatted(&warns),
+	})
+	if err == nil {
+		t.Fatal("Rollback must fail on the conflicts")
+	}
+	if res == nil {
+		t.Fatal("Rollback must return the partial RollbackResult alongside the conflict error")
+	}
+	if len(res.Conflicts) != 2 {
+		t.Fatalf("Conflicts = %+v, want the two structured occupied-target conflicts", res.Conflicts)
+	}
+	if len(res.Entries) != 2 || res.Entries[0].Target != "b" || res.Entries[1].Target != "c" {
+		t.Errorf("Entries = %+v, want the target generation's inventory {b, c}", res.Entries)
+	}
+	if len(res.Unreached) != 1 || res.Unreached[0] != "a" {
+		t.Errorf("Unreached = %v, want [a] (the planned gen2-only removal never ran)", res.Unreached)
+	}
+	if len(res.RemovalEntries) != 1 || res.RemovalEntries[0].Target != "a" {
+		t.Errorf("RemovalEntries = %+v, want the planned removal's recorded entry", res.RemovalEntries)
+	}
+	if res.From != 2 || res.To != 2 {
+		t.Errorf("From/To = %d/%d, want the pinned unmoved 2/2", res.From, res.To)
+	}
+	if res.GenBefore == nil || *res.GenBefore != 2 || res.GenAfter == nil || *res.GenAfter != 2 {
+		t.Errorf("GenBefore/GenAfter = %v/%v, want 2/2", res.GenBefore, res.GenAfter)
+	}
+	// The current placement must be untouched (the conflict stopped the run before any FS action).
+	if got, rerr := os.Readlink(filepath.Join(root, "a")); rerr != nil || got != srcA {
+		t.Errorf("a = %q (err %v), want the untouched gen2 placement", got, rerr)
+	}
+}
