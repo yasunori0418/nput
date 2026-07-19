@@ -497,7 +497,7 @@ func TestMutationPayloadConflicts(t *testing.T) {
 // TestResetPayload pins reset's mapping: items = the selected teardown entries, symlink
 // removals are reversible remove changes with the recorded dest, copy deletions are
 // irreversible removes without info, a kept-foreign target stays success with the
-// W_NPUT_STALE_KEPT warning on its item, and no generation slot is emitted (reset never
+// W_NPUT_STALE_MISMATCH warning on its item, and no generation slot is emitted (reset never
 // moves the profile pointer · → issue #131).
 func TestResetPayload(t *testing.T) {
 	res := &engine.ResetResult{
