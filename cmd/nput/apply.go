@@ -24,6 +24,7 @@ func newApplyCmd() *cobra.Command {
 			"--all applies all of nput.* in lexical order; --project-root / --home-root / --system-root narrow by root mode.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			nifaceReport.begin(cmd.Name())
 			flagBackupEnabled = cmd.Flags().Changed("backup")
 			if flagApplyAll {
 				if len(args) > 0 {
@@ -94,6 +95,8 @@ func runApplyManifest(name string) error {
 // When --manifest is given it does no entrypoint discovery and no nix eval/build, passing the pre-built link-farm
 // directly to the engine (the module activation path; → docs/spec.md "per-module behavior spec", ADR-0003, ADR-0007).
 func runApply(name string) error {
+	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
+	nifaceReport.beginSubject(name)
 	if flagManifest != "" {
 		// --manifest fixes the source to a link-farm, so it conflicts in meaning with the
 		// entrypoint discovery flags (the positional name is orthogonal as a profile selector and coexists; → ADR-0026).
@@ -134,7 +137,11 @@ func runApply(name string) error {
 		if err != nil {
 			return err
 		}
-		printApplyPlan(res)
+		// Under --json stdout belongs to the envelope alone; the line-oriented plan is the
+		// default contract only (→ ADR-0043 §2, issue #130).
+		if !flagJSON {
+			printApplyPlan(res)
+		}
 		// exit 2 if there are conflicts (a pre-gate for CI; → docs/spec.md exit code table).
 		if len(res.Conflicts) > 0 {
 			return &exitError{code: 2}
@@ -336,7 +343,10 @@ func aggregateDryRun(selected []string, applyDry func(name string) (*engine.Resu
 			fmt.Fprintf(os.Stderr, "nput: apply %s --dryrun failed: %v\n", name, err)
 			continue
 		}
-		printApplyPlan(res)
+		// Under --json stdout belongs to the envelope alone (→ ADR-0043 §2, issue #130).
+		if !flagJSON {
+			printApplyPlan(res)
+		}
 		if len(res.Conflicts) > 0 {
 			anyConflict = true
 		}

@@ -31,6 +31,7 @@ func newInitCmd() *cobra.Command {
 			"Existing files are not overwritten (inherits nix flake init's behavior).",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			nifaceReport.begin(cmd.Name())
 			return runInit(args[0])
 		},
 	}
@@ -58,6 +59,11 @@ func runInit(template string) error {
 	cmd := exec.Command("nix", args...)
 	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
+	// Under --json stdout belongs to the envelope alone; route any nix stdout to stderr
+	// (nix flake init normally writes only to stderr anyway · → ADR-0043 §2, issue #130).
+	if flagJSON {
+		cmd.Stdout = os.Stderr
+	}
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		return nixError(args, stderr.String(), err)

@@ -23,6 +23,7 @@ func newResetCmd() *cobra.Command {
 			"--dryrun shows the removal targets with zero side effects and exits (no confirm / flock).",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			nifaceReport.begin(cmd.Name())
 			return runReset(args[0], args[1:], flagDryrun)
 		},
 	}
@@ -34,6 +35,8 @@ func newResetCmd() *cobra.Command {
 // runReset resolves rootKind (→ profileDir) via eval pre-resolution and drives engine.Reset.
 // --dryrun prints the plan read-only to stdout and exits 0. Non-dryrun requires TTY confirmation / --yes.
 func runReset(name string, targets []string, dryrun bool) error {
+	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
+	nifaceReport.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -60,12 +63,17 @@ func runReset(name string, targets []string, dryrun bool) error {
 		if err != nil {
 			return err
 		}
-		printResetPlan(res)
+		// Under --json stdout belongs to the envelope alone (→ ADR-0043 §2, issue #130).
+		if !flagJSON {
+			printResetPlan(res)
+		}
 		return nil
 	}
 
 	// Non-dryrun is a destructive operation. Decide the confirmation policy (skip / prompt / refuse) from --yes and TTY state.
-	needPrompt, err := confirmPolicy(flagYes, isInteractive())
+	// --json is machine consumption: never prompt even on a TTY — without --yes it refuses and
+	// fails fast, exactly like the non-interactive case (→ ADR-0043 §8).
+	needPrompt, err := confirmPolicy(flagYes, isInteractive() && !flagJSON)
 	if err != nil {
 		return err
 	}

@@ -21,6 +21,7 @@ func newListGenerationsCmd() *cobra.Command {
 			"Pass <name> for that config, or --all to list every home mode config.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			nifaceReport.begin(cmd.Name())
 			if all {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: list-generations cannot combine <name> with --all")
@@ -39,6 +40,8 @@ func newListGenerationsCmd() *cobra.Command {
 
 // runListGenerations confirms rootKind via eval pre-resolution (home mode only), resolves profileDir, and lists generations.
 func runListGenerations(name string) error {
+	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
+	nifaceReport.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -69,7 +72,11 @@ func runListGenerations(name string) error {
 	if err != nil {
 		return err
 	}
-	printGenerations(gens)
+	// Under --json stdout belongs to the envelope alone; the line-oriented listing is the
+	// default contract only (→ ADR-0043 §2, issue #130).
+	if !flagJSON {
+		printGenerations(gens)
+	}
 	return nil
 }
 
@@ -104,15 +111,20 @@ func runListAllGenerations() error {
 	sort.Strings(names)
 
 	for i, name := range names {
-		if i > 0 {
-			fmt.Println()
-		}
-		fmt.Printf("# %s\n", name)
 		prof := paths.Resolve(stateDir, name, manifest.RootKindHome, "", false)
 		gens, err := engine.ListGenerations(prof.Profile)
 		if err != nil {
 			return err
 		}
+		// Under --json stdout belongs to the envelope alone (→ ADR-0043 §2, issue #130); the
+		// listing itself still runs so read failures keep the same exit behavior.
+		if flagJSON {
+			continue
+		}
+		if i > 0 {
+			fmt.Println()
+		}
+		fmt.Printf("# %s\n", name)
 		printGenerations(gens)
 	}
 	return nil

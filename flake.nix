@@ -121,7 +121,7 @@
             pname = "nput";
             inherit version;
             src = goSrc;
-            vendorHash = "sha256-7K17JaXFsjf163g5PXCb5ng2gYdotnZ2IDKk8KFjNj0=";
+            vendorHash = "sha256-0f+MDJBF3bFSUuXMoSJpnnNRzkJqY/eT/EPdChWseiw=";
             doCheck = true;
             env.GOTOOLCHAIN = "local";
             # VERSION の値を cmd/nput の main.version へ埋め込む（→ ADR-0042）。ldflags 未設定の
