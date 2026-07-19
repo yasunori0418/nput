@@ -65,6 +65,11 @@ func (a *applier) place(actions []planner.PlaceAction) error {
 			continue
 		}
 
+		// Only PlaceNew reaches here; assert it so a future PlaceKind cannot silently fall
+		// through to a fresh-symlink creation it was never classified for.
+		if act.Kind != planner.PlaceNew {
+			return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: internal: unhandled place kind %d (target: %s)", act.Kind, act.Entry.Target))
+		}
 		if err := os.Symlink(act.Dest, act.TargetAbs); err != nil {
 			return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: cannot create symlink (%s -> %s): %w", act.TargetAbs, act.Dest, err))
 		}
