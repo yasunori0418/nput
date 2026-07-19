@@ -199,9 +199,6 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(plan.Conflicts) > 0 {
-		return nil, reportConflicts(warnf, plan.Conflicts)
-	}
 
 	// The generation numbers come from the listing rather than a readlink observation: cur/prev
 	// are already identified above, and the pointer only moves at step 7 (→ issue #130, niface
@@ -218,7 +215,6 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	a.result.GenBefore = intPtr(cur.Number)
 	// Full inventory = the generation being rolled back to (its entries are the FS end state · → issue #130).
 	a.result.Entries = target.Entries
-	a.emitWarnings(plan.Warnings, false)
 	// Each stage journals its own FS writes; a failure in any of the three unwinds everything
 	// this Rollback call has done so far before returning (→ ADR-0044, same shape as Apply).
 	// Mirroring Apply's stage-failure contract, the partial result is returned alongside the
@@ -228,6 +224,13 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 		res.GenAfter = intPtr(cur.Number)
 		return &RollbackResult{Result: *res, From: cur.Number, To: cur.Number}, err
 	}
+	if len(plan.Conflicts) > 0 {
+		// Same partial-result contract as Apply's conflict stop: structured conflicts + the
+		// everything-unreached partition, so the CLI can map failed/skipped items (→ issue #131).
+		a.result.Conflicts = plan.Conflicts
+		return fail(reportConflicts(warnf, plan.Conflicts))
+	}
+	a.emitWarnings(plan.Warnings, false)
 	if err := a.runJournaled(func() error { return a.preRemove(plan.PreRemove) }); err != nil {
 		return fail(err)
 	}

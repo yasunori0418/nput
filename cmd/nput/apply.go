@@ -189,7 +189,7 @@ func printApplyPlan(res *engine.Result) {
 		fmt.Printf("backup\t%s\n", t)
 	}
 	for _, c := range res.Conflicts {
-		fmt.Printf("conflict\t%s\n", c)
+		fmt.Printf("conflict\t%s: %s\n", c.Entry.Target, c.Reason)
 	}
 }
 

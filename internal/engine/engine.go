@@ -97,7 +97,11 @@ type Result struct {
 	BackedUp   []string // targets renamed aside to "<target>.<suffix>" under apply --backup (→ ADR-0045)
 	Skipped    bool     // skipped on try-lock contention (NoWait path)
 	DryRun     bool     // read-only preview (Placed etc. are "to be placed" plans · → ADR-0023)
-	Conflicts  []string // conflicts detected in dryrun ("target: reason" · used by the CLI to decide exit 2 · → ADR-0006)
+	// Conflicts are the planner-detected conflicts, in structured form. Populated on the dryrun
+	// path (the CLI decides exit 2 · → ADR-0006) and on the non-dryrun conflict stop, where the
+	// partial Result is returned alongside the aggregate error so the CLI can map each conflict
+	// onto a failed niface item (E_NPUT_COLLISION · → issue #131, ADR-0043 §6).
+	Conflicts []planner.Conflict
 	// GenerationSkipped indicates that the project-mode generation skip committed no new
 	// generation (omitted --set). The path where the new link-farm equals the previous
 	// generation so no commit happens and only drifted entries are lstat-repaired
@@ -250,7 +254,11 @@ func Apply(opts Options) (*Result, error) {
 		return nil, err
 	}
 	if len(plan.Conflicts) > 0 {
-		return nil, reportConflicts(a.opts.Warnf, plan.Conflicts)
+		// Return the partial Result (full inventory + structured conflicts + everything-unreached
+		// partition via fail), not nil: the CLI needs it to report conflicted entries as failed
+		// items and the rest as skipped (→ issue #131, niface ADR-0016 / ADR-0020).
+		a.result.Conflicts = plan.Conflicts
+		return a.fail(plan, reportConflicts(a.opts.Warnf, plan.Conflicts))
 	}
 	a.emitWarnings(plan.Warnings, opts.Recopy)
 
@@ -495,9 +503,7 @@ func (a *applier) dryRun() (*Result, error) {
 	for _, b := range plan.Backup {
 		a.result.BackedUp = append(a.result.BackedUp, b.Entry.Target)
 	}
-	for _, c := range plan.Conflicts {
-		a.result.Conflicts = append(a.result.Conflicts, fmt.Sprintf("%s: %s", c.Entry.Target, c.Reason))
-	}
+	a.result.Conflicts = plan.Conflicts
 	return a.result, nil
 }
 
