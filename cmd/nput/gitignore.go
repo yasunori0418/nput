@@ -21,6 +21,7 @@ func newGitignoreCmd() *cobra.Command {
 			"--all sorts and de-duplicates the targets of all projectRoot configs.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			nifaceReport.begin(cmd.Name())
 			if all {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: gitignore cannot combine <name> with --all")
@@ -40,6 +41,8 @@ func newGitignoreCmd() *cobra.Command {
 // runGitignore lists a single config's placement targets. project mode only;
 // it errors out if a non-project config (home / fixed) is given (because the anchor form presupposes the git toplevel; → ADR-0023).
 func runGitignore(name string) error {
+	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
+	nifaceReport.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -62,7 +65,11 @@ func runGitignore(name string) error {
 	if err != nil {
 		return err
 	}
-	printGitignore(targets)
+	// Under --json stdout belongs to the envelope alone; the line-oriented listing stays the
+	// default contract (→ ADR-0043 §2, issue #130).
+	if !flagJSON {
+		printGitignore(targets)
+	}
 	return nil
 }
 
@@ -100,7 +107,10 @@ func runGitignoreAll() error {
 		}
 		all = append(all, targets...)
 	}
-	printGitignore(dedupeSorted(all))
+	// Under --json stdout belongs to the envelope alone (→ ADR-0043 §2, issue #130).
+	if !flagJSON {
+		printGitignore(dedupeSorted(all))
+	}
 	return nil
 }
 

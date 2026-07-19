@@ -19,6 +19,7 @@ func newRollbackCmd() *cobra.Command {
 			"before moving the profile pointer. A name is required (no --all); errors out if there is no previous generation.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			nifaceReport.begin(cmd.Name())
 			return runRollback(args[0])
 		},
 	}
@@ -26,6 +27,8 @@ func newRollbackCmd() *cobra.Command {
 
 // runRollback confirms rootKind via eval pre-resolution (home mode only) and drives engine.Rollback.
 func runRollback(name string) error {
+	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
+	nifaceReport.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err

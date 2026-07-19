@@ -32,6 +32,7 @@ var (
 	flagRoot        string // --root: explicitly override the resolved root
 	flagNoWait      bool   // --no-wait: skip without waiting on flock contention (for shellHook)
 	flagVerbose     bool   // -v/--verbose: print the placement report (summary + per-target lines); silent on success by default (→ ADR-0031)
+	flagJSON        bool   // --json: write a niface envelope (single JSON document) to stdout at command completion (→ ADR-0043, issue #130)
 	flagDebug       bool   // --debug: disclose the internally run nix commands on stderr (→ ADR-0031)
 	flagRecopy      bool   // --recopy: apply modifier; unconditionally re-copy every copy target from src, overwriting
 	flagYes         bool   // -y/--yes: skip reset's confirmation prompt (for scripts / CI)
@@ -93,11 +94,16 @@ func newRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+	// The niface run is begun at each subcommand's RunE top (nifaceReport.begin), not via a
+	// PersistentPreRun: cobra's auto-added utility commands (help / completion / __complete)
+	// own stdout with their own text and must never emit an envelope, and PersistentPreRun
+	// cannot tell them apart robustly (→ issue #130, docs/spec.md).
 	pf := root.PersistentFlags()
 	pf.StringVarP(&flagFile, "file", "f", "", "Specify the entrypoint explicitly (overrides autodiscovery)")
 	pf.StringVar(&flagRoot, "root", "", "Override the resolved root explicitly (all modes)")
 	pf.BoolVar(&flagNoWait, "no-wait", false, "Skip without waiting on flock contention (for shellHook)")
 	pf.BoolVarP(&flagVerbose, "verbose", "v", false, "Print the placement report (summary + per-target lines); silent on success by default (see ADR-0031)")
+	pf.BoolVar(&flagJSON, "json", false, "Write a niface-conformant JSON envelope to stdout (machine-readable; orthogonal to -v; see ADR-0043)")
 	pf.BoolVar(&flagDebug, "debug", false, "Disclose the internal nix commands on stderr (see ADR-0031)")
 	pf.BoolVarP(&flagYes, "yes", "y", false, "Skip reset's confirmation prompt (for scripts / CI)")
 	pf.BoolVar(&flagProjectRoot, "project-root", false, "Modifier for apply --all: apply only projectRoot configs")
@@ -126,7 +132,23 @@ func (e *exitCodeError) Error() string { return e.msg }
 func (e *exitCodeError) ExitCode() int { return e.code }
 
 func main() {
-	if err := newRootCmd().Execute(); err != nil {
+	err := newRootCmd().Execute()
+
+	// Emit the niface envelope — exactly one JSON document on stdout, exactly once, after the
+	// command has completed — before the exit-code handling below (which is unchanged: the
+	// envelope's status mirrors, never replaces, the exit code · → ADR-0043 §6, issue #130).
+	if flagJSON && nifaceReport.began() {
+		if emitErr := nifaceReport.emit(err); emitErr != nil {
+			fmt.Fprintf(os.Stderr, "nput: cannot write the --json envelope: %v\n", emitErr)
+			if err == nil {
+				// The command itself succeeded but the machine channel is broken; the consumer
+				// must not read the missing/partial document as success.
+				os.Exit(1)
+			}
+		}
+	}
+
+	if err != nil {
 		// An error carrying an exit code (such as apply --dryrun conflict=2) exits with the code alone
 		// (the plan was already written to stdout; → docs/spec.md exit code table).
 		var ee *exitError
