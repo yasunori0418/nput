@@ -90,6 +90,12 @@ func runReset(name string, targets []string, dryrun bool) error {
 		Targets:      targets,
 		Confirm:      confirm,
 	})
+	if res != nil {
+		// Also on a mid-teardown failure: the partial result keeps the changes complete up to
+		// the failure point (→ issue #131, niface ADR-0020). No generation slot — reset never
+		// moves the profile pointer (FS-only teardown).
+		attachResetPayload(res, err)
+	}
 	if err != nil {
 		return err
 	}

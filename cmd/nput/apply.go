@@ -74,6 +74,11 @@ func runApplyManifest(name string) error {
 		Backup:       flagBackupEnabled,
 		BackupSuffix: flagBackup,
 	})
+	if res != nil {
+		// Also on failure: a partial result carries the reached/unreached item partition and
+		// the changes that actually happened before the stop (→ issue #131, niface ADR-0020).
+		attachMutationPayload(res, err)
+	}
 	if err != nil {
 		if errors.Is(err, engine.ErrSkipped) {
 			if flagVerbose {
@@ -147,6 +152,11 @@ func runApply(name string) error {
 
 	// 2. Drive the engine (flock acquisition, in-lock build, placement, commit, and .pending removal are owned by the engine).
 	res, err := applyOne(ep, system, name, rootKind, fixedRoot)
+	if res != nil {
+		// Also on failure: a partial result carries the reached/unreached item partition and
+		// the changes that actually happened before the stop (→ issue #131, niface ADR-0020).
+		attachMutationPayload(res, err)
+	}
 	if err != nil {
 		if errors.Is(err, engine.ErrSkipped) {
 			// A try-lock skip is a normal skip (exit 0; → docs/spec.md exit code table).

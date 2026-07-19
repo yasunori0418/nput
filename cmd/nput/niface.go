@@ -27,12 +27,16 @@ import (
 const nifaceSpecVersion = 1
 
 // The nput instantiation of the niface generic envelope. The four type parameters are the
-// tool-specific info slots (item / change / per-subject result / envelope-wide); #130 leaves
-// them as open JSON objects — #131 / #132 pin them down to concrete DTO structs when the
-// payloads are populated (nil maps marshal as omitted, keeping the minimal envelope minimal).
+// tool-specific info slots (item / change / per-subject result / envelope-wide). #131 pins
+// the item / change slots to the concrete mutation DTOs (pointers, so an absent info is
+// omitted); the per-subject result / envelope-wide slots stay open JSON objects until #132
+// populates them (read-only inventories / init) — nil maps marshal as omitted.
 type (
-	nputEnvelope      = niface.Envelope[map[string]any, map[string]any, map[string]any, map[string]any]
-	nputSubjectResult = niface.SubjectResult[map[string]any, map[string]any, map[string]any]
+	nputEnvelope      = niface.Envelope[*nifaceEntryInfo, *nifaceChangeInfo, map[string]any, map[string]any]
+	nputSubjectResult = niface.SubjectResult[*nifaceEntryInfo, *nifaceChangeInfo, map[string]any]
+	nputResult        = niface.Result[*nifaceEntryInfo, *nifaceChangeInfo, map[string]any]
+	nputItem          = niface.Item[*nifaceEntryInfo]
+	nputChange        = niface.Change[*nifaceChangeInfo]
 )
 
 // entryItemID derives the niface item id for a placement entry: identity kind="entry",
@@ -68,6 +72,18 @@ type nifaceRun struct {
 type nifaceSubject struct {
 	name    string
 	started time.Time
+	// payload is the command-built items/changes/generation/warnings mapping (→ #131's
+	// niface_payload.go builders). nil keeps the minimal #130 shape (empty items) — the
+	// read-only commands until #132, and failures before any engine result exists.
+	payload *nifacePayload
+}
+
+// setPayload attaches the command's result payload to the registered subject (a no-op
+// without one — payloads only exist for subject-scoped commands).
+func (r *nifaceRun) setPayload(p *nifacePayload) {
+	if r.subject != nil {
+		r.subject.payload = p
+	}
 }
 
 // nifaceReport is the process-wide run the CLI wires (tests build their own nifaceRun instances).
@@ -115,21 +131,31 @@ func (r *nifaceRun) emit(cmdErr error) error {
 		FinishedAt:  finished,
 	}
 	if r.subject != nil {
-		env.Results = append(env.Results, nputSubjectResult{
+		sr := nputSubjectResult{
 			Subject:    niface.Subject{Name: r.subject.name},
 			Status:     status,
 			StartedAt:  nifaceTimestamp(r.subject.started),
 			FinishedAt: finished,
-		})
+		}
+		if p := r.subject.payload; p != nil {
+			sr.Generation = p.generation
+			sr.Warnings = p.warnings
+			sr.Result = nputResult{Items: p.items, Changes: p.changes}
+		}
+		env.Results = append(env.Results, sr)
 	}
 	if cmdErr != nil {
-		e := classifyError(cmdErr)
-		if r.subject != nil {
+		switch {
+		case r.subject == nil:
+			env.Errors = append(env.Errors, classifyError(cmdErr))
+		case r.subject.payload != nil && r.subject.payload.itemBorne:
+			// The failure is already represented as a failed item (entry failure / conflict);
+			// duplicating it into subjectResult.errors[] would violate niface §2 (item-borne
+			// errors must not sit in errors[]). The failed item alone justifies status error.
+		default:
 			// The failure happened with the subject established, so it is subject-borne
-			// (build / lock / engine ...), not a pre-enumeration failure (→ ADR-0043 §6).
-			env.Results[0].Errors = append(env.Results[0].Errors, e)
-		} else {
-			env.Errors = append(env.Errors, e)
+			// (build / lock / commit ...), not a pre-enumeration failure (→ ADR-0043 §6).
+			env.Results[0].Errors = append(env.Results[0].Errors, classifyError(cmdErr))
 		}
 	}
 
