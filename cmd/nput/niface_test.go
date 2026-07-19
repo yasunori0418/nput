@@ -159,6 +159,47 @@ func TestNifaceEnvelopeConformance(t *testing.T) {
 	}
 }
 
+// TestNifaceEnvelopeDryRunFlag pins the envelope's dryRun field to the run's captured --dryrun
+// value (begin snapshots flagDryrun; tests set the field directly).
+func TestNifaceEnvelopeDryRunFlag(t *testing.T) {
+	checker, err := conformance.NewDefaultChecker()
+	if err != nil {
+		t.Fatalf("conformance.NewDefaultChecker: %v", err)
+	}
+	for _, dryRun := range []bool{false, true} {
+		r, buf := newTestRun("apply")
+		r.dryRun = dryRun
+		r.beginSubject("default")
+		if err := r.emit(nil); err != nil {
+			t.Fatalf("emit: %v", err)
+		}
+		if findings := checker.Check(buf.Bytes()); len(findings) > 0 {
+			t.Fatalf("conformance findings: %v", findings)
+		}
+		doc := decodeEnvelope(t, buf)
+		if doc["dryRun"] != dryRun {
+			t.Errorf("dryRun = %v, want %v", doc["dryRun"], dryRun)
+		}
+	}
+}
+
+// failingWriter simulates a broken stdout (EPIPE etc.) for the emit write-failure path.
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("broken pipe") }
+
+// TestNifaceEmitWriteFailure pins that a failed envelope write surfaces as an error from emit —
+// main then exits non-zero even for a succeeded command, so a missing/partial document is never
+// read as success (→ docs/spec.md emit タイミングと成立条件).
+func TestNifaceEmitWriteFailure(t *testing.T) {
+	r := &nifaceRun{now: fixedClock(time.Date(2026, 7, 19, 12, 0, 0, 0, time.UTC)), out: failingWriter{}}
+	r.begin("apply")
+	r.beginSubject("default")
+	if err := r.emit(nil); err == nil {
+		t.Fatal("emit must propagate the writer failure")
+	}
+}
+
 // TestNifaceTimestampOffset pins the timestamp shape: RFC 3339, "T" separator, explicit offset
 // (niface ADR-0025 format assertion; local zone renders its UTC offset, UTC renders "Z").
 func TestNifaceTimestampOffset(t *testing.T) {

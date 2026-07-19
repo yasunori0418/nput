@@ -59,6 +59,7 @@ type nifaceRun struct {
 	now     func() time.Time // injectable clock; tests pin it to a fixed time
 	out     io.Writer        // envelope sink (os.Stdout; tests substitute a buffer)
 	command string           // executed subcommand name ("" until begin — no envelope for --help / --version)
+	dryRun  bool             // envelope dryRun field, captured from flagDryrun at begin (tests set it directly)
 	started time.Time
 	subject *nifaceSubject // the single subject #130 wires (nil = none; #164 generalizes to N)
 }
@@ -72,9 +73,11 @@ type nifaceSubject struct {
 // nifaceReport is the process-wide run the CLI wires (tests build their own nifaceRun instances).
 var nifaceReport = &nifaceRun{now: time.Now, out: os.Stdout}
 
-// begin records the executed subcommand and the run start time.
+// begin records the executed subcommand, the run start time, and the parsed --dryrun value
+// (cobra has finished flag parsing by RunE, where begin is called).
 func (r *nifaceRun) begin(command string) {
 	r.command = command
+	r.dryRun = flagDryrun
 	r.started = r.now()
 }
 
@@ -107,7 +110,7 @@ func (r *nifaceRun) emit(cmdErr error) error {
 		Tool:        niface.Tool{Name: "nput", Version: version},
 		Command:     r.command,
 		Status:      status,
-		DryRun:      flagDryrun,
+		DryRun:      r.dryRun,
 		StartedAt:   nifaceTimestamp(r.started),
 		FinishedAt:  finished,
 	}
