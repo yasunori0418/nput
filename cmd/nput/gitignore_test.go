@@ -73,11 +73,22 @@ func TestGitignoreJSONInfoPaths(t *testing.T) {
 	}
 }
 
-// TestGitignoreAnchorsEmptyStaysArray pins that a config without entries still lists
-// "paths": [] (a non-nil slice; nil would marshal the key away).
-func TestGitignoreAnchorsEmptyStaysArray(t *testing.T) {
-	got := gitignoreAnchors(nil)
-	if got == nil || len(got) != 0 {
-		t.Errorf("gitignoreAnchors(nil) = %#v, want a non-nil empty slice", got)
+// TestGitignoreJSONEmptyPathsStaysArray pins the zero-entry boundary at the emit level
+// (spec: entry 0 件でも "paths": [] を明示): the emitted document must carry the paths key as
+// an empty array — a nil slice would marshal the key away.
+func TestGitignoreJSONEmptyPathsStaysArray(t *testing.T) {
+	r, buf := newTestRun("gitignore")
+	r.beginSubject("empty")
+	r.setPayload(&nifacePayload{info: map[string]any{"paths": gitignoreAnchors(nil)}})
+	if err := r.emit(nil); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	info := decodeEnvelope(t, buf)["results"].([]any)[0].(map[string]any)["result"].(map[string]any)["info"].(map[string]any)
+	paths, ok := info["paths"].([]any)
+	if !ok {
+		t.Fatalf("info = %v, want the paths key present as an array", info)
+	}
+	if len(paths) != 0 {
+		t.Errorf("info.paths = %v, want []", paths)
 	}
 }

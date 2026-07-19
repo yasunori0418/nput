@@ -907,3 +907,30 @@ func TestMutationPayloadConflictWithWarningStaysConformant(t *testing.T) {
 		t.Errorf("status = %v, want error", doc["status"])
 	}
 }
+
+// TestMutationPayloadCopyForeignItemWarning completes the warning kind × in/out-of-inventory
+// table (→ issue #132 review follow-up): the place-once copy skip is the one copy-family
+// warning whose entry stays in the manifest, so W_NPUT_COPY_FOREIGN rides on its item — not
+// the subject.
+func TestMutationPayloadCopyForeignItemWarning(t *testing.T) {
+	res := &engine.Result{
+		Profile:  "/p",
+		DryRun:   true,
+		Entries:  []manifest.Entry{{SrcKind: "store", Src: "/nix/store/c", Target: ".config/copydir", Method: "copy"}},
+		Warnings: []planner.Warning{{Kind: planner.WarnCopyForeign, Target: ".config/copydir"}},
+	}
+	p, err := mutationPayload(res, nil)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	it := findItem(t, p.items, ".config/copydir")
+	if len(it.Warnings) != 1 || it.Warnings[0].Code != "W_NPUT_COPY_FOREIGN" {
+		t.Errorf("item warnings = %+v, want W_NPUT_COPY_FOREIGN on the inventory item", it.Warnings)
+	}
+	if len(p.warnings) != 0 {
+		t.Errorf("subject warnings = %+v, want none", p.warnings)
+	}
+	if it.Status != niface.ItemSuccess {
+		t.Errorf("item status = %s, want success (a skip is policy inaction, not a failure)", it.Status)
+	}
+}
