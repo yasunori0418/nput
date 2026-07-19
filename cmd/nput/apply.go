@@ -137,11 +137,7 @@ func runApply(name string) error {
 		if err != nil {
 			return err
 		}
-		// Under --json stdout belongs to the envelope alone; the line-oriented plan is the
-		// default contract only (→ ADR-0043 §2, issue #130).
-		if !flagJSON {
-			printApplyPlan(res)
-		}
+		printApplyPlan(res)
 		// exit 2 if there are conflicts (a pre-gate for CI; → docs/spec.md exit code table).
 		if len(res.Conflicts) > 0 {
 			return &exitError{code: 2}
@@ -171,7 +167,12 @@ func runApply(name string) error {
 // printApplyPlan prints the apply --dryrun plan to stdout (it owns the machine-readable output; one action per line;
 // → docs/spec.md stream discipline, ADR-0023, ADR-0024). It is not suppressed even under silent-on-success (the stdout-ownership principle; → ADR-0031).
 // conflict lines are also put on stdout as part of the plan, with the exit code (exit 2) complementing machine discrimination.
+// Under --json it prints nothing: stdout belongs to the niface envelope alone, and gating here —
+// the single chokepoint for every call site — keeps that contract testable (→ ADR-0043 §2, issue #130).
 func printApplyPlan(res *engine.Result) {
+	if flagJSON {
+		return
+	}
 	for _, t := range res.Placed {
 		fmt.Printf("place\t%s\n", t)
 	}
@@ -343,10 +344,7 @@ func aggregateDryRun(selected []string, applyDry func(name string) (*engine.Resu
 			fmt.Fprintf(os.Stderr, "nput: apply %s --dryrun failed: %v\n", name, err)
 			continue
 		}
-		// Under --json stdout belongs to the envelope alone (→ ADR-0043 §2, issue #130).
-		if !flagJSON {
-			printApplyPlan(res)
-		}
+		printApplyPlan(res)
 		if len(res.Conflicts) > 0 {
 			anyConflict = true
 		}

@@ -72,11 +72,7 @@ func runListGenerations(name string) error {
 	if err != nil {
 		return err
 	}
-	// Under --json stdout belongs to the envelope alone; the line-oriented listing is the
-	// default contract only (→ ADR-0043 §2, issue #130).
-	if !flagJSON {
-		printGenerations(gens)
-	}
+	printGenerations(gens)
 	return nil
 }
 
@@ -131,7 +127,13 @@ func runListAllGenerations() error {
 }
 
 // printGenerations prints the generation list to stdout (the primary output of a read-only command; → ADR-0023).
+// Under --json it prints nothing: stdout belongs to the niface envelope alone, gated here — the
+// single chokepoint for every call site (→ ADR-0043 §2, issue #130). The --all path additionally
+// gates its own per-config header lines at the call site.
 func printGenerations(gens []engine.Generation) {
+	if flagJSON {
+		return
+	}
 	for _, g := range gens {
 		marker := ""
 		if g.Current {
