@@ -234,7 +234,7 @@ func mutationPayload(res *engine.Result, cmdErr error) (*nifacePayload, error) {
 		p.changes = append(p.changes, c)
 		return nil
 	}
-	place := func(targets []string, modifyAlways bool, reversible bool) error {
+	place := func(targets []string, modifyAlways, reversible, skipNoop bool) error {
 		for _, t := range targets {
 			rePlaced[t] = true
 			kind := niface.ChangeAdd
@@ -245,24 +245,31 @@ func mutationPayload(res *engine.Result, cmdErr error) (*nifacePayload, error) {
 				kind = niface.ChangeModify
 				old = oldDest(t)
 			}
+			if skipNoop && old != "" && old == newDest[t] {
+				// A re-link back to the recorded dest (apply re-links every planned symlink
+				// mechanically) leaves the state identical: a noop, which changes must not
+				// contain (niface §4). The -v report still shows the mechanical op.
+				continue
+			}
 			if err := addChange(t, kind, reversible, changeInfoOrNil(old, newDest[t])); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
-	if err := place(res.Placed, false, true); err != nil {
+	if err := place(res.Placed, false, true, false); err != nil {
 		return nil, err
 	}
-	if err := place(res.Replaced, true, true); err != nil {
+	if err := place(res.Replaced, true, true, true); err != nil {
 		return nil, err
 	}
-	if err := place(res.Copied, false, true); err != nil {
+	if err := place(res.Copied, false, true, false); err != nil {
 		return nil, err
 	}
 	// A recopy overwrite discards content nput never tracked: irreversible, no old value
-	// (→ ADR-0020, ADR-0043 §4).
-	if err := place(res.Recopied, true, false); err != nil {
+	// (→ ADR-0020, ADR-0043 §4). Not a noop even when content happens to match — the
+	// overwrite itself happened and the pre-state is unknowable.
+	if err := place(res.Recopied, true, false, false); err != nil {
 		return nil, err
 	}
 	for _, t := range res.Removed {
