@@ -29,7 +29,7 @@ func (a *applier) materializeCopies(plan planner.Plan, recopy bool) error {
 func (a *applier) placeCopies(actions []planner.CopyAction) error {
 	for _, act := range actions {
 		if err := ensureParentDir(act.TargetAbs); err != nil {
-			return err
+			return a.entryFailed(act.Entry.Target, err)
 		}
 		// Journaled before copyTree, not after: copyTree can write a partial tree (e.g. some
 		// files copied before a later one fails), and os.RemoveAll tolerates a fully- or
@@ -37,7 +37,7 @@ func (a *applier) placeCopies(actions []planner.CopyAction) error {
 		// gets its partial tree cleaned up on unwind instead of leaving debris (→ ADR-0044).
 		a.journalPlacedCopy(act.TargetAbs)
 		if err := copyTree(act.Src, act.TargetAbs); err != nil {
-			return fmt.Errorf("nput: copy placement failed (%s -> %s): %w", act.Src, act.TargetAbs, err)
+			return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: copy placement failed (%s -> %s): %w", act.Src, act.TargetAbs, err))
 		}
 		a.result.Copied = append(a.result.Copied, act.Entry.Target)
 	}
@@ -63,7 +63,7 @@ func (a *applier) recopyAll() error {
 			existed = true
 			aside := asidePath(targetAbs)
 			if err := os.Rename(targetAbs, aside); err != nil {
-				return fmt.Errorf("nput: cannot move aside recopy target (%s): %w", targetAbs, err)
+				return a.entryFailed(e.Target, fmt.Errorf("nput: cannot move aside recopy target (%s): %w", targetAbs, err))
 			}
 			// Journaled immediately after the rename-aside, before the fresh copy: if copyTree
 			// below fails partway, undoRestoreRename's os.RemoveAll tolerates a partial/absent
@@ -71,7 +71,7 @@ func (a *applier) recopyAll() error {
 			// leaving it stranded under the aside name (→ ADR-0044).
 			a.journalRenamedAside(targetAbs, aside)
 		} else if !os.IsNotExist(err) {
-			return fmt.Errorf("nput: cannot lstat recopy target (%s): %w", targetAbs, err)
+			return a.entryFailed(e.Target, fmt.Errorf("nput: cannot lstat recopy target (%s): %w", targetAbs, err))
 		} else {
 			// Same reasoning as placeCopies: journal before copyTree so a mid-copy failure still
 			// gets its partial tree cleaned up on unwind (→ ADR-0044).
@@ -79,10 +79,10 @@ func (a *applier) recopyAll() error {
 		}
 
 		if err := ensureParentDir(targetAbs); err != nil {
-			return err
+			return a.entryFailed(e.Target, err)
 		}
 		if err := copyTree(planner.LinkDest(e), targetAbs); err != nil {
-			return fmt.Errorf("nput: recopy failed (%s -> %s): %w", planner.LinkDest(e), targetAbs, err)
+			return a.entryFailed(e.Target, fmt.Errorf("nput: recopy failed (%s -> %s): %w", planner.LinkDest(e), targetAbs, err))
 		}
 		if existed {
 			a.result.Recopied = append(a.result.Recopied, e.Target)

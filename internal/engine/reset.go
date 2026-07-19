@@ -60,6 +60,16 @@ type ResetResult struct {
 	Pruned          []string // empty ancestor directories rmdir-ed after a removal (→ Issue #174, #172 (D4); not computed in dryrun)
 	DryRun          bool     // was a read-only preview
 	Aborted         bool     // aborted at the confirmation prompt
+
+	// Warnings are the planner's entry-scoped warnings in structured form (kind + target), for
+	// the CLI to map onto niface warnings; KeptForeign above stays the preview-oriented view of
+	// the same data (→ issue #130, niface ADR-0019).
+	Warnings []planner.Warning
+	// GenBefore / GenAfter are the profile generation numbers observed for the run. Reset is an
+	// FS-only teardown that never moves the profile pointer, so before == after; nil when the
+	// profile link is not a parsable generation link (→ issue #130, niface ADR-0015).
+	GenBefore *int
+	GenAfter  *int
 }
 
 // Reset reverts the placed entities of the target entries to a not-placed state. It shares with the
@@ -91,6 +101,13 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 			return res, nil
 		}
 		return nil, fmt.Errorf("nput: cannot check profile (%s): %w", prof.Profile, err)
+	}
+
+	// Observe the generation once: the FS-only teardown never moves the profile pointer, so the
+	// same observation serves as both before and after (→ issue #130, niface ADR-0015).
+	res.GenBefore = observeGeneration(prof.Profile)
+	if res.GenBefore != nil {
+		res.GenAfter = intPtr(*res.GenBefore)
 	}
 
 	// 2. at run time, serialize with concurrent apply / reset via a blocking flock (→ ADR-0013, ADR-0021).
@@ -142,6 +159,7 @@ func Reset(opts ResetOptions) (*ResetResult, error) {
 	}
 
 	// For the preview (dryrun / confirm display), pack the to-be-removed symlinks and the kept foreign.
+	res.Warnings = plan.Warnings
 	for _, a := range plan.Remove {
 		res.RemovedSymlinks = append(res.RemovedSymlinks, a.Entry.Target)
 	}
