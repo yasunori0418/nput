@@ -247,6 +247,14 @@ func dryBuildFunc(e *entrypoint, system, name string) func(pending string) (stri
 	}
 }
 
+// nixCmdError marks a failed internal nix invocation (eval / build), so the --json error
+// classification can map it to E_NPUT_BUILD without string matching (→ issue #131, ADR-0043 §8).
+// It wraps transparently: Error/Unwrap keep the existing message and chain untouched.
+type nixCmdError struct{ err error }
+
+func (e *nixCmdError) Error() string { return e.err.Error() }
+func (e *nixCmdError) Unwrap() error { return e.err }
+
 // runNixCapture captures and returns nix's stdout (for machine-readable output such as eval).
 func runNixCapture(args ...string) (string, error) {
 	if flagDebug {
@@ -257,7 +265,7 @@ func runNixCapture(args ...string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", nixError(args, stderr.String(), err)
+		return "", &nixCmdError{nixError(args, stderr.String(), err)}
 	}
 	return stdout.String(), nil
 }
@@ -272,7 +280,7 @@ func runNixStream(args ...string) error {
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("nput: nix %s failed: %w", args[0], err)
+		return &nixCmdError{fmt.Errorf("nput: nix %s failed: %w", args[0], err)}
 	}
 	return nil
 }
@@ -317,12 +325,13 @@ Original nix error:
 }
 
 // wrapEvalErr makes the "nput.<name> does not exist" case of an eval failure clearer
-// (experimental etc. are passed through as-is) (→ docs/spec.md error spec).
+// (experimental etc. are passed through as-is) (→ docs/spec.md error spec). The original
+// error is wrapped (%w), keeping the nixCmdError marker reachable for --json classification.
 func wrapEvalErr(err error, label string) error {
 	msg := err.Error()
 	if strings.Contains(msg, "does not provide attribute") ||
 		(strings.Contains(msg, "attribute") && strings.Contains(msg, "missing")) {
-		return fmt.Errorf("nput: %s not found in the entrypoint (check the config name)\n%s", label, msg)
+		return fmt.Errorf("nput: %s not found in the entrypoint (check the config name)\n%w", label, err)
 	}
 	return err
 }
@@ -332,7 +341,7 @@ func wrapEvalAllErr(err error, label string) error {
 	msg := err.Error()
 	if strings.Contains(msg, "does not provide attribute") ||
 		(strings.Contains(msg, "attribute") && strings.Contains(msg, "missing")) {
-		return fmt.Errorf("nput: %s not found in the entrypoint (no configs found)\n%s", label, msg)
+		return fmt.Errorf("nput: %s not found in the entrypoint (no configs found)\n%w", label, err)
 	}
 	return err
 }
