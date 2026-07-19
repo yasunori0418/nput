@@ -309,6 +309,27 @@ func TestJSONSuppressesLineOrientedStdout(t *testing.T) {
 	}
 }
 
+// TestJSONEmptyResetPlanKeepsStderrNotice covers the empty-result quadrants of printResetPlan's
+// contract: with nothing to remove, the stderr "nothing to remove" notice is printed under BOTH
+// contracts — human diagnostics coexist with --json — while stdout stays empty (under --json it
+// must stay empty for the envelope; under the default contract there are simply no plan lines).
+func TestJSONEmptyResetPlanKeepsStderrNotice(t *testing.T) {
+	origJSON := flagJSON
+	defer func() { flagJSON = origJSON }()
+
+	empty := &engine.ResetResult{}
+	for _, jsonMode := range []bool{false, true} {
+		flagJSON = jsonMode
+		out, errOut := captureOutErr(t, func() { printResetPlan(empty) })
+		if out != "" {
+			t.Errorf("flagJSON=%v: stdout = %q, want empty for an empty plan", jsonMode, out)
+		}
+		if !strings.Contains(errOut, "nothing to remove") {
+			t.Errorf("flagJSON=%v: stderr = %q, want the nothing-to-remove notice", jsonMode, errOut)
+		}
+	}
+}
+
 // TestResetPromptAllowed pins reset's prompt-permission composition: --json forbids prompting
 // even on a TTY, so reset --json without --yes goes down confirmPolicy's refuse path and fails
 // fast (→ ADR-0043 §8, docs/spec.md "reset --json は --yes 必須").
