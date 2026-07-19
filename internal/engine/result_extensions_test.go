@@ -287,6 +287,27 @@ func TestApplyResultStructuredWarnings(t *testing.T) {
 	}
 }
 
+// TestResetResultGenerationUnobservable pins the nil branch of Reset's generation observation:
+// a profile link that is not a generation link (test-substituted commit) observes neither
+// before nor after (→ niface ADR-0015's nil-able Generation).
+func TestResetResultGenerationUnobservable(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "conf/rc")
+	lf := writeLinkFarm(t, fixedManifest(root, storeEntry(src, "conf", "link")))
+
+	if _, err := Apply(Options{LinkFarm: lf, Name: "c", StateDir: state, Commit: fakeCommit(nil)}); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	res, err := Reset(ResetOptions{Name: "c", RootKind: manifest.RootKindFixed, FixedRoot: root, StateDir: state})
+	if err != nil {
+		t.Fatalf("Reset: %v", err)
+	}
+	if res.GenBefore != nil || res.GenAfter != nil {
+		t.Errorf("GenBefore/GenAfter = %v/%v, want nil/nil (profile link is not a generation link)", res.GenBefore, res.GenAfter)
+	}
+}
+
 // TestResetResultGenerationAndWarnings verifies Reset observes the (unmoved) profile generation
 // as before == after and exposes the planner warnings in structured form.
 func TestResetResultGenerationAndWarnings(t *testing.T) {
