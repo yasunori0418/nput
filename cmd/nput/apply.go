@@ -142,6 +142,12 @@ func runApply(name string) error {
 		if err != nil {
 			return err
 		}
+		// The dryrun rides the same payload builder as the real apply, so parity is
+		// structural — same schema by construction, only the observed values differ
+		// (→ issue #132). cmdErr is nil here: a conflict is item-borne (failed item +
+		// E_NPUT_COLLISION inside the payload) and the exit-2 decision comes below,
+		// after the plan is printed — the envelope still carries the payload alongside.
+		attachMutationPayload(res, nil)
 		printApplyPlan(res)
 		// exit 2 if there are conflicts (a pre-gate for CI; → docs/spec.md exit code table).
 		if len(res.Conflicts) > 0 {

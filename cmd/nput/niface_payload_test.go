@@ -721,3 +721,127 @@ func TestJSONEndToEndApplyAndResetPayload(t *testing.T) {
 		t.Errorf("reset changes = %+v, want one reversible remove for .keep", cs)
 	}
 }
+
+// TestDryrunPayloadFirstPlanOmitsGenerationNumbers pins apply --dryrun over a not-yet-created
+// profile (niface ADR-0015 · → issue #132): the dryrun rides mutationPayload, and with neither
+// generation number observable the emitted generation carries the profile path alone — no
+// before / after keys (nil pointers must marshal away, never as 0 or null).
+func TestDryrunPayloadFirstPlanOmitsGenerationNumbers(t *testing.T) {
+	res := &engine.Result{
+		Profile: "/state/nix/profiles/nput/home/profile",
+		DryRun:  true,
+		Entries: []manifest.Entry{{SrcKind: "store", Src: "/nix/store/z", Target: ".zshrc", Method: "symlink"}},
+		Placed:  []string{".zshrc"},
+	}
+	p, err := mutationPayload(res, nil)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	doc := emitPayloadDoc(t, "apply", p, nil)
+	gen := subjectResultOf(t, doc)["generation"].(map[string]any)
+	if gen["profile"] != res.Profile {
+		t.Errorf("generation.profile = %v, want %s", gen["profile"], res.Profile)
+	}
+	for _, key := range []string{"before", "after"} {
+		if v, ok := gen[key]; ok {
+			t.Errorf("generation.%s present (= %v), want omitted before the first apply", key, v)
+		}
+	}
+}
+
+// TestDryrunPayloadConflictKeepsEnvelopeBesideExit2 pins the dryrun conflict contract
+// (→ issue #132 acceptance): the CLI attaches the payload with cmdErr nil (the exit-2
+// exitError is decided after the plan is printed), the conflicted entry is a failed item with
+// E_NPUT_COLLISION, and the envelope emitted alongside exit 2 stays conformant with status
+// error, dryRun true, and no subject-level duplication of the item-borne error.
+func TestDryrunPayloadConflictKeepsEnvelopeBesideExit2(t *testing.T) {
+	res := &engine.Result{
+		Profile: "/state/nix/profiles/nput/home/profile",
+		DryRun:  true,
+		Entries: []manifest.Entry{
+			{SrcKind: "store", Src: "/nix/store/a", Target: ".zshrc", Method: "symlink"},
+			{SrcKind: "store", Src: "/nix/store/b", Target: ".config/nvim", Method: "symlink"},
+		},
+		Placed: []string{".config/nvim"},
+		Conflicts: []planner.Conflict{
+			{Entry: manifest.Entry{Target: ".zshrc"}, Reason: "target already has an existing file/directory (will not overwrite)", Kind: planner.ConflictForeignEntity},
+		},
+	}
+	p, err := mutationPayload(res, nil) // the dryrun wiring passes cmdErr nil (→ runApply)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	if !p.itemBorne {
+		t.Error("itemBorne = false, want true (the conflict is fully represented by its item)")
+	}
+	if it := findItem(t, p.items, ".config/nvim"); it.Status != niface.ItemSuccess {
+		t.Errorf("sibling item status = %s, want success (a dryrun attempts nothing)", it.Status)
+	}
+
+	r, buf := newTestRun("apply")
+	r.dryRun = true
+	r.beginSubject("default")
+	r.setPayload(p)
+	if err := r.emit(&exitError{code: 2}); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	checker, err := conformance.NewDefaultChecker()
+	if err != nil {
+		t.Fatalf("conformance.NewDefaultChecker: %v", err)
+	}
+	if findings := checker.Check(buf.Bytes()); len(findings) > 0 {
+		t.Fatalf("conformance findings:\n%s\ndocument: %s", strings.Join(findings, "\n"), buf.String())
+	}
+	doc := decodeEnvelope(t, buf)
+	if doc["status"] != "error" || doc["dryRun"] != true {
+		t.Errorf("status/dryRun = %v/%v, want error/true", doc["status"], doc["dryRun"])
+	}
+	sr := subjectResultOf(t, doc)
+	if errList, ok := sr["errors"]; ok {
+		t.Errorf("subjectResult.errors = %v, want absent (the failed item carries the collision)", errList)
+	}
+	item := findItem(t, mustDecodeItems(t, sr), ".zshrc")
+	if item.Status != niface.ItemFailed || item.Error == nil || item.Error.Code != "E_NPUT_COLLISION" {
+		t.Errorf("conflicted item = %+v, want failed with E_NPUT_COLLISION", item)
+	}
+}
+
+// mustDecodeItems re-decodes a subjectResult's items into typed nputItem values so the typed
+// helpers (findItem) work on emitted documents too.
+func mustDecodeItems(t *testing.T, sr map[string]any) []nputItem {
+	t.Helper()
+	raw, err := json.Marshal(sr["result"].(map[string]any)["items"])
+	if err != nil {
+		t.Fatalf("re-marshal items: %v", err)
+	}
+	var items []nputItem
+	if err := json.Unmarshal(raw, &items); err != nil {
+		t.Fatalf("decode items: %v", err)
+	}
+	return items
+}
+
+// TestDryrunPayloadRelinkNotSuppressed pins the dryrun side of the noop rule (→ issue #132):
+// a dryrun never executes the re-link, so no pre-relink dest is observed (ReplacedDests
+// stays empty) and the planned re-link cannot be proven a noop — it stays a modify (mirroring
+// the text plan's replace line), unlike the real apply's suppression
+// (→ TestMutationPayloadNoopRelinkSuppressed).
+func TestDryrunPayloadRelinkNotSuppressed(t *testing.T) {
+	res := &engine.Result{
+		Profile:  "/state/nix/profiles/nput/home/profile",
+		DryRun:   true,
+		Entries:  []manifest.Entry{{SrcKind: "store", Src: "/nix/store/same", Target: ".same", Method: "symlink"}},
+		Replaced: []string{".same"},
+	}
+	p, err := mutationPayload(res, nil)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	cs := changesFor(t, p.changes, ".same")
+	if len(cs) != 1 || cs[0].Kind != niface.ChangeModify || !cs[0].Reversible {
+		t.Fatalf(".same changes = %+v, want one reversible modify (unobserved old dest ⇒ not provably a noop)", cs)
+	}
+	if cs[0].Info == nil || cs[0].Info.New != "/nix/store/same" || cs[0].Info.Old != "" {
+		t.Errorf("change info = %+v, want new only (the old dest is unobserved in a dryrun)", cs[0].Info)
+	}
+}
