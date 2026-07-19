@@ -49,6 +49,15 @@ e2e_step "y を config から削除して再 apply"
 write_flake x
 git -c user.email=e2e@nput.test -c user.name=e2e add -A
 git -c user.email=e2e@nput.test -c user.name=e2e commit -qm "drop y"
+
+e2e_step "apply --dryrun --json: stale 除去は remove change + 旧 entry も item に載る（→ issue #132）"
+ENV_STALE="$E2E_WORK/dryrun-stale.json"
+run_json 0 "$ENV_STALE" apply docs --dryrun
+assert_json "$ENV_STALE" "items は新 entry (.out/x) + stale 旧 entry (.out/y) の 2 件" \
+	'[.results[0].result.items[].label] | sort == [".out/x", ".out/y"]'
+assert_json "$ENV_STALE" "remove change が .out/y の item を指す" \
+	'. as $d | [$d.results[0].result.changes[] | select(.kind == "remove")] | (length == 1) and (.[0].itemId == ($d.results[0].result.items[] | select(.label == ".out/y") | .id))'
+
 nput apply docs
 
 e2e_step "x は残り、y の旧 symlink は stale 除去される"

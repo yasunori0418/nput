@@ -34,4 +34,16 @@ for t in standalone project; do
 	fi
 done
 
+e2e_step "init --json: results:[] + トップレベル info（niface ADR-0018・→ issue #132）"
+d="$E2E_WORK/init-json"
+mkdir -p "$d"
+cd "$d"
+ENV_INIT="$E2E_WORK/init.json"
+NPUT_TEMPLATE_REF="path:$REPO_ROOT" run_json 0 "$ENV_INIT" init standalone
+assert_json "$ENV_INIT" "results は空（init は主体を持たない）" \
+	'.results == [] and .status == "success" and .dryRun == false'
+assert_json "$ENV_INIT" "info に展開テンプレート名と ref が載る" \
+	'.info.template == "standalone" and (.info.ref | startswith("path:"))'
+assert_exists "$d/flake.nix"
+
 e2e_finish

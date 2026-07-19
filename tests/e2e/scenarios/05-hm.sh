@@ -59,4 +59,14 @@ case "$(readlink "$HOME/.cfg/skill")" in
 	*) e2e_fail "store symlink を指すべき: $(readlink "$HOME/.cfg/skill")" ;;
 esac
 
+e2e_step "エラーでも --json は適合エンベロープ + exit 1（HM fixture は nput 出力を持たない・→ issue #132）"
+# この flake は homeConfigurations だけを公開するため、名指し list-generations の eval は
+# subject 確定後に失敗する → エラーは results[0].errors[]（主体起因の層）に載る。
+ENV_ERR="$E2E_WORK/error.json"
+run_json 1 "$ENV_ERR" list-generations nosuch
+assert_json "$ENV_ERR" "status=error・subject=nosuch の一様形" \
+	'.status == "error" and .results[0].subject.name == "nosuch"'
+assert_json "$ENV_ERR" "エラーは subject errors[] に構造化・items=[]" \
+	'(.results[0].errors | length) >= 1 and .results[0].result.items == []'
+
 e2e_finish

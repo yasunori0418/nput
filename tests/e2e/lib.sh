@@ -99,6 +99,40 @@ assert_writable() {
 	if [ -w "$1" ]; then e2e_pass "書込可: $1"; else e2e_fail "書込可であるべき: $1"; fi
 }
 
+# ---- niface エンベロープ検証（--json・→ issue #132） -------------------------
+
+# nput を --json 付きで実行してエンベロープを保存し、終了コードの一致を確認したうえで
+# niface-validate（-schema 省略 = embed 正本 schema〔format assertion 込み〕+ lint MUST）に
+# 掛ける。トップレベル results[] の常在・subject 必須などの一様形は schema 側が強制する。
+run_json() { # $1: 期待 exit code, $2: エンベロープ保存先, $3...: nput 引数
+	local want="$1" out="$2"
+	shift 2
+	local code=0
+	nput "$@" --json >"$out" || code=$?
+	if [ "$code" -eq "$want" ]; then
+		e2e_pass "exit $code: nput $* --json"
+	else
+		e2e_fail "exit $code (期待 $want): nput $* --json"
+	fi
+	local findings
+	if findings="$(niface-validate "$out" 2>&1)"; then
+		e2e_pass "niface 適合: $(basename "$out")"
+	else
+		e2e_fail "niface 適合違反: $(basename "$out"): $findings"
+	fi
+}
+
+# エンベロープへの jq アサート。式が true を返すことを確認する。
+assert_json() { # $1: エンベロープ, $2: 説明, $3: jq 式
+	local got
+	got="$(jq -r "$3" "$1" 2>&1)"
+	if [ "$got" = "true" ]; then
+		e2e_pass "$2"
+	else
+		e2e_fail "$2 (jq: $3 → $got)"
+	fi
+}
+
 # ---- 環境の隔離 --------------------------------------------------------------
 
 # 隔離した一時 HOME / XDG_STATE_HOME を作り export する。EXIT trap で消す。

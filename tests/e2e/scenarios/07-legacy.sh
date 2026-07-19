@@ -60,4 +60,10 @@ nix-shell --run true "$PROJ/shell.nix"
 assert_symlink "$TARGET"
 assert_file_eq "$TARGET/SKILL.md" "SKILLBODY"
 
+e2e_step "legacy entrypoint でも gitignore --json が info.paths を運ぶ（→ issue #132）"
+ENV_LEGACY="$E2E_WORK/gitignore-legacy.json"
+run_json 0 "$ENV_LEGACY" gitignore docs
+assert_json "$ENV_LEGACY" "info.paths が anchor 形・items=[]" \
+	'.results[0].result.info.paths == ["/.nput-out/docs"] and .results[0].result.items == []'
+
 e2e_finish
