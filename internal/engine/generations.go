@@ -111,7 +111,10 @@ type RollbackOptions struct {
 	Warnf func(format string, args ...any)
 }
 
-// RollbackResult is the result report of Rollback. It augments Result (placement diff) with the generation transition From→To.
+// RollbackResult is the result report of Rollback. It augments Result (placement diff) with the
+// generation transition From→To. On a failure return the partial result carries From == To ==
+// the current generation: no transition happened (→ issue #130 到達状態, same contract as Apply's
+// stage-failure partial Result).
 type RollbackResult struct {
 	Result
 	From int // current generation N before rolling back
@@ -218,21 +221,30 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	a.emitWarnings(plan.Warnings, false)
 	// Each stage journals its own FS writes; a failure in any of the three unwinds everything
 	// this Rollback call has done so far before returning (→ ADR-0044, same shape as Apply).
+	// Mirroring Apply's stage-failure contract, the partial result is returned alongside the
+	// error, with GenAfter pinned at the unmoved current generation (→ issue #130 到達状態).
+	fail := func(err error) (*RollbackResult, error) {
+		res, _ := a.fail(plan, err)
+		res.GenAfter = intPtr(cur.Number)
+		return &RollbackResult{Result: *res, From: cur.Number, To: cur.Number}, err
+	}
 	if err := a.runJournaled(func() error { return a.preRemove(plan.PreRemove) }); err != nil {
-		return nil, err
+		return fail(err)
 	}
 	if err := a.runJournaled(func() error { return a.place(plan.Place) }); err != nil {
-		return nil, err
+		return fail(err)
 	}
 	if err := a.runJournaled(func() error { return a.removeStale(plan.Remove) }); err != nil {
-		return nil, err
+		return fail(err)
 	}
 
 	// 7. finally move the profile pointer to N-1 (→ docs/spec.md rollback step 3). Not unwound on
 	//    failure: every FS write up to this point already succeeded, so there is nothing to roll
 	//    back — only the pointer move itself failed, and re-running Rollback retries it (→ ADR-0044 §2).
 	if err := switchFn(prof.Profile, prev.Number); err != nil {
-		return nil, fmt.Errorf("nput: failed to move the profile pointer (--switch-generation %d): %w", prev.Number, err)
+		// Every planned FS action already succeeded, so the failure is not entry-scoped
+		// (FailedTarget / Unreached stay empty) — but the partial result is still returned.
+		return fail(fmt.Errorf("nput: failed to move the profile pointer (--switch-generation %d): %w", prev.Number, err))
 	}
 	a.discardJournal()
 	a.result.GenAfter = intPtr(prev.Number)

@@ -123,6 +123,14 @@ func TestRollbackReconverges(t *testing.T) {
 	if switched != 1 {
 		t.Errorf("switched generation = %d, want 1", switched)
 	}
+	// #130's generation observation mirrors From/To (numbers come from the listing, and the
+	// pointer moves last), and Entries carries the rolled-back-to generation's full inventory.
+	if res.GenBefore == nil || *res.GenBefore != 2 || res.GenAfter == nil || *res.GenAfter != 1 {
+		t.Errorf("GenBefore/GenAfter = %v/%v, want 2/1", res.GenBefore, res.GenAfter)
+	}
+	if len(res.Entries) != 2 {
+		t.Errorf("Entries = %+v, want gen1's 2-entry inventory", res.Entries)
+	}
 
 	// FS matches gen1: a remains, b new, c removed.
 	if dest, err := os.Readlink(filepath.Join(root, "a")); err != nil || dest != srcA {
@@ -184,7 +192,7 @@ func TestRollbackSwitchGenerationFailureDoesNotUnwind(t *testing.T) {
 	}
 
 	var warns []string
-	_, err := Rollback(RollbackOptions{
+	res, err := Rollback(RollbackOptions{
 		Name:         "vim",
 		RootKind:     manifest.RootKindHome,
 		RootOverride: root,
@@ -197,6 +205,21 @@ func TestRollbackSwitchGenerationFailureDoesNotUnwind(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected the SwitchGeneration failure to propagate, got nil")
+	}
+	// The partial result mirrors Apply's failure contract (→ issue #130): no transition
+	// happened (From == To == current), the pointer stayed at 2, and the failure is not
+	// entry-scoped (every planned FS action had already succeeded).
+	if res == nil {
+		t.Fatal("Rollback must return the partial result alongside a SwitchGeneration failure")
+	}
+	if res.From != 2 || res.To != 2 {
+		t.Errorf("From/To = %d/%d, want 2/2 (no transition on failure)", res.From, res.To)
+	}
+	if res.GenAfter == nil || *res.GenAfter != 2 {
+		t.Errorf("GenAfter = %v, want 2 (pointer unmoved)", res.GenAfter)
+	}
+	if res.FailedTarget != "" || len(res.Unreached) != 0 {
+		t.Errorf("FailedTarget/Unreached = %q/%v, want empty (not entry-scoped)", res.FailedTarget, res.Unreached)
 	}
 
 	// All FS writes already succeeded before SwitchGeneration ran, and must survive untouched:
