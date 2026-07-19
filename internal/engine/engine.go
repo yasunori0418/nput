@@ -88,6 +88,7 @@ type Options struct {
 type Result struct {
 	Root       string   // resolved absolute root path
 	ProfileDir string   // the fixed profileDir
+	Profile    string   // the profile link (<profileDir>/profile) — the niface generation.profile value (→ issue #131)
 	Placed     []string // newly placed symlink targets
 	Replaced   []string // targets whose existing symlink was re-linked
 	Copied     []string // copy targets newly copied via place-once
@@ -207,6 +208,7 @@ func Apply(opts Options) (*Result, error) {
 	a.result.Root = root
 	a.profile = prof
 	a.result.ProfileDir = a.profile.Dir
+	a.result.Profile = a.profile.Profile
 
 	// 1.2 observe the profile generation at run start, and again on every return path (deferred),
 	//     so Result carries the before/after generation numbers (nil when unobservable — first

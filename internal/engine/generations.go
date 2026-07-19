@@ -209,7 +209,7 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	//    engine.go, ADR-0046), then new/re-link, then stale removal last (→ ADR-0006). Unlike
 	//    Apply, Rollback has no materializeCopies step, so copy entries in plan.Copies are not
 	//    reflected onto the FS (pre-existing gap, out of scope here · → issue #178).
-	a := &applier{opts: Options{Warnf: warnf}, result: &Result{Root: root, ProfileDir: prof.Dir}}
+	a := &applier{opts: Options{Warnf: warnf}, result: &Result{Root: root, ProfileDir: prof.Dir, Profile: prof.Profile}}
 	a.profile = prof
 	a.root = root
 	a.result.GenBefore = intPtr(cur.Number)
