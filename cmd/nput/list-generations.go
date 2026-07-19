@@ -72,8 +72,30 @@ func runListGenerations(name string) error {
 	if err != nil {
 		return err
 	}
+	// A read-only enumeration rides in result.info (items stays [] — generations are not
+	// id-derived items, and the SubjectResult.generation slot stays absent to avoid encoding
+	// the same numbers twice · → issue #132, ADR-0043 §5).
+	nifaceReport.setPayload(&nifacePayload{info: map[string]any{"generations": generationRows(gens)}})
 	printGenerations(gens)
 	return nil
+}
+
+// generationRow is one generation of the --json inventory (result.info.generations · → issue
+// #132, ADR-0043 §5). date carries nix-env's display timestamp verbatim, like the text output.
+type generationRow struct {
+	Number  int    `json:"number"`
+	Date    string `json:"date"`
+	Current bool   `json:"current"`
+}
+
+// generationRows converts the engine listing into the info inventory (non-nil even when empty,
+// so an empty profile still lists "generations": []).
+func generationRows(gens []engine.Generation) []generationRow {
+	rows := make([]generationRow, 0, len(gens))
+	for _, g := range gens {
+		rows = append(rows, generationRow{Number: g.Number, Date: g.Date, Current: g.Current})
+	}
+	return rows
 }
 
 // runListAllGenerations scans the home profiles directly under <state>/nix/profiles/nput (the <name>
