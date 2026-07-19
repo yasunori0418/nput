@@ -16,6 +16,7 @@ import (
 	niface "github.com/yasunori0418/niface/go"
 	"github.com/yasunori0418/niface/go/conformance"
 
+	"github.com/yasunori0418/nput/internal/engine"
 	"github.com/yasunori0418/nput/internal/lock"
 )
 
@@ -269,6 +270,66 @@ func TestEntryItemIDMatchesVectors(t *testing.T) {
 	}
 	if entryVectors == 0 {
 		t.Error("no entry-kind vectors exercised nput's entryItemID seam")
+	}
+}
+
+// TestJSONSuppressesLineOrientedStdout pins the --json stdout-ownership contract at its single
+// chokepoints: every line-oriented printer emits nothing under --json (the envelope owns stdout)
+// and everything under the default contract (→ ADR-0043 §2; issue #130 acceptance "--json 指定時、
+// stdout には niface エンベロープ 1 文書以外何も出ない").
+func TestJSONSuppressesLineOrientedStdout(t *testing.T) {
+	origJSON := flagJSON
+	defer func() { flagJSON = origJSON }()
+
+	applyRes := &engine.Result{Placed: []string{"a"}, Removed: []string{"b"}}
+	resetRes := &engine.ResetResult{RemovedSymlinks: []string{"s"}, RemovedCopies: []string{"c"}, KeptForeign: []string{"k"}}
+	gens := []engine.Generation{{Number: 1, Date: "2026-07-19", Current: true}}
+	targets := []string{".claude/skills"}
+
+	printers := []struct {
+		name  string
+		print func()
+	}{
+		{"printApplyPlan", func() { printApplyPlan(applyRes) }},
+		{"printResetPlan", func() { printResetPlan(resetRes) }},
+		{"printGenerations", func() { printGenerations(gens) }},
+		{"printGitignore", func() { printGitignore(targets) }},
+	}
+	for _, p := range printers {
+		t.Run(p.name, func(t *testing.T) {
+			flagJSON = false
+			if out := captureStdout(t, p.print); out == "" {
+				t.Errorf("%s must print under the default contract", p.name)
+			}
+			flagJSON = true
+			if out := captureStdout(t, p.print); out != "" {
+				t.Errorf("%s must print nothing under --json, got %q", p.name, out)
+			}
+		})
+	}
+}
+
+// TestResetPromptAllowed pins reset's prompt-permission composition: --json forbids prompting
+// even on a TTY, so reset --json without --yes goes down confirmPolicy's refuse path and fails
+// fast (→ ADR-0043 §8, docs/spec.md "reset --json は --yes 必須").
+func TestResetPromptAllowed(t *testing.T) {
+	cases := []struct{ interactive, jsonMode, want bool }{
+		{true, false, true},   // TTY, default contract → prompting allowed
+		{true, true, false},   // TTY + --json → machine consumption never prompts
+		{false, false, false}, // non-TTY → refuse path (unchanged)
+		{false, true, false},
+	}
+	for _, c := range cases {
+		if got := resetPromptAllowed(c.interactive, c.jsonMode); got != c.want {
+			t.Errorf("resetPromptAllowed(%v, %v) = %v, want %v", c.interactive, c.jsonMode, got, c.want)
+		}
+	}
+	// The composed contract: --json without --yes refuses; --json with --yes runs promptless.
+	if _, err := confirmPolicy(false, resetPromptAllowed(true, true)); err == nil {
+		t.Error("reset --json without --yes must refuse (fail fast)")
+	}
+	if needPrompt, err := confirmPolicy(true, resetPromptAllowed(true, true)); err != nil || needPrompt {
+		t.Errorf("reset --json --yes: needPrompt=%v err=%v, want promptless success", needPrompt, err)
 	}
 }
 

@@ -63,17 +63,12 @@ func runReset(name string, targets []string, dryrun bool) error {
 		if err != nil {
 			return err
 		}
-		// Under --json stdout belongs to the envelope alone (→ ADR-0043 §2, issue #130).
-		if !flagJSON {
-			printResetPlan(res)
-		}
+		printResetPlan(res)
 		return nil
 	}
 
 	// Non-dryrun is a destructive operation. Decide the confirmation policy (skip / prompt / refuse) from --yes and TTY state.
-	// --json is machine consumption: never prompt even on a TTY — without --yes it refuses and
-	// fails fast, exactly like the non-interactive case (→ ADR-0043 §8).
-	needPrompt, err := confirmPolicy(flagYes, isInteractive() && !flagJSON)
+	needPrompt, err := confirmPolicy(flagYes, resetPromptAllowed(isInteractive(), flagJSON))
 	if err != nil {
 		return err
 	}
@@ -110,15 +105,19 @@ func runReset(name string, targets []string, dryrun bool) error {
 
 // printResetPlan prints reset --dryrun's removal targets to stdout (it owns the machine-readable output; one per line;
 // → docs/spec.md stream discipline, ADR-0023). It is not suppressed even under silent-on-success (the stdout-ownership principle; → ADR-0031).
+// Under --json the stdout lines are suppressed at this single chokepoint (the envelope owns
+// stdout); the stderr nothing-to-remove notice stays — human diagnostics coexist (→ ADR-0043 §2, issue #130).
 func printResetPlan(res *engine.ResetResult) {
-	for _, t := range res.RemovedSymlinks {
-		fmt.Printf("remove-symlink\t%s\n", t)
-	}
-	for _, t := range res.RemovedCopies {
-		fmt.Printf("remove-copy\t%s\n", t)
-	}
-	for _, t := range res.KeptForeign {
-		fmt.Printf("keep-foreign\t%s\n", t)
+	if !flagJSON {
+		for _, t := range res.RemovedSymlinks {
+			fmt.Printf("remove-symlink\t%s\n", t)
+		}
+		for _, t := range res.RemovedCopies {
+			fmt.Printf("remove-copy\t%s\n", t)
+		}
+		for _, t := range res.KeptForeign {
+			fmt.Printf("keep-foreign\t%s\n", t)
+		}
 	}
 	if len(res.RemovedSymlinks)+len(res.RemovedCopies)+len(res.KeptForeign) == 0 {
 		fmt.Fprintln(os.Stderr, "nput: reset --dryrun: nothing to remove")
@@ -160,6 +159,14 @@ func reportResetResult(res *engine.ResetResult, name string) {
 	if len(res.RemovedSymlinks)+len(res.RemovedCopies) == 0 {
 		fmt.Fprintln(os.Stderr, "  no-op")
 	}
+}
+
+// resetPromptAllowed reports whether reset may prompt interactively: it requires a TTY, and
+// --json unconditionally forbids it — machine consumption never prompts, so without --yes the
+// confirmPolicy refuse path fails fast exactly like the non-interactive case (→ ADR-0043 §8,
+// docs/spec.md "reset --json は --yes 必須").
+func resetPromptAllowed(interactive, jsonMode bool) bool {
+	return interactive && !jsonMode
 }
 
 // confirmPolicy decides the confirmation policy for a destructive reset from --yes and TTY state (→ ADR-0025 §5).

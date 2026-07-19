@@ -65,11 +65,7 @@ func runGitignore(name string) error {
 	if err != nil {
 		return err
 	}
-	// Under --json stdout belongs to the envelope alone; the line-oriented listing stays the
-	// default contract (→ ADR-0043 §2, issue #130).
-	if !flagJSON {
-		printGitignore(targets)
-	}
+	printGitignore(targets)
 	return nil
 }
 
@@ -107,10 +103,7 @@ func runGitignoreAll() error {
 		}
 		all = append(all, targets...)
 	}
-	// Under --json stdout belongs to the envelope alone (→ ADR-0043 §2, issue #130).
-	if !flagJSON {
-		printGitignore(dedupeSorted(all))
-	}
+	printGitignore(dedupeSorted(all))
 	return nil
 }
 
@@ -148,7 +141,12 @@ func dedupeSorted(in []string) []string {
 
 // printGitignore prints targets to stdout in /-anchor form (leading /, no trailing /), one per line
 // (→ docs/spec.md, ADR-0013). It is pipe-safe by the stdout-ownership principle (`nput gitignore <name> >> .gitignore`).
+// Under --json it prints nothing: stdout belongs to the niface envelope alone, gated here — the
+// single chokepoint for every call site (→ ADR-0043 §2, issue #130).
 func printGitignore(targets []string) {
+	if flagJSON {
+		return
+	}
 	for _, t := range targets {
 		fmt.Println(gitignoreAnchor(t))
 	}
