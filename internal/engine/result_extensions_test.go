@@ -347,3 +347,137 @@ func TestResetResultGenerationAndWarnings(t *testing.T) {
 		t.Errorf("KeptForeign = %v, want [link]", res.KeptForeign)
 	}
 }
+
+// --- issue #131 extensions: structured conflicts, removal-plan entries, replaced dests,
+// reset partial failure ---
+
+// TestApplyConflictPartialResult verifies the non-dryrun conflict stop returns the partial
+// Result (not nil): the full inventory, the structured conflicts, and every planned action in
+// Unreached, so the CLI can map failed (E_NPUT_COLLISION) vs skipped items (→ issue #131).
+func TestApplyConflictPartialResult(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "conf/rc")
+
+	// "busy" is occupied by a regular file (ConflictForeignEntity); "free" would place fine.
+	if err := os.WriteFile(filepath.Join(root, "busy"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lf := writeLinkFarm(t, fixedManifest(root, storeEntry(src, "conf", "busy"), storeEntry(src, "conf", "free")))
+
+	var warned []string
+	res, err := Apply(Options{
+		LinkFarm: lf, Name: "c", StateDir: state, Commit: fakeCommit(nil),
+		Warnf: collectFormatted(&warned),
+	})
+	if err == nil {
+		t.Fatal("Apply must fail on the conflict")
+	}
+	if res == nil {
+		t.Fatal("Apply must return the partial Result alongside the conflict error")
+	}
+	if len(res.Conflicts) != 1 || res.Conflicts[0].Entry.Target != "busy" || res.Conflicts[0].Kind != planner.ConflictForeignEntity {
+		t.Errorf("Conflicts = %+v, want the structured busy conflict", res.Conflicts)
+	}
+	if len(res.Entries) != 2 {
+		t.Errorf("Entries = %+v, want the full inventory", res.Entries)
+	}
+	if len(res.Unreached) != 1 || res.Unreached[0] != "free" {
+		t.Errorf("Unreached = %v, want [free] (nothing ran)", res.Unreached)
+	}
+	if res.FailedTarget != "" {
+		t.Errorf("FailedTarget = %q, want empty (the conflict rides Conflicts, not FailedTarget)", res.FailedTarget)
+	}
+	// Nothing was placed: the conflict stops the run before any FS action.
+	if _, err := os.Lstat(filepath.Join(root, "free")); !os.IsNotExist(err) {
+		t.Errorf("free must not be placed on a conflict stop, lstat err = %v", err)
+	}
+}
+
+// TestApplyRecordsReplacedDestsAndRemovalEntries verifies the #131 change-info data sources:
+// a re-linked target records the dest it pointed at before this run (ReplacedDests), and a
+// dropped entry's previous-generation record lands in RemovalEntries.
+func TestApplyRecordsReplacedDestsAndRemovalEntries(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src1 := makeSrc(t, "conf/rc")
+	src2 := makeSrc(t, "conf/rc")
+
+	lf1 := writeLinkFarm(t, fixedManifest(root, storeEntry(src1, "conf", "link"), storeEntry(src1, "conf", "drop")))
+	gen := 0
+	if _, err := Apply(Options{LinkFarm: lf1, Name: "c", StateDir: state, Commit: fakeGenCommit(&gen)}); err != nil {
+		t.Fatalf("first Apply: %v", err)
+	}
+
+	lf2 := writeLinkFarm(t, fixedManifest(root, storeEntry(src2, "conf", "link")))
+	res, err := Apply(Options{LinkFarm: lf2, Name: "c", StateDir: state, Commit: fakeGenCommit(&gen)})
+	if err != nil {
+		t.Fatalf("second Apply: %v", err)
+	}
+	wantOld := filepath.Join(src1, "conf")
+	if got := res.ReplacedDests["link"]; got != wantOld {
+		t.Errorf("ReplacedDests[link] = %q, want %q (the pre-re-link dest)", got, wantOld)
+	}
+	if len(res.RemovalEntries) != 1 || res.RemovalEntries[0].Target != "drop" || res.RemovalEntries[0].Src != src1 {
+		t.Errorf("RemovalEntries = %+v, want the dropped entry's previous-generation record", res.RemovalEntries)
+	}
+	if res.Profile == "" {
+		t.Error("Profile = empty, want the profile link path for generation.profile")
+	}
+}
+
+// TestResetPartialFailureReturnsPartial verifies Reset's mid-teardown failure contract: the
+// symlink half already removed keeps its record, the failing copy target is FailedTarget, the
+// never-attempted copy is Unreached, and Entries carries the selected inventory (→ issue #131).
+func TestResetPartialFailureReturnsPartial(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("running as root; read-only directory does not block")
+	}
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "conf/rc")
+
+	lf := writeLinkFarm(t, fixedManifest(root,
+		storeEntry(src, "conf", "s"),
+		copyEntry(src, "conf", "boxed/c1"),
+		copyEntry(src, "conf", "later/c2"),
+	))
+	gen := 0
+	if _, err := Apply(Options{LinkFarm: lf, Name: "c", StateDir: state, Commit: fakeGenCommit(&gen)}); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	// Freeze c1's parent so its RemoveAll fails; c2 must then never be attempted.
+	boxed := filepath.Join(root, "boxed")
+	if err := os.Chmod(boxed, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(boxed, 0o755) })
+
+	var warned []string
+	res, err := Reset(ResetOptions{
+		Name: "c", RootKind: manifest.RootKindFixed, FixedRoot: root, StateDir: state,
+		Warnf: collectFormatted(&warned),
+	})
+	if err == nil {
+		t.Fatal("Reset must fail on the frozen copy target")
+	}
+	if res == nil {
+		t.Fatal("Reset must return the partial ResetResult alongside the error")
+	}
+	if len(res.Entries) != 3 {
+		t.Errorf("Entries = %+v, want the selected inventory", res.Entries)
+	}
+	if len(res.RemovedSymlinks) != 1 || res.RemovedSymlinks[0] != "s" {
+		t.Errorf("RemovedSymlinks = %v, want [s] (completed before the failure)", res.RemovedSymlinks)
+	}
+	if len(res.RemovedCopies) != 0 {
+		t.Errorf("RemovedCopies = %v, want none (the first copy removal failed)", res.RemovedCopies)
+	}
+	if res.FailedTarget != "boxed/c1" {
+		t.Errorf("FailedTarget = %q, want boxed/c1", res.FailedTarget)
+	}
+	if len(res.Unreached) != 1 || res.Unreached[0] != "later/c2" {
+		t.Errorf("Unreached = %v, want [later/c2]", res.Unreached)
+	}
+}
