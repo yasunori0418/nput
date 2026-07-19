@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/yasunori0418/nput/internal/engine"
+	"github.com/yasunori0418/nput/internal/manifest"
+	"github.com/yasunori0418/nput/internal/planner"
 )
 
 // applyAllExitCode follows priority error(1) > conflict(2) > 0 (not the plain maximum; → ADR-0024).
@@ -78,7 +80,9 @@ func TestAggregateDryRun(t *testing.T) {
 		return &engine.Result{Placed: []string{"/p/" + name}}, nil
 	}
 	conflict := func(name string) (*engine.Result, error) {
-		return &engine.Result{Conflicts: []string{"/c/" + name}}, nil
+		return &engine.Result{Conflicts: []planner.Conflict{
+			{Entry: manifest.Entry{Target: "/c/" + name}, Reason: "occupied"},
+		}}, nil
 	}
 	fail := func(name string) (*engine.Result, error) {
 		return nil, io.EOF
