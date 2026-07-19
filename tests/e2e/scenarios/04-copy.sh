@@ -48,6 +48,14 @@ e2e_step "out-of-store: live ディレクトリへの symlink"
 assert_symlink "$HOME/.cfg/live" "$LIVE"
 assert_file_eq "$HOME/.cfg/live/note.txt" "LIVE1"
 
+e2e_step "apply --dryrun --json: place-once の copy は change を生まず、既存 symlink は再リンク modify（→ issue #132）"
+ENV_RERUN="$E2E_WORK/dryrun-rerun.json"
+run_json 0 "$ENV_RERUN" apply home --dryrun
+assert_json "$ENV_RERUN" "items は copy + out-of-store の全 entry（フルインベントリ・全て success）" \
+	'[.results[0].result.items[] | select(.status == "success")] | length == 2'
+assert_json "$ENV_RERUN" "copy entry は change なし・symlink は再リンク modify 1 件のみ（reversible=true）" \
+	'. as $d | $d.results[0].result.changes | (length == 1) and (.[0].kind == "modify") and .[0].reversible and (.[0].itemId == ($d.results[0].result.items[] | select(.label == ".cfg/live") | .id))'
+
 e2e_step "place-once 冪等: copy したファイルを編集 → 再 apply で編集が残る（上書きされない）"
 echo "EDITED" >"$HOME/.cfg/copied/conf"
 nput apply home

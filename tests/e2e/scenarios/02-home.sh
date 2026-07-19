@@ -67,6 +67,12 @@ else
 	e2e_fail "世代が 1 つも無い"
 fi
 
+e2e_step "apply --dryrun --json: 既存 profile では generation.before = after（→ issue #132）"
+ENV_DRYRUN="$E2E_WORK/dryrun-gen.json"
+run_json 0 "$ENV_DRYRUN" apply home --dryrun
+assert_json "$ENV_DRYRUN" "generation が before = after の観測を運ぶ" \
+	'.results[0].generation | (.before != null) and (.before == .after)'
+
 e2e_step "世代 2: entry を b に入替えて apply（a は stale 除去）"
 write_flake ".cfg/b" "b"
 git -c user.email=e2e@nput.test -c user.name=e2e add -A
@@ -88,5 +94,15 @@ nput rollback home
 assert_symlink "$HOME/.cfg/a"
 assert_file_eq "$HOME/.cfg/a/file" "AAA"
 assert_absent "$HOME/.cfg/b"
+
+e2e_step "list-generations --json: result.info.generations（items=[]・→ issue #132）"
+ENV_GENS="$E2E_WORK/list-generations.json"
+run_json 0 "$ENV_GENS" list-generations home
+assert_json "$ENV_GENS" "info.generations に 2 世代が {number, date, current} で載る" \
+	'.results[0].result.info.generations | length == 2 and all(has("number") and has("date") and has("current"))'
+assert_json "$ENV_GENS" "current は rollback 先の 1 世代だけ" \
+	'[.results[0].result.info.generations[] | select(.current)] | map(.number) == [1]'
+assert_json "$ENV_GENS" "items=[]・generation スロット無し・dryRun=false" \
+	'.results[0].result.items == [] and (.results[0] | has("generation") | not) and .dryRun == false'
 
 e2e_finish
