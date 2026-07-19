@@ -215,6 +215,7 @@ func Rollback(opts RollbackOptions) (*RollbackResult, error) {
 	a.result.GenBefore = intPtr(cur.Number)
 	// Full inventory = the generation being rolled back to (its entries are the FS end state · → issue #130).
 	a.result.Entries = target.Entries
+	a.recordRemovalPlan(plan)
 	// Each stage journals its own FS writes; a failure in any of the three unwinds everything
 	// this Rollback call has done so far before returning (→ ADR-0044, same shape as Apply).
 	// Mirroring Apply's stage-failure contract, the partial result is returned alongside the

@@ -62,6 +62,7 @@ func (a *applier) place(actions []planner.PlaceAction) error {
 				return a.entryFailed(act.Entry.Target, fmt.Errorf("nput: cannot create symlink (%s -> %s): %w", act.TargetAbs, act.Dest, err))
 			}
 			a.result.Replaced = append(a.result.Replaced, act.Entry.Target)
+			a.recordReplacedDest(act.Entry.Target, prevDest)
 			continue
 		}
 
