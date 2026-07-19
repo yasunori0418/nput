@@ -393,7 +393,10 @@ func (a *applier) entryFailed(target string, err error) error {
 // Under --recopy the copy execution source is the manifest, not plan.Copies (→ recopyAll), so
 // the manifest's copy entries are walked as well.
 func (a *applier) fail(plan planner.Plan, err error) (*Result, error) {
-	done := map[string]bool{a.result.FailedTarget: true}
+	done := map[string]bool{}
+	if a.result.FailedTarget != "" {
+		done[a.result.FailedTarget] = true
+	}
 	for _, list := range [][]string{
 		a.result.Placed, a.result.Replaced, a.result.Copied, a.result.Recopied,
 		a.result.Removed, a.result.BackedUp,
