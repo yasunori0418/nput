@@ -142,14 +142,16 @@ func (r *nifaceRun) emit(cmdErr error) error {
 }
 
 // classifyError maps a command-level failure onto a niface error object (two-layer code naming ·
-// niface §6). #130 classifies only what sentinel errors already distinguish; the finer per-site
-// codes (E_NPUT_BUILD at build call sites, per-item E_NPUT_COLLISION) arrive with the payloads
-// in #131 / #132 (→ ADR-0043 §8). E_NPUT_FAILED is the tool-generic fallback for a command
-// failure not otherwise classified.
+// niface §6, ADR-0043 §8): tool-specific E_NPUT_COLLISION (dryrun conflict exit) / E_NPUT_BUILD
+// (internal nix eval / build invocation, via the nixCmdError marker), and the common registry
+// codes E_LOCK / E_NOTFOUND / E_PERMISSION / E_IO. Specific sentinels win over the generic
+// E_IO shape check, so a not-found PathError stays E_NOTFOUND. E_NPUT_FAILED is the
+// tool-generic fallback for a command failure not otherwise classified.
 func classifyError(err error) niface.Error {
 	code := "E_NPUT_FAILED"
 	message := err.Error()
 	var ee *exitError
+	var ne *nixCmdError
 	switch {
 	case errors.As(err, &ee) && ee.code == 2:
 		// exit 2 is apply --dryrun's conflict detection (→ docs/spec.md exit code table). Its
@@ -160,10 +162,24 @@ func classifyError(err error) niface.Error {
 		}
 	case errors.Is(err, lock.ErrLocked):
 		code = "E_LOCK"
+	case errors.As(err, &ne):
+		code = "E_NPUT_BUILD"
 	case errors.Is(err, fs.ErrNotExist):
 		code = "E_NOTFOUND"
 	case errors.Is(err, fs.ErrPermission):
 		code = "E_PERMISSION"
+	case isIOError(err):
+		code = "E_IO"
 	}
 	return niface.Error{Code: code, Message: message}
+}
+
+// isIOError reports whether err carries a filesystem / external-I/O failure shape (niface §6
+// common code E_IO). Checked after the more specific fs.ErrNotExist / fs.ErrPermission
+// sentinels, so it only catches the remaining I/O failures (EEXIST, ENOTEMPTY, EIO, ...).
+func isIOError(err error) bool {
+	var pe *fs.PathError
+	var le *os.LinkError
+	var se *os.SyscallError
+	return errors.As(err, &pe) || errors.As(err, &le) || errors.As(err, &se)
 }
