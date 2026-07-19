@@ -112,6 +112,18 @@ type Result struct {
 	// entry produced any FS action, so the CLI can list every entry — not just the diff —
 	// as niface items (full-inventory · → issue #130, niface ADR-0016).
 	Entries []manifest.Entry
+	// RemovalEntries are the previous-generation manifest entries behind this run's planned
+	// symlink removals (pre-removal migration + stale removal), recorded at plan time regardless
+	// of completion — completion is what the Removed list says. They are the old-entry half of
+	// the full inventory: the CLI renders items (target/method/subpath) and the recorded old
+	// dest for remove changes from them, including entries whose removal failed or was never
+	// reached (→ issue #131). A method-change target also present in Entries is shadowed there.
+	RemovalEntries []manifest.Entry
+	// ReplacedDests records, for each re-linked target in Replaced, the symlink destination
+	// that was actually on disk immediately before the re-link (the pre-removal readlink —
+	// for a foreign replace this is the foreign dest, not a recorded one), so the CLI can
+	// carry the old→new transition in change.info (→ issue #131).
+	ReplacedDests map[string]string
 	// Warnings are the planner's entry-scoped warnings in structured form (kind + target),
 	// for the CLI to map onto niface item/subject warnings. The human-readable stderr text
 	// is still emitted through Warnf alongside (→ issue #130, niface ADR-0019).
@@ -253,6 +265,7 @@ func Apply(opts Options) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	a.recordRemovalPlan(plan)
 	if len(plan.Conflicts) > 0 {
 		// Return the partial Result (full inventory + structured conflicts + everything-unreached
 		// partition via fail), not nil: the CLI needs it to report conflicted entries as failed
@@ -383,6 +396,30 @@ func (a *applier) runJournaled(stage func() error) error {
 	return nil
 }
 
+// recordRemovalPlan exposes the previous-generation entries behind the plan's symlink
+// removals on the Result (RemovalEntries), at plan time so the record covers removals that
+// later fail or are never reached (→ issue #131). Rmdir actions carry no manifest entry and
+// are skipped. Shared by Apply (normal + dryrun) and Rollback right after planner.Compute.
+func (a *applier) recordRemovalPlan(plan planner.Plan) {
+	for _, acts := range [][]planner.RemoveAction{plan.PreRemove, plan.Remove} {
+		for _, act := range acts {
+			if act.Kind != planner.RemoveUnlink {
+				continue
+			}
+			a.result.RemovalEntries = append(a.result.RemovalEntries, act.Entry)
+		}
+	}
+}
+
+// recordReplacedDest records the on-disk symlink destination a re-linked target pointed at
+// immediately before this run replaced it (→ Result.ReplacedDests, issue #131).
+func (a *applier) recordReplacedDest(target, prevDest string) {
+	if a.result.ReplacedDests == nil {
+		a.result.ReplacedDests = map[string]string{}
+	}
+	a.result.ReplacedDests[target] = prevDest
+}
+
 // entryFailed records the entry-scoped failure position (result.FailedTarget) when err is
 // non-nil, passing err through unchanged so the error-wrap convention (wrap once at the source)
 // is untouched (→ issue #130 到達状態). target == "" (an action with no manifest entry, such as
@@ -473,6 +510,7 @@ func (a *applier) dryRun() (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	a.recordRemovalPlan(plan)
 	a.emitWarnings(plan.Warnings, a.opts.Recopy)
 
 	a.result.DryRun = true
