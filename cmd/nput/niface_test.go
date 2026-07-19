@@ -9,7 +9,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io/fs"
+	"os"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -270,6 +273,47 @@ func TestEntryItemIDMatchesVectors(t *testing.T) {
 	}
 	if entryVectors == 0 {
 		t.Error("no entry-kind vectors exercised nput's entryItemID seam")
+	}
+}
+
+// TestClassifyErrorCodes pins the classifyError table directly, one case per code (the #131
+// refinement): the nixCmdError marker → E_NPUT_BUILD, including its survival through
+// wrapEvalErr / wrapEvalAllErr's re-wraps (the %w chain is the classification's lifeline);
+// the specific fs sentinels beating the generic E_IO shape check; and the residual-I/O and
+// fallback arms.
+func TestClassifyErrorCodes(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"nix invocation failure", &nixCmdError{err: errors.New("nput: nix build failed")}, "E_NPUT_BUILD"},
+		{"marker survives wrapEvalErr attr-missing rewrap",
+			wrapEvalErr(&nixCmdError{err: errors.New("error: flake does not provide attribute nput")}, "nput.x86_64-linux.web"),
+			"E_NPUT_BUILD"},
+		{"marker survives wrapEvalErr passthrough",
+			wrapEvalErr(&nixCmdError{err: errors.New("error: something else")}, "nput.x86_64-linux.web"),
+			"E_NPUT_BUILD"},
+		{"marker survives wrapEvalAllErr attr-missing rewrap",
+			wrapEvalAllErr(&nixCmdError{err: errors.New("error: flake does not provide attribute nput")}, "nput.x86_64-linux"),
+			"E_NPUT_BUILD"},
+		{"lock sentinel", lock.ErrLocked, "E_LOCK"},
+		{"not-found beats the IO shape", &fs.PathError{Op: "stat", Path: "/x", Err: fs.ErrNotExist}, "E_NOTFOUND"},
+		{"permission beats the IO shape", &fs.PathError{Op: "open", Path: "/x", Err: fs.ErrPermission}, "E_PERMISSION"},
+		{"residual IO PathError", &fs.PathError{Op: "rmdir", Path: "/x", Err: syscall.ENOTEMPTY}, "E_IO"},
+		{"residual IO LinkError", &os.LinkError{Op: "symlink", Old: "/a", New: "/b", Err: syscall.EEXIST}, "E_IO"},
+		{"unclassified fallback", errors.New("nput: generation commit (nix-env --set) failed"), "E_NPUT_FAILED"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := classifyError(c.err)
+			if e.Code != c.want {
+				t.Errorf("classifyError(%v).Code = %s, want %s", c.err, e.Code, c.want)
+			}
+			if e.Message == "" {
+				t.Error("message must not be empty")
+			}
+		})
 	}
 }
 
