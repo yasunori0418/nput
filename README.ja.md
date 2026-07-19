@@ -369,7 +369,8 @@ nput init <template>           # `nix flake init -t github:yasunori0418/nput#<te
 ### 出力と終了コード
 
 - **既定では成功時サイレント**("silence is golden")。配置レポート、try-lock のスキップ通知、`apply --all` のサマリは `-v` / `--verbose` を付けない限り **出力しない**。`-v` で stderr のレポートに opt-in する。
-- **`--debug`** は内部 nix コマンドを明らかにする(verbosity の `-v` とデバッグは直交)。`--quiet` は **無い**(成功時サイレントが既定になった時点で廃止)。MVP に `--json` も **無い**。
+- **`--debug`** は内部 nix コマンドを明らかにする(verbosity の `-v` とデバッグは直交)。`--quiet` は **無い**(成功時サイレントが既定になった時点で廃止)。
+- **`--json`** はコマンド完了時に [niface](https://github.com/yasunori0418/niface) 準拠の JSON エンベロープ(1 文書)を stdout へ書く機械可読の第 2 契約。`-v`(stderr・人間向け)とは直交(現状は基盤のみ。コマンドごとのペイロードは充実中)。
 - **ストリーム規律**：stdout は機械可読出力(`gitignore` 一覧、`apply --dryrun` 計画)専用で、既定 verbosity でも出力される。よって `nput gitignore <name> >> .gitignore` や `nput apply <name> --dryrun | ...` は安全にパイプできる。**警告(例：外部 symlink)とエラーは常に stderr へ出力され、サイレンスされない。**
 
 | 終了コード | 意味 |
@@ -419,7 +420,7 @@ nput init <template>           # `nix flake init -t github:yasunori0418/nput#<te
 | copy(place-once)/ out-of-store symlink | 実装済み |
 | flake-parts モジュール | 実装済み |
 | `manifest.json` スキーマ | v1 のみ。migration / 後方互換の仕組みはまだ無い |
-| `--json` 機械可読出力 | MVP 対象外(将来) |
+| `--json` 機械可読出力 | 基盤実装済み — 全サブコマンドで niface 準拠エンベロープを返す。コマンドごとのペイロード(items / changes / info)は充実中 |
 | NixOS / nix-darwin モジュール | 将来 |
 | system mode(`systemRoot` = `/`) | 将来(seam のみ。今選ぶと評価時エラー) |
 
