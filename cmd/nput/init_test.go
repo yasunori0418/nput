@@ -3,6 +3,8 @@ package main
 import (
 	"reflect"
 	"testing"
+
+	"github.com/yasunori0418/niface/go/conformance"
 )
 
 // flakeInitArgs builds the argv for `nix flake init -t <ref>#<template>` (→ plan 6).
@@ -54,5 +56,36 @@ func TestIsValidTemplate(t *testing.T) {
 		if isValidTemplate(v) {
 			t.Errorf("isValidTemplate(%q) = true, want false", v)
 		}
+	}
+}
+
+// TestInitJSONEnvelopeInfo pins init's --json shape (niface ADR-0018 · → issue #132): init has
+// no subject, so results stays [] and the run facts (template / ref) ride in the envelope-wide
+// top-level info. The envelope is conformant.
+func TestInitJSONEnvelopeInfo(t *testing.T) {
+	checker, err := conformance.NewDefaultChecker()
+	if err != nil {
+		t.Fatalf("conformance.NewDefaultChecker: %v", err)
+	}
+
+	r, buf := newTestRun("init")
+	r.setEnvelopeInfo(map[string]any{"template": "standalone", "ref": defaultTemplateRef})
+	if err := r.emit(nil); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	if findings := checker.Check(buf.Bytes()); len(findings) > 0 {
+		t.Fatalf("conformance findings: %v\ndocument: %s", findings, buf.String())
+	}
+
+	doc := decodeEnvelope(t, buf)
+	if results := doc["results"].([]any); len(results) != 0 {
+		t.Errorf("results = %v, want [] (init has no subject)", results)
+	}
+	info := doc["info"].(map[string]any)
+	if info["template"] != "standalone" || info["ref"] != defaultTemplateRef {
+		t.Errorf("info = %v, want template=standalone ref=%s", info, defaultTemplateRef)
+	}
+	if doc["status"] != "success" || doc["dryRun"] != false {
+		t.Errorf("status/dryRun = %v/%v, want success/false", doc["status"], doc["dryRun"])
 	}
 }

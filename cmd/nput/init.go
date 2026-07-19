@@ -49,6 +49,11 @@ func runInit(template string) error {
 		ref = env
 	}
 
+	// init has no subject (no config), so the run facts ride in the envelope-wide info while
+	// results stays [] (niface ADR-0018 · → issue #132). Registered before the expansion so a
+	// failed init still reports what it attempted alongside the top-level error.
+	nifaceReport.setEnvelopeInfo(map[string]any{"template": template, "ref": ref})
+
 	args := flakeInitArgs(template, ref)
 	if flagDebug {
 		fmt.Fprintf(os.Stderr, "nput: + nix %s\n", strings.Join(args, " "))
