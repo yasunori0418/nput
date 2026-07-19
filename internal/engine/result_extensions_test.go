@@ -177,6 +177,87 @@ func TestApplyResultReachedStateOnFailure(t *testing.T) {
 	}
 }
 
+// TestApplyResultCommitFailurePartialResult verifies the commit-failure branch: every planned
+// FS action already succeeded, so the partial Result is returned with the inventory filled and
+// the reached-state fields empty (not entry-scoped), nothing is unwound (→ ADR-0044 §2), and the
+// unmoved profile pointer is observed as GenAfter == GenBefore.
+func TestApplyResultCommitFailurePartialResult(t *testing.T) {
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "conf/rc")
+	lf := writeLinkFarm(t, fixedManifest(root, storeEntry(src, "conf", "link")))
+
+	res, err := Apply(Options{
+		LinkFarm: lf, Name: "c", StateDir: state,
+		Commit: func(string, string) error { return os.ErrPermission },
+	})
+	if err == nil {
+		t.Fatal("Apply must fail when the commit fails")
+	}
+	if res == nil {
+		t.Fatal("Apply must return the partial Result alongside a commit failure")
+	}
+	if len(res.Entries) != 1 || res.Entries[0].Target != "link" {
+		t.Errorf("Entries = %+v, want the full inventory", res.Entries)
+	}
+	if res.FailedTarget != "" || len(res.Unreached) != 0 {
+		t.Errorf("FailedTarget/Unreached = %q/%v, want empty (commit failure is not entry-scoped)", res.FailedTarget, res.Unreached)
+	}
+	if res.Unwound {
+		t.Error("Unwound = true, want false (a commit failure is not unwound; → ADR-0044 §2)")
+	}
+	if res.GenBefore != nil || res.GenAfter != nil {
+		t.Errorf("GenBefore/GenAfter = %v/%v, want nil/nil (no generation was ever committed)", res.GenBefore, res.GenAfter)
+	}
+	// The placement itself survives (idempotent re-apply converges; only the commit failed).
+	if _, err := os.Readlink(filepath.Join(root, "link")); err != nil {
+		t.Errorf("placed symlink must survive a commit failure: %v", err)
+	}
+	if len(res.Placed) != 1 || res.Placed[0] != "link" {
+		t.Errorf("Placed = %v, want [link]", res.Placed)
+	}
+}
+
+// TestApplyResultRecopyUnreached verifies fail()'s --recopy branch: recopy's copy execution
+// source is the manifest (not plan.Copies), so a copy entry whose place-once classification
+// produced no CopyAction (an existing foreign target recopy would overwrite) must still land in
+// Unreached when an earlier stage failure stops the run before materializeCopies.
+func TestApplyResultRecopyUnreached(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("running as root; read-only directory does not block")
+	}
+	root := realTempDir(t)
+	state := realTempDir(t)
+	src := makeSrc(t, "conf/rc")
+
+	// The symlink entry fails at place (read-only parent); the copy entry's target already
+	// exists as a foreign real file, so place-once emits no CopyAction — only recopy would
+	// overwrite it, and only the manifest walk can report it as unreached.
+	if err := os.Mkdir(filepath.Join(root, "blocked"), 0o555); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "copytarget"), []byte("foreign"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bad := storeEntry(src, "conf", "blocked/child")
+	cp := copyEntry(src, "conf/rc", "copytarget") // file×file: place-once skips it as foreign, no structure conflict
+	lf := writeLinkFarm(t, fixedManifest(root, bad, cp))
+
+	res, err := Apply(Options{LinkFarm: lf, Name: "c", StateDir: state, Recopy: true, Commit: fakeCommit(nil)})
+	if err == nil {
+		t.Fatal("Apply should fail on the blocked parent")
+	}
+	if res == nil {
+		t.Fatal("Apply should return the partial Result alongside the error")
+	}
+	if res.FailedTarget != "blocked/child" {
+		t.Errorf("FailedTarget = %q, want %q", res.FailedTarget, "blocked/child")
+	}
+	if len(res.Unreached) != 1 || res.Unreached[0] != "copytarget" {
+		t.Errorf("Unreached = %v, want [copytarget] via the manifest walk", res.Unreached)
+	}
+}
+
 // TestApplyResultStructuredWarnings verifies the planner's entry warnings are recorded on the
 // Result in structured form (kind + target) while the Warnf text keeps streaming.
 func TestApplyResultStructuredWarnings(t *testing.T) {
