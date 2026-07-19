@@ -43,6 +43,10 @@ type nifacePayload struct {
 	changes    []nputChange
 	generation *niface.Generation
 	warnings   []niface.Warning // subject-level (not item-borne) warnings
+	// info is the per-subject tool info (result.info): the read-only enumeration inventories
+	// (list-generations の generations / gitignore の paths · → issue #132, ADR-0043 §5).
+	// nil for the mutation commands — their record lives in items / changes.
+	info map[string]any
 	// itemBorne marks that the command error is already represented by a failed item
 	// (entry failure / conflict), so emit must not duplicate it into subjectResult.errors[]
 	// (niface §2: item 起因のエラーを errors[] に置いてはならない).

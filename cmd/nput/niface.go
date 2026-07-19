@@ -66,6 +66,7 @@ type nifaceRun struct {
 	dryRun  bool             // envelope dryRun field, captured from flagDryrun at begin (tests set it directly)
 	started time.Time
 	subject *nifaceSubject // the single subject #130 wires (nil = none; #164 generalizes to N)
+	info    map[string]any // envelope-wide tool info (init's run info · niface ADR-0018, issue #132)
 }
 
 // nifaceSubject is one subject's (config's) accumulation for its SubjectResult.
@@ -85,6 +86,10 @@ func (r *nifaceRun) setPayload(p *nifacePayload) {
 		r.subject.payload = p
 	}
 }
+
+// setEnvelopeInfo registers the envelope-wide tool info (top-level info — run-scoped facts not
+// tied to any subject; init's template expansion · niface ADR-0018, issue #132).
+func (r *nifaceRun) setEnvelopeInfo(info map[string]any) { r.info = info }
 
 // nifaceReport is the process-wide run the CLI wires (tests build their own nifaceRun instances).
 var nifaceReport = &nifaceRun{now: time.Now, out: os.Stdout}
@@ -129,6 +134,7 @@ func (r *nifaceRun) emit(cmdErr error) error {
 		DryRun:      r.dryRun,
 		StartedAt:   nifaceTimestamp(r.started),
 		FinishedAt:  finished,
+		Info:        r.info,
 	}
 	if r.subject != nil {
 		sr := nputSubjectResult{
@@ -140,7 +146,7 @@ func (r *nifaceRun) emit(cmdErr error) error {
 		if p := r.subject.payload; p != nil {
 			sr.Generation = p.generation
 			sr.Warnings = p.warnings
-			sr.Result = nputResult{Items: p.items, Changes: p.changes}
+			sr.Result = nputResult{Items: p.items, Changes: p.changes, Info: p.info}
 		}
 		env.Results = append(env.Results, sr)
 	}
