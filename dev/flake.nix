@@ -13,6 +13,14 @@
       url = "github:mattpocock/skills";
       flake = false;
     };
+
+    # niface エンベロープの E2E 適合検証キット（niface-validate CLI + id-vectors）。
+    # 規格由来の検証依存として許容する（→ issue #132・niface ADR-0021 / 0023 / 0025）。
+    niface = {
+      url = "github:yasunori0418/niface";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
+    };
   };
 
   outputs =
@@ -34,6 +42,13 @@
       ];
       perSystem =
         { inputs', pkgs, ... }:
+        let
+          # niface の Go 参照実装は subPackages 由来の bin/validate を生むため、
+          # 規格上の CLI 名 niface-validate で PATH に載せる薄い wrapper を挟む。
+          niface-validate = pkgs.writeShellScriptBin "niface-validate" ''
+            exec ${inputs'.niface.packages.validate}/bin/validate "$@"
+          '';
+        in
         {
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
@@ -73,8 +88,12 @@
               git
               jq
               coreutils
+              # --json エンベロープの適合検証（schema〔format assertion 込み〕+ lint MUST・→ issue #132）。
+              niface-validate
             ];
             env.TERM = "dumb";
+            # E2E の id-vectors 整合チェックが参照する適合ベクタ（niface testdata の正本）。
+            env.NIFACE_ID_VECTORS = "${inputs.niface}/testdata/v1/id-vectors.json";
           };
         };
     };
