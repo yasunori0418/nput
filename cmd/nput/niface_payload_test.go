@@ -845,3 +845,65 @@ func TestDryrunPayloadRelinkNotSuppressed(t *testing.T) {
 		t.Errorf("change info = %+v, want new only (the old dest is unobserved in a dryrun)", cs[0].Info)
 	}
 }
+
+// TestMutationPayloadKeptStaleSubjectWarning pins the apply-side routing of the conservative
+// keep warnings (→ issue #132 review follow-up): a kept-stale target (record mismatch / not a
+// symlink) is neither in the new manifest nor in the removal plan, so no item exists for it —
+// its W_NPUT_STALE_* warning lands on the subject, self-contained via detail.target.
+func TestMutationPayloadKeptStaleSubjectWarning(t *testing.T) {
+	res := &engine.Result{
+		Profile: "/p",
+		DryRun:  true,
+		Entries: []manifest.Entry{{SrcKind: "store", Src: "/nix/store/a", Target: ".zshrc", Method: "symlink"}},
+		Warnings: []planner.Warning{
+			{Kind: planner.WarnStaleMismatch, Target: ".config/drifted"},
+			{Kind: planner.WarnStaleNonSymlink, Target: ".config/solidified"},
+		},
+	}
+	p, err := mutationPayload(res, nil)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	want := []struct{ code, target string }{
+		{"W_NPUT_STALE_MISMATCH", ".config/drifted"},
+		{"W_NPUT_STALE_NON_SYMLINK", ".config/solidified"},
+	}
+	if len(p.warnings) != len(want) {
+		t.Fatalf("subject warnings = %+v, want the %d kept-stale warnings", p.warnings, len(want))
+	}
+	for i, w := range want {
+		if p.warnings[i].Code != w.code || p.warnings[i].Detail["target"] != w.target {
+			t.Errorf("subject warnings[%d] = %+v, want %s on %s", i, p.warnings[i], w.code, w.target)
+		}
+	}
+	if it := findItem(t, p.items, ".zshrc"); len(it.Warnings) != 0 {
+		t.Errorf("inventory item warnings = %+v, want none (the stale warnings are subject-borne)", it.Warnings)
+	}
+}
+
+// TestMutationPayloadConflictWithWarningStaysConformant pins the failed-item × warnings
+// combination: an item that failed on a conflict can still carry an entry-borne warning, and
+// the emitted envelope (error + warnings side by side on one item) stays conformant.
+func TestMutationPayloadConflictWithWarningStaysConformant(t *testing.T) {
+	res := &engine.Result{
+		Profile: "/p",
+		DryRun:  true,
+		Entries: []manifest.Entry{{SrcKind: "store", Src: "/nix/store/a", Target: ".zshrc", Method: "symlink"}},
+		Conflicts: []planner.Conflict{
+			{Entry: manifest.Entry{Target: ".zshrc"}, Reason: "target already has an existing file", Kind: planner.ConflictForeignEntity},
+		},
+		Warnings: []planner.Warning{{Kind: planner.WarnForeignReplace, Target: ".zshrc"}},
+	}
+	p, err := mutationPayload(res, nil)
+	if err != nil {
+		t.Fatalf("mutationPayload: %v", err)
+	}
+	it := findItem(t, p.items, ".zshrc")
+	if it.Status != niface.ItemFailed || it.Error == nil || len(it.Warnings) != 1 {
+		t.Fatalf("item = %+v, want failed with both error and the entry-borne warning", it)
+	}
+	doc := emitPayloadDoc(t, "apply", p, &exitError{code: 2})
+	if doc["status"] != "error" {
+		t.Errorf("status = %v, want error", doc["status"])
+	}
+}
