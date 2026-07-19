@@ -58,11 +58,22 @@ func TestListGenerationsJSONInfoGenerations(t *testing.T) {
 	}
 }
 
-// TestGenerationRowsEmptyStaysArray pins that a profile without generations still lists
-// "generations": [] (a non-nil slice; nil would marshal the key away).
-func TestGenerationRowsEmptyStaysArray(t *testing.T) {
-	got := generationRows(nil)
-	if got == nil || len(got) != 0 {
-		t.Errorf("generationRows(nil) = %#v, want a non-nil empty slice", got)
+// TestListGenerationsJSONEmptyStaysArray pins the zero-generation boundary at the emit level
+// (spec: 空 profile でも "generations": [] を明示): the emitted document must carry the
+// generations key as an empty array — a nil slice would marshal the key away.
+func TestListGenerationsJSONEmptyStaysArray(t *testing.T) {
+	r, buf := newTestRun("list-generations")
+	r.beginSubject("empty")
+	r.setPayload(&nifacePayload{info: map[string]any{"generations": generationRows(nil)}})
+	if err := r.emit(nil); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	info := decodeEnvelope(t, buf)["results"].([]any)[0].(map[string]any)["result"].(map[string]any)["info"].(map[string]any)
+	rows, ok := info["generations"].([]any)
+	if !ok {
+		t.Fatalf("info = %v, want the generations key present as an array", info)
+	}
+	if len(rows) != 0 {
+		t.Errorf("info.generations = %v, want []", rows)
 	}
 }
