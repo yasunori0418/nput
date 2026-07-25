@@ -35,8 +35,10 @@ func fixedClock(t0 time.Time) func() time.Time {
 }
 
 // newTestRun returns a nifaceRun with a pinned clock and buffer sink, already begun for command.
-// The info type arguments are the command's own pair (→ issue #196); callers spell them out
-// because the command name is a plain string and cannot drive inference.
+// The info type arguments are the command's own pair (→ issue #196); the command name is a plain
+// string and cannot drive inference, so prefer the per-command wrappers below — they take their
+// arguments from the production run aliases, which keeps the tests from silently exercising a
+// type pair the CLI no longer uses.
 func newTestRun[TInfo, TEnvInfo any](command string) (*nifaceRun[TInfo, TEnvInfo], *bytes.Buffer) {
 	var buf bytes.Buffer
 	r := &nifaceRun[TInfo, TEnvInfo]{
@@ -45,6 +47,29 @@ func newTestRun[TInfo, TEnvInfo any](command string) (*nifaceRun[TInfo, TEnvInfo
 	}
 	r.begin(command)
 	return r, &buf
+}
+
+// The per-command test runs. Each is spelled against its production alias (applyRun, resetRun,
+// ...), so changing a command's info pair updates its tests by construction: a test that kept
+// the old pair would no longer satisfy the alias-typed return and fails to compile (→ issue
+// #196, diff-review follow-up).
+func newApplyTestRun() (*applyRun, *bytes.Buffer) {
+	return newTestRun[*applyResultInfo, *applyEnvInfo]("apply")
+}
+func newResetTestRun() (*resetRun, *bytes.Buffer) {
+	return newTestRun[*resetResultInfo, *resetEnvInfo]("reset")
+}
+func newRollbackTestRun() (*rollbackRun, *bytes.Buffer) {
+	return newTestRun[*rollbackResultInfo, *rollbackEnvInfo]("rollback")
+}
+func newListGenerationsTestRun() (*listGenerationsRun, *bytes.Buffer) {
+	return newTestRun[*generationsInfo, *struct{}]("list-generations")
+}
+func newGitignoreTestRun() (*gitignoreRun, *bytes.Buffer) {
+	return newTestRun[*gitignoreInfo, *struct{}]("gitignore")
+}
+func newInitTestRun() (*initRun, *bytes.Buffer) {
+	return newTestRun[*struct{}, *initInfo]("init")
 }
 
 // decodeEnvelope asserts buf holds exactly one JSON document with a trailing newline and
@@ -100,7 +125,7 @@ func TestNifaceEnvelopeConformance(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			r, buf := newTestRun[*applyResultInfo, *applyEnvInfo]("apply")
+			r, buf := newApplyTestRun()
 			if c.subject != "" {
 				r.beginSubject(c.subject)
 			}
@@ -173,7 +198,7 @@ func TestNifaceEnvelopeDryRunFlag(t *testing.T) {
 		t.Fatalf("conformance.NewDefaultChecker: %v", err)
 	}
 	for _, dryRun := range []bool{false, true} {
-		r, buf := newTestRun[*applyResultInfo, *applyEnvInfo]("apply")
+		r, buf := newApplyTestRun()
 		r.dryRun = dryRun
 		r.beginSubject("default")
 		if err := r.emit(nil); err != nil {

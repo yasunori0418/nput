@@ -44,7 +44,7 @@ func TestGitignoreJSONInfoPaths(t *testing.T) {
 		t.Fatalf("conformance.NewDefaultChecker: %v", err)
 	}
 
-	r, buf := newTestRun[*gitignoreInfo, *struct{}]("gitignore")
+	r, buf := newGitignoreTestRun()
 	r.beginSubject("docs")
 	r.setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{
 		Paths: gitignoreAnchors([]string{".claude/skills/nix", ".nput-out/docs"}),
@@ -81,7 +81,7 @@ func TestGitignoreJSONInfoPaths(t *testing.T) {
 // did while the slot was a nil map. A value-struct TInfo would emit "info":{"paths":null},
 // which the conformance checker would still accept.
 func TestGitignoreJSONInfoAbsentWithoutEnumeration(t *testing.T) {
-	r, buf := newTestRun[*gitignoreInfo, *struct{}]("gitignore")
+	r, buf := newGitignoreTestRun()
 	r.beginSubject("docs")
 	if err := r.emit(errors.New("nput: gitignore is project mode only")); err != nil {
 		t.Fatalf("emit: %v", err)
@@ -93,7 +93,7 @@ func TestGitignoreJSONInfoAbsentWithoutEnumeration(t *testing.T) {
 // (spec: entry 0 件でも "paths": [] を明示): the emitted document must carry the paths key as
 // an empty array — a nil slice would marshal the key away.
 func TestGitignoreJSONEmptyPathsStaysArray(t *testing.T) {
-	r, buf := newTestRun[*gitignoreInfo, *struct{}]("gitignore")
+	r, buf := newGitignoreTestRun()
 	r.beginSubject("empty")
 	r.setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{Paths: gitignoreAnchors(nil)}})
 	if err := r.emit(nil); err != nil {

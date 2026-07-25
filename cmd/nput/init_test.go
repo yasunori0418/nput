@@ -66,7 +66,7 @@ func TestIsValidTemplate(t *testing.T) {
 // a nil map. A value-struct TEnvInfo would emit "info":{"template":"","ref":""}, which the
 // conformance checker would still accept.
 func TestInitJSONEnvelopeInfoAbsentOnRejectedTemplate(t *testing.T) {
-	r, buf := newTestRun[*struct{}, *initInfo]("init")
+	r, buf := newInitTestRun()
 	if err := r.emit(errors.New(`nput: unknown template: "nosuch"`)); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestInitJSONEnvelopeInfo(t *testing.T) {
 		t.Fatalf("conformance.NewDefaultChecker: %v", err)
 	}
 
-	r, buf := newTestRun[*struct{}, *initInfo]("init")
+	r, buf := newInitTestRun()
 	r.setEnvelopeInfo(&initInfo{Template: "standalone", Ref: defaultTemplateRef})
 	if err := r.emit(nil); err != nil {
 		t.Fatalf("emit: %v", err)
