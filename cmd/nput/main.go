@@ -94,7 +94,8 @@ func newRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	// The niface run is begun at each subcommand's RunE top (nifaceReport.begin), not via a
+	// The niface run is built, begun, and published to nifaceReport at each subcommand's RunE
+	// top (→ issue #196: the run is typed by that command's info pair), not via a
 	// PersistentPreRun: cobra's auto-added utility commands (help / completion / __complete)
 	// own stdout with their own text and must never emit an envelope, and PersistentPreRun
 	// cannot tell them apart robustly (→ issue #130, docs/spec.md).
