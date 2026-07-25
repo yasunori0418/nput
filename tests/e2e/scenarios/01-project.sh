@@ -105,4 +105,51 @@ else
 	e2e_fail "行指向出力が変化: $(nput gitignore docs)"
 fi
 
+# ここから --all の複数 SubjectResult（→ issue #164）。この flake は projectRoot の
+# config を 2 つ（docs / idvec）持つので、--all は N=2 の results[] を出す。
+e2e_step "gitignore --all --json: config ごとの SubjectResult（cross-config dedup なし・→ issue #164）"
+ENV_GI_ALL="$E2E_WORK/gitignore-all.json"
+run_json 0 "$ENV_GI_ALL" gitignore --all
+assert_json "$ENV_GI_ALL" "status=success・results は選択順（辞書順）の 2 config" \
+	'.status == "success" and [.results[].subject.name] == ["docs", "idvec"]'
+assert_json "$ENV_GI_ALL" "各 subject は自 config のパスだけを info.paths に持つ" \
+	'[.results[] | select(.subject.name == "docs").result.info.paths == ["/.nput-out/docs"]] | length == 1'
+assert_json "$ENV_GI_ALL" "items=[] は単一実行と同一・トップ errors[] なし" \
+	'([.results[] | select(.result.items == [])] | length) == 2 and (has("errors") | not)'
+
+e2e_step "gitignore --all はフラグ無しで従来の dedup+sort テキスト（ADR-0018 不変・→ issue #164）"
+if [ "$(nput gitignore --all)" = "$(printf '/.nput-out/docs\n/.zshrc')" ]; then
+	e2e_pass "テキスト集約 / JSON per-config の非対称を保つ"
+else
+	e2e_fail "テキスト行出力が変化: $(nput gitignore --all)"
+fi
+
+e2e_step "apply --all --dryrun --json: 全 config が clean なら status=success（→ issue #164）"
+ENV_ALL_CLEAN="$E2E_WORK/apply-all-clean.json"
+run_json 0 "$ENV_ALL_CLEAN" apply --all --dryrun
+assert_json "$ENV_ALL_CLEAN" "status=success・dryRun=true・2 config" \
+	'.status == "success" and .dryRun == true and (.results | length) == 2'
+assert_json "$ENV_ALL_CLEAN" "全 subject が success" \
+	'[.results[] | select(.status == "success")] | length == 2'
+
+e2e_step "apply --all --dryrun --json: 一部 conflict は item 起因 + 集約 status=error（exit 2・→ issue #164 受け入れ基準）"
+echo "foreign" >"$PROJ/.zshrc"
+ENV_ALL_CONFLICT="$E2E_WORK/apply-all-conflict.json"
+run_json 2 "$ENV_ALL_CONFLICT" apply --all --dryrun
+assert_json "$ENV_ALL_CONFLICT" "集約 status=error（conflict は 1 件でも error）" \
+	'.status == "error"'
+assert_json "$ENV_ALL_CONFLICT" "conflict の無い docs は success のまま残る（部分失敗で成功分を失わない）" \
+	'[.results[] | select(.subject.name == "docs")] | .[0].status == "success" and (.[0].result.items | length) > 0'
+assert_json "$ENV_ALL_CONFLICT" "idvec は failed item + E_NPUT_COLLISION で subject status=error" \
+	'[.results[] | select(.subject.name == "idvec")] | .[0].status == "error" and ([.[0].result.items[] | select(.status == "failed" and .error.code == "E_NPUT_COLLISION")] | length) == 1'
+assert_json "$ENV_ALL_CONFLICT" "item 起因は subject errors[] にもトップ errors[] にも重ねない" \
+	'([.results[] | select(has("errors"))] | length) == 0 and (has("errors") | not)'
+rm "$PROJ/.zshrc"
+
+e2e_step "apply --all --json: フィルタが 0 件でも results:[] + status=success（→ issue #164 受け入れ基準）"
+ENV_ALL_EMPTY="$E2E_WORK/apply-all-empty.json"
+run_json 0 "$ENV_ALL_EMPTY" apply --all --home-root
+assert_json "$ENV_ALL_EMPTY" "results:[]・status=success（N=0 でも同一形状）" \
+	'.results == [] and .status == "success"'
+
 e2e_finish
