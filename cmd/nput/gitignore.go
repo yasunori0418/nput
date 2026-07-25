@@ -63,7 +63,8 @@ func newGitignoreCmd() *cobra.Command {
 // it errors out if a non-project config (home / fixed) is given (because the anchor form presupposes the git toplevel; → ADR-0023).
 func runGitignore(run *gitignoreRun, name string) error {
 	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
-	run.beginSubject(name)
+	// A named listing registers exactly one, so the run's results[] holds N=1 (→ issue #164).
+	subject := run.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -89,7 +90,7 @@ func runGitignore(run *gitignoreRun, name string) error {
 	// A read-only enumeration rides in result.info as the anchor-form paths (items stays [] —
 	// the listing is not an execution record · → issue #132, ADR-0043 §5). The line-oriented
 	// default stdout below is untouched (--json is the opt-in second contract).
-	run.setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{Paths: gitignoreAnchors(targets)}})
+	subject.setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{Paths: gitignoreAnchors(targets)}})
 	printGitignore(targets)
 	return nil
 }

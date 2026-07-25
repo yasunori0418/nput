@@ -45,8 +45,7 @@ func TestGitignoreJSONInfoPaths(t *testing.T) {
 	}
 
 	r, buf := newGitignoreTestRun()
-	r.beginSubject("docs")
-	r.setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{
+	r.beginSubject("docs").setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{
 		Paths: gitignoreAnchors([]string{".claude/skills/nix", ".nput-out/docs"}),
 	}})
 	if err := r.emit(nil); err != nil {
@@ -94,8 +93,7 @@ func TestGitignoreJSONInfoAbsentWithoutEnumeration(t *testing.T) {
 // an empty array — a nil slice would marshal the key away.
 func TestGitignoreJSONEmptyPathsStaysArray(t *testing.T) {
 	r, buf := newGitignoreTestRun()
-	r.beginSubject("empty")
-	r.setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{Paths: gitignoreAnchors(nil)}})
+	r.beginSubject("empty").setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{Paths: gitignoreAnchors(nil)}})
 	if err := r.emit(nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}

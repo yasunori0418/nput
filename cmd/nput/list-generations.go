@@ -64,7 +64,8 @@ func newListGenerationsCmd() *cobra.Command {
 // runListGenerations confirms rootKind via eval pre-resolution (home mode only), resolves profileDir, and lists generations.
 func runListGenerations(run *listGenerationsRun, name string) error {
 	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
-	run.beginSubject(name)
+	// A named listing registers exactly one, so the run's results[] holds N=1 (→ issue #164).
+	subject := run.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -98,7 +99,7 @@ func runListGenerations(run *listGenerationsRun, name string) error {
 	// A read-only enumeration rides in result.info (items stays [] — generations are not
 	// id-derived items, and the SubjectResult.generation slot stays absent to avoid encoding
 	// the same numbers twice · → issue #132, ADR-0043 §5).
-	run.setPayload(&nifacePayload[*generationsInfo]{info: &generationsInfo{Generations: generationRows(gens)}})
+	subject.setPayload(&nifacePayload[*generationsInfo]{info: &generationsInfo{Generations: generationRows(gens)}})
 	printGenerations(gens)
 	return nil
 }

@@ -34,7 +34,11 @@ type (
 )
 
 // applyRun is apply's concrete run instantiation, threaded from RunE into the run functions.
-type applyRun = nifaceRun[*applyResultInfo, *applyEnvInfo]
+// applySubject is one config's handle within it — what the payload builders attach to.
+type (
+	applyRun     = nifaceRun[*applyResultInfo, *applyEnvInfo]
+	applySubject = nifaceSubject[*applyResultInfo]
+)
 
 // beginApplyRun starts apply's run (→ beginNifaceRun). It is the only production site that
 // spells apply's info type pair outside the alias (the tests have one more, newApplyTestRun),
@@ -90,7 +94,7 @@ func newApplyCmd() *cobra.Command {
 // (the module activation path). It does no entrypoint discovery, no rootKind pre-resolution eval,
 // and no nix build; the engine reads rootKind from manifest.json (an HM module pins homeRoot, so home).
 // It drives engine.Apply's Build=nil path (a pre-built LinkFarm) from the CLI (→ engine.Options).
-func runApplyManifest(run *applyRun, name string) error {
+func runApplyManifest(subject *applySubject, name string) error {
 	linkFarm, err := filepath.Abs(flagManifest)
 	if err != nil {
 		return fmt.Errorf("nput: cannot resolve the --manifest path (%s): %w", flagManifest, err)
@@ -108,7 +112,7 @@ func runApplyManifest(run *applyRun, name string) error {
 	if res != nil {
 		// Also on failure: a partial result carries the reached/unreached item partition and
 		// the changes that actually happened before the stop (→ issue #131, niface ADR-0020).
-		attachMutationPayload(run, res, err)
+		attachMutationPayload(subject, res, err)
 	}
 	if err != nil {
 		if errors.Is(err, engine.ErrSkipped) {
@@ -132,14 +136,15 @@ func runApplyManifest(run *applyRun, name string) error {
 // directly to the engine (the module activation path; → docs/spec.md "per-module behavior spec", ADR-0003, ADR-0007).
 func runApply(run *applyRun, name string) error {
 	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
-	run.beginSubject(name)
+	// A named apply registers exactly one, so the run's results[] holds N=1 (→ issue #164).
+	subject := run.beginSubject(name)
 	if flagManifest != "" {
 		// --manifest fixes the source to a link-farm, so it conflicts in meaning with the
 		// entrypoint discovery flags (the positional name is orthogonal as a profile selector and coexists; → ADR-0026).
 		if flagFile != "" {
 			return errors.New("nput: --manifest cannot be combined with -f (--manifest fixes the source to a pre-built link-farm)")
 		}
-		return runApplyManifest(run, name)
+		return runApplyManifest(subject, name)
 	}
 
 	ep, err := discoverEntrypoint(flagFile)
@@ -178,7 +183,7 @@ func runApply(run *applyRun, name string) error {
 		// (→ issue #132). cmdErr is nil here: a conflict is item-borne (failed item +
 		// E_NPUT_COLLISION inside the payload) and the exit-2 decision comes below,
 		// after the plan is printed — the envelope still carries the payload alongside.
-		attachMutationPayload(run, res, nil)
+		attachMutationPayload(subject, res, nil)
 		printApplyPlan(res)
 		// exit 2 if there are conflicts (a pre-gate for CI; → docs/spec.md exit code table).
 		if len(res.Conflicts) > 0 {
@@ -192,7 +197,7 @@ func runApply(run *applyRun, name string) error {
 	if res != nil {
 		// Also on failure: a partial result carries the reached/unreached item partition and
 		// the changes that actually happened before the stop (→ issue #131, niface ADR-0020).
-		attachMutationPayload(run, res, err)
+		attachMutationPayload(subject, res, err)
 	}
 	if err != nil {
 		if errors.Is(err, engine.ErrSkipped) {

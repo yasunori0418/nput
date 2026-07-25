@@ -74,8 +74,7 @@ func emitPayloadDoc[TInfo, TEnvInfo any](t *testing.T, newRun func() (*nifaceRun
 		t.Fatalf("conformance.NewDefaultChecker: %v", err)
 	}
 	r, buf := newRun()
-	r.beginSubject("default")
-	r.setPayload(p)
+	r.beginSubject("default").setPayload(p)
 	if err := r.emit(cmdErr); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
@@ -858,8 +857,7 @@ func TestDryrunPayloadConflictKeepsEnvelopeBesideExit2(t *testing.T) {
 
 	r, buf := newApplyTestRun()
 	r.dryRun = true
-	r.beginSubject("default")
-	r.setPayload(p)
+	r.beginSubject("default").setPayload(p)
 	if err := r.emit(&exitError{code: 2}); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
