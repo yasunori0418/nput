@@ -74,11 +74,17 @@ type nifaceRun[TInfo, TEnvInfo any] struct {
 	command string           // executed subcommand name ("" until begin · → began)
 	dryRun  bool             // envelope dryRun field, captured from flagDryrun at begin (tests set it directly)
 	started time.Time
-	subject *nifaceSubject[TInfo] // the single subject #130 wires (nil = none; #164 generalizes to N)
-	info    TEnvInfo              // envelope-wide tool info (init's run info · niface ADR-0018, issue #132)
+	// subjects are the run's registered subjects in registration order, one SubjectResult each
+	// (→ issue #164). A single-config command registers exactly one (N=1, the shape #130 wired);
+	// --all registers one per selected config; init and a pre-enumeration failure register none.
+	subjects []*nifaceSubject[TInfo]
+	info     TEnvInfo // envelope-wide tool info (init's run info · niface ADR-0018, issue #132)
 }
 
-// nifaceSubject is one subject's (config's) accumulation for its SubjectResult.
+// nifaceSubject is one subject's (config's) accumulation for its SubjectResult. Commands hold
+// it as the handle beginSubject returns and attach everything through it, so a multi-subject run
+// cannot mis-attribute one config's result to another — the binding is the handle, not the
+// registration order (the precondition for #149's parallel apply --all · → issue #164).
 type nifaceSubject[TInfo any] struct {
 	name    string
 	started time.Time
@@ -88,13 +94,8 @@ type nifaceSubject[TInfo any] struct {
 	payload *nifacePayload[TInfo]
 }
 
-// setPayload attaches the command's result payload to the registered subject (a no-op
-// without one — payloads only exist for subject-scoped commands).
-func (r *nifaceRun[TInfo, TEnvInfo]) setPayload(p *nifacePayload[TInfo]) {
-	if r.subject != nil {
-		r.subject.payload = p
-	}
-}
+// setPayload attaches this subject's result payload (→ #131 / #132 payload builders).
+func (s *nifaceSubject[TInfo]) setPayload(p *nifacePayload[TInfo]) { s.payload = p }
 
 // setEnvelopeInfo registers the envelope-wide tool info (top-level info — run-scoped facts not
 // tied to any subject; init's template expansion · niface ADR-0018, issue #132).
@@ -153,18 +154,21 @@ func (r *nifaceRun[TInfo, TEnvInfo]) begin(command string) {
 // build runs directly and main's gate must stay honest for them too.
 func (r *nifaceRun[TInfo, TEnvInfo]) began() bool { return r.command != "" }
 
-// beginSubject registers the command's subject (config name) once it is known. From then on a
-// command failure attaches to this subject's SubjectResult.errors[] rather than the top-level
-// errors[] (top level = failures before/outside subject resolution only · → ADR-0043 §6).
-// #130 wires the single-config commands; --all / init leave no subject (results stays []).
-func (r *nifaceRun[TInfo, TEnvInfo]) beginSubject(name string) {
-	r.subject = &nifaceSubject[TInfo]{name: name, started: r.now()}
+// beginSubject registers a subject (config name) once it is known and returns its handle, which
+// the command uses to attach that config's payload. From then on a command failure attaches to a
+// subject's SubjectResult.errors[] rather than the top-level errors[] (top level = failures
+// before/outside subject enumeration only · → ADR-0043 §6). A single-config command calls it once
+// (N=1); --all calls it per selected config (→ issue #164); init registers none (results stays []).
+func (r *nifaceRun[TInfo, TEnvInfo]) beginSubject(name string) *nifaceSubject[TInfo] {
+	s := &nifaceSubject[TInfo]{name: name, started: r.now()}
+	r.subjects = append(r.subjects, s)
+	return s
 }
 
 // emit writes the niface envelope — exactly one JSON document, trailing newline, nothing else —
 // to r.out. cmdErr is the command's overall error: nil ⇔ exit 0 ⇔ status "success" (the only
-// status contract consumers may rely on · → ADR-0043 §6). The #130 envelope is minimal: the
-// registered subject yields one SubjectResult with empty items; payload population is #131 / #132.
+// status contract consumers may rely on · → ADR-0043 §6). Every registered subject yields one
+// SubjectResult, in registration order (→ issue #164); a run with none emits results: [].
 func (r *nifaceRun[TInfo, TEnvInfo]) emit(cmdErr error) error {
 	finished := nifaceTimestamp(r.now())
 	status := niface.StatusSuccess
@@ -182,14 +186,14 @@ func (r *nifaceRun[TInfo, TEnvInfo]) emit(cmdErr error) error {
 		FinishedAt:  finished,
 		Info:        r.info,
 	}
-	if r.subject != nil {
+	for _, s := range r.subjects {
 		sr := nputSubjectResult[TInfo]{
-			Subject:    niface.Subject{Name: r.subject.name},
+			Subject:    niface.Subject{Name: s.name},
 			Status:     status,
-			StartedAt:  nifaceTimestamp(r.subject.started),
+			StartedAt:  nifaceTimestamp(s.started),
 			FinishedAt: finished,
 		}
-		if p := r.subject.payload; p != nil {
+		if p := s.payload; p != nil {
 			sr.Generation = p.generation
 			sr.Warnings = p.warnings
 			sr.Result = nputResult[TInfo]{Items: p.items, Changes: p.changes, Info: p.info}
@@ -197,17 +201,20 @@ func (r *nifaceRun[TInfo, TEnvInfo]) emit(cmdErr error) error {
 		env.Results = append(env.Results, sr)
 	}
 	if cmdErr != nil {
+		last := len(env.Results) - 1
 		switch {
-		case r.subject == nil:
+		case last < 0:
 			env.Errors = append(env.Errors, classifyError(cmdErr))
-		case r.subject.payload != nil && r.subject.payload.itemBorne:
+		case r.subjects[last].payload != nil && r.subjects[last].payload.itemBorne:
 			// The failure is already represented as a failed item (entry failure / conflict);
 			// duplicating it into subjectResult.errors[] would violate niface §2 (item-borne
 			// errors must not sit in errors[]). The failed item alone justifies status error.
 		default:
-			// The failure happened with the subject established, so it is subject-borne
+			// The failure happened with a subject established, so it is subject-borne
 			// (build / lock / commit ...), not a pre-enumeration failure (→ ADR-0043 §6).
-			env.Results[0].Errors = append(env.Results[0].Errors, classifyError(cmdErr))
+			// A single-config command stops at its first failure, so the subject it was on when
+			// it stopped is the last registered one.
+			env.Results[last].Errors = append(env.Results[last].Errors, classifyError(cmdErr))
 		}
 	}
 

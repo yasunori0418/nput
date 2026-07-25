@@ -55,27 +55,27 @@ type nifacePayload[TInfo any] struct {
 	itemBorne bool
 }
 
-// attachMutationPayload builds the apply / rollback payload from res and registers it on the
-// command's run. A payload-build failure (id derivation — practically impossible for string
-// targets) is reported to stderr and the envelope falls back to the minimal #130 shape rather
-// than emitting a half-mapped document.
-func attachMutationPayload[TInfo, TEnvInfo any](run *nifaceRun[TInfo, TEnvInfo], res *engine.Result, cmdErr error) {
+// attachMutationPayload builds the apply / rollback payload from res and attaches it to the
+// subject it belongs to. A payload-build failure (id derivation — practically impossible for
+// string targets) is reported to stderr and that subject falls back to the minimal #130 shape
+// rather than emitting a half-mapped document.
+func attachMutationPayload[TInfo any](s *nifaceSubject[TInfo], res *engine.Result, cmdErr error) {
 	p, err := mutationPayload[TInfo](res, cmdErr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "nput: could not build the --json payload: %v\n", err)
 		return
 	}
-	run.setPayload(p)
+	s.setPayload(p)
 }
 
 // attachResetPayload is attachMutationPayload's reset counterpart.
-func attachResetPayload[TInfo, TEnvInfo any](run *nifaceRun[TInfo, TEnvInfo], res *engine.ResetResult, cmdErr error) {
+func attachResetPayload[TInfo any](s *nifaceSubject[TInfo], res *engine.ResetResult, cmdErr error) {
 	p, err := resetPayload[TInfo](res, cmdErr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "nput: could not build the --json payload: %v\n", err)
 		return
 	}
-	run.setPayload(p)
+	s.setPayload(p)
 }
 
 // itemStatuses is the reached-state partition shared by the builders (→ niface ADR-0016 /

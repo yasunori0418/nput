@@ -46,7 +46,8 @@ func newRollbackCmd() *cobra.Command {
 // runRollback confirms rootKind via eval pre-resolution (home mode only) and drives engine.Rollback.
 func runRollback(run *rollbackRun, name string) error {
 	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
-	run.beginSubject(name)
+	// rollback is name-required (no --all), so the run always holds exactly this one (→ issue #164).
+	subject := run.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -74,7 +75,7 @@ func runRollback(run *rollbackRun, name string) error {
 		// The From→To transition rides generation.before/after (GenBefore/GenAfter), not
 		// result.info — no double encoding (→ issue #131, niface ADR-0015). A stage-failure
 		// partial result maps the same way, with the pointer pinned at the unmoved generation.
-		attachMutationPayload(run, &res.Result, err)
+		attachMutationPayload(subject, &res.Result, err)
 	}
 	if err != nil {
 		return err

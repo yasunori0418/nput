@@ -53,7 +53,8 @@ func newResetCmd() *cobra.Command {
 // --dryrun prints the plan read-only to stdout and exits 0. Non-dryrun requires TTY confirmation / --yes.
 func runReset(run *resetRun, name string, targets []string, dryrun bool) error {
 	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
-	run.beginSubject(name)
+	// reset is name-required (no --all), so the run always holds exactly this one (→ issue #164).
+	subject := run.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -111,7 +112,7 @@ func runReset(run *resetRun, name string, targets []string, dryrun bool) error {
 		// Also on a mid-teardown failure: the partial result keeps the changes complete up to
 		// the failure point (→ issue #131, niface ADR-0020). No generation slot — reset never
 		// moves the profile pointer (FS-only teardown).
-		attachResetPayload(run, res, err)
+		attachResetPayload(subject, res, err)
 	}
 	if err != nil {
 		return err
