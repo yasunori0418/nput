@@ -90,9 +90,8 @@ func emitPayloadDoc[TInfo, TEnvInfo any](t *testing.T, newRun func() (*nifaceRun
 // would emit "info":{} — schema-valid (envelope.schema.json types info as a bare object) and
 // therefore invisible to the conformance checker, so it has to be pinned here.
 //
-// The results loop is empty for the subject-less commands (init, and any --all path), leaving
-// the envelope-level check as the whole assertion there — which is the only level those
-// documents have.
+// The results loop is empty for init — the one command that registers no subject — leaving the
+// envelope-level check as the whole assertion there, which is the only level its documents have.
 func assertNoInfoKeys(t *testing.T, doc map[string]any) {
 	t.Helper()
 	if v, ok := doc["info"]; ok {

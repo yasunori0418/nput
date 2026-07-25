@@ -40,14 +40,14 @@ func newGitignoreCmd() *cobra.Command {
 			"--all sorts and de-duplicates the targets of all projectRoot configs.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// beginGitignoreRun also publishes the run to nifaceReport, so --all still emits its
-			// (subject-less) envelope even though it never touches the run value below.
+			// beginGitignoreRun also publishes the run to nifaceReport, so main emits the envelope
+			// after Execute returns whichever path below runs.
 			run := beginGitignoreRun(cmd.Name())
 			if all {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: gitignore cannot combine <name> with --all")
 				}
-				return runGitignoreAll()
+				return runGitignoreAll(run)
 			}
 			if len(args) != 1 {
 				return fmt.Errorf("nput: gitignore requires <name> or --all")
@@ -90,9 +90,16 @@ func runGitignore(run *gitignoreRun, name string) error {
 	// A read-only enumeration rides in result.info as the anchor-form paths (items stays [] —
 	// the listing is not an execution record · → issue #132, ADR-0043 §5). The line-oriented
 	// default stdout below is untouched (--json is the opt-in second contract).
-	subject.setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{Paths: gitignoreAnchors(targets)}})
+	subject.setPayload(gitignorePayload(targets))
 	printGitignore(targets)
 	return nil
+}
+
+// gitignorePayload wraps one config's targets as its SubjectResult payload — the anchor-form
+// enumeration rides result.info, shared by the named listing and --all so both produce the same
+// shape by construction (→ issue #132, #164).
+func gitignorePayload(targets []string) *nifacePayload[*gitignoreInfo] {
+	return &nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{Paths: gitignoreAnchors(targets)}}
 }
 
 // gitignoreAnchors maps targets into their /-anchor form (non-nil even when empty, so a
@@ -108,7 +115,13 @@ func gitignoreAnchors(targets []string) []string {
 // runGitignoreAll lists the targets of all projectRoot configs, sorted and de-duplicated
 // (a repo has a single .gitignore, so listing them together is natural; → docs/spec.md, ADR-0018).
 // Non-project configs are excluded (--all picks up only projectRoot configs).
-func runGitignoreAll() error {
+//
+// The two contracts are deliberately asymmetric here (→ issue #164): the default stdout stays the
+// cross-config dedup+sort union (ADR-0018 unchanged — it is meant to be appended to one .gitignore),
+// while --json gives each config its own SubjectResult holding that config's own paths, undeduped.
+// Attributing a shared path to one arbitrary config would be a lie about which config declares it;
+// a consumer that wants the union takes it across the results itself.
+func runGitignoreAll(run *gitignoreRun) error {
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -133,10 +146,16 @@ func runGitignoreAll() error {
 		if roots[name].RootKind != manifest.RootKindProject {
 			continue
 		}
+		subject := run.beginSubject(name)
 		targets, err := configTargets(ep, system, name)
 		if err != nil {
+			// The enumeration stops here (unchanged), so this config's subject carries the failure
+			// and the ones already listed keep their results (→ issue #164).
+			subject.finish(err)
 			return err
 		}
+		subject.setPayload(gitignorePayload(targets))
+		subject.finish(nil)
 		all = append(all, targets...)
 	}
 	printGitignore(dedupeSorted(all))
