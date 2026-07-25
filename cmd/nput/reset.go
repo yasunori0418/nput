@@ -16,7 +16,7 @@ import (
 // resetResultInfo / resetEnvInfo are reset's niface info slots (→ issue #196): empty seat types
 // held as nil pointers, so both info keys stay out of the document exactly as before. Reset's
 // record lives in items / changes; the seats are here so later mutation run facts arrive as
-// field additions alone (→ apply.go の applyResultInfo コメント).
+// field additions alone (→ applyResultInfo in apply.go for the full rationale).
 type (
 	resetResultInfo struct{}
 	resetEnvInfo    struct{}
@@ -35,9 +35,7 @@ func newResetCmd() *cobra.Command {
 			"--dryrun shows the removal targets with zero side effects and exits (no confirm / flock).",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := newNifaceRun[*resetResultInfo, *resetEnvInfo]()
-			run.begin(cmd.Name())
-			nifaceReport = run
+			run := beginNifaceRun[*resetResultInfo, *resetEnvInfo](cmd.Name())
 			return runReset(run, args[0], args[1:], flagDryrun)
 		},
 	}

@@ -46,9 +46,7 @@ func newInitCmd() *cobra.Command {
 			"Existing files are not overwritten (inherits nix flake init's behavior).",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := newNifaceRun[*struct{}, *initInfo]()
-			run.begin(cmd.Name())
-			nifaceReport = run
+			run := beginNifaceRun[*struct{}, *initInfo](cmd.Name())
 			return runInit(run, args[0])
 		},
 	}

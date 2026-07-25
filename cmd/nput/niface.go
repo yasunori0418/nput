@@ -122,10 +122,16 @@ func (noopEmitter) emit(error) error { return nil }
 // concrete run here so main can emit it after Execute returns (tests build their own runs).
 var nifaceReport emitter = noopEmitter{}
 
-// newNifaceRun builds a command's concrete run against the real clock and stdout. RunE calls it,
-// begins it, and publishes it to nifaceReport (→ issue #196).
-func newNifaceRun[TInfo, TEnvInfo any]() *nifaceRun[TInfo, TEnvInfo] {
-	return &nifaceRun[TInfo, TEnvInfo]{now: time.Now, out: os.Stdout}
+// beginNifaceRun starts a command's run: it builds the concrete instantiation against the real
+// clock and stdout, begins it for command, and publishes it to nifaceReport so main can emit it
+// after Execute returns. Every subcommand's RunE calls exactly this — keeping build / begin /
+// publish in one place, because a run that is begun but never published emits no envelope at
+// all (main's gate reads nifaceReport, not the command's local variable · → issue #196).
+func beginNifaceRun[TInfo, TEnvInfo any](command string) *nifaceRun[TInfo, TEnvInfo] {
+	r := &nifaceRun[TInfo, TEnvInfo]{now: time.Now, out: os.Stdout}
+	r.begin(command)
+	nifaceReport = r
+	return r
 }
 
 // begin records the executed subcommand, the run start time, and the parsed --dryrun value

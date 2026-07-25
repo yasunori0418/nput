@@ -37,9 +37,7 @@ func newListGenerationsCmd() *cobra.Command {
 			"Pass <name> for that config, or --all to list every home mode config.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := newNifaceRun[*generationsInfo, *struct{}]()
-			run.begin(cmd.Name())
-			nifaceReport = run
+			run := beginNifaceRun[*generationsInfo, *struct{}](cmd.Name())
 			if all {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: list-generations cannot combine <name> with --all")
