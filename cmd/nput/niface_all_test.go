@@ -7,7 +7,11 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -15,6 +19,7 @@ import (
 
 	"github.com/yasunori0418/nput/internal/engine"
 	"github.com/yasunori0418/nput/internal/manifest"
+	"github.com/yasunori0418/nput/internal/paths"
 	"github.com/yasunori0418/nput/internal/planner"
 )
 
@@ -51,7 +56,7 @@ func subjectResults(t *testing.T, buf *bytes.Buffer) (map[string]map[string]any,
 	return byName, order
 }
 
-// resultOf returns the SubjectResult's status and its (possibly absent) errors[].
+// statusAndErrors returns the SubjectResult's status and its (possibly absent) errors[].
 func statusAndErrors(t *testing.T, sr map[string]any) (string, []any) {
 	t.Helper()
 	errs, _ := sr["errors"].([]any)
@@ -106,7 +111,7 @@ func TestApplyAllPartialFailureKeepsEverySubject(t *testing.T) {
 	}
 
 	byName, order := subjectResults(t, buf)
-	if want := []string{"a", "b", "c"}; !equalStrings(order, want) {
+	if want := []string{"a", "b", "c"}; !slices.Equal(order, want) {
 		t.Errorf("results order = %v, want %v (selection order)", order, want)
 	}
 	for _, name := range []string{"a", "c"} {
@@ -131,6 +136,75 @@ func TestApplyAllPartialFailureKeepsEverySubject(t *testing.T) {
 	}
 }
 
+// TestApplyAllPartialFailureItemBorne is the acceptance criterion above on the path production
+// actually takes: engine.Apply returns its partial result alongside the error (→ engine.apply's
+// "return a.result, err"), so the failing config's subject gets a payload whose failed item already
+// carries the error. That makes the failure item-borne, and its SubjectResult.errors[] must stay
+// empty while the status is still error (niface §2 / ADR-0002). The res == nil variant above only
+// covers the failures that precede any engine result (a pre-flight eval / lock rejection).
+func TestApplyAllPartialFailureItemBorne(t *testing.T) {
+	run, buf := newApplyTestRun()
+	failure := errors.New("nput: symlink t/b: permission denied")
+	_, _, failures := aggregateApply(run, []string{"a", "b", "c"}, func(name string) (*engine.Result, error) {
+		if name == "b" {
+			// The engine's partial result: the entry it stopped on, plus the planned entry it
+			// never reached (→ niface ADR-0016's reached-state partition).
+			res := placedResult(name)
+			res.Placed = nil
+			res.Entries = append(res.Entries, manifest.Entry{Target: "t/" + name + "-later"})
+			res.FailedTarget = "t/" + name
+			res.Unreached = []string{"t/" + name + "-later"}
+			return res, failure
+		}
+		return placedResult(name), nil
+	})
+	if failures != 1 {
+		t.Fatalf("failures = %d, want 1", failures)
+	}
+	if err := run.emit(&exitCodeError{code: 1, msg: "nput: apply --all: 1 config(s) failed"}); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	checkConformance(t, buf)
+
+	doc := decodeEnvelope(t, buf)
+	if doc["status"] != "error" {
+		t.Errorf("aggregate status = %v, want error", doc["status"])
+	}
+	if topErrs, ok := doc["errors"]; ok {
+		t.Errorf("top-level errors = %v, want absent", topErrs)
+	}
+	byName, _ := subjectResults(t, buf)
+	status, errs := statusAndErrors(t, byName["b"])
+	if status != "error" {
+		t.Errorf("failing subject status = %s, want error (its failed item makes it error)", status)
+	}
+	if len(errs) != 0 {
+		t.Errorf("failing subject errors = %v, want none — the failure is item-borne (niface §2)", errs)
+	}
+	// The reached-state partition has to survive onto the items, not just the status.
+	byTarget := map[string]map[string]any{}
+	for _, it := range byName["b"]["result"].(map[string]any)["items"].([]any) {
+		item := it.(map[string]any)
+		byTarget[item["label"].(string)] = item
+	}
+	failed := byTarget["t/b"]
+	if failed == nil || failed["status"] != "failed" {
+		t.Fatalf("item t/b = %v, want status failed", failed)
+	}
+	if itemErr, ok := failed["error"].(map[string]any); !ok || itemErr["message"] != failure.Error() {
+		t.Errorf("item t/b error = %v, want the config's own failure carried on the item", failed["error"])
+	}
+	if unreached := byTarget["t/b-later"]; unreached == nil || unreached["status"] != "skipped" {
+		t.Errorf("item t/b-later = %v, want status skipped (planned but never attempted)", unreached)
+	}
+	// The sibling configs still carry their own successful inventories.
+	for _, name := range []string{"a", "c"} {
+		if s, e := statusAndErrors(t, byName[name]); s != "success" || len(e) != 0 {
+			t.Errorf("subject %s = (%s, %v), want (success, none)", name, s, e)
+		}
+	}
+}
+
 // TestApplyAllSkipIsNotAFailure pins the try-lock skip's asymmetry with a failure: ErrSkipped is a
 // normal skip (exit 0 for a named apply), so its subject succeeds and the aggregate stays success.
 // Without this the skip would be indistinguishable from a failure in the envelope while the exit
@@ -139,7 +213,13 @@ func TestApplyAllSkipIsNotAFailure(t *testing.T) {
 	run, buf := newApplyTestRun()
 	applied, skipped, failures := aggregateApply(run, []string{"a", "b"}, func(name string) (*engine.Result, error) {
 		if name == "b" {
-			return nil, engine.ErrSkipped
+			// The engine returns its result alongside ErrSkipped (→ engine.apply's try-lock
+			// arm sets Skipped and returns a.result), so the payload gets attached here too:
+			// the skipped config's subject must still come out success, payload and all.
+			res := placedResult(name)
+			res.Placed = nil
+			res.Skipped = true
+			return res, engine.ErrSkipped
 		}
 		return placedResult(name), nil
 	})
@@ -195,7 +275,7 @@ func TestApplyAllEmptySelectionEmitsEmptyResults(t *testing.T) {
 // failed item carrying E_NPUT_COLLISION (item-borne, so it must NOT be repeated in that
 // SubjectResult's errors[] · niface §2), the subject's status is error (niface ADR-0002: a failed
 // item makes the result error), the aggregate is error, and the exit code stays what
-// applyAllExitCode decides — conflict 2, not the error 1 (→ nput ADR-0043 §62, ADR-0024).
+// applyAllExitCode decides — conflict 2, not the error 1 (→ nput ADR-0043 §6, ADR-0024).
 func TestApplyAllDryRunConflictIsItemBorne(t *testing.T) {
 	run, buf := newApplyTestRun()
 	run.dryRun = true
@@ -261,6 +341,68 @@ func TestApplyAllDryRunConflictIsItemBorne(t *testing.T) {
 	}
 }
 
+// TestApplyAllDryRunMixedErrorAndConflict pins the two error layers side by side in one document,
+// which is the combination the exit-code priority exists for: a config that failed outright carries
+// a subject-level error, a config that merely conflicts carries none (its item does), and the exit
+// code is error(1) — not the conflict's 2, which must never mask a real failure (→ ADR-0024).
+func TestApplyAllDryRunMixedErrorAndConflict(t *testing.T) {
+	run, buf := newApplyTestRun()
+	run.dryRun = true
+	buildFailure := errors.New("nput: nix build failed")
+	var code int
+	captureStdout(t, func() {
+		code = aggregateDryRun(run, []string{"broken", "clashing", "clean"}, func(name string) (*engine.Result, error) {
+			switch name {
+			case "broken":
+				return nil, buildFailure
+			case "clashing":
+				res := placedResult(name)
+				res.Placed = nil
+				res.Conflicts = []planner.Conflict{
+					{Entry: manifest.Entry{Target: "t/" + name}, Reason: "occupied by a foreign entity"},
+				}
+				return res, nil
+			}
+			return placedResult(name), nil
+		})
+	})
+	if want := applyAllExitCode(true, true); code != want {
+		t.Fatalf("code = %d, want %d (error must win over conflict)", code, want)
+	}
+	if err := run.emit(&exitError{code: code}); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	checkConformance(t, buf)
+
+	doc := decodeEnvelope(t, buf)
+	if doc["status"] != "error" {
+		t.Errorf("aggregate status = %v, want error", doc["status"])
+	}
+	if topErrs, ok := doc["errors"]; ok {
+		t.Errorf("top-level errors = %v, want absent (both failures belong to their configs)", topErrs)
+	}
+	byName, _ := subjectResults(t, buf)
+	// The outright failure is subject-borne: no engine result exists, so nothing else can carry it.
+	status, errs := statusAndErrors(t, byName["broken"])
+	if status != "error" || len(errs) != 1 {
+		t.Fatalf("failed subject = (%s, %v), want (error, exactly one subject-borne error)", status, errs)
+	}
+	if got := errs[0].(map[string]any)["code"]; got != "E_NPUT_FAILED" {
+		t.Errorf("failed subject error code = %v, want E_NPUT_FAILED (the build error is unclassified here)", got)
+	}
+	// The conflict is item-borne: same error status, but errors[] stays empty (niface §2).
+	status, errs = statusAndErrors(t, byName["clashing"])
+	if status != "error" {
+		t.Errorf("conflicting subject status = %s, want error", status)
+	}
+	if len(errs) != 0 {
+		t.Errorf("conflicting subject errors = %v, want none — its item carries the conflict", errs)
+	}
+	if status, errs := statusAndErrors(t, byName["clean"]); status != "success" || len(errs) != 0 {
+		t.Errorf("clean subject = (%s, %v), want (success, none)", status, errs)
+	}
+}
+
 // TestApplyAllSingleConfigMatchesNamedApply is issue #164's fourth acceptance criterion, pinned as
 // an equality rather than a description: a one-config --all and a named apply of the same config
 // must emit byte-identical documents once the clocks agree. Any drift the append-based
@@ -288,6 +430,158 @@ func TestApplyAllSingleConfigMatchesNamedApply(t *testing.T) {
 		t.Errorf("apply --all at N=1 diverged from the named apply\n--all: %s\nnamed: %s", allBuf, namedBuf)
 	}
 	checkConformance(t, allBuf)
+}
+
+// TestApplyAllSingleConfigFailureMatchesNamedApply is the equality above on the failing side, which
+// is where the two paths actually diverge in mechanism: the named apply settles nothing and lets
+// emit attribute the command error to its one subject, while --all settles the subject itself with
+// that config's error and hands emit an aggregate error it must not re-apply. Both must still land
+// on the same document — the invariant behind emit's first-wins finish (→ issue #164).
+func TestApplyAllSingleConfigFailureMatchesNamedApply(t *testing.T) {
+	failure := errors.New("nput: generation commit (nix-env --set) failed")
+	// A commit failure: the engine returns a result but no failed target, so it is subject-borne
+	// (not item-borne) and has to appear in the SubjectResult's errors[] on both paths.
+	newRes := func() *engine.Result {
+		res := placedResult("default")
+		res.Placed = nil
+		return res
+	}
+
+	named, namedBuf := newApplyTestRun()
+	attachMutationPayload(named.beginSubject("default"), newRes(), failure)
+	if err := named.emit(failure); err != nil {
+		t.Fatalf("emit named: %v", err)
+	}
+
+	all, allBuf := newApplyTestRun()
+	aggregateApply(all, []string{"default"}, func(string) (*engine.Result, error) { return newRes(), failure })
+	// --all reports its own aggregate error, whose text differs from the config's; the subject is
+	// already settled, so this must not reach it.
+	if err := all.emit(&exitCodeError{code: 1, msg: "nput: apply --all: 1 config(s) failed"}); err != nil {
+		t.Fatalf("emit all: %v", err)
+	}
+
+	if allBuf.String() != namedBuf.String() {
+		t.Errorf("failing apply --all at N=1 diverged from the named apply\n--all: %s\nnamed: %s", allBuf, namedBuf)
+	}
+	checkConformance(t, allBuf)
+	// Guard the equality against being satisfied by both sides losing the error.
+	byName, _ := subjectResults(t, allBuf)
+	if status, errs := statusAndErrors(t, byName["default"]); status != "error" || len(errs) != 1 {
+		t.Fatalf("subject = (%s, %v), want (error, exactly one subject-borne error)", status, errs)
+	}
+}
+
+// stubNixEnvListGenerations puts a fake nix-env first on PATH: it prints one generation line for
+// every profile except failFor, for which it exits non-zero. That makes runListAllGenerations
+// drivable in-process — the real one shells out to nix-env — so the subject wiring (register per
+// config, attach that config's listing, settle it) is exercised through production code rather
+// than restated by the test.
+func stubNixEnvListGenerations(t *testing.T, failFor string) {
+	t.Helper()
+	bin := t.TempDir()
+	script := "#!/bin/sh\n" +
+		"for a in \"$@\"; do case \"$prev\" in --profile) prof=$a;; esac; prev=$a; done\n" +
+		"case \"$prof\" in\n" +
+		"*/" + failFor + "/profile) echo 'error: not a valid profile' >&2; exit 1;;\n" +
+		"esac\n" +
+		"printf '   1   2026-07-19 12:00:00   (current)\\n'\n"
+	if err := os.WriteFile(filepath.Join(bin, "nix-env"), []byte(script), 0o755); err != nil {
+		t.Fatalf("write nix-env stub: %v", err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+// makeHomeProfiles creates the on-disk shape runListAllGenerations scans for: a <name> directory
+// holding a "profile" link directly under <state>/nix/profiles/nput (the home-mode layout; the
+// roothash family nests one level deeper and is skipped · → paths.Resolve, ADR-0024).
+func makeHomeProfiles(t *testing.T, names ...string) {
+	t.Helper()
+	state := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", state)
+	for _, name := range names {
+		dir := filepath.Join(paths.Base(state), name)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+		// The scan only lstats the link, so the destination need not exist.
+		if err := os.Symlink("profile-1-link", filepath.Join(dir, "profile")); err != nil {
+			t.Fatalf("symlink profile: %v", err)
+		}
+	}
+}
+
+// TestListGenerationsAllWiring drives the real runListAllGenerations, which is what actually
+// registers and settles one subject per scanned config (→ issue #164). The hand-built variant below
+// pins the document shape; this pins the wiring, so a forgotten beginSubject / setPayload / finish
+// cannot pass by having the test restate what production should have done.
+func TestListGenerationsAllWiring(t *testing.T) {
+	origJSON := flagJSON
+	defer func() { flagJSON = origJSON }()
+	flagJSON = true
+
+	t.Run("every scanned config becomes its own SubjectResult", func(t *testing.T) {
+		makeHomeProfiles(t, "home", "work")
+		stubNixEnvListGenerations(t, "")
+		run, buf := newListGenerationsTestRun()
+		if err := runListAllGenerations(run); err != nil {
+			t.Fatalf("runListAllGenerations: %v", err)
+		}
+		if err := run.emit(nil); err != nil {
+			t.Fatalf("emit: %v", err)
+		}
+		checkConformance(t, buf)
+
+		byName, order := subjectResults(t, buf)
+		want := []string{"home", "work"}
+		if !slices.Equal(order, want) {
+			t.Fatalf("results order = %v, want %v (lexical scan order)", order, want)
+		}
+		for _, name := range want {
+			if status, errs := statusAndErrors(t, byName[name]); status != "success" || len(errs) != 0 {
+				t.Errorf("subject %s = (%s, %v), want (success, none)", name, status, errs)
+			}
+			if got := infoArray(t, byName[name], "generations"); len(got) != 1 {
+				t.Errorf("subject %s generations = %v, want its own listing", name, got)
+			}
+		}
+	})
+
+	t.Run("a mid-enumeration failure lands on its own subject", func(t *testing.T) {
+		// "work" sorts after "home", so the scan lists home, then fails on work and stops.
+		makeHomeProfiles(t, "home", "work", "zzz")
+		stubNixEnvListGenerations(t, "work")
+		run, buf := newListGenerationsTestRun()
+		err := runListAllGenerations(run)
+		if err == nil {
+			t.Fatal("runListAllGenerations must fail when a profile cannot be listed")
+		}
+		if err := run.emit(err); err != nil {
+			t.Fatalf("emit: %v", err)
+		}
+		checkConformance(t, buf)
+
+		doc := decodeEnvelope(t, buf)
+		if doc["status"] != "error" {
+			t.Errorf("aggregate status = %v, want error", doc["status"])
+		}
+		// The failure belongs to the config it happened on, not to the top level — subjects exist,
+		// so the top-level layer (pre-enumeration failures only) must stay empty (→ ADR-0043 §6).
+		if topErrs, ok := doc["errors"]; ok {
+			t.Errorf("top-level errors = %v, want absent (the failure belongs to subject work)", topErrs)
+		}
+		byName, order := subjectResults(t, buf)
+		// The scan stops at the failure, so the untouched config never becomes a subject at all.
+		if want := []string{"home", "work"}; !slices.Equal(order, want) {
+			t.Fatalf("results = %v, want %v — the scan stops at the failure and zzz is never reached", order, want)
+		}
+		if status, errs := statusAndErrors(t, byName["home"]); status != "success" || len(errs) != 0 {
+			t.Errorf("already-listed subject = (%s, %v), want (success, none) — it keeps its result", status, errs)
+		}
+		if status, errs := statusAndErrors(t, byName["work"]); status != "error" || len(errs) != 1 {
+			t.Errorf("failing subject = (%s, %v), want (error, exactly one subject-borne error)", status, errs)
+		}
+	})
 }
 
 // TestReadAllCommandsEmitPerConfigResults covers the read-only --all paths' payload wiring
@@ -354,16 +648,4 @@ func infoArray(t *testing.T, sr map[string]any, key string) []any {
 		t.Fatalf("info.%s = %v, want the key present as an array", key, info[key])
 	}
 	return arr
-}
-
-func equalStrings(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }

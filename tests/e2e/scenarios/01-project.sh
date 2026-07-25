@@ -112,8 +112,13 @@ ENV_GI_ALL="$E2E_WORK/gitignore-all.json"
 run_json 0 "$ENV_GI_ALL" gitignore --all
 assert_json "$ENV_GI_ALL" "status=success・results は選択順（辞書順）の 2 config" \
 	'.status == "success" and [.results[].subject.name] == ["docs", "idvec"]'
-assert_json "$ENV_GI_ALL" "各 subject は自 config のパスだけを info.paths に持つ" \
-	'[.results[] | select(.subject.name == "docs").result.info.paths == ["/.nput-out/docs"]] | length == 1'
+# 真偽値そのものを評価する（select の結果を length で数えると、値が誤っていても要素数は
+# 変わらないため恒真アサートになる）。docs / idvec が「自 config のパスだけ」を持つことと、
+# 共有パス /.zshrc が dedup されず idvec 側に残ることを両方固定する。
+assert_json "$ENV_GI_ALL" "docs は自 config のパスだけを info.paths に持つ" \
+	'first(.results[] | select(.subject.name == "docs")).result.info.paths == ["/.nput-out/docs"]'
+assert_json "$ENV_GI_ALL" "idvec も自 config のパスだけを持つ（cross-config dedup なし）" \
+	'first(.results[] | select(.subject.name == "idvec")).result.info.paths == ["/.zshrc"]'
 assert_json "$ENV_GI_ALL" "items=[] は単一実行と同一・トップ errors[] なし" \
 	'([.results[] | select(.result.items == [])] | length) == 2 and (has("errors") | not)'
 
@@ -144,6 +149,18 @@ assert_json "$ENV_ALL_CONFLICT" "idvec は failed item + E_NPUT_COLLISION で su
 	'[.results[] | select(.subject.name == "idvec")] | .[0].status == "error" and ([.[0].result.items[] | select(.status == "failed" and .error.code == "E_NPUT_COLLISION")] | length) == 1'
 assert_json "$ENV_ALL_CONFLICT" "item 起因は subject errors[] にもトップ errors[] にも重ねない" \
 	'([.results[] | select(has("errors"))] | length) == 0 and (has("errors") | not)'
+rm "$PROJ/.zshrc"
+
+e2e_step "apply --all --json（非 dryrun）: 実際に配置した 2 config の SubjectResult（→ issue #164）"
+ENV_ALL_APPLY="$E2E_WORK/apply-all.json"
+run_json 0 "$ENV_ALL_APPLY" apply --all
+assert_json "$ENV_ALL_APPLY" "status=success・dryRun=false・2 config が選択順" \
+	'.status == "success" and .dryRun == false and [.results[].subject.name] == ["docs", "idvec"]'
+assert_json "$ENV_ALL_APPLY" "各 subject が自 config の items を持ち generation を観測している" \
+	'all(.results[]; (.result.items | length) == 1 and (.generation | has("profile")))'
+assert_json "$ENV_ALL_APPLY" "トップ errors[] なし・どの subject にも errors[] なし" \
+	'(has("errors") | not) and ([.results[] | select(has("errors"))] | length) == 0'
+assert_symlink "$PROJ/.zshrc"
 rm "$PROJ/.zshrc"
 
 e2e_step "apply --all --json: フィルタが 0 件でも results:[] + status=success（→ issue #164 受け入れ基準）"
