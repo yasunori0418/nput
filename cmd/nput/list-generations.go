@@ -42,6 +42,8 @@ func newListGenerationsCmd() *cobra.Command {
 			"Pass <name> for that config, or --all to list every home mode config.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// beginListGenerationsRun also publishes the run to nifaceReport, so --all still emits
+			// its (subject-less) envelope even though it never touches the run value below.
 			run := beginListGenerationsRun(cmd.Name())
 			if all {
 				if len(args) > 0 {

@@ -36,9 +36,10 @@ type (
 // applyRun is apply's concrete run instantiation, threaded from RunE into the run functions.
 type applyRun = nifaceRun[*applyResultInfo, *applyEnvInfo]
 
-// beginApplyRun starts apply's run (→ beginNifaceRun). It is the only place apply's info type
-// pair is spelled outside the alias, so changing applyRun's parameters cannot leave a stale
-// instantiation behind.
+// beginApplyRun starts apply's run (→ beginNifaceRun). It is the only production site that
+// spells apply's info type pair outside the alias (the tests have one more, newApplyTestRun),
+// and because it returns the alias type, changing applyRun's parameters without updating it is
+// a compile error rather than a stale instantiation.
 func beginApplyRun(command string) *applyRun {
 	return beginNifaceRun[*applyResultInfo, *applyEnvInfo](command)
 }
@@ -52,6 +53,8 @@ func newApplyCmd() *cobra.Command {
 			"--all applies all of nput.* in lexical order; --project-root / --home-root / --system-root narrow by root mode.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// beginApplyRun also publishes the run to nifaceReport, so --all still emits its
+			// (subject-less) envelope even though it never touches the run value below.
 			run := beginApplyRun(cmd.Name())
 			flagBackupEnabled = cmd.Flags().Changed("backup")
 			if flagApplyAll {
