@@ -99,9 +99,6 @@ type nifaceSubject[TInfo any] struct {
 	// subject with the command error, which for them IS that subject's (→ issue #164).
 	finished bool
 	err      error
-	// itemBorneFailure marks a failure that a failed item already carries in full, so this
-	// subject is in error while its errors[] stays empty (→ finishItemBorne, niface §2).
-	itemBorneFailure bool
 }
 
 // setPayload attaches this subject's result payload (→ #131 / #132 payload builders).
@@ -118,22 +115,19 @@ func (s *nifaceSubject[TInfo]) finish(err error) {
 	s.finished, s.err = true, err
 }
 
-// finishItemBorne settles this subject as failed without naming a subject-level error: the failure
-// is already fully represented by a failed item (an entry failure / conflict), which niface §2
-// requires stay out of errors[]. The status still has to be error — a failed item makes the result
-// error (niface ADR-0002) — so this is the "error, but the item already said why" outcome, distinct
-// from finish(err) where the error belongs to the subject itself (→ issue #164).
-func (s *nifaceSubject[TInfo]) finishItemBorne() {
-	if s.finished {
-		return
-	}
-	s.finished, s.err, s.itemBorneFailure = true, nil, true
+// itemBorne reports whether this subject's payload already represents the failure as a failed item
+// (an entry failure / conflict). It is the single source for that question: the failed item both
+// makes this subject error and keeps the error out of its errors[] (niface §2: item 起因のエラーを
+// errors[] に置いてはならない), so nothing needs to say "this failed" a second time.
+func (s *nifaceSubject[TInfo]) itemBorne() bool {
+	return s.payload != nil && s.payload.itemBorne
 }
 
-// failed reports whether this subject settled on an error, by either route — the aggregate's error
-// source (any one subject in error makes the envelope error · → niface §2, ADR-0043 §6).
+// failed reports whether this subject settled on an error — by its own error or by a failed item in
+// its payload. It is the aggregate's error source (any one subject in error makes the envelope
+// error · → niface §2, ADR-0043 §6, niface ADR-0002 "a failed item makes the result error").
 func (s *nifaceSubject[TInfo]) failed() bool {
-	return s.finished && (s.err != nil || s.itemBorneFailure)
+	return s.finished && (s.err != nil || s.itemBorne())
 }
 
 // setEnvelopeInfo registers the envelope-wide tool info (top-level info — run-scoped facts not
@@ -204,11 +198,10 @@ func (r *nifaceRun[TInfo, TEnvInfo]) beginSubject(name string) *nifaceSubject[TI
 	return s
 }
 
-// subjectResult renders this subject's SubjectResult from its own settled state alone — finish
-// (or finishItemBorne) is the single place its outcome is decided, so reading this result never
-// requires knowing what the caller passed in (→ issue #164). finishedAt is the run's single finish
-// timestamp, shared by every result. Calling it before the subject is settled is a programming
-// error, not a shape: emit settles every subject first.
+// subjectResult renders this subject's SubjectResult from its own settled state alone — finish is
+// the single place its outcome is decided, so reading this result never requires knowing what the
+// caller passed in (→ issue #164). finishedAt is the run's single finish timestamp, shared by every
+// result. emit is the only caller and settles every subject immediately before rendering it.
 func (s *nifaceSubject[TInfo]) subjectResult(finishedAt string) nputSubjectResult[TInfo] {
 	status := niface.StatusSuccess
 	if s.failed() {
@@ -225,12 +218,10 @@ func (s *nifaceSubject[TInfo]) subjectResult(finishedAt string) nputSubjectResul
 		sr.Warnings = p.warnings
 		sr.Result = nputResult[TInfo]{Items: p.items, Changes: p.changes, Info: p.info}
 	}
-	// A failure the items already carry stays out of errors[] (niface §2: item 起因のエラーを
-	// errors[] に置いてはならない) — either because the subject was settled that way explicitly
-	// (finishItemBorne) or because the payload the command attached says so. Everything else that
+	// A failure the items already carry stays out of errors[] (→ itemBorne). Everything else that
 	// failed with the subject established is subject-borne (build / lock / commit ...) and lands
 	// here rather than at the top level (→ ADR-0043 §6).
-	if s.err != nil && (s.payload == nil || !s.payload.itemBorne) {
+	if s.err != nil && !s.itemBorne() {
 		sr.Errors = append(sr.Errors, classifyError(s.err))
 	}
 	return sr
