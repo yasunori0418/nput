@@ -92,13 +92,16 @@ type nifaceSubject[TInfo any] struct {
 	// niface_payload.go builders). nil keeps the minimal #130 shape (empty items) — the
 	// read-only commands until #132, and failures before any engine result exists.
 	payload *nifacePayload[TInfo]
-	// finished marks that this subject settled its own outcome through finish, so emit takes
-	// its status and errors[] from err below instead of from the command-level error. A
-	// multi-subject run (--all) finishes every subject — one config's failure must not colour
-	// the ones that succeeded — while the single-config commands leave it false and keep the
-	// #130 attribution (the command error IS that one subject's · → issue #164).
+	// finished marks that this subject's outcome is settled: err below is final and nothing may
+	// re-attribute the command-level error to it. A multi-subject run (--all) finishes every
+	// subject as its config completes — one config's failure must not colour the ones that
+	// succeeded — while the single-config commands leave it unset so emit can settle their one
+	// subject with the command error, which for them IS that subject's (→ issue #164).
 	finished bool
 	err      error
+	// itemBorneFailure marks a failure that a failed item already carries in full, so this
+	// subject is in error while its errors[] stays empty (→ finishItemBorne, niface §2).
+	itemBorneFailure bool
 }
 
 // setPayload attaches this subject's result payload (→ #131 / #132 payload builders).
@@ -106,15 +109,32 @@ func (s *nifaceSubject[TInfo]) setPayload(p *nifacePayload[TInfo]) { s.payload =
 
 // finish settles this subject's own outcome: err is that config's error (nil = success), which
 // decides its SubjectResult status and errors[] independently of the other subjects and of the
-// command's aggregate error (→ issue #164). Only the multi-subject paths call it.
+// command's aggregate error (→ issue #164). Calling it twice keeps the first outcome: the config's
+// own result is the truth, and emit's later sweep must not overwrite it with the aggregate error.
 func (s *nifaceSubject[TInfo]) finish(err error) {
+	if s.finished {
+		return
+	}
 	s.finished, s.err = true, err
 }
 
-// failed reports whether this subject settled on an error — the aggregate's error source
-// alongside the command-level error (any one subject in error makes the envelope error ·
-// → niface §2, ADR-0043 §6).
-func (s *nifaceSubject[TInfo]) failed() bool { return s.finished && s.err != nil }
+// finishItemBorne settles this subject as failed without naming a subject-level error: the failure
+// is already fully represented by a failed item (an entry failure / conflict), which niface §2
+// requires stay out of errors[]. The status still has to be error — a failed item makes the result
+// error (niface ADR-0002) — so this is the "error, but the item already said why" outcome, distinct
+// from finish(err) where the error belongs to the subject itself (→ issue #164).
+func (s *nifaceSubject[TInfo]) finishItemBorne() {
+	if s.finished {
+		return
+	}
+	s.finished, s.err, s.itemBorneFailure = true, nil, true
+}
+
+// failed reports whether this subject settled on an error, by either route — the aggregate's error
+// source (any one subject in error makes the envelope error · → niface §2, ADR-0043 §6).
+func (s *nifaceSubject[TInfo]) failed() bool {
+	return s.finished && (s.err != nil || s.itemBorneFailure)
+}
 
 // setEnvelopeInfo registers the envelope-wide tool info (top-level info — run-scoped facts not
 // tied to any subject; init's template expansion · niface ADR-0018, issue #132).
@@ -184,13 +204,14 @@ func (r *nifaceRun[TInfo, TEnvInfo]) beginSubject(name string) *nifaceSubject[TI
 	return s
 }
 
-// subjectResult renders this subject's SubjectResult. err is the error attributed to it — its
-// own (finish) for a multi-subject run, the command-level one for a single-config command that
-// never finished it — and decides both this result's status and whether it carries an errors[]
-// entry (→ issue #164). finishedAt is the run's single finish timestamp, shared by every result.
-func (s *nifaceSubject[TInfo]) subjectResult(err error, finishedAt string) nputSubjectResult[TInfo] {
+// subjectResult renders this subject's SubjectResult from its own settled state alone — finish
+// (or finishItemBorne) is the single place its outcome is decided, so reading this result never
+// requires knowing what the caller passed in (→ issue #164). finishedAt is the run's single finish
+// timestamp, shared by every result. Calling it before the subject is settled is a programming
+// error, not a shape: emit settles every subject first.
+func (s *nifaceSubject[TInfo]) subjectResult(finishedAt string) nputSubjectResult[TInfo] {
 	status := niface.StatusSuccess
-	if err != nil {
+	if s.failed() {
 		status = niface.StatusError
 	}
 	sr := nputSubjectResult[TInfo]{
@@ -204,13 +225,13 @@ func (s *nifaceSubject[TInfo]) subjectResult(err error, finishedAt string) nputS
 		sr.Warnings = p.warnings
 		sr.Result = nputResult[TInfo]{Items: p.items, Changes: p.changes, Info: p.info}
 	}
-	// An item-borne failure (entry failure / conflict) is already represented as a failed item;
-	// duplicating it into errors[] would violate niface §2 (item 起因のエラーを errors[] に置いて
-	// はならない). The failed item alone justifies the error status. Everything else that failed
-	// with the subject established is subject-borne (build / lock / commit ...) and lands here
-	// rather than at the top level (→ ADR-0043 §6).
-	if err != nil && (s.payload == nil || !s.payload.itemBorne) {
-		sr.Errors = append(sr.Errors, classifyError(err))
+	// A failure the items already carry stays out of errors[] (niface §2: item 起因のエラーを
+	// errors[] に置いてはならない) — either because the subject was settled that way explicitly
+	// (finishItemBorne) or because the payload the command attached says so. Everything else that
+	// failed with the subject established is subject-borne (build / lock / commit ...) and lands
+	// here rather than at the top level (→ ADR-0043 §6).
+	if s.err != nil && (s.payload == nil || !s.payload.itemBorne) {
+		sr.Errors = append(sr.Errors, classifyError(s.err))
 	}
 	return sr
 }
@@ -219,11 +240,12 @@ func (s *nifaceSubject[TInfo]) subjectResult(err error, finishedAt string) nputS
 // to r.out. cmdErr is the command's overall error: nil ⇔ exit 0 ⇔ status "success" (the only
 // status contract consumers may rely on · → ADR-0043 §6).
 //
-// emit only aggregates (→ issue #164): each subject has already settled its own status and
-// errors[] (finish), and emit folds them into the envelope's status — one subject in error makes
-// the whole document error — while the top-level errors[] takes only a failure that belongs to no
-// subject, i.e. one from before/outside subject enumeration. A single-config command settles no
-// subject, so cmdErr attributes to the one it registered, which is #130's behaviour unchanged.
+// emit only aggregates (→ issue #164): every subject decides its own status and errors[] through
+// finish, and emit folds them into the envelope's status — one subject in error makes the whole
+// document error — while the top-level errors[] takes only a failure that belongs to no subject,
+// i.e. one from before/outside subject enumeration. cmdErr reaches a subject through the same
+// finish, so a single-config command (which settles nothing itself) keeps #130's attribution
+// unchanged, and a --all run's already-settled configs are immune to the aggregate error.
 func (r *nifaceRun[TInfo, TEnvInfo]) emit(cmdErr error) error {
 	finished := nifaceTimestamp(r.now())
 
@@ -240,27 +262,21 @@ func (r *nifaceRun[TInfo, TEnvInfo]) emit(cmdErr error) error {
 	if cmdErr != nil {
 		env.Status = niface.StatusError
 	}
-	// unsettled is the subject cmdErr attributes to when no subject settled its own outcome: the
-	// last registered one. A single-config command has exactly one and stops at its first failure,
-	// so that is the subject it was on; a run whose subjects all called finish leaves it nil.
-	var unsettled *nifaceSubject[TInfo]
+	// Settle whatever the command left unsettled, so every subject's outcome is decided in exactly
+	// one place (finish) before anything is rendered. A single-config command settles nothing —
+	// it registers one subject and stops at its first failure, so cmdErr IS that subject's, and
+	// this is where it attaches. A --all path settles each config as it completes, so every
+	// subject here is already finished and finish's first-wins rule leaves them untouched: the
+	// aggregate cmdErr ("N config(s) failed") never overwrites a config's own outcome.
 	for _, s := range r.subjects {
+		s.finish(cmdErr)
 		if s.failed() {
 			env.Status = niface.StatusError
 		}
-		if !s.finished {
-			unsettled = s
-		}
-	}
-	for _, s := range r.subjects {
-		err := s.err
-		if s == unsettled {
-			err = cmdErr
-		}
-		env.Results = append(env.Results, s.subjectResult(err, finished))
+		env.Results = append(env.Results, s.subjectResult(finished))
 	}
 	if cmdErr != nil && len(r.subjects) == 0 {
-		// The failure belongs to no subject because none was ever enumerated: it happened before
+		// The failure belongs to no subject because none was ever registered: it happened before
 		// or outside subject enumeration (entrypoint discovery, the batch eval, an argument
 		// rejection), which is the only thing the top-level errors[] carries (→ ADR-0043 §6,
 		// issue #164). Once subjects exist, the run's failure is theirs — a --all aggregate error
