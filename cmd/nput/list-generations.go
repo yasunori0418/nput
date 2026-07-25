@@ -42,14 +42,14 @@ func newListGenerationsCmd() *cobra.Command {
 			"Pass <name> for that config, or --all to list every home mode config.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// beginListGenerationsRun also publishes the run to nifaceReport, so --all still emits
-			// its (subject-less) envelope even though it never touches the run value below.
+			// beginListGenerationsRun also publishes the run to nifaceReport, so main emits the
+			// envelope after Execute returns whichever path below runs.
 			run := beginListGenerationsRun(cmd.Name())
 			if all {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: list-generations cannot combine <name> with --all")
 				}
-				return runListAllGenerations()
+				return runListAllGenerations(run)
 			}
 			if len(args) != 1 {
 				return fmt.Errorf("nput: list-generations requires <name> or --all")
@@ -99,9 +99,16 @@ func runListGenerations(run *listGenerationsRun, name string) error {
 	// A read-only enumeration rides in result.info (items stays [] — generations are not
 	// id-derived items, and the SubjectResult.generation slot stays absent to avoid encoding
 	// the same numbers twice · → issue #132, ADR-0043 §5).
-	subject.setPayload(&nifacePayload[*generationsInfo]{info: &generationsInfo{Generations: generationRows(gens)}})
+	subject.setPayload(generationsPayload(gens))
 	printGenerations(gens)
 	return nil
+}
+
+// generationsPayload wraps a config's listing as its SubjectResult payload — the read-only
+// enumeration rides result.info, shared by the named listing and --all so both produce the same
+// shape by construction (→ issue #132, #164).
+func generationsPayload(gens []engine.Generation) *nifacePayload[*generationsInfo] {
+	return &nifacePayload[*generationsInfo]{info: &generationsInfo{Generations: generationRows(gens)}}
 }
 
 // generationRow is one generation of the --json inventory (result.info.generations · → issue
@@ -125,7 +132,12 @@ func generationRows(gens []engine.Generation) []generationRow {
 // runListAllGenerations scans the home profiles directly under <state>/nix/profiles/nput (the <name>
 // directories that hold a profile link directly under them) and lists each config's generations. No entrypoint eval is needed (disk scan only).
 // The roothash family (project / fixed / --root) has a <roothash>/<name> structure with no profile directly under it, so it is naturally excluded.
-func runListAllGenerations() error {
+//
+// Each scanned config becomes one SubjectResult carrying its own listing in result.info, the same
+// shape a named listing emits with N=1 (→ issue #164). A scan that finds nothing emits results: []
+// with status success, and a failure before the scan completes (the state dir being unreadable) is
+// a pre-enumeration failure that stays at the top level.
+func runListAllGenerations(run *listGenerationsRun) error {
 	stateDir, err := paths.StateDir()
 	if err != nil {
 		return err
@@ -153,11 +165,17 @@ func runListAllGenerations() error {
 	sort.Strings(names)
 
 	for i, name := range names {
+		subject := run.beginSubject(name)
 		prof := paths.Resolve(stateDir, name, manifest.RootKindHome, "", false)
 		gens, err := engine.ListGenerations(prof.Profile)
 		if err != nil {
+			// The listing stops here (unchanged), so this config's subject carries the failure
+			// and the ones already scanned keep their results (→ issue #164).
+			subject.finish(err)
 			return err
 		}
+		subject.setPayload(generationsPayload(gens))
+		subject.finish(nil)
 		// Under --json stdout belongs to the envelope alone (→ ADR-0043 §2, issue #130); the
 		// listing itself still runs so read failures keep the same exit behavior.
 		if flagJSON {
