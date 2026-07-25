@@ -56,7 +56,7 @@ func newGitignoreCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&all, "all", false,
-		"Sort and de-duplicate the targets of all projectRoot configs (under --json each config keeps its own targets instead, un-deduplicated; see ADR-0018)")
+		"Sort and de-duplicate the targets of all projectRoot configs (see ADR-0018; under --json each config keeps its own targets instead, un-deduplicated, see ADR-0043)")
 	return cmd
 }
 
@@ -142,18 +142,32 @@ func runGitignoreAll(run *gitignoreRun) error {
 	}
 	sort.Strings(names)
 
-	var all []string
+	var selected []string
 	for _, name := range names {
-		if roots[name].RootKind != manifest.RootKindProject {
-			continue
+		if roots[name].RootKind == manifest.RootKindProject {
+			selected = append(selected, name)
 		}
+	}
+	return enumerateGitignoreAll(run, selected, func(name string) ([]string, error) {
+		return configTargets(ep, system, name)
+	})
+}
+
+// enumerateGitignoreAll lists each selected config's targets, registering one niface subject per
+// config (→ issue #164), and prints the de-duplicated union to stdout. targetsFor is the seam that
+// injects the per-config build + manifest read, so the enumeration's subject wiring is testable
+// without nix (mirroring aggregateApply / aggregateDryRun for the mutation side).
+func enumerateGitignoreAll(run *gitignoreRun, selected []string, targetsFor func(name string) ([]string, error)) error {
+	var all []string
+	for _, name := range selected {
 		subject := run.beginSubject(name)
-		targets, err := configTargets(ep, system, name)
+		targets, err := targetsFor(name)
 		if err != nil {
 			// The enumeration stops here (unchanged), so this config's subject carries the failure
-			// and the ones already listed keep their results (→ issue #164). The same error also
-			// returns as the command error, but it lands only here: emit's finish is first-wins,
-			// and the top-level errors[] takes a failure only when no subject was registered.
+			// and the ones already listed keep their results, while the configs after it never
+			// become subjects at all (→ issue #164, docs/spec.md). The same error also returns as
+			// the command error, but it lands only here: emit's finish is first-wins, and the
+			// top-level errors[] takes a failure only when no subject was registered.
 			subject.finish(err)
 			return err
 		}
@@ -161,6 +175,8 @@ func runGitignoreAll(run *gitignoreRun) error {
 		subject.finish(nil)
 		all = append(all, targets...)
 	}
+	// The text contract stays the cross-config dedup+sort union (→ ADR-0018); only the --json
+	// payload above is per-config (→ ADR-0043 §7).
 	printGitignore(dedupeSorted(all))
 	return nil
 }
