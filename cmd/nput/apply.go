@@ -427,11 +427,11 @@ func aggregateDryRun(run *applyRun, selected []string, applyDry func(name string
 		printApplyPlan(res)
 		if len(res.Conflicts) > 0 {
 			anyConflict = true
-			// The conflicting entries are already failed items carrying E_NPUT_COLLISION, so the
-			// subject is in error with nothing to add to its errors[] (niface §2).
-			subject.finishItemBorne()
-			continue
 		}
+		// No subject-level error either way: a conflict is already failed items carrying
+		// E_NPUT_COLLISION, and the payload's item-borne mark is what puts this subject in error
+		// (→ nifaceSubject.itemBorne) — the same mechanism aggregateApply relies on for an
+		// entry-scoped failure, so both settle a config the one way.
 		subject.finish(nil)
 	}
 	return applyAllExitCode(anyError, anyConflict)
