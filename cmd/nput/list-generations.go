@@ -28,6 +28,11 @@ type generationsInfo struct {
 // listGenerationsRun is list-generations' concrete run instantiation, threaded from RunE.
 type listGenerationsRun = nifaceRun[*generationsInfo, *struct{}]
 
+// beginListGenerationsRun starts list-generations' run (→ beginNifaceRun, beginApplyRun).
+func beginListGenerationsRun(command string) *listGenerationsRun {
+	return beginNifaceRun[*generationsInfo, *struct{}](command)
+}
+
 func newListGenerationsCmd() *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
@@ -37,7 +42,7 @@ func newListGenerationsCmd() *cobra.Command {
 			"Pass <name> for that config, or --all to list every home mode config.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := beginNifaceRun[*generationsInfo, *struct{}](cmd.Name())
+			run := beginListGenerationsRun(cmd.Name())
 			if all {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: list-generations cannot combine <name> with --all")

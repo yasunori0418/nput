@@ -24,6 +24,11 @@ type gitignoreInfo struct {
 // gitignoreRun is gitignore's concrete run instantiation, threaded from RunE.
 type gitignoreRun = nifaceRun[*gitignoreInfo, *struct{}]
 
+// beginGitignoreRun starts gitignore's run (→ beginNifaceRun, beginApplyRun).
+func beginGitignoreRun(command string) *gitignoreRun {
+	return beginNifaceRun[*gitignoreInfo, *struct{}](command)
+}
+
 func newGitignoreCmd() *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
@@ -35,7 +40,7 @@ func newGitignoreCmd() *cobra.Command {
 			"--all sorts and de-duplicates the targets of all projectRoot configs.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := beginNifaceRun[*gitignoreInfo, *struct{}](cmd.Name())
+			run := beginGitignoreRun(cmd.Name())
 			if all {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: gitignore cannot combine <name> with --all")

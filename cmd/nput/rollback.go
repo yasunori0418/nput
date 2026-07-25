@@ -23,6 +23,11 @@ type (
 // rollbackRun is rollback's concrete run instantiation, threaded from RunE into runRollback.
 type rollbackRun = nifaceRun[*rollbackResultInfo, *rollbackEnvInfo]
 
+// beginRollbackRun starts rollback's run (→ beginNifaceRun, beginApplyRun).
+func beginRollbackRun(command string) *rollbackRun {
+	return beginNifaceRun[*rollbackResultInfo, *rollbackEnvInfo](command)
+}
+
 func newRollbackCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "rollback <name>",
@@ -32,7 +37,7 @@ func newRollbackCmd() *cobra.Command {
 			"before moving the profile pointer. A name is required (no --all); errors out if there is no previous generation.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := beginNifaceRun[*rollbackResultInfo, *rollbackEnvInfo](cmd.Name())
+			run := beginRollbackRun(cmd.Name())
 			return runRollback(run, args[0])
 		},
 	}

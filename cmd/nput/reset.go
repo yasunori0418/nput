@@ -25,6 +25,11 @@ type (
 // resetRun is reset's concrete run instantiation, threaded from RunE into runReset.
 type resetRun = nifaceRun[*resetResultInfo, *resetEnvInfo]
 
+// beginResetRun starts reset's run (→ beginNifaceRun, beginApplyRun).
+func beginResetRun(command string) *resetRun {
+	return beginNifaceRun[*resetResultInfo, *resetEnvInfo](command)
+}
+
 func newResetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reset <name> [target...]",
@@ -35,7 +40,7 @@ func newResetCmd() *cobra.Command {
 			"--dryrun shows the removal targets with zero side effects and exits (no confirm / flock).",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := beginNifaceRun[*resetResultInfo, *resetEnvInfo](cmd.Name())
+			run := beginResetRun(cmd.Name())
 			return runReset(run, args[0], args[1:], flagDryrun)
 		},
 	}
