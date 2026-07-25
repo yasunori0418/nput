@@ -24,7 +24,7 @@ func TestListGenerationsJSONInfoGenerations(t *testing.T) {
 		{Number: 1, Date: "2026-07-18 09:00:00"},
 		{Number: 2, Date: "2026-07-19 12:00:00", Current: true},
 	}
-	r, buf := newTestRun[*generationsInfo, *struct{}]("list-generations")
+	r, buf := newListGenerationsTestRun()
 	r.beginSubject("home")
 	r.setPayload(&nifacePayload[*generationsInfo]{info: &generationsInfo{Generations: generationRows(gens)}})
 	if err := r.emit(nil); err != nil {
@@ -66,7 +66,7 @@ func TestListGenerationsJSONInfoGenerations(t *testing.T) {
 // it did while the slot was a nil map. A value-struct TInfo would emit
 // "info":{"generations":null}, which the conformance checker would still accept.
 func TestListGenerationsJSONInfoAbsentWithoutListing(t *testing.T) {
-	r, buf := newTestRun[*generationsInfo, *struct{}]("list-generations")
+	r, buf := newListGenerationsTestRun()
 	r.beginSubject("home")
 	if err := r.emit(errors.New("nput: list-generations is home mode only")); err != nil {
 		t.Fatalf("emit: %v", err)
@@ -78,7 +78,7 @@ func TestListGenerationsJSONInfoAbsentWithoutListing(t *testing.T) {
 // (spec: 空 profile でも "generations": [] を明示): the emitted document must carry the
 // generations key as an empty array — a nil slice would marshal the key away.
 func TestListGenerationsJSONEmptyStaysArray(t *testing.T) {
-	r, buf := newTestRun[*generationsInfo, *struct{}]("list-generations")
+	r, buf := newListGenerationsTestRun()
 	r.beginSubject("empty")
 	r.setPayload(&nifacePayload[*generationsInfo]{info: &generationsInfo{Generations: generationRows(nil)}})
 	if err := r.emit(nil); err != nil {

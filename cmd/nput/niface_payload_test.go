@@ -6,6 +6,7 @@ package main
 // conformance of every emitted shape against niface's checker.
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -61,16 +62,18 @@ func changesFor(t *testing.T, changes []nputChange, target string) []nputChange 
 }
 
 // emitPayloadDoc runs the payload through the real emit path (command + subject + payload),
-// checks the document against niface's conformance checker, and returns it decoded. TInfo /
-// TEnvInfo are the emitting command's info pair (→ issue #196); the mutation commands' pairs are
-// empty seat types, so the emitted document carries no info key on either level.
-func emitPayloadDoc[TInfo, TEnvInfo any](t *testing.T, command string, p *nifacePayload[TInfo], cmdErr error) map[string]any {
+// checks the document against niface's conformance checker, and returns it decoded. newRun is
+// the emitting command's test-run constructor (newApplyTestRun, ...), which carries both the
+// command name and its info pair from the production alias — so no call site re-spells the type
+// arguments (→ issue #196). The mutation commands' pairs are empty seat types, so the emitted
+// document carries no info key on either level.
+func emitPayloadDoc[TInfo, TEnvInfo any](t *testing.T, newRun func() (*nifaceRun[TInfo, TEnvInfo], *bytes.Buffer), p *nifacePayload[TInfo], cmdErr error) map[string]any {
 	t.Helper()
 	checker, err := conformance.NewDefaultChecker()
 	if err != nil {
 		t.Fatalf("conformance.NewDefaultChecker: %v", err)
 	}
-	r, buf := newTestRun[TInfo, TEnvInfo](command)
+	r, buf := newRun()
 	r.beginSubject("default")
 	r.setPayload(p)
 	if err := r.emit(cmdErr); err != nil {
@@ -83,10 +86,14 @@ func emitPayloadDoc[TInfo, TEnvInfo any](t *testing.T, command string, p *niface
 }
 
 // assertNoInfoKeys fails when the document carries an info key at the envelope level or inside
-// results[0].result. The seat types are empty structs held as nil pointers precisely so
-// omitempty drops both keys (→ issue #196 §4); a value struct, or a seat accidentally filled
-// with &T{}, would emit "info":{} — schema-valid (envelope.schema.json types info as a bare
-// object) and therefore invisible to the conformance checker, so it has to be pinned here.
+// any result. The seat types are empty structs held as nil pointers precisely so omitempty
+// drops both keys (→ issue #196 §4); a value struct, or a seat accidentally filled with &T{},
+// would emit "info":{} — schema-valid (envelope.schema.json types info as a bare object) and
+// therefore invisible to the conformance checker, so it has to be pinned here.
+//
+// The results loop is empty for the subject-less commands (init, and any --all path), leaving
+// the envelope-level check as the whole assertion there — which is the only level those
+// documents have.
 func assertNoInfoKeys(t *testing.T, doc map[string]any) {
 	t.Helper()
 	if v, ok := doc["info"]; ok {
@@ -123,26 +130,26 @@ func TestMutationSeatInfoKeysStayAbsent(t *testing.T) {
 		if err != nil {
 			t.Fatalf("mutationPayload: %v", err)
 		}
-		assertNoInfoKeys(t, emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil))
+		assertNoInfoKeys(t, emitPayloadDoc(t, newApplyTestRun, p, nil))
 	})
 	t.Run("rollback with payload", func(t *testing.T) {
 		p, err := mutationPayload[*rollbackResultInfo](res, nil)
 		if err != nil {
 			t.Fatalf("mutationPayload: %v", err)
 		}
-		assertNoInfoKeys(t, emitPayloadDoc[*rollbackResultInfo, *rollbackEnvInfo](t, "rollback", p, nil))
+		assertNoInfoKeys(t, emitPayloadDoc(t, newRollbackTestRun, p, nil))
 	})
 	t.Run("reset with payload", func(t *testing.T) {
 		p, err := resetPayload[*resetResultInfo](resetRes, nil)
 		if err != nil {
 			t.Fatalf("resetPayload: %v", err)
 		}
-		assertNoInfoKeys(t, emitPayloadDoc[*resetResultInfo, *resetEnvInfo](t, "reset", p, nil))
+		assertNoInfoKeys(t, emitPayloadDoc(t, newResetTestRun, p, nil))
 	})
 	// The subject-registered-but-payload-less path: the command failed before any engine result
 	// existed, so Result.Info stays the zero value. A non-pointer seat would surface here.
 	t.Run("apply without payload", func(t *testing.T) {
-		r, buf := newTestRun[*applyResultInfo, *applyEnvInfo]("apply")
+		r, buf := newApplyTestRun()
 		r.beginSubject("default")
 		if err := r.emit(errors.New("nput: no entrypoint found")); err != nil {
 			t.Fatalf("emit: %v", err)
@@ -240,7 +247,7 @@ func TestMutationPayloadFullInventory(t *testing.T) {
 		t.Errorf("subject warnings = %+v, want none (the warned target is an item)", p.warnings)
 	}
 
-	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil)
+	doc := emitPayloadDoc(t, newApplyTestRun, p, nil)
 	sr := subjectResultOf(t, doc)
 	gen, ok := sr["generation"].(map[string]any)
 	if !ok {
@@ -342,7 +349,7 @@ func TestMutationPayloadOrphanSubjectWarning(t *testing.T) {
 	if it := findItem(t, p.items, "a"); len(it.Warnings) != 0 {
 		t.Errorf("item warnings = %+v, want none (the orphan is not this item's)", it.Warnings)
 	}
-	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil)
+	doc := emitPayloadDoc(t, newApplyTestRun, p, nil)
 	sr := subjectResultOf(t, doc)
 	warns, ok := sr["warnings"].([]any)
 	if !ok || len(warns) != 1 {
@@ -371,7 +378,7 @@ func TestMutationPayloadRollbackGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
-	doc := emitPayloadDoc[*rollbackResultInfo, *rollbackEnvInfo](t, "rollback", p, nil)
+	doc := emitPayloadDoc(t, newRollbackTestRun, p, nil)
 	sr := subjectResultOf(t, doc)
 	gen := sr["generation"].(map[string]any)
 	if gen["before"] != json.Number("5") || gen["after"] != json.Number("4") {
@@ -469,7 +476,7 @@ func TestMutationPayloadPartialFailure(t *testing.T) {
 		t.Errorf("subject warnings = %+v, want W_NPUT_UNWOUND for the unwound run", p.warnings)
 	}
 
-	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, cmdErr)
+	doc := emitPayloadDoc(t, newApplyTestRun, p, cmdErr)
 	if doc["status"] != "error" {
 		t.Errorf("status = %v, want error", doc["status"])
 	}
@@ -509,7 +516,7 @@ func TestMutationPayloadSubjectBorneFailure(t *testing.T) {
 	if it := findItem(t, p.items, "a"); it.Status != niface.ItemSuccess {
 		t.Errorf("placed item status = %s, want success (the commit, not the entry, failed)", it.Status)
 	}
-	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, cmdErr)
+	doc := emitPayloadDoc(t, newApplyTestRun, p, cmdErr)
 	sr := subjectResultOf(t, doc)
 	errList, ok := sr["errors"].([]any)
 	if !ok || len(errList) != 1 {
@@ -558,7 +565,7 @@ func TestMutationPayloadConflicts(t *testing.T) {
 	if len(p.changes) != 0 {
 		t.Errorf("changes = %+v, want none (the run stopped before any FS action)", p.changes)
 	}
-	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, cmdErr)
+	doc := emitPayloadDoc(t, newApplyTestRun, p, cmdErr)
 	sr := subjectResultOf(t, doc)
 	if errList, ok := sr["errors"]; ok {
 		t.Errorf("subjectResult.errors = %v, want absent (conflicts are item-borne)", errList)
@@ -610,7 +617,7 @@ func TestResetPayload(t *testing.T) {
 		t.Errorf("kept target changes = %+v, want none (policy inaction is not a diff)", cs)
 	}
 
-	doc := emitPayloadDoc[*resetResultInfo, *resetEnvInfo](t, "reset", p, nil)
+	doc := emitPayloadDoc(t, newResetTestRun, p, nil)
 	sr := subjectResultOf(t, doc)
 	if gen, ok := sr["generation"]; ok {
 		t.Errorf("generation = %v, want the slot absent for reset", gen)
@@ -652,7 +659,7 @@ func TestResetPayloadPartialFailure(t *testing.T) {
 	if cs := changesFor(t, p.changes, "s1"); len(cs) != 1 {
 		t.Errorf("removed-so-far changes = %+v, want the remove present despite the failure", cs)
 	}
-	doc := emitPayloadDoc[*resetResultInfo, *resetEnvInfo](t, "reset", p, cmdErr)
+	doc := emitPayloadDoc(t, newResetTestRun, p, cmdErr)
 	if doc["status"] != "error" {
 		t.Errorf("status = %v, want error", doc["status"])
 	}
@@ -735,7 +742,7 @@ func TestJSONEndToEndApplyAndResetPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
-	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil)
+	doc := emitPayloadDoc(t, newApplyTestRun, p, nil)
 	sr := subjectResultOf(t, doc)
 	gen := sr["generation"].(map[string]any)
 	if _, hasBefore := gen["before"]; hasBefore || gen["after"] != json.Number("1") {
@@ -754,7 +761,7 @@ func TestJSONEndToEndApplyAndResetPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
-	doc = emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil)
+	doc = emitPayloadDoc(t, newApplyTestRun, p, nil)
 	sr = subjectResultOf(t, doc)
 	gen = sr["generation"].(map[string]any)
 	if gen["before"] != json.Number("1") || gen["after"] != json.Number("2") {
@@ -783,7 +790,7 @@ func TestJSONEndToEndApplyAndResetPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resetPayload: %v", err)
 	}
-	doc = emitPayloadDoc[*resetResultInfo, *resetEnvInfo](t, "reset", rp, nil)
+	doc = emitPayloadDoc(t, newResetTestRun, rp, nil)
 	sr = subjectResultOf(t, doc)
 	if gen, ok := sr["generation"]; ok {
 		t.Errorf("reset generation = %v, want the slot absent", gen)
@@ -808,7 +815,7 @@ func TestDryrunPayloadFirstPlanOmitsGenerationNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
-	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil)
+	doc := emitPayloadDoc(t, newApplyTestRun, p, nil)
 	gen := subjectResultOf(t, doc)["generation"].(map[string]any)
 	if gen["profile"] != res.Profile {
 		t.Errorf("generation.profile = %v, want %s", gen["profile"], res.Profile)
@@ -849,7 +856,7 @@ func TestDryrunPayloadConflictKeepsEnvelopeBesideExit2(t *testing.T) {
 		t.Errorf("sibling item status = %s, want success (a dryrun attempts nothing)", it.Status)
 	}
 
-	r, buf := newTestRun[*applyResultInfo, *applyEnvInfo]("apply")
+	r, buf := newApplyTestRun()
 	r.dryRun = true
 	r.beginSubject("default")
 	r.setPayload(p)
@@ -973,7 +980,7 @@ func TestMutationPayloadConflictWithWarningStaysConformant(t *testing.T) {
 	if it.Status != niface.ItemFailed || it.Error == nil || len(it.Warnings) != 1 {
 		t.Fatalf("item = %+v, want failed with both error and the entry-borne warning", it)
 	}
-	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, &exitError{code: 2})
+	doc := emitPayloadDoc(t, newApplyTestRun, p, &exitError{code: 2})
 	if doc["status"] != "error" {
 		t.Errorf("status = %v, want error", doc["status"])
 	}
