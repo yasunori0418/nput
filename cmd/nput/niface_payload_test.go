@@ -61,14 +61,16 @@ func changesFor(t *testing.T, changes []nputChange, target string) []nputChange 
 }
 
 // emitPayloadDoc runs the payload through the real emit path (command + subject + payload),
-// checks the document against niface's conformance checker, and returns it decoded.
-func emitPayloadDoc(t *testing.T, command string, p *nifacePayload, cmdErr error) map[string]any {
+// checks the document against niface's conformance checker, and returns it decoded. TInfo /
+// TEnvInfo are the emitting command's info pair (→ issue #196); the mutation commands' pairs are
+// empty seat types, so the emitted document carries no info key on either level.
+func emitPayloadDoc[TInfo, TEnvInfo any](t *testing.T, command string, p *nifacePayload[TInfo], cmdErr error) map[string]any {
 	t.Helper()
 	checker, err := conformance.NewDefaultChecker()
 	if err != nil {
 		t.Fatalf("conformance.NewDefaultChecker: %v", err)
 	}
-	r, buf := newTestRun(command)
+	r, buf := newTestRun[TInfo, TEnvInfo](command)
 	r.beginSubject("default")
 	r.setPayload(p)
 	if err := r.emit(cmdErr); err != nil {
@@ -116,7 +118,7 @@ func TestMutationPayloadFullInventory(t *testing.T) {
 		GenAfter:      ip(1),
 		Warnings:      []planner.Warning{{Kind: planner.WarnForeignReplace, Target: ".config/relinked"}},
 	}
-	p, err := mutationPayload(res, nil)
+	p, err := mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -169,7 +171,7 @@ func TestMutationPayloadFullInventory(t *testing.T) {
 		t.Errorf("subject warnings = %+v, want none (the warned target is an item)", p.warnings)
 	}
 
-	doc := emitPayloadDoc(t, "apply", p, nil)
+	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil)
 	sr := subjectResultOf(t, doc)
 	gen, ok := sr["generation"].(map[string]any)
 	if !ok {
@@ -198,7 +200,7 @@ func TestMutationPayloadMethodChangeCoalesces(t *testing.T) {
 		Removed: []string{".config/x"},
 		Copied:  []string{".config/x"},
 	}
-	p, err := mutationPayload(res, nil)
+	p, err := mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -234,7 +236,7 @@ func TestMutationPayloadNoopRelinkSuppressed(t *testing.T) {
 			".moved": "/nix/store/old",  // genuinely moved
 		},
 	}
-	p, err := mutationPayload(res, nil)
+	p, err := mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -261,7 +263,7 @@ func TestMutationPayloadOrphanSubjectWarning(t *testing.T) {
 		},
 		Warnings: []planner.Warning{{Kind: planner.WarnCopyOrphan, Target: ".gone/copy"}},
 	}
-	p, err := mutationPayload(res, nil)
+	p, err := mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -271,7 +273,7 @@ func TestMutationPayloadOrphanSubjectWarning(t *testing.T) {
 	if it := findItem(t, p.items, "a"); len(it.Warnings) != 0 {
 		t.Errorf("item warnings = %+v, want none (the orphan is not this item's)", it.Warnings)
 	}
-	doc := emitPayloadDoc(t, "apply", p, nil)
+	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil)
 	sr := subjectResultOf(t, doc)
 	warns, ok := sr["warnings"].([]any)
 	if !ok || len(warns) != 1 {
@@ -296,11 +298,11 @@ func TestMutationPayloadRollbackGeneration(t *testing.T) {
 		},
 		From: 5, To: 4,
 	}
-	p, err := mutationPayload(&rr.Result, nil)
+	p, err := mutationPayload[*rollbackResultInfo](&rr.Result, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
-	doc := emitPayloadDoc(t, "rollback", p, nil)
+	doc := emitPayloadDoc[*rollbackResultInfo, *rollbackEnvInfo](t, "rollback", p, nil)
 	sr := subjectResultOf(t, doc)
 	gen := sr["generation"].(map[string]any)
 	if gen["before"] != json.Number("5") || gen["after"] != json.Number("4") {
@@ -309,7 +311,7 @@ func TestMutationPayloadRollbackGeneration(t *testing.T) {
 
 	// A failed rollback pins the pointer at the unmoved current generation.
 	rr.GenBefore, rr.GenAfter = ip(5), ip(5)
-	p, err = mutationPayload(&rr.Result, errors.New("nput: failed to move the profile pointer"))
+	p, err = mutationPayload[*rollbackResultInfo](&rr.Result, errors.New("nput: failed to move the profile pointer"))
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -367,7 +369,7 @@ func TestMutationPayloadPartialFailure(t *testing.T) {
 		GenAfter:     ip(3),
 	}
 	cmdErr := &os.PathError{Op: "symlink", Path: "/root/b", Err: fs.ErrPermission}
-	p, err := mutationPayload(res, cmdErr)
+	p, err := mutationPayload[*applyResultInfo](res, cmdErr)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -398,7 +400,7 @@ func TestMutationPayloadPartialFailure(t *testing.T) {
 		t.Errorf("subject warnings = %+v, want W_NPUT_UNWOUND for the unwound run", p.warnings)
 	}
 
-	doc := emitPayloadDoc(t, "apply", p, cmdErr)
+	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, cmdErr)
 	if doc["status"] != "error" {
 		t.Errorf("status = %v, want error", doc["status"])
 	}
@@ -428,7 +430,7 @@ func TestMutationPayloadSubjectBorneFailure(t *testing.T) {
 		GenAfter: ip(2), GenBefore: ip(2),
 	}
 	cmdErr := errors.New("nput: generation commit (nix-env --set) failed: exit status 1")
-	p, err := mutationPayload(res, cmdErr)
+	p, err := mutationPayload[*applyResultInfo](res, cmdErr)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -438,7 +440,7 @@ func TestMutationPayloadSubjectBorneFailure(t *testing.T) {
 	if it := findItem(t, p.items, "a"); it.Status != niface.ItemSuccess {
 		t.Errorf("placed item status = %s, want success (the commit, not the entry, failed)", it.Status)
 	}
-	doc := emitPayloadDoc(t, "apply", p, cmdErr)
+	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, cmdErr)
 	sr := subjectResultOf(t, doc)
 	errList, ok := sr["errors"].([]any)
 	if !ok || len(errList) != 1 {
@@ -469,7 +471,7 @@ func TestMutationPayloadConflicts(t *testing.T) {
 		Unreached: []string{"b"},
 	}
 	cmdErr := errors.New("nput: 1 conflict(s) detected; stopped without placing (see above)")
-	p, err := mutationPayload(res, cmdErr)
+	p, err := mutationPayload[*applyResultInfo](res, cmdErr)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -487,7 +489,7 @@ func TestMutationPayloadConflicts(t *testing.T) {
 	if len(p.changes) != 0 {
 		t.Errorf("changes = %+v, want none (the run stopped before any FS action)", p.changes)
 	}
-	doc := emitPayloadDoc(t, "apply", p, cmdErr)
+	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, cmdErr)
 	sr := subjectResultOf(t, doc)
 	if errList, ok := sr["errors"]; ok {
 		t.Errorf("subjectResult.errors = %v, want absent (conflicts are item-borne)", errList)
@@ -511,7 +513,7 @@ func TestResetPayload(t *testing.T) {
 		KeptForeign:     []string{"s2"},
 		Warnings:        []planner.Warning{{Kind: planner.WarnStaleMismatch, Target: "s2"}},
 	}
-	p, err := resetPayload(res, nil)
+	p, err := resetPayload[*resetResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("resetPayload: %v", err)
 	}
@@ -539,7 +541,7 @@ func TestResetPayload(t *testing.T) {
 		t.Errorf("kept target changes = %+v, want none (policy inaction is not a diff)", cs)
 	}
 
-	doc := emitPayloadDoc(t, "reset", p, nil)
+	doc := emitPayloadDoc[*resetResultInfo, *resetEnvInfo](t, "reset", p, nil)
 	sr := subjectResultOf(t, doc)
 	if gen, ok := sr["generation"]; ok {
 		t.Errorf("generation = %v, want the slot absent for reset", gen)
@@ -561,7 +563,7 @@ func TestResetPayloadPartialFailure(t *testing.T) {
 		Unreached:       []string{"c2"},
 	}
 	cmdErr := &os.PathError{Op: "removeall", Path: "/root/c1", Err: fs.ErrPermission}
-	p, err := resetPayload(res, cmdErr)
+	p, err := resetPayload[*resetResultInfo](res, cmdErr)
 	if err != nil {
 		t.Fatalf("resetPayload: %v", err)
 	}
@@ -581,7 +583,7 @@ func TestResetPayloadPartialFailure(t *testing.T) {
 	if cs := changesFor(t, p.changes, "s1"); len(cs) != 1 {
 		t.Errorf("removed-so-far changes = %+v, want the remove present despite the failure", cs)
 	}
-	doc := emitPayloadDoc(t, "reset", p, cmdErr)
+	doc := emitPayloadDoc[*resetResultInfo, *resetEnvInfo](t, "reset", p, cmdErr)
 	if doc["status"] != "error" {
 		t.Errorf("status = %v, want error", doc["status"])
 	}
@@ -660,11 +662,11 @@ func TestJSONEndToEndApplyAndResetPayload(t *testing.T) {
 
 	// First apply: two adds, no previous generation to observe.
 	res := apply(1, keep, drop)
-	p, err := mutationPayload(res, nil)
+	p, err := mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
-	doc := emitPayloadDoc(t, "apply", p, nil)
+	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil)
 	sr := subjectResultOf(t, doc)
 	gen := sr["generation"].(map[string]any)
 	if _, hasBefore := gen["before"]; hasBefore || gen["after"] != json.Number("1") {
@@ -679,11 +681,11 @@ func TestJSONEndToEndApplyAndResetPayload(t *testing.T) {
 
 	// Second apply drops .drop: its old entry is stale-removed and stays in the inventory.
 	res = apply(2, keep)
-	p, err = mutationPayload(res, nil)
+	p, err = mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
-	doc = emitPayloadDoc(t, "apply", p, nil)
+	doc = emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil)
 	sr = subjectResultOf(t, doc)
 	gen = sr["generation"].(map[string]any)
 	if gen["before"] != json.Number("1") || gen["after"] != json.Number("2") {
@@ -708,11 +710,11 @@ func TestJSONEndToEndApplyAndResetPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Reset: %v", err)
 	}
-	rp, err := resetPayload(resetRes, nil)
+	rp, err := resetPayload[*resetResultInfo](resetRes, nil)
 	if err != nil {
 		t.Fatalf("resetPayload: %v", err)
 	}
-	doc = emitPayloadDoc(t, "reset", rp, nil)
+	doc = emitPayloadDoc[*resetResultInfo, *resetEnvInfo](t, "reset", rp, nil)
 	sr = subjectResultOf(t, doc)
 	if gen, ok := sr["generation"]; ok {
 		t.Errorf("reset generation = %v, want the slot absent", gen)
@@ -733,11 +735,11 @@ func TestDryrunPayloadFirstPlanOmitsGenerationNumbers(t *testing.T) {
 		Entries: []manifest.Entry{{SrcKind: "store", Src: "/nix/store/z", Target: ".zshrc", Method: "symlink"}},
 		Placed:  []string{".zshrc"},
 	}
-	p, err := mutationPayload(res, nil)
+	p, err := mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
-	doc := emitPayloadDoc(t, "apply", p, nil)
+	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil)
 	gen := subjectResultOf(t, doc)["generation"].(map[string]any)
 	if gen["profile"] != res.Profile {
 		t.Errorf("generation.profile = %v, want %s", gen["profile"], res.Profile)
@@ -767,7 +769,7 @@ func TestDryrunPayloadConflictKeepsEnvelopeBesideExit2(t *testing.T) {
 			{Entry: manifest.Entry{Target: ".zshrc"}, Reason: "target already has an existing file/directory (will not overwrite)", Kind: planner.ConflictForeignEntity},
 		},
 	}
-	p, err := mutationPayload(res, nil) // the dryrun wiring passes cmdErr nil (→ runApply)
+	p, err := mutationPayload[*applyResultInfo](res, nil) // the dryrun wiring passes cmdErr nil (→ runApply)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -778,7 +780,7 @@ func TestDryrunPayloadConflictKeepsEnvelopeBesideExit2(t *testing.T) {
 		t.Errorf("sibling item status = %s, want success (a dryrun attempts nothing)", it.Status)
 	}
 
-	r, buf := newTestRun("apply")
+	r, buf := newTestRun[*applyResultInfo, *applyEnvInfo]("apply")
 	r.dryRun = true
 	r.beginSubject("default")
 	r.setPayload(p)
@@ -833,7 +835,7 @@ func TestDryrunPayloadRelinkNotSuppressed(t *testing.T) {
 		Entries:  []manifest.Entry{{SrcKind: "store", Src: "/nix/store/same", Target: ".same", Method: "symlink"}},
 		Replaced: []string{".same"},
 	}
-	p, err := mutationPayload(res, nil)
+	p, err := mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -860,7 +862,7 @@ func TestMutationPayloadKeptStaleSubjectWarning(t *testing.T) {
 			{Kind: planner.WarnStaleNonSymlink, Target: ".config/solidified"},
 		},
 	}
-	p, err := mutationPayload(res, nil)
+	p, err := mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -894,7 +896,7 @@ func TestMutationPayloadConflictWithWarningStaysConformant(t *testing.T) {
 		},
 		Warnings: []planner.Warning{{Kind: planner.WarnForeignReplace, Target: ".zshrc"}},
 	}
-	p, err := mutationPayload(res, nil)
+	p, err := mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}
@@ -902,7 +904,7 @@ func TestMutationPayloadConflictWithWarningStaysConformant(t *testing.T) {
 	if it.Status != niface.ItemFailed || it.Error == nil || len(it.Warnings) != 1 {
 		t.Fatalf("item = %+v, want failed with both error and the entry-borne warning", it)
 	}
-	doc := emitPayloadDoc(t, "apply", p, &exitError{code: 2})
+	doc := emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, &exitError{code: 2})
 	if doc["status"] != "error" {
 		t.Errorf("status = %v, want error", doc["status"])
 	}
@@ -919,7 +921,7 @@ func TestMutationPayloadCopyForeignItemWarning(t *testing.T) {
 		Entries:  []manifest.Entry{{SrcKind: "store", Src: "/nix/store/c", Target: ".config/copydir", Method: "copy"}},
 		Warnings: []planner.Warning{{Kind: planner.WarnCopyForeign, Target: ".config/copydir"}},
 	}
-	p, err := mutationPayload(res, nil)
+	p, err := mutationPayload[*applyResultInfo](res, nil)
 	if err != nil {
 		t.Fatalf("mutationPayload: %v", err)
 	}

@@ -23,9 +23,9 @@ func TestListGenerationsJSONInfoGenerations(t *testing.T) {
 		{Number: 1, Date: "2026-07-18 09:00:00"},
 		{Number: 2, Date: "2026-07-19 12:00:00", Current: true},
 	}
-	r, buf := newTestRun("list-generations")
+	r, buf := newTestRun[*generationsInfo, *struct{}]("list-generations")
 	r.beginSubject("home")
-	r.setPayload(&nifacePayload{info: map[string]any{"generations": generationRows(gens)}})
+	r.setPayload(&nifacePayload[*generationsInfo]{info: &generationsInfo{Generations: generationRows(gens)}})
 	if err := r.emit(nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
@@ -62,9 +62,9 @@ func TestListGenerationsJSONInfoGenerations(t *testing.T) {
 // (spec: 空 profile でも "generations": [] を明示): the emitted document must carry the
 // generations key as an empty array — a nil slice would marshal the key away.
 func TestListGenerationsJSONEmptyStaysArray(t *testing.T) {
-	r, buf := newTestRun("list-generations")
+	r, buf := newTestRun[*generationsInfo, *struct{}]("list-generations")
 	r.beginSubject("empty")
-	r.setPayload(&nifacePayload{info: map[string]any{"generations": generationRows(nil)}})
+	r.setPayload(&nifacePayload[*generationsInfo]{info: &generationsInfo{Generations: generationRows(nil)}})
 	if err := r.emit(nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}

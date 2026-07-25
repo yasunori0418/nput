@@ -43,10 +43,10 @@ func TestGitignoreJSONInfoPaths(t *testing.T) {
 		t.Fatalf("conformance.NewDefaultChecker: %v", err)
 	}
 
-	r, buf := newTestRun("gitignore")
+	r, buf := newTestRun[*gitignoreInfo, *struct{}]("gitignore")
 	r.beginSubject("docs")
-	r.setPayload(&nifacePayload{info: map[string]any{
-		"paths": gitignoreAnchors([]string{".claude/skills/nix", ".nput-out/docs"}),
+	r.setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{
+		Paths: gitignoreAnchors([]string{".claude/skills/nix", ".nput-out/docs"}),
 	}})
 	if err := r.emit(nil); err != nil {
 		t.Fatalf("emit: %v", err)
@@ -77,9 +77,9 @@ func TestGitignoreJSONInfoPaths(t *testing.T) {
 // (spec: entry 0 件でも "paths": [] を明示): the emitted document must carry the paths key as
 // an empty array — a nil slice would marshal the key away.
 func TestGitignoreJSONEmptyPathsStaysArray(t *testing.T) {
-	r, buf := newTestRun("gitignore")
+	r, buf := newTestRun[*gitignoreInfo, *struct{}]("gitignore")
 	r.beginSubject("empty")
-	r.setPayload(&nifacePayload{info: map[string]any{"paths": gitignoreAnchors(nil)}})
+	r.setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{Paths: gitignoreAnchors(nil)}})
 	if err := r.emit(nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}

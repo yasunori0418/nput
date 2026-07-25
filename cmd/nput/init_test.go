@@ -68,8 +68,8 @@ func TestInitJSONEnvelopeInfo(t *testing.T) {
 		t.Fatalf("conformance.NewDefaultChecker: %v", err)
 	}
 
-	r, buf := newTestRun("init")
-	r.setEnvelopeInfo(map[string]any{"template": "standalone", "ref": defaultTemplateRef})
+	r, buf := newTestRun[*struct{}, *initInfo]("init")
+	r.setEnvelopeInfo(&initInfo{Template: "standalone", Ref: defaultTemplateRef})
 	if err := r.emit(nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
