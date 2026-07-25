@@ -40,6 +40,8 @@ func newGitignoreCmd() *cobra.Command {
 			"--all sorts and de-duplicates the targets of all projectRoot configs.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// beginGitignoreRun also publishes the run to nifaceReport, so --all still emits its
+			// (subject-less) envelope even though it never touches the run value below.
 			run := beginGitignoreRun(cmd.Name())
 			if all {
 				if len(args) > 0 {

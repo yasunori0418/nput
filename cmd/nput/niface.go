@@ -71,7 +71,7 @@ func nifaceTimestamp(t time.Time) string { return t.Format(time.RFC3339) }
 type nifaceRun[TInfo, TEnvInfo any] struct {
 	now     func() time.Time // injectable clock; tests pin it to a fixed time
 	out     io.Writer        // envelope sink (os.Stdout; tests substitute a buffer)
-	command string           // executed subcommand name ("" until begin — no envelope for --help / --version)
+	command string           // executed subcommand name ("" until begin · → began)
 	dryRun  bool             // envelope dryRun field, captured from flagDryrun at begin (tests set it directly)
 	started time.Time
 	subject *nifaceSubject[TInfo] // the single subject #130 wires (nil = none; #164 generalizes to N)
@@ -146,9 +146,11 @@ func (r *nifaceRun[TInfo, TEnvInfo]) begin(command string) {
 	r.started = r.now()
 }
 
-// began reports whether an nput subcommand's RunE actually started (false on the --help /
-// --version / help / completion paths and on flag or argument validation failures — none of
-// those emit an envelope; exit code + stderr are the only signals there).
+// began satisfies emitter. A published run is always a begun one — beginNifaceRun is the only
+// production constructor and it begins before publishing — so this is true for anything main
+// finds in nifaceReport; the not-started state is noopEmitter's, which owns the list of paths
+// that never reach a RunE. It still reads the field rather than returning true, because tests
+// build runs directly and main's gate must stay honest for them too.
 func (r *nifaceRun[TInfo, TEnvInfo]) began() bool { return r.command != "" }
 
 // beginSubject registers the command's subject (config name) once it is known. From then on a
