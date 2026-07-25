@@ -10,6 +10,18 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
+// rollbackResultInfo / rollbackEnvInfo are rollback's niface info slots (→ issue #196): empty
+// seat types held as nil pointers, so both info keys stay out of the document exactly as before.
+// The generation transition rides generation.before/after, not info; the seats are here so later
+// mutation run facts arrive as field additions alone (→ apply.go の applyResultInfo コメント).
+type (
+	rollbackResultInfo struct{}
+	rollbackEnvInfo    struct{}
+)
+
+// rollbackRun is rollback's concrete run instantiation, threaded from RunE into runRollback.
+type rollbackRun = nifaceRun[*rollbackResultInfo, *rollbackEnvInfo]
+
 func newRollbackCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "rollback <name>",
@@ -19,16 +31,18 @@ func newRollbackCmd() *cobra.Command {
 			"before moving the profile pointer. A name is required (no --all); errors out if there is no previous generation.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			nifaceReport.begin(cmd.Name())
-			return runRollback(args[0])
+			run := newNifaceRun[*rollbackResultInfo, *rollbackEnvInfo]()
+			run.begin(cmd.Name())
+			nifaceReport = run
+			return runRollback(run, args[0])
 		},
 	}
 }
 
 // runRollback confirms rootKind via eval pre-resolution (home mode only) and drives engine.Rollback.
-func runRollback(name string) error {
+func runRollback(run *rollbackRun, name string) error {
 	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
-	nifaceReport.beginSubject(name)
+	run.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -56,7 +70,7 @@ func runRollback(name string) error {
 		// The From→To transition rides generation.before/after (GenBefore/GenAfter), not
 		// result.info — no double encoding (→ issue #131, niface ADR-0015). A stage-failure
 		// partial result maps the same way, with the pointer pinned at the unmoved generation.
-		attachMutationPayload(&res.Result, err)
+		attachMutationPayload(run, &res.Result, err)
 	}
 	if err != nil {
 		return err

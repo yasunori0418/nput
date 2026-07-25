@@ -10,6 +10,20 @@ import (
 	"github.com/yasunori0418/nput/internal/manifest"
 )
 
+// gitignoreInfo is gitignore's result.info: the anchor-form target enumeration (→ issue #132,
+// ADR-0043 §5; typed by #196). The envelope-wide slot stays unused (read-only command), so it is
+// an anonymous *struct{} left nil.
+//
+// Carried as a pointer for the same reason as generationsInfo: gitignore can fail after the
+// subject is registered but before the enumeration exists (eval / project-mode rejection /
+// build), and only a nil pointer keeps result.info omitted there (→ issue #196 §4).
+type gitignoreInfo struct {
+	Paths []string `json:"paths"`
+}
+
+// gitignoreRun is gitignore's concrete run instantiation, threaded from RunE.
+type gitignoreRun = nifaceRun[*gitignoreInfo, *struct{}]
+
 func newGitignoreCmd() *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
@@ -21,7 +35,9 @@ func newGitignoreCmd() *cobra.Command {
 			"--all sorts and de-duplicates the targets of all projectRoot configs.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			nifaceReport.begin(cmd.Name())
+			run := newNifaceRun[*gitignoreInfo, *struct{}]()
+			run.begin(cmd.Name())
+			nifaceReport = run
 			if all {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: gitignore cannot combine <name> with --all")
@@ -31,7 +47,7 @@ func newGitignoreCmd() *cobra.Command {
 			if len(args) != 1 {
 				return fmt.Errorf("nput: gitignore requires <name> or --all")
 			}
-			return runGitignore(args[0])
+			return runGitignore(run, args[0])
 		},
 	}
 	cmd.Flags().BoolVar(&all, "all", false, "Sort and de-duplicate the targets of all projectRoot configs")
@@ -40,9 +56,9 @@ func newGitignoreCmd() *cobra.Command {
 
 // runGitignore lists a single config's placement targets. project mode only;
 // it errors out if a non-project config (home / fixed) is given (because the anchor form presupposes the git toplevel; → ADR-0023).
-func runGitignore(name string) error {
+func runGitignore(run *gitignoreRun, name string) error {
 	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
-	nifaceReport.beginSubject(name)
+	run.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -68,7 +84,7 @@ func runGitignore(name string) error {
 	// A read-only enumeration rides in result.info as the anchor-form paths (items stays [] —
 	// the listing is not an execution record · → issue #132, ADR-0043 §5). The line-oriented
 	// default stdout below is untouched (--json is the opt-in second contract).
-	nifaceReport.setPayload(&nifacePayload{info: map[string]any{"paths": gitignoreAnchors(targets)}})
+	run.setPayload(&nifacePayload[*gitignoreInfo]{info: &gitignoreInfo{Paths: gitignoreAnchors(targets)}})
 	printGitignore(targets)
 	return nil
 }

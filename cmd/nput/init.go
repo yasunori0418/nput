@@ -18,6 +18,21 @@ const defaultTemplateRef = "github:yasunori0418/nput"
 // initTemplates is the template names that init accepts (matching the output names in flake.templates).
 var initTemplates = []string{"standalone", "project"}
 
+// initInfo is init's envelope-wide info: the run facts of the template expansion (→ issue #132,
+// niface ADR-0018; typed by #196). init registers no subject, so its result.info slot is unused
+// and stays an anonymous *struct{} left nil.
+//
+// Carried as a pointer: an unknown template name fails before setEnvelopeInfo, and only a nil
+// pointer keeps the envelope's info omitted there (a value struct would newly emit
+// "info":{"template":"","ref":""} · → issue #196 §4).
+type initInfo struct {
+	Template string `json:"template"`
+	Ref      string `json:"ref"`
+}
+
+// initRun is init's concrete run instantiation, threaded from RunE into runInit.
+type initRun = nifaceRun[*struct{}, *initInfo]
+
 func newInitCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init <template>",
@@ -31,15 +46,17 @@ func newInitCmd() *cobra.Command {
 			"Existing files are not overwritten (inherits nix flake init's behavior).",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			nifaceReport.begin(cmd.Name())
-			return runInit(args[0])
+			run := newNifaceRun[*struct{}, *initInfo]()
+			run.begin(cmd.Name())
+			nifaceReport = run
+			return runInit(run, args[0])
 		},
 	}
 }
 
 // runInit validates the template name and runs `nix flake init -t <ref>#<template>` in the CWD.
 // Because it generates a new flake, it does not go through entrypoint discovery (discoverEntrypoint; → plan 8).
-func runInit(template string) error {
+func runInit(run *initRun, template string) error {
 	if !isValidTemplate(template) {
 		return fmt.Errorf("nput: unknown template: %q (valid values: %s)", template, strings.Join(initTemplates, " / "))
 	}
@@ -52,7 +69,7 @@ func runInit(template string) error {
 	// init has no subject (no config), so the run facts ride in the envelope-wide info while
 	// results stays [] (niface ADR-0018 · → issue #132). Registered before the expansion so a
 	// failed init still reports what it attempted alongside the top-level error.
-	nifaceReport.setEnvelopeInfo(map[string]any{"template": template, "ref": ref})
+	run.setEnvelopeInfo(&initInfo{Template: template, Ref: ref})
 
 	args := flakeInitArgs(template, ref)
 	if flagDebug {
