@@ -33,6 +33,11 @@ type initInfo struct {
 // initRun is init's concrete run instantiation, threaded from RunE into runInit.
 type initRun = nifaceRun[*struct{}, *initInfo]
 
+// beginInitRun starts init's run (→ beginNifaceRun, beginApplyRun).
+func beginInitRun(command string) *initRun {
+	return beginNifaceRun[*struct{}, *initInfo](command)
+}
+
 func newInitCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init <template>",
@@ -46,7 +51,7 @@ func newInitCmd() *cobra.Command {
 			"Existing files are not overwritten (inherits nix flake init's behavior).",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := beginNifaceRun[*struct{}, *initInfo](cmd.Name())
+			run := beginInitRun(cmd.Name())
 			return runInit(run, args[0])
 		},
 	}

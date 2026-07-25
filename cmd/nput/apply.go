@@ -33,9 +33,15 @@ type (
 	applyEnvInfo    struct{}
 )
 
-// applyRun is apply's concrete run instantiation, threaded from RunE through the run functions
-// (the info-typed setters cannot cross the emitter interface · → issue #196).
+// applyRun is apply's concrete run instantiation, threaded from RunE into the run functions.
 type applyRun = nifaceRun[*applyResultInfo, *applyEnvInfo]
+
+// beginApplyRun starts apply's run (→ beginNifaceRun). It is the only place apply's info type
+// pair is spelled outside the alias, so changing applyRun's parameters cannot leave a stale
+// instantiation behind.
+func beginApplyRun(command string) *applyRun {
+	return beginNifaceRun[*applyResultInfo, *applyEnvInfo](command)
+}
 
 func newApplyCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -46,7 +52,7 @@ func newApplyCmd() *cobra.Command {
 			"--all applies all of nput.* in lexical order; --project-root / --home-root / --system-root narrow by root mode.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := beginNifaceRun[*applyResultInfo, *applyEnvInfo](cmd.Name())
+			run := beginApplyRun(cmd.Name())
 			flagBackupEnabled = cmd.Flags().Changed("backup")
 			if flagApplyAll {
 				if len(args) > 0 {

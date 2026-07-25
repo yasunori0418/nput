@@ -124,9 +124,13 @@ var nifaceReport emitter = noopEmitter{}
 
 // beginNifaceRun starts a command's run: it builds the concrete instantiation against the real
 // clock and stdout, begins it for command, and publishes it to nifaceReport so main can emit it
-// after Execute returns. Every subcommand's RunE calls exactly this — keeping build / begin /
-// publish in one place, because a run that is begun but never published emits no envelope at
-// all (main's gate reads nifaceReport, not the command's local variable · → issue #196).
+// after Execute returns — keeping build / begin / publish in one place, because a run that is
+// begun but never published emits no envelope at all (main's gate reads nifaceReport, not the
+// command's local variable · → issue #196).
+//
+// Commands do not call this directly with their type arguments; each one wraps it in a
+// begin<Command>Run helper declared next to its run alias, so the command's (TInfo, TEnvInfo)
+// pair is spelled exactly once per command and the alias stays the single source of truth.
 func beginNifaceRun[TInfo, TEnvInfo any](command string) *nifaceRun[TInfo, TEnvInfo] {
 	r := &nifaceRun[TInfo, TEnvInfo]{now: time.Now, out: os.Stdout}
 	r.begin(command)
