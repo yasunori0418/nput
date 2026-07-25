@@ -82,6 +82,75 @@ func emitPayloadDoc[TInfo, TEnvInfo any](t *testing.T, command string, p *niface
 	return decodeEnvelope(t, buf)
 }
 
+// assertNoInfoKeys fails when the document carries an info key at the envelope level or inside
+// results[0].result. The seat types are empty structs held as nil pointers precisely so
+// omitempty drops both keys (→ issue #196 §4); a value struct, or a seat accidentally filled
+// with &T{}, would emit "info":{} — schema-valid (envelope.schema.json types info as a bare
+// object) and therefore invisible to the conformance checker, so it has to be pinned here.
+func assertNoInfoKeys(t *testing.T, doc map[string]any) {
+	t.Helper()
+	if v, ok := doc["info"]; ok {
+		t.Errorf("envelope info = %v, want the key absent (the seat type is a nil pointer)", v)
+	}
+	results, _ := doc["results"].([]any)
+	for i, r := range results {
+		res, _ := r.(map[string]any)["result"].(map[string]any)
+		if v, ok := res["info"]; ok {
+			t.Errorf("results[%d].result.info = %v, want the key absent (the seat type is a nil pointer)", i, v)
+		}
+	}
+}
+
+// TestMutationSeatInfoKeysStayAbsent pins the output-invariance requirement that made the
+// mutation info slots empty seat types behind pointers (→ issue #196 §4): apply / reset /
+// rollback must emit no info key at either level, both with a payload attached and on the
+// payload-less path (a failure before any engine result exists). Without this the seats could
+// silently start emitting "info":{} — the conformance checker accepts it, so no other test
+// in the suite would notice.
+func TestMutationSeatInfoKeysStayAbsent(t *testing.T) {
+	res := &engine.Result{
+		Profile: "/p",
+		Entries: []manifest.Entry{{SrcKind: "store", Src: "/nix/store/a", Target: "a", Method: "symlink"}},
+		Placed:  []string{"a"},
+	}
+	resetRes := &engine.ResetResult{
+		Entries:         []manifest.Entry{{SrcKind: "store", Src: "/nix/store/s", Target: "s", Method: "symlink"}},
+		RemovedSymlinks: []string{"s"},
+	}
+
+	t.Run("apply with payload", func(t *testing.T) {
+		p, err := mutationPayload[*applyResultInfo](res, nil)
+		if err != nil {
+			t.Fatalf("mutationPayload: %v", err)
+		}
+		assertNoInfoKeys(t, emitPayloadDoc[*applyResultInfo, *applyEnvInfo](t, "apply", p, nil))
+	})
+	t.Run("rollback with payload", func(t *testing.T) {
+		p, err := mutationPayload[*rollbackResultInfo](res, nil)
+		if err != nil {
+			t.Fatalf("mutationPayload: %v", err)
+		}
+		assertNoInfoKeys(t, emitPayloadDoc[*rollbackResultInfo, *rollbackEnvInfo](t, "rollback", p, nil))
+	})
+	t.Run("reset with payload", func(t *testing.T) {
+		p, err := resetPayload[*resetResultInfo](resetRes, nil)
+		if err != nil {
+			t.Fatalf("resetPayload: %v", err)
+		}
+		assertNoInfoKeys(t, emitPayloadDoc[*resetResultInfo, *resetEnvInfo](t, "reset", p, nil))
+	})
+	// The subject-registered-but-payload-less path: the command failed before any engine result
+	// existed, so Result.Info stays the zero value. A non-pointer seat would surface here.
+	t.Run("apply without payload", func(t *testing.T) {
+		r, buf := newTestRun[*applyResultInfo, *applyEnvInfo]("apply")
+		r.beginSubject("default")
+		if err := r.emit(errors.New("nput: no entrypoint found")); err != nil {
+			t.Fatalf("emit: %v", err)
+		}
+		assertNoInfoKeys(t, decodeEnvelope(t, buf))
+	})
+}
+
 // subjectResultOf digs results[0] out of a decoded envelope.
 func subjectResultOf(t *testing.T, doc map[string]any) map[string]any {
 	t.Helper()

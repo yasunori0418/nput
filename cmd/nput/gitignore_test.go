@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -71,6 +72,21 @@ func TestGitignoreJSONInfoPaths(t *testing.T) {
 	if len(paths) != 2 || paths[0] != "/.claude/skills/nix" || paths[1] != "/.nput-out/docs" {
 		t.Errorf("info.paths = %v, want the anchor-form targets", paths)
 	}
+}
+
+// TestGitignoreJSONInfoAbsentWithoutEnumeration pins the failure boundary that forced
+// gitignoreInfo to be carried as a pointer (→ issue #196 §4): gitignore can fail after the
+// subject is registered but before the enumeration exists (entrypoint discovery, the
+// project-mode rejection, the manifest build), and result.info must stay absent there — as it
+// did while the slot was a nil map. A value-struct TInfo would emit "info":{"paths":null},
+// which the conformance checker would still accept.
+func TestGitignoreJSONInfoAbsentWithoutEnumeration(t *testing.T) {
+	r, buf := newTestRun[*gitignoreInfo, *struct{}]("gitignore")
+	r.beginSubject("docs")
+	if err := r.emit(errors.New("nput: gitignore is project mode only")); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	assertNoInfoKeys(t, decodeEnvelope(t, buf))
 }
 
 // TestGitignoreJSONEmptyPathsStaysArray pins the zero-entry boundary at the emit level
