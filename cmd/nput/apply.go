@@ -57,15 +57,15 @@ func newApplyCmd() *cobra.Command {
 			"--all applies all of nput.* in lexical order; --project-root / --home-root / --system-root narrow by root mode.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// beginApplyRun also publishes the run to nifaceReport, so --all still emits its
-			// (subject-less) envelope even though it never touches the run value below.
+			// beginApplyRun also publishes the run to nifaceReport, so main emits the envelope
+			// after Execute returns whichever path below runs.
 			run := beginApplyRun(cmd.Name())
 			flagBackupEnabled = cmd.Flags().Changed("backup")
 			if flagApplyAll {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: apply cannot combine <name> with --all")
 				}
-				return runApplyAll()
+				return runApplyAll(run)
 			}
 			if err := ensureNoRootFilter("apply --all"); err != nil {
 				return err
@@ -264,7 +264,10 @@ func applyOne(ep *entrypoint, system, name, rootKind, fixedRoot string) (*engine
 // runApplyAll applies all of the entrypoint's nput.* in lexical order (→ docs/spec.md execution flow, ADR-0016, ADR-0024).
 // rootKind is taken in a single batch eval (collapsing process launches N→1); build is per config for atomicity.
 // It continues with the rest on a partial failure, shows an aggregate at the end, and exits non-zero if any one fails.
-func runApplyAll() error {
+// Each selected config becomes one SubjectResult in results[], the same shape a named apply
+// emits with N=1 (→ issue #164); the failures below stay on their own subject, so a partial
+// failure still carries every succeeded config's result.
+func runApplyAll(run *applyRun) error {
 	filter, err := selectedRootFilter()
 	if err != nil {
 		return err
@@ -307,11 +310,11 @@ func runApplyAll() error {
 	//     read-only). It aggregates each selected config's plan to stdout and decides the exit code by
 	//     priority error(1) > conflict(2) > 0 (→ docs/spec.md, ADR-0024).
 	if flagDryrun {
-		return runApplyAllDryRun(ep, system, selected, roots)
+		return runApplyAllDryRun(run, ep, system, selected, roots)
 	}
 
 	// 3. Apply each config independently. Continue on partial failure and aggregate failures (each config is independently atomic).
-	applied, skipped, failures := aggregateApply(selected, func(name string) (*engine.Result, error) {
+	applied, skipped, failures := aggregateApply(run, selected, func(name string) (*engine.Result, error) {
 		ri := roots[name]
 		return applyOne(ep, system, name, ri.RootKind, ri.Root)
 	})
@@ -333,8 +336,8 @@ func runApplyAll() error {
 // aggregates the plan to stdout (taking none of FS writes / flock / --set / pending gcroot; → ADR-0023).
 // It decides the exit code by priority error(1) > conflict(2) > 0 (→ docs/spec.md, ADR-0024) and carries it in an
 // empty-msg exitError (symmetric with the single apply --dryrun conflict=2; main exits with the code alone).
-func runApplyAllDryRun(ep *entrypoint, system string, selected []string, roots map[string]rootInfo) error {
-	code := aggregateDryRun(selected, func(name string) (*engine.Result, error) {
+func runApplyAllDryRun(run *applyRun, ep *entrypoint, system string, selected []string, roots map[string]rootInfo) error {
+	code := aggregateDryRun(run, selected, func(name string) (*engine.Result, error) {
 		ri := roots[name]
 		return engine.Apply(engine.Options{
 			Name:         name,
@@ -359,22 +362,37 @@ func runApplyAllDryRun(ep *entrypoint, system string, selected []string, roots m
 // failure"). It does not swallow ErrSkipped (a try-lock skip is normal) or other errors; a skip is counted
 // and reported to stderr under flagVerbose, a failure is counted and always reported to stderr, and either
 // way the loop continues (a seam that injects the apply implementation for testability, mirroring aggregateDryRun).
-func aggregateApply(selected []string, applyFn func(name string) (*engine.Result, error)) (applied, skipped, failures int) {
+//
+// Each config also gets its own niface subject, settled with that config's own outcome (→ issue
+// #164): the counts drive the aggregate exit code as before, while the subjects carry the per-config
+// results — including every succeeded one alongside a partial failure.
+func aggregateApply(run *applyRun, selected []string, applyFn func(name string) (*engine.Result, error)) (applied, skipped, failures int) {
 	for _, name := range selected {
+		subject := run.beginSubject(name)
 		res, err := applyFn(name)
+		if res != nil {
+			// Also on failure: a partial result carries the reached/unreached item partition and
+			// the changes that actually happened before the stop (→ issue #131, niface ADR-0020).
+			attachMutationPayload(subject, res, err)
+		}
 		if err != nil {
 			if errors.Is(err, engine.ErrSkipped) {
+				// A try-lock skip is a normal skip (exit 0), so the subject succeeds — symmetric
+				// with the named apply, which returns nil on ErrSkipped (→ docs/spec.md exit codes).
+				subject.finish(nil)
 				skipped++
 				if flagVerbose {
 					fmt.Fprintf(os.Stderr, "nput: skipped apply %s (another apply is in progress)\n", name)
 				}
 				continue
 			}
+			subject.finish(err)
 			failures++
 			// Do not swallow partial failures; print to stderr and continue (→ docs/spec.md "continue on partial failure").
 			fmt.Fprintf(os.Stderr, "nput: apply %s failed: %v\n", name, err)
 			continue
 		}
+		subject.finish(nil)
 		applied++
 		if flagVerbose {
 			reportResult(res, name)
@@ -386,20 +404,34 @@ func aggregateApply(selected []string, applyFn func(name string) (*engine.Result
 // aggregateDryRun runs each selected config read-only via applyDry, prints the plan to stdout,
 // aggregates error / conflict, and returns the exit code (a seam that injects the apply implementation for testability).
 // It does not swallow a config's build / eval failure (error); it prints to stderr, continues, and reflects it in the final code.
-func aggregateDryRun(selected []string, applyDry func(name string) (*engine.Result, error)) int {
+//
+// Like aggregateApply it settles one niface subject per config, riding the same payload builder as
+// the real apply so the dryrun's SubjectResult is the same shape by construction (→ issue #164). A
+// conflict is item-borne — the conflicting entry is a failed item carrying E_NPUT_COLLISION — and
+// still puts that subject in error, symmetric with the named apply --dryrun (→ nput ADR-0043 §62,
+// niface ADR-0002).
+func aggregateDryRun(run *applyRun, selected []string, applyDry func(name string) (*engine.Result, error)) int {
 	var anyError, anyConflict bool
 	for _, name := range selected {
+		subject := run.beginSubject(name)
 		res, err := applyDry(name)
 		if err != nil {
+			subject.finish(err)
 			anyError = true
 			// Do not swallow partial failures; print to stderr and continue (→ docs/spec.md "continue on partial failure").
 			fmt.Fprintf(os.Stderr, "nput: apply %s --dryrun failed: %v\n", name, err)
 			continue
 		}
+		attachMutationPayload(subject, res, nil)
 		printApplyPlan(res)
 		if len(res.Conflicts) > 0 {
 			anyConflict = true
+			// The conflict is already the failed item's; the subject error only sets its status,
+			// and subjectResult suppresses the duplicate errors[] entry for an item-borne payload.
+			subject.finish(&exitError{code: 2})
+			continue
 		}
+		subject.finish(nil)
 	}
 	return applyAllExitCode(anyError, anyConflict)
 }

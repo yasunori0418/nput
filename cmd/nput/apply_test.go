@@ -119,8 +119,9 @@ func TestAggregateDryRun(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			run, _ := newApplyTestRun()
 			var got int
-			out := captureStdout(t, func() { got = aggregateDryRun(c.selected, c.apply) })
+			out := captureStdout(t, func() { got = aggregateDryRun(run, c.selected, c.apply) })
 			if got != c.wantCode {
 				t.Errorf("aggregateDryRun code = %d, want %d", got, c.wantCode)
 			}
@@ -179,7 +180,8 @@ func TestAggregateApply(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			applied, skippedCount, failures := aggregateApply(c.selected, c.apply)
+			run, _ := newApplyTestRun()
+			applied, skippedCount, failures := aggregateApply(run, c.selected, c.apply)
 			if applied != c.wantApplied || skippedCount != c.wantSkipped || failures != c.wantFailures {
 				t.Errorf("aggregateApply() = (applied=%d, skipped=%d, failures=%d), want (applied=%d, skipped=%d, failures=%d)",
 					applied, skippedCount, failures, c.wantApplied, c.wantSkipped, c.wantFailures)
