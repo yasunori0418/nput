@@ -53,6 +53,11 @@ func newTestRun[TInfo, TEnvInfo any](command string) (*nifaceRun[TInfo, TEnvInfo
 // ...), so changing a command's info pair updates its tests by construction: a test that kept
 // the old pair would no longer satisfy the alias-typed return and fails to compile (→ issue
 // #196, diff-review follow-up).
+//
+// The command strings are literals rather than cobra's Use values: the envelope's command field
+// is part of the output contract, so a rename must be a visible edit here (and
+// TestBeginRunPublishesEveryCommand checks that every registered RunE subcommand still has a
+// begin<Cmd>Run case, which is where a rename would otherwise hide).
 func newApplyTestRun() (*applyRun, *bytes.Buffer) {
 	return newTestRun[*applyResultInfo, *applyEnvInfo]("apply")
 }
@@ -423,6 +428,53 @@ func TestResetPromptAllowed(t *testing.T) {
 	}
 	if needPrompt, err := confirmPolicy(true, resetPromptAllowed(true, true)); err != nil || needPrompt {
 		t.Errorf("reset --json --yes: needPrompt=%v err=%v, want promptless success", needPrompt, err)
+	}
+}
+
+// TestBeginRunPublishesEveryCommand pins the wiring step this refactor introduced (→ issue
+// #196): every command's begin<Cmd>Run must begin its run AND publish it to nifaceReport, since
+// main emits what it finds there, not the command's local variable. A wrapper that dropped the
+// publish would silence that command's envelope entirely while every other test stayed green —
+// only apply and the read commands otherwise exercise the full RunE path (reset / rollback have
+// no --json coverage in the Go tests or the e2e scenarios).
+func TestBeginRunPublishesEveryCommand(t *testing.T) {
+	origReport := nifaceReport
+	defer func() { nifaceReport = origReport }()
+
+	// Each entry begins the command's run exactly as its RunE does.
+	begins := map[string]func(string) emitter{
+		"apply":            func(c string) emitter { return beginApplyRun(c) },
+		"reset":            func(c string) emitter { return beginResetRun(c) },
+		"rollback":         func(c string) emitter { return beginRollbackRun(c) },
+		"list-generations": func(c string) emitter { return beginListGenerationsRun(c) },
+		"gitignore":        func(c string) emitter { return beginGitignoreRun(c) },
+		"init":             func(c string) emitter { return beginInitRun(c) },
+	}
+	for command, begin := range begins {
+		t.Run(command, func(t *testing.T) {
+			nifaceReport = noopEmitter{}
+			run := begin(command)
+			if !run.began() {
+				t.Errorf("%s: the returned run is not begun", command)
+			}
+			if nifaceReport != emitter(run) {
+				t.Fatalf("%s: nifaceReport = %#v, want the run just begun (main emits what it finds here)", command, nifaceReport)
+			}
+			if !nifaceReport.began() {
+				t.Errorf("%s: the published run is not begun; main's gate would skip the envelope", command)
+			}
+		})
+	}
+
+	// Every subcommand the root registers must be covered above, so a command added later
+	// cannot quietly skip the begin/publish contract.
+	for _, cmd := range newRootCmd().Commands() {
+		if cmd.RunE == nil {
+			continue // cobra's own utility commands (help / completion) never begin a run
+		}
+		if _, ok := begins[cmd.Name()]; !ok {
+			t.Errorf("subcommand %q has a RunE but no begin<Cmd>Run case here", cmd.Name())
+		}
 	}
 }
 
