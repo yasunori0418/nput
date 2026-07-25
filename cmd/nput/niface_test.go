@@ -35,9 +35,11 @@ func fixedClock(t0 time.Time) func() time.Time {
 }
 
 // newTestRun returns a nifaceRun with a pinned clock and buffer sink, already begun for command.
-func newTestRun(command string) (*nifaceRun, *bytes.Buffer) {
+// The info type arguments are the command's own pair (→ issue #196); callers spell them out
+// because the command name is a plain string and cannot drive inference.
+func newTestRun[TInfo, TEnvInfo any](command string) (*nifaceRun[TInfo, TEnvInfo], *bytes.Buffer) {
 	var buf bytes.Buffer
-	r := &nifaceRun{
+	r := &nifaceRun[TInfo, TEnvInfo]{
 		now: fixedClock(time.Date(2026, 7, 19, 12, 0, 0, 0, time.FixedZone("JST", 9*3600))),
 		out: &buf,
 	}
@@ -98,7 +100,7 @@ func TestNifaceEnvelopeConformance(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			r, buf := newTestRun("apply")
+			r, buf := newTestRun[*applyResultInfo, *applyEnvInfo]("apply")
 			if c.subject != "" {
 				r.beginSubject(c.subject)
 			}
@@ -171,7 +173,7 @@ func TestNifaceEnvelopeDryRunFlag(t *testing.T) {
 		t.Fatalf("conformance.NewDefaultChecker: %v", err)
 	}
 	for _, dryRun := range []bool{false, true} {
-		r, buf := newTestRun("apply")
+		r, buf := newTestRun[*applyResultInfo, *applyEnvInfo]("apply")
 		r.dryRun = dryRun
 		r.beginSubject("default")
 		if err := r.emit(nil); err != nil {
@@ -196,7 +198,7 @@ func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("broken p
 // main then exits non-zero even for a succeeded command, so a missing/partial document is never
 // read as success (→ docs/spec.md emit タイミングと成立条件).
 func TestNifaceEmitWriteFailure(t *testing.T) {
-	r := &nifaceRun{now: fixedClock(time.Date(2026, 7, 19, 12, 0, 0, 0, time.UTC)), out: failingWriter{}}
+	r := &applyRun{now: fixedClock(time.Date(2026, 7, 19, 12, 0, 0, 0, time.UTC)), out: failingWriter{}}
 	r.begin("apply")
 	r.beginSubject("default")
 	if err := r.emit(nil); err == nil {
@@ -417,7 +419,9 @@ func TestJSONFlagRegistered(t *testing.T) {
 func TestJSONUtilityCommandsDoNotBegin(t *testing.T) {
 	for _, args := range [][]string{{"help"}, {"completion", "bash"}} {
 		origReport := nifaceReport
-		nifaceReport = &nifaceRun{now: fixedClock(time.Date(2026, 7, 19, 12, 0, 0, 0, time.UTC)), out: &bytes.Buffer{}}
+		// The process-start state: only a RunE of ours replaces it with a begun run, so a
+		// still-noop report after Execute proves the utility command emitted nothing.
+		nifaceReport = noopEmitter{}
 		root := newRootCmd()
 		root.SetArgs(args)
 		_ = captureStdout(t, func() {
@@ -445,24 +449,32 @@ func TestJSONEndToEndSubjectBorneFailure(t *testing.T) {
 		flagJSON, flagDryrun = origJSON, origDryrun
 	}()
 
-	var buf bytes.Buffer
-	nifaceReport = &nifaceRun{
-		now: fixedClock(time.Date(2026, 7, 19, 12, 0, 0, 0, time.UTC)),
-		out: &buf,
-	}
+	nifaceReport = noopEmitter{}
 
-	root := newRootCmd()
-	root.SetArgs([]string{"apply", "--json"})
-	execErr := root.Execute()
+	// RunE builds its own concrete run against os.Stdout (→ issue #196), so the document is
+	// captured off the real sink: Execute and the main-style emit both run inside the capture.
+	var execErr error
+	out := captureStdout(t, func() {
+		root := newRootCmd()
+		root.SetArgs([]string{"apply", "--json"})
+		execErr = root.Execute()
+		if execErr == nil {
+			return
+		}
+		if !nifaceReport.began() {
+			return
+		}
+		if err := nifaceReport.emit(execErr); err != nil {
+			t.Errorf("emit: %v", err)
+		}
+	})
 	if execErr == nil {
 		t.Fatal("apply in an entrypoint-less directory must fail")
 	}
 	if !nifaceReport.began() {
-		t.Fatal("apply's RunE did not begin the niface run")
+		t.Fatal("apply's RunE did not publish a begun niface run")
 	}
-	if err := nifaceReport.emit(execErr); err != nil {
-		t.Fatalf("emit: %v", err)
-	}
+	buf := bytes.NewBufferString(out)
 
 	checker, err := conformance.NewDefaultChecker()
 	if err != nil {
@@ -471,7 +483,7 @@ func TestJSONEndToEndSubjectBorneFailure(t *testing.T) {
 	if findings := checker.Check(buf.Bytes()); len(findings) > 0 {
 		t.Fatalf("conformance findings:\n%s\ndocument: %s", strings.Join(findings, "\n"), buf.String())
 	}
-	doc := decodeEnvelope(t, &buf)
+	doc := decodeEnvelope(t, buf)
 	if doc["status"] != "error" || doc["command"] != "apply" {
 		t.Errorf("status/command = %v/%v, want error/apply", doc["status"], doc["command"])
 	}
