@@ -205,6 +205,52 @@ func TestApplyAllPartialFailureItemBorne(t *testing.T) {
 	}
 }
 
+// TestApplyAllSharedTargetKeepsItemIDsResultScoped pins the id-scoping contract the --all shape
+// depends on (→ docs/spec.md, niface §5): item ids derive from the target alone — the config name
+// is deliberately not part of the identity (→ ADR-0043 §3) — so two configs declaring the same
+// target produce the same item.id in two different results[]. That is legal precisely because
+// references resolve within one SubjectResult (the (tool, subject, id) triple), and the conformance
+// checker's uniqueness scope has to agree. Nothing else in the suite puts a duplicate id in one
+// document, and cross-config target collisions are reachable today (ADR-0038's pre-flight
+// detection is accepted but unimplemented).
+func TestApplyAllSharedTargetKeepsItemIDsResultScoped(t *testing.T) {
+	run, buf := newApplyTestRun()
+	shared := manifest.Entry{Target: ".config/shared"}
+	aggregateApply(run, []string{"a", "b"}, func(name string) (*engine.Result, error) {
+		res := placedResult(name)
+		res.Entries = []manifest.Entry{shared}
+		res.Placed = []string{shared.Target}
+		return res, nil
+	})
+	if err := run.emit(nil); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	// The whole point: a document carrying the same item id twice, in two results, still conforms.
+	checkConformance(t, buf)
+
+	byName, _ := subjectResults(t, buf)
+	ids := map[string]string{}
+	for _, name := range []string{"a", "b"} {
+		items := byName[name]["result"].(map[string]any)["items"].([]any)
+		if len(items) != 1 {
+			t.Fatalf("subject %s items = %v, want the shared entry", name, items)
+		}
+		item := items[0].(map[string]any)
+		ids[name] = item["id"].(string)
+		// Each result's changes must reference its own result's item, never a sibling's.
+		changes := byName[name]["result"].(map[string]any)["changes"].([]any)
+		if len(changes) != 1 {
+			t.Fatalf("subject %s changes = %v, want the placement", name, changes)
+		}
+		if got := changes[0].(map[string]any)["itemId"]; got != ids[name] {
+			t.Errorf("subject %s change itemId = %v, want its own item %s", name, got, ids[name])
+		}
+	}
+	if ids["a"] != ids["b"] {
+		t.Errorf("item ids = %v, want equal — the id derives from the target alone, not the config", ids)
+	}
+}
+
 // TestApplyAllSkipIsNotAFailure pins the try-lock skip's asymmetry with a failure: ErrSkipped is a
 // normal skip (exit 0 for a named apply), so its subject succeeds and the aggregate stays success.
 // Without this the skip would be indistinguishable from a failure in the envelope while the exit
@@ -510,8 +556,8 @@ func makeHomeProfiles(t *testing.T, names ...string) {
 }
 
 // TestListGenerationsAllWiring drives the real runListAllGenerations, which is what actually
-// registers and settles one subject per scanned config (→ issue #164). The hand-built variant below
-// pins the document shape; this pins the wiring, so a forgotten beginSubject / setPayload / finish
+// registers and settles one subject per scanned config (→ issue #164). Driving production rather
+// than hand-building the subjects is the point: a forgotten beginSubject / setPayload / finish
 // cannot pass by having the test restate what production should have done.
 func TestListGenerationsAllWiring(t *testing.T) {
 	origJSON := flagJSON

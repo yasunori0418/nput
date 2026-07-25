@@ -163,6 +163,56 @@ assert_json "$ENV_ALL_APPLY" "トップ errors[] なし・どの subject にも 
 assert_symlink "$PROJ/.zshrc"
 rm "$PROJ/.zshrc"
 
+e2e_step "apply --all --json（非 dryrun・部分失敗）: exit 1 + 成功 config は残る（→ issue #164 受け入れ基準）"
+# 第 3 config broken を足し、その target を実ファイルで塞いで conflict させる（非 dryrun の
+# conflict は engine が停止して error を返す = exit 1 経路。dryrun の conflict=2 とは別物）。
+# --all は残りを続行するので、集約 status:error / exit 1 と「成功 config の SubjectResult は
+# 全て残る」を同時に見る。
+cp "$PROJ/flake.nix" "$E2E_WORK/flake.nix.bak"
+cat >"$PROJ/flake.nix" <<EOF
+{
+$(e2e_flake_inputs)
+  outputs = { self, nixpkgs, nput }: {
+    nput = nixpkgs.lib.genAttrs $E2E_SYSTEMS (system: {
+      docs = nput.lib.mkManifest {
+        pkgs = nixpkgs.legacyPackages.\${system};
+        root = nput.lib.projectRoot;
+        entries.".nput-out/docs" = { src = ./srcrepo; subpath = "skills/nix"; };
+      };
+      idvec = nput.lib.mkManifest {
+        pkgs = nixpkgs.legacyPackages.\${system};
+        root = nput.lib.projectRoot;
+        entries.".zshrc" = { src = ./srcrepo; subpath = "skills/nix"; };
+      };
+      broken = nput.lib.mkManifest {
+        pkgs = nixpkgs.legacyPackages.\${system};
+        root = nput.lib.projectRoot;
+        entries.".nput-out/broken" = { src = ./srcrepo; subpath = "skills/nix"; };
+      };
+    });
+  };
+}
+EOF
+git -c user.email=e2e@nput.test -c user.name=e2e add -A
+# broken の target を実ファイルで塞ぐ（foreign entity → conflict で engine が停止する）。
+mkdir -p "$PROJ/.nput-out"
+echo "foreign" >"$PROJ/.nput-out/broken"
+ENV_ALL_PARTIAL="$E2E_WORK/apply-all-partial.json"
+run_json 1 "$ENV_ALL_PARTIAL" apply --all
+assert_json "$ENV_ALL_PARTIAL" "集約 status=error（1 config でも失敗すれば error）" \
+	'.status == "error"'
+assert_json "$ENV_ALL_PARTIAL" "選択した 3 config すべてが results に載る（続行して全部処理する）" \
+	'[.results[].subject.name] == ["broken", "docs", "idvec"]'
+assert_json "$ENV_ALL_PARTIAL" "失敗した broken だけが error・conflict は item 起因で errors[] に重ねない" \
+	'first(.results[] | select(.subject.name == "broken")) | .status == "error" and (.errors | not) and ([.result.items[] | select(.status == "failed" and .error.code == "E_NPUT_COLLISION")] | length) == 1'
+assert_json "$ENV_ALL_PARTIAL" "成功した docs / idvec は success のまま items を保つ" \
+	'all(.results[] | select(.subject.name != "broken"); .status == "success" and (.errors | not) and (.result.items | length) == 1)'
+assert_json "$ENV_ALL_PARTIAL" "集約エラーをトップ errors[] へ重ねない（各 subject が既に持つ）" \
+	'has("errors") | not'
+cp "$E2E_WORK/flake.nix.bak" "$PROJ/flake.nix"
+git -c user.email=e2e@nput.test -c user.name=e2e add -A
+rm -f "$PROJ/.zshrc" "$PROJ/.nput-out/broken"
+
 e2e_step "apply --all --json: フィルタが 0 件でも results:[] + status=success（→ issue #164 受け入れ基準）"
 ENV_ALL_EMPTY="$E2E_WORK/apply-all-empty.json"
 run_json 0 "$ENV_ALL_EMPTY" apply --all --home-root

@@ -37,7 +37,8 @@ func newGitignoreCmd() *cobra.Command {
 		Long: "List the placement targets of nput.<name> for .gitignore on stdout (writes no file). " +
 			"Output is the root-relative target with a leading / in anchor form (e.g. /.claude/skills/nix), one per line, " +
 			"covering every target regardless of method (symlink / copy). project mode only; " +
-			"--all sorts and de-duplicates the targets of all projectRoot configs.",
+			"--all sorts and de-duplicates the targets of all projectRoot configs into this one listing " +
+			"(under --json it keeps them per config instead; see the --all flag).",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// beginGitignoreRun also publishes the run to nifaceReport, so main emits the envelope

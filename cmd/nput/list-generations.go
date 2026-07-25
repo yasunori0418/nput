@@ -169,10 +169,11 @@ func runListAllGenerations(run *listGenerationsRun) error {
 		prof := paths.Resolve(stateDir, name, manifest.RootKindHome, "", false)
 		gens, err := engine.ListGenerations(prof.Profile)
 		if err != nil {
-			// The listing stops here (unchanged), so this config's subject carries the failure
-			// and the ones already scanned keep their results (→ issue #164). The same error also
-			// returns as the command error, but it lands only here: emit's finish is first-wins,
-			// and the top-level errors[] takes a failure only when no subject was registered.
+			// The listing stops here (unchanged), so this config's subject carries the failure and
+			// the ones already scanned keep their results, while the configs after it never become
+			// subjects at all (→ issue #164, docs/spec.md). The same error also returns as the
+			// command error, but it lands only here: emit's finish is first-wins, and the
+			// top-level errors[] takes a failure only when no subject was registered.
 			subject.finish(err)
 			return err
 		}
