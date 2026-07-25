@@ -35,9 +35,7 @@ func newGitignoreCmd() *cobra.Command {
 			"--all sorts and de-duplicates the targets of all projectRoot configs.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := newNifaceRun[*gitignoreInfo, *struct{}]()
-			run.begin(cmd.Name())
-			nifaceReport = run
+			run := beginNifaceRun[*gitignoreInfo, *struct{}](cmd.Name())
 			if all {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: gitignore cannot combine <name> with --all")

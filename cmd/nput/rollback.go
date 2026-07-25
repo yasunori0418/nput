@@ -13,7 +13,8 @@ import (
 // rollbackResultInfo / rollbackEnvInfo are rollback's niface info slots (→ issue #196): empty
 // seat types held as nil pointers, so both info keys stay out of the document exactly as before.
 // The generation transition rides generation.before/after, not info; the seats are here so later
-// mutation run facts arrive as field additions alone (→ apply.go の applyResultInfo コメント).
+// mutation run facts arrive as field additions alone (→ applyResultInfo in apply.go for the
+// full rationale).
 type (
 	rollbackResultInfo struct{}
 	rollbackEnvInfo    struct{}
@@ -31,9 +32,7 @@ func newRollbackCmd() *cobra.Command {
 			"before moving the profile pointer. A name is required (no --all); errors out if there is no previous generation.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := newNifaceRun[*rollbackResultInfo, *rollbackEnvInfo]()
-			run.begin(cmd.Name())
-			nifaceReport = run
+			run := beginNifaceRun[*rollbackResultInfo, *rollbackEnvInfo](cmd.Name())
 			return runRollback(run, args[0])
 		},
 	}

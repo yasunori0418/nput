@@ -17,10 +17,17 @@ var flagApplyAll bool // --all: apply all of nput.* in lexical order (narrowable
 
 // applyResultInfo / applyEnvInfo are apply's niface info slots (→ issue #196). apply's record
 // lives entirely in items / changes, so both are empty seat types held as nil pointers: the
-// omitempty on result.info / the envelope's info keeps them out of the document (an
-// unparameterized struct{} would emit "info":{} and change the output). They exist so a later
-// issue can put mutation run facts (profile / trunk root / retention ...) on them by adding
-// fields alone, without touching the run's type arguments or any RunE instantiation.
+// omitempty on result.info / the envelope's info keeps them out of the document (a non-pointer
+// struct{} would emit "info":{} and change the output). They exist so a later issue can put
+// mutation run facts (profile / trunk root / retention ...) on them by adding fields alone,
+// without touching the run's type arguments or any RunE instantiation.
+//
+// The asymmetry against the read commands is deliberate, not an oversight (→ issue #196 §5):
+// unused slots get a named seat only where information is expected to land later, which is the
+// mutation commands' two slots (ncompose reconstructs "what this run did" from them · niface
+// ADR-0018). Read commands record no run-scoped state and init registers no subject, so their
+// unused slots stay anonymous *struct{} — a named seat there would promise a future that is
+// not planned. Read "named seat" as "reserved", "*struct{}" as "nothing goes here".
 type (
 	applyResultInfo struct{}
 	applyEnvInfo    struct{}
@@ -39,9 +46,7 @@ func newApplyCmd() *cobra.Command {
 			"--all applies all of nput.* in lexical order; --project-root / --home-root / --system-root narrow by root mode.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := newNifaceRun[*applyResultInfo, *applyEnvInfo]()
-			run.begin(cmd.Name())
-			nifaceReport = run
+			run := beginNifaceRun[*applyResultInfo, *applyEnvInfo](cmd.Name())
 			flagBackupEnabled = cmd.Flags().Changed("backup")
 			if flagApplyAll {
 				if len(args) > 0 {
