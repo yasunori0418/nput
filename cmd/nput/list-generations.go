@@ -12,6 +12,22 @@ import (
 	"github.com/yasunori0418/nput/internal/paths"
 )
 
+// generationsInfo is list-generations' result.info: the read-only generation inventory
+// (→ issue #132, ADR-0043 §5; typed by #196). The envelope-wide slot stays unused — a read-only
+// command records no run-scoped state — so it is an anonymous *struct{} left nil (omitted).
+//
+// It is carried as a *generationsInfo, not a value: the run can fail after the subject is
+// registered but before the listing exists (eval / rootKind rejection / profile resolution),
+// and only a nil pointer keeps omitempty effective there. A value struct would newly emit
+// "info":{"generations":null} on those paths — the same output-invariance trap as the mutation
+// seats (→ issue #196 §4).
+type generationsInfo struct {
+	Generations []generationRow `json:"generations"`
+}
+
+// listGenerationsRun is list-generations' concrete run instantiation, threaded from RunE.
+type listGenerationsRun = nifaceRun[*generationsInfo, *struct{}]
+
 func newListGenerationsCmd() *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
@@ -21,7 +37,9 @@ func newListGenerationsCmd() *cobra.Command {
 			"Pass <name> for that config, or --all to list every home mode config.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			nifaceReport.begin(cmd.Name())
+			run := newNifaceRun[*generationsInfo, *struct{}]()
+			run.begin(cmd.Name())
+			nifaceReport = run
 			if all {
 				if len(args) > 0 {
 					return fmt.Errorf("nput: list-generations cannot combine <name> with --all")
@@ -31,7 +49,7 @@ func newListGenerationsCmd() *cobra.Command {
 			if len(args) != 1 {
 				return fmt.Errorf("nput: list-generations requires <name> or --all")
 			}
-			return runListGenerations(args[0])
+			return runListGenerations(run, args[0])
 		},
 	}
 	cmd.Flags().BoolVar(&all, "all", false, "List generations for every home mode config")
@@ -39,9 +57,9 @@ func newListGenerationsCmd() *cobra.Command {
 }
 
 // runListGenerations confirms rootKind via eval pre-resolution (home mode only), resolves profileDir, and lists generations.
-func runListGenerations(name string) error {
+func runListGenerations(run *listGenerationsRun, name string) error {
 	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
-	nifaceReport.beginSubject(name)
+	run.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -75,7 +93,7 @@ func runListGenerations(name string) error {
 	// A read-only enumeration rides in result.info (items stays [] — generations are not
 	// id-derived items, and the SubjectResult.generation slot stays absent to avoid encoding
 	// the same numbers twice · → issue #132, ADR-0043 §5).
-	nifaceReport.setPayload(&nifacePayload{info: map[string]any{"generations": generationRows(gens)}})
+	run.setPayload(&nifacePayload[*generationsInfo]{info: &generationsInfo{Generations: generationRows(gens)}})
 	printGenerations(gens)
 	return nil
 }

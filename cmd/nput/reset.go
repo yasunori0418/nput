@@ -13,6 +13,18 @@ import (
 	"github.com/yasunori0418/nput/internal/engine"
 )
 
+// resetResultInfo / resetEnvInfo are reset's niface info slots (→ issue #196): empty seat types
+// held as nil pointers, so both info keys stay out of the document exactly as before. Reset's
+// record lives in items / changes; the seats are here so later mutation run facts arrive as
+// field additions alone (→ apply.go の applyResultInfo コメント).
+type (
+	resetResultInfo struct{}
+	resetEnvInfo    struct{}
+)
+
+// resetRun is reset's concrete run instantiation, threaded from RunE into runReset.
+type resetRun = nifaceRun[*resetResultInfo, *resetEnvInfo]
+
 func newResetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reset <name> [target...]",
@@ -23,8 +35,10 @@ func newResetCmd() *cobra.Command {
 			"--dryrun shows the removal targets with zero side effects and exits (no confirm / flock).",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			nifaceReport.begin(cmd.Name())
-			return runReset(args[0], args[1:], flagDryrun)
+			run := newNifaceRun[*resetResultInfo, *resetEnvInfo]()
+			run.begin(cmd.Name())
+			nifaceReport = run
+			return runReset(run, args[0], args[1:], flagDryrun)
 		},
 	}
 	cmd.Flags().BoolVar(&flagDryrun, "dryrun", false,
@@ -34,9 +48,9 @@ func newResetCmd() *cobra.Command {
 
 // runReset resolves rootKind (→ profileDir) via eval pre-resolution and drives engine.Reset.
 // --dryrun prints the plan read-only to stdout and exits 0. Non-dryrun requires TTY confirmation / --yes.
-func runReset(name string, targets []string, dryrun bool) error {
+func runReset(run *resetRun, name string, targets []string, dryrun bool) error {
 	// The config name is the niface subject; errors from here on are subject-borne (→ issue #130).
-	nifaceReport.beginSubject(name)
+	run.beginSubject(name)
 	ep, err := discoverEntrypoint(flagFile)
 	if err != nil {
 		return err
@@ -94,7 +108,7 @@ func runReset(name string, targets []string, dryrun bool) error {
 		// Also on a mid-teardown failure: the partial result keeps the changes complete up to
 		// the failure point (→ issue #131, niface ADR-0020). No generation slot — reset never
 		// moves the profile pointer (FS-only teardown).
-		attachResetPayload(res, err)
+		attachResetPayload(run, res, err)
 	}
 	if err != nil {
 		return err
