@@ -66,7 +66,7 @@ func statusAndErrors(t *testing.T, sr map[string]any) (string, []any) {
 // placedResult is one config's successful apply: a single placed entry, so its SubjectResult
 // carries a real inventory rather than an empty one (a succeeded config surviving a sibling's
 // failure has to be observable as more than a bare status). Each config has its own profile —
-// what makes --all N separate atomic runs rather than one (→ ADR-0002).
+// what makes --all N separate atomic runs rather than one (→ nput ADR-0002).
 func placedResult(name string) *engine.Result {
 	return &engine.Result{
 		Profile: "/state/nix/profiles/nput/" + name + "/profile",
@@ -213,13 +213,11 @@ func TestApplyAllSkipIsNotAFailure(t *testing.T) {
 	run, buf := newApplyTestRun()
 	applied, skipped, failures := aggregateApply(run, []string{"a", "b"}, func(name string) (*engine.Result, error) {
 		if name == "b" {
-			// The engine returns its result alongside ErrSkipped (→ engine.apply's try-lock
-			// arm sets Skipped and returns a.result), so the payload gets attached here too:
-			// the skipped config's subject must still come out success, payload and all.
-			res := placedResult(name)
-			res.Placed = nil
-			res.Skipped = true
-			return res, engine.ErrSkipped
+			// The engine returns its result alongside ErrSkipped (→ engine.apply's try-lock arm
+			// sets Skipped and returns a.result), so a payload is attached here too. The try-lock
+			// gate precedes the manifest read, so that result carries no entries at all — the run
+			// never learned what it would have placed.
+			return &engine.Result{Profile: placedResult(name).Profile, Skipped: true}, engine.ErrSkipped
 		}
 		return placedResult(name), nil
 	})
@@ -584,52 +582,78 @@ func TestListGenerationsAllWiring(t *testing.T) {
 	})
 }
 
-// TestReadAllCommandsEmitPerConfigResults covers the read-only --all paths' payload wiring
-// (list-generations / gitignore): each config's own inventory rides its own result.info, so a
-// consumer can tell which config declares what. gitignore --all deliberately does NOT dedup
-// across configs in JSON — a path shared by two configs appears under both, because attributing
-// it to one of them would be a lie about which config declares it (the text contract keeps its
-// dedup+sort union · → ADR-0018, issue #164).
-func TestReadAllCommandsEmitPerConfigResults(t *testing.T) {
-	t.Run("list-generations", func(t *testing.T) {
-		run, buf := newListGenerationsTestRun()
-		run.beginSubject("home").setPayload(generationsPayload([]engine.Generation{
-			{Number: 1, Date: "2026-07-19 12:00:00", Current: true},
-		}))
-		run.beginSubject("work").setPayload(generationsPayload(nil))
+// TestGitignoreAllWiring is TestListGenerationsAllWiring's gitignore counterpart, driving the real
+// enumerateGitignoreAll through its target-lookup seam (→ issue #164). Both read commands promise
+// the same truncation contract in docs/spec.md, so both have to pin it: a failure stops the
+// enumeration, the config it happened on carries it, and the configs after it never appear.
+func TestGitignoreAllWiring(t *testing.T) {
+	origJSON := flagJSON
+	defer func() { flagJSON = origJSON }()
+	flagJSON = true
+
+	t.Run("every selected config becomes its own SubjectResult", func(t *testing.T) {
+		run, buf := newGitignoreTestRun()
+		shared := ".nput-out/shared"
+		err := enumerateGitignoreAll(run, []string{"docs", "web"}, func(name string) ([]string, error) {
+			if name == "docs" {
+				return []string{".claude/skills/nix", shared}, nil
+			}
+			return []string{shared}, nil
+		})
+		if err != nil {
+			t.Fatalf("enumerateGitignoreAll: %v", err)
+		}
 		if err := run.emit(nil); err != nil {
 			t.Fatalf("emit: %v", err)
 		}
 		checkConformance(t, buf)
 
-		byName, _ := subjectResults(t, buf)
-		if got := infoArray(t, byName["home"], "generations"); len(got) != 1 {
-			t.Errorf("home generations = %v, want its own single generation", got)
+		byName, order := subjectResults(t, buf)
+		if want := []string{"docs", "web"}; !slices.Equal(order, want) {
+			t.Fatalf("results order = %v, want %v", order, want)
 		}
-		// An empty profile still lists the key as an array, exactly as the named listing does.
-		if got := infoArray(t, byName["work"], "generations"); len(got) != 0 {
-			t.Errorf("work generations = %v, want []", got)
+		// The shared path stays under both configs: --json does not dedup across them.
+		if got := infoArray(t, byName["docs"], "paths"); len(got) != 2 {
+			t.Errorf("docs paths = %v, want both of its own targets", got)
+		}
+		if got := infoArray(t, byName["web"], "paths"); len(got) != 1 || got[0] != gitignoreAnchor(shared) {
+			t.Errorf("web paths = %v, want the shared path kept here too", got)
 		}
 	})
 
-	t.Run("gitignore keeps per-config paths undeduped", func(t *testing.T) {
-		shared := ".nput-out/shared"
+	t.Run("a mid-enumeration failure lands on its own subject", func(t *testing.T) {
 		run, buf := newGitignoreTestRun()
-		run.beginSubject("docs").setPayload(gitignorePayload([]string{".claude/skills/nix", shared}))
-		run.beginSubject("web").setPayload(gitignorePayload([]string{shared}))
-		if err := run.emit(nil); err != nil {
+		failure := errors.New("nput: nix build failed")
+		err := enumerateGitignoreAll(run, []string{"docs", "broken", "later"}, func(name string) ([]string, error) {
+			if name == "broken" {
+				return nil, failure
+			}
+			return []string{".nput-out/" + name}, nil
+		})
+		if err == nil {
+			t.Fatal("enumerateGitignoreAll must propagate the config's failure")
+		}
+		if err := run.emit(err); err != nil {
 			t.Fatalf("emit: %v", err)
 		}
 		checkConformance(t, buf)
 
-		byName, _ := subjectResults(t, buf)
-		docs := infoArray(t, byName["docs"], "paths")
-		if len(docs) != 2 {
-			t.Errorf("docs paths = %v, want both of its own targets", docs)
+		doc := decodeEnvelope(t, buf)
+		if doc["status"] != "error" {
+			t.Errorf("aggregate status = %v, want error", doc["status"])
 		}
-		web := infoArray(t, byName["web"], "paths")
-		if len(web) != 1 || web[0] != gitignoreAnchor(shared) {
-			t.Errorf("web paths = %v, want the shared path kept under this config too (no cross-config dedup)", web)
+		if topErrs, ok := doc["errors"]; ok {
+			t.Errorf("top-level errors = %v, want absent (the failure belongs to subject broken)", topErrs)
+		}
+		byName, order := subjectResults(t, buf)
+		if want := []string{"docs", "broken"}; !slices.Equal(order, want) {
+			t.Fatalf("results = %v, want %v — the enumeration stops and later is never reached", order, want)
+		}
+		if status, errs := statusAndErrors(t, byName["docs"]); status != "success" || len(errs) != 0 {
+			t.Errorf("already-listed subject = (%s, %v), want (success, none)", status, errs)
+		}
+		if status, errs := statusAndErrors(t, byName["broken"]); status != "error" || len(errs) != 1 {
+			t.Errorf("failing subject = (%s, %v), want (error, exactly one subject-borne error)", status, errs)
 		}
 	})
 }

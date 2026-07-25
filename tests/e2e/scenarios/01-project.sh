@@ -157,7 +157,7 @@ run_json 0 "$ENV_ALL_APPLY" apply --all
 assert_json "$ENV_ALL_APPLY" "status=success・dryRun=false・2 config が選択順" \
 	'.status == "success" and .dryRun == false and [.results[].subject.name] == ["docs", "idvec"]'
 assert_json "$ENV_ALL_APPLY" "各 subject が自 config の items を持ち generation を観測している" \
-	'all(.results[]; (.result.items | length) == 1 and (.generation | has("profile")))'
+	'(.results | length) == 2 and all(.results[]; (.result.items | length) == 1 and (.generation | has("profile")))'
 assert_json "$ENV_ALL_APPLY" "トップ errors[] なし・どの subject にも errors[] なし" \
 	'(has("errors") | not) and ([.results[] | select(has("errors"))] | length) == 0'
 assert_symlink "$PROJ/.zshrc"
