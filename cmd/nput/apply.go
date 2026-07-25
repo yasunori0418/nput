@@ -375,28 +375,29 @@ func aggregateApply(run *applyRun, selected []string, applyFn func(name string) 
 			// the changes that actually happened before the stop (→ issue #131, niface ADR-0020).
 			attachMutationPayload(subject, res, err)
 		}
-		if err != nil {
-			if errors.Is(err, engine.ErrSkipped) {
-				// A try-lock skip is a normal skip (exit 0), so the subject succeeds — symmetric
-				// with the named apply, which returns nil on ErrSkipped (→ docs/spec.md exit codes).
-				subject.finish(nil)
-				skipped++
-				if flagVerbose {
-					fmt.Fprintf(os.Stderr, "nput: skipped apply %s (another apply is in progress)\n", name)
-				}
-				continue
+		// subjectErr is what this config's subject settles on, which is not always err: a try-lock
+		// skip is a normal skip (exit 0), so its subject succeeds — symmetric with the named apply,
+		// which returns nil on ErrSkipped (→ docs/spec.md exit codes). Deciding it before the
+		// reporting below keeps finish to a single unconditional call, so no branch can forget it.
+		subjectErr := err
+		switch {
+		case err == nil:
+			applied++
+			if flagVerbose {
+				reportResult(res, name)
 			}
-			subject.finish(err)
+		case errors.Is(err, engine.ErrSkipped):
+			subjectErr = nil
+			skipped++
+			if flagVerbose {
+				fmt.Fprintf(os.Stderr, "nput: skipped apply %s (another apply is in progress)\n", name)
+			}
+		default:
 			failures++
 			// Do not swallow partial failures; print to stderr and continue (→ docs/spec.md "continue on partial failure").
 			fmt.Fprintf(os.Stderr, "nput: apply %s failed: %v\n", name, err)
-			continue
 		}
-		subject.finish(nil)
-		applied++
-		if flagVerbose {
-			reportResult(res, name)
-		}
+		subject.finish(subjectErr)
 	}
 	return applied, skipped, failures
 }
@@ -408,7 +409,7 @@ func aggregateApply(run *applyRun, selected []string, applyFn func(name string) 
 // Like aggregateApply it settles one niface subject per config, riding the same payload builder as
 // the real apply so the dryrun's SubjectResult is the same shape by construction (→ issue #164). A
 // conflict is item-borne — the conflicting entry is a failed item carrying E_NPUT_COLLISION — and
-// still puts that subject in error, symmetric with the named apply --dryrun (→ nput ADR-0043 §62,
+// still puts that subject in error, symmetric with the named apply --dryrun (→ nput ADR-0043 §6,
 // niface ADR-0002).
 func aggregateDryRun(run *applyRun, selected []string, applyDry func(name string) (*engine.Result, error)) int {
 	var anyError, anyConflict bool
@@ -416,19 +417,19 @@ func aggregateDryRun(run *applyRun, selected []string, applyDry func(name string
 		subject := run.beginSubject(name)
 		res, err := applyDry(name)
 		if err != nil {
-			subject.finish(err)
 			anyError = true
 			// Do not swallow partial failures; print to stderr and continue (→ docs/spec.md "continue on partial failure").
 			fmt.Fprintf(os.Stderr, "nput: apply %s --dryrun failed: %v\n", name, err)
+			subject.finish(err)
 			continue
 		}
 		attachMutationPayload(subject, res, nil)
 		printApplyPlan(res)
 		if len(res.Conflicts) > 0 {
 			anyConflict = true
-			// The conflict is already the failed item's; the subject error only sets its status,
-			// and subjectResult suppresses the duplicate errors[] entry for an item-borne payload.
-			subject.finish(&exitError{code: 2})
+			// The conflicting entries are already failed items carrying E_NPUT_COLLISION, so the
+			// subject is in error with nothing to add to its errors[] (niface §2).
+			subject.finishItemBorne()
 			continue
 		}
 		subject.finish(nil)

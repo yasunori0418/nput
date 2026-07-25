@@ -170,7 +170,9 @@ func runListAllGenerations(run *listGenerationsRun) error {
 		gens, err := engine.ListGenerations(prof.Profile)
 		if err != nil {
 			// The listing stops here (unchanged), so this config's subject carries the failure
-			// and the ones already scanned keep their results (→ issue #164).
+			// and the ones already scanned keep their results (→ issue #164). The same error also
+			// returns as the command error, but it lands only here: emit's finish is first-wins,
+			// and the top-level errors[] takes a failure only when no subject was registered.
 			subject.finish(err)
 			return err
 		}
