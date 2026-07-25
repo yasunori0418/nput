@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/yasunori0418/niface/go/conformance"
@@ -56,6 +57,21 @@ func TestListGenerationsJSONInfoGenerations(t *testing.T) {
 	if first := rows[0].(map[string]any); first["current"] != false {
 		t.Errorf("rows[0].current = %v, want false (the key is always present)", first["current"])
 	}
+}
+
+// TestListGenerationsJSONInfoAbsentWithoutListing pins the failure boundary that forced
+// generationsInfo to be carried as a pointer (→ issue #196 §4): list-generations can fail after
+// the subject is registered but before any listing exists (entrypoint discovery, the home-mode
+// rootKind rejection, profile resolution), and result.info must stay absent there — exactly as
+// it did while the slot was a nil map. A value-struct TInfo would emit
+// "info":{"generations":null}, which the conformance checker would still accept.
+func TestListGenerationsJSONInfoAbsentWithoutListing(t *testing.T) {
+	r, buf := newTestRun[*generationsInfo, *struct{}]("list-generations")
+	r.beginSubject("home")
+	if err := r.emit(errors.New("nput: list-generations is home mode only")); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	assertNoInfoKeys(t, decodeEnvelope(t, buf))
 }
 
 // TestListGenerationsJSONEmptyStaysArray pins the zero-generation boundary at the emit level

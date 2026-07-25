@@ -196,7 +196,8 @@ func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("broken p
 
 // TestNifaceEmitWriteFailure pins that a failed envelope write surfaces as an error from emit —
 // main then exits non-zero even for a succeeded command, so a missing/partial document is never
-// read as success (→ docs/spec.md emit タイミングと成立条件).
+// read as success (→ docs/spec.md emit タイミングと成立条件). The write path does not depend on
+// the info types, so applyRun stands in for any command's instantiation.
 func TestNifaceEmitWriteFailure(t *testing.T) {
 	r := &applyRun{now: fixedClock(time.Date(2026, 7, 19, 12, 0, 0, 0, time.UTC)), out: failingWriter{}}
 	r.begin("apply")
@@ -424,13 +425,18 @@ func TestJSONUtilityCommandsDoNotBegin(t *testing.T) {
 		nifaceReport = noopEmitter{}
 		root := newRootCmd()
 		root.SetArgs(args)
-		_ = captureStdout(t, func() {
+		out := captureStdout(t, func() {
 			if err := root.Execute(); err != nil {
 				t.Errorf("%v: Execute: %v", args, err)
 			}
 		})
 		if nifaceReport.began() {
 			t.Errorf("%v began a niface run; utility commands must not emit an envelope", args)
+		}
+		// The gate is began(), but assert the observable contract too, so a future wiring that
+		// writes an envelope past the gate is caught rather than inferred.
+		if strings.Contains(out, `"specVersion"`) {
+			t.Errorf("%v wrote an envelope to stdout; utility commands own it with their own text: %q", args, out)
 		}
 		nifaceReport = origReport
 	}
@@ -474,6 +480,12 @@ func TestJSONEndToEndSubjectBorneFailure(t *testing.T) {
 	if !nifaceReport.began() {
 		t.Fatal("apply's RunE did not publish a begun niface run")
 	}
+	// captureStdout replaces the whole of os.Stdout, so anything else the command wrote lands
+	// here too. Check that first: a stray line would otherwise surface as an opaque JSON decode
+	// error rather than the stdout-ownership violation it actually is (→ ADR-0043 §2).
+	if !strings.HasPrefix(out, "{") {
+		t.Fatalf("stdout must hold the envelope alone (the --json contract), got %q", out)
+	}
 	buf := bytes.NewBufferString(out)
 
 	checker, err := conformance.NewDefaultChecker()
@@ -501,4 +513,8 @@ func TestJSONEndToEndSubjectBorneFailure(t *testing.T) {
 	if topErrs, ok := doc["errors"]; ok {
 		t.Errorf("top-level errors present = %v, want the failure attached to the subject", topErrs)
 	}
+	// The subject is registered but no payload ever exists (the failure precedes any engine
+	// result), so both info slots stay at their nil-pointer zero value and must be omitted —
+	// the output-invariance requirement behind the seat types (→ issue #196 §4).
+	assertNoInfoKeys(t, doc)
 }

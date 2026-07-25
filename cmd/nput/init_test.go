@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -57,6 +58,19 @@ func TestIsValidTemplate(t *testing.T) {
 			t.Errorf("isValidTemplate(%q) = true, want false", v)
 		}
 	}
+}
+
+// TestInitJSONEnvelopeInfoAbsentOnRejectedTemplate pins the failure boundary that forced
+// initInfo to be carried as a pointer (→ issue #196 §4): an unknown template name fails before
+// setEnvelopeInfo runs, so the envelope's info must stay absent — as it did while the slot was
+// a nil map. A value-struct TEnvInfo would emit "info":{"template":"","ref":""}, which the
+// conformance checker would still accept.
+func TestInitJSONEnvelopeInfoAbsentOnRejectedTemplate(t *testing.T) {
+	r, buf := newTestRun[*struct{}, *initInfo]("init")
+	if err := r.emit(errors.New(`nput: unknown template: "nosuch"`)); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	assertNoInfoKeys(t, decodeEnvelope(t, buf))
 }
 
 // TestInitJSONEnvelopeInfo pins init's --json shape (niface ADR-0018 · → issue #132): init has
