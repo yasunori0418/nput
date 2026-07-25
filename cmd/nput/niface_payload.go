@@ -38,15 +38,17 @@ type nifaceChangeInfo struct {
 
 // nifacePayload is one subject's accumulated result payload, attached to the run by the
 // mutation commands and folded into the SubjectResult at emit time (→ nifaceRun.emit).
-type nifacePayload struct {
+// TInfo is the owning command's result.info type (→ issue #196).
+type nifacePayload[TInfo any] struct {
 	items      []nputItem
 	changes    []nputChange
 	generation *niface.Generation
 	warnings   []niface.Warning // subject-level (not item-borne) warnings
 	// info is the per-subject tool info (result.info): the read-only enumeration inventories
 	// (list-generations の generations / gitignore の paths · → issue #132, ADR-0043 §5).
-	// nil for the mutation commands — their record lives in items / changes.
-	info map[string]any
+	// The mutation commands leave it at its zero value (a nil seat pointer, omitted from the
+	// document) — their record lives in items / changes.
+	info TInfo
 	// itemBorne marks that the command error is already represented by a failed item
 	// (entry failure / conflict), so emit must not duplicate it into subjectResult.errors[]
 	// (niface §2: item 起因のエラーを errors[] に置いてはならない).
@@ -54,26 +56,26 @@ type nifacePayload struct {
 }
 
 // attachMutationPayload builds the apply / rollback payload from res and registers it on the
-// run. A payload-build failure (id derivation — practically impossible for string targets) is
-// reported to stderr and the envelope falls back to the minimal #130 shape rather than
-// emitting a half-mapped document.
-func attachMutationPayload(res *engine.Result, cmdErr error) {
-	p, err := mutationPayload(res, cmdErr)
+// command's run. A payload-build failure (id derivation — practically impossible for string
+// targets) is reported to stderr and the envelope falls back to the minimal #130 shape rather
+// than emitting a half-mapped document.
+func attachMutationPayload[TInfo, TEnvInfo any](run *nifaceRun[TInfo, TEnvInfo], res *engine.Result, cmdErr error) {
+	p, err := mutationPayload[TInfo](res, cmdErr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "nput: could not build the --json payload: %v\n", err)
 		return
 	}
-	nifaceReport.setPayload(p)
+	run.setPayload(p)
 }
 
 // attachResetPayload is attachMutationPayload's reset counterpart.
-func attachResetPayload(res *engine.ResetResult, cmdErr error) {
-	p, err := resetPayload(res, cmdErr)
+func attachResetPayload[TInfo, TEnvInfo any](run *nifaceRun[TInfo, TEnvInfo], res *engine.ResetResult, cmdErr error) {
+	p, err := resetPayload[TInfo](res, cmdErr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "nput: could not build the --json payload: %v\n", err)
 		return
 	}
-	nifaceReport.setPayload(p)
+	run.setPayload(p)
 }
 
 // itemStatuses is the reached-state partition shared by the builders (→ niface ADR-0016 /
@@ -173,9 +175,9 @@ func changeInfoOrNil(old, new string) *nifaceChangeInfo {
 //     (→ ADR-0044) additionally carries W_NPUT_UNWOUND at the subject level: the changes list
 //     stays the record of what happened up to the failure, and the warning tells consumers
 //     those diffs were rolled back rather than left on disk.
-func mutationPayload(res *engine.Result, cmdErr error) (*nifacePayload, error) {
+func mutationPayload[TInfo any](res *engine.Result, cmdErr error) (*nifacePayload[TInfo], error) {
 	statuses := newItemStatuses(res.FailedTarget, res.Unreached, res.Conflicts, cmdErr)
-	p := &nifacePayload{itemBorne: res.FailedTarget != "" || len(res.Conflicts) > 0}
+	p := &nifacePayload[TInfo]{itemBorne: res.FailedTarget != "" || len(res.Conflicts) > 0}
 
 	// Items: the new manifest's inventory first, then the stale-removed old entries not
 	// shadowed by it (a method-change target lives in both; the new entry wins).
@@ -306,9 +308,9 @@ func mutationPayload(res *engine.Result, cmdErr error) (*nifacePayload, error) {
 // the generations are untouched, so there is no transition to observe · → issue #131).
 // An aborted run (confirmation declined — unreachable under --json, which never prompts)
 // changed nothing: items stay success, changes stay empty.
-func resetPayload(res *engine.ResetResult, cmdErr error) (*nifacePayload, error) {
+func resetPayload[TInfo any](res *engine.ResetResult, cmdErr error) (*nifacePayload[TInfo], error) {
 	statuses := newItemStatuses(res.FailedTarget, res.Unreached, nil, cmdErr)
-	p := &nifacePayload{itemBorne: res.FailedTarget != ""}
+	p := &nifacePayload[TInfo]{itemBorne: res.FailedTarget != ""}
 
 	byTarget := map[string]manifest.Entry{}
 	for _, e := range res.Entries {
