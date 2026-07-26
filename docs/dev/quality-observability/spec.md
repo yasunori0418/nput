@@ -5,7 +5,7 @@
 ## 目的
 
 nput は公開契約（CLI サブコマンド 6 件 + lib 公開 API 6 件 + モジュールオプション 5 件）・
-実装・テスト（Go テスト関数 254 件 / nix-unit 40 件超 / e2e 7 シナリオ）・ドキュメント
+実装・テスト（Go テスト関数 254 件 / nix-unit 40 件超 / namaka スナップショット / e2e 7 シナリオ）・ドキュメント
 （`concept.md` / `design.md` / `spec.md` の計 2147 行 + ADR 47 本）を抱え、これらの対応関係を
 人が把握できない規模に達している。未完了 epic が 7 件控えており規模はさらに増える。
 
@@ -47,6 +47,14 @@ nput は公開契約（CLI サブコマンド 6 件 + lib 公開 API 6 件 + モ
 - lib 公開 API を `lib/default.nix` が公開する属性から抽出する。`__internal` は公開 API では
   ないため台帳の行に含めない。
 - モジュールオプションを `modules/*.nix` の `mkOption` / `mkEnableOption` 呼び出しから抽出する。
+  数え方は次の規則で確定する:
+  - オプションの**宣言**だけを数える。`inherit (lib) mkOption` のような関数の取り込み行は
+    宣言ではないため含めない。
+  - submodule 型の親オプションと入れ子の葉オプションはそれぞれ 1 件と数える
+    （`nput.backup` / `nput.backup.enable` / `nput.backup.suffix` は 3 件）。
+  - `modules/flake-parts.nix` が `mkTransposedPerSystemModule` で宣言する transposed
+    オプション（`perSystem.nput`）は flake-parts の配線であり、モジュール利用者へ公開する
+    オプションではないため母集団に含めない。
 - 抽出は静的解析（ソースの走査）で行い、Nix の評価（`nix eval`）を必要としない。
 
 ### REQ-03: テストの所在を命名規約で紐づける
@@ -60,8 +68,9 @@ nput は公開契約（CLI サブコマンド 6 件 + lib 公開 API 6 件 + モ
 
 ### REQ-04: テスト一覧を出力する
 
-- Go テスト関数・nix-unit テスト・e2e シナリオを人が俯瞰できる一覧として出力する。
-- 一覧は少なくとも「テスト名」「所在ファイル」「種別（Go / nix-unit / e2e）」を含む。
+- Go テスト関数・nix-unit テスト・namaka スナップショットテスト・e2e シナリオを人が
+  俯瞰できる一覧として出力する。
+- 一覧は少なくとも「テスト名」「所在ファイル」「種別（Go / nix-unit / namaka / e2e）」を含む。
 - 出力形式（markdown / HTML / その他）は本仕様では規定せず、基本設計で決定する。
 
 ### REQ-05: 台帳の参照生存を検証する
@@ -96,8 +105,12 @@ nput は公開契約（CLI サブコマンド 6 件 + lib 公開 API 6 件 + モ
 - GitHub Actions の pull_request で REQ-05 / REQ-06 / REQ-07 の検証を実行する。
 - 検証を required status check として `main branch protection` ruleset に登録し、失敗時に
   main へのマージを不可能にする。
-- `.github/actions/changes` の `relevant` フィルタに `docs/quality/**` を追加し、台帳のみを
-  変更した pull_request でも検証が実行されるようにする。
+- `.github/actions/changes` へ第 2 出力 `quality` を追加し（検出対象: `**.nix` / `**.go` /
+  `docs/quality/**` / `docs/spec.md`）、検証 job はこの出力でゲートする。既存の `relevant`
+  出力は変更しない（docs のみの変更で `flake-check` / `e2e` / `go-coverage` の nix 実走を
+  避ける最適化〔ADR-0027〕を維持するため）。これにより台帳のみを変更した pull_request でも
+  検証が実行される。`docs/spec.md` を検出対象に含めるのは、REQ-05 の見出し実在検証が
+  `docs/spec.md` の見出し文字列に依存し、見出しの改名で検証が壊れるためである。
 
 ### REQ-10: 完成の定義へ機械判定項目を追加する
 
@@ -128,7 +141,7 @@ nput は公開契約（CLI サブコマンド 6 件 + lib 公開 API 6 件 + モ
 | AC-03 | REQ-02 | `cmd/nput/` へ新規サブコマンドファイルを追加すると、生成モードの出力にその行が現れる |
 | AC-04 | REQ-02/03 | 生成モードの実行が `nix eval` を呼ばずに完了する |
 | AC-05 | REQ-03 | `rollback` の行の「テスト所在」列が `なし` と記載される（`cmd/nput/rollback_test.go` が存在しないため） |
-| AC-06 | REQ-04 | テスト一覧の出力に Go テスト 254 件・nix-unit・e2e 7 シナリオが種別付きで含まれる |
+| AC-06 | REQ-04 | テスト一覧の出力に Go テスト 254 件・nix-unit・namaka・e2e 7 シナリオが種別付きで含まれる |
 | AC-07 | REQ-05 | 台帳の「テスト所在」列を実在しないパスへ書き換えると検証モードが非ゼロ終了する |
 | AC-08 | REQ-06 | 台帳から任意の 1 行を削除すると検証モードが非ゼロ終了し、削除された機能名が標準エラー出力に現れる |
 | AC-09 | REQ-06 | 母集団に存在しない機能の行を台帳へ追加すると検証モードが非ゼロ終了する |
@@ -169,3 +182,10 @@ nput は公開契約（CLI サブコマンド 6 件 + lib 公開 API 6 件 + モ
 - **テストが機能を実際に検証しているかの判定**（機械が保証するのは対応関係の欠落が無いことで
   あり、対応関係の内容の正しさではない）
 - **ADR 47 本の有効性・置換関係の判定**（機械判定の手段が無いため）
+
+## 改訂履歴
+
+- 2026-07-26: 初版。
+- 2026-07-26: テスト計画工程からの改善提案を反映。REQ-02 へ母集団の数え方の規則を明記、
+  REQ-04・AC-06 へ namaka スナップショットテストを種別として追加、REQ-09 の CI ゲート方式を
+  「`relevant` フィルタへの追加」から「第 2 出力 `quality` の新設」へ是正。
