@@ -102,3 +102,19 @@ jobs:
 
       - name: Run E2E harness
         run: nix develop '.?dir=dev#ci' -c tests/e2e/run.sh
+
+  traceability:
+    # Aggregates the ID chain across the test-process artefacts (spec REQ/NFR/AC →
+    # test-plan risks → test-analysis conditions → test-case cases) and reports it to
+    # the Job Summary. Measurement/display only, no threshold gate — same stance as
+    # go-coverage, so it is not a required status check either (→ ADR-0030).
+    #
+    # Runs unconditionally, without the `changes` gate and without Setup Nix: the
+    # script is plain bash + awk over docs/, so gating it on `run` (nix/Go paths)
+    # would skip exactly the docs-only PRs whose artefacts it measures.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Report traceability
+        run: tests/traceability/run.sh quality-observability >> "$GITHUB_STEP_SUMMARY"
