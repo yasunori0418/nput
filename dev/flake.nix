@@ -21,6 +21,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-parts.follows = "flake-parts";
     };
+
+    # 個人 NUR。sara（アーキテクチャ文書・要求をナレッジグラフとして管理する CLI）を
+    # devShell に載せるために引く。nixpkgs は follows で寄せない：NUR 側 CI がビルドして
+    # yasunori0418.cachix.org に push した store path をそのまま引くためで、寄せると
+    # store path が変わり devShell 構築のたびに Rust をローカルビルドすることになる。
+    # sara は nput のビルド・ライブラリに一切絡まない独立した CLI なので nixpkgs を
+    # 揃える整合性上の必要もない（代償は flake.lock に nixpkgs がもう一本増えること）。
+    nur = {
+      url = "github:yasunori0418/nur-packages";
+    };
   };
 
   outputs =
@@ -56,6 +66,10 @@
               nixd
               inputs'.root.formatter
               inputs'.root.packages.nput
+              # アーキテクチャ文書・要求をナレッジグラフとして扱う CLI（NUR 由来）。
+              # CONTEXT.md / docs/adr の設計文書運用を補助する開発時ツールで、
+              # nput のビルド・テスト経路には関与しない。
+              inputs'.nur.packages.sara
               go
               gopls
               # ローカルでカバレッジ計測する coverage ツール（go test -coverprofile + go tool cover）。
