@@ -77,6 +77,8 @@
               util-linux
               ripgrep
               coreutils
+              # 既出チェックの走査先をリポジトリルート基準で解決するため。
+              git
             ];
             text = ''
               usage() {
@@ -93,20 +95,23 @@
               EOF
               }
 
-              if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-                usage
-                exit 2
-              fi
-
-              case "$1" in
+              # help は引数個数に先立って処理する（`sara-id --help extra` も help になる）。
+              case "''${1-}" in
                 -h | --help)
                   usage
                   exit 0
                   ;;
               esac
 
+              if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+                usage
+                exit 2
+              fi
+
               # 型名 → prefix。docs/model.yaml の item_types と対応させる。
-              # prefix を直接渡された場合はそのまま大文字化して通す。
+              # 別名は sara init のサブコマンド別名に揃える。ただし defect の `d` は
+              # 落とす（design を `d` と略した入力が黙って defect を引くため）。
+              # 未知の入力は prefix そのものを渡されたとみなして大文字化して通す。
               case "$1" in
                 solution | sol) prefix=SOL ;;
                 use_case | use-case | uc) prefix=UC ;;
@@ -117,7 +122,7 @@
                 risk) prefix=RISK ;;
                 test_condition | test-condition | tc) prefix=TC ;;
                 test_case | test-case | case) prefix=CASE ;;
-                defect | d) prefix=D ;;
+                defect) prefix=D ;;
                 *) prefix=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]') ;;
               esac
 
@@ -133,8 +138,11 @@
               # UUID 生成は seam 経由で呼ぶ（テストが決定論的に差し替えるため）。
               uuidgen_cmd=''${SARA_ID_UUIDGEN:-uuidgen}
 
-              # 既出チェックの走査先。docs/ が無いリポジトリでも動くようにする。
-              scan_dir=docs
+              # 既出チェックの走査先。リポジトリルート基準で解決する（カレント相対だと
+              # dev/ 等から叩いたときに docs/ を見つけられず、重複チェックが黙って
+              # 外れる）。git 管理外ならカレント基準へフォールバックする。
+              repo_root=$(git rev-parse --show-toplevel 2>/dev/null || printf '.')
+              scan_dir="$repo_root/docs"
 
               uuid=""
               # 8 文字 prefix の偶然重複は極めて稀なので、有限回で打ち切る。
@@ -187,10 +195,9 @@
               # nput のビルド・テスト経路には関与しない。
               inputs'.nur.packages.sara
               # sara item の ID 採番（UUIDv4 二層構成）。定義は上の let 束縛を参照。
+              # uuidgen -r の供給元（util-linux）は sara-id の runtimeInputs で
+              # wrapper の PATH に前置されるため、devShell 側には載せない。
               sara-id
-              # sara-id が使う uuidgen -r の供給元。macOS 標準 uuidgen には -r が
-              # 無いため明示的に載せて移植性を担保する（→ Issue #207）。
-              util-linux
               go
               gopls
               # ローカルでカバレッジ計測する coverage ツール（go test -coverprofile + go tool cover）。
@@ -211,12 +218,36 @@
             '';
           };
 
+          # sara-id の採番契約を固定するテスト（dev/tests/sara-id.sh）を
+          # `nix flake check ./dev` に載せる。ローカルでは devShell から直接
+          # 叩けるが、それだけだと人が思い出したときにしか走らない。
+          # CI からは .github/workflows/test.yml の sara job が同じスクリプトを
+          # 実行する（そちらは devShell 経由で、この派生はローカル・dev flake 用）。
+          checks.sara-id = pkgs.runCommandLocal "sara-id-test" {
+            nativeBuildInputs = [
+              sara-id
+              pkgs.ripgrep
+              pkgs.coreutils
+              # テストがルート解決経路を検証するため一時 repo を git init する。
+              pkgs.git
+            ];
+          } ''
+            bash ${./tests/sara-id.sh}
+            touch "$out"
+          '';
+
           # CI の sara check 専用シェル。default devShell は nput のビルドと
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
           # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
           # yasunori0418.cachix.org から引くだけで済む。
+          # CI からは sara check と dev/tests/sara-id.sh の両方をこのシェルで実行する。
           devShells.sara = pkgs.mkShell {
-            packages = [ inputs'.nur.packages.sara ];
+            packages = [
+              inputs'.nur.packages.sara
+              sara-id
+              pkgs.ripgrep
+              pkgs.git
+            ];
             env.TERM = "dumb";
           };
 
