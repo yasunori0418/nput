@@ -34,7 +34,7 @@
 # （sara-core/src/model/item.rs 実装確認済み）、これは `sara init` の自動採番
 # （連番前提で本リポジトリでは使わない）向けの記述であり、人間向けのドキュメントを
 # 兼ねる。ADR のみ既存 47 本の相互参照・README 運用・Issue 言及を壊さないため
-# 連番（ADR-0044）を維持する。
+# 連番（ADR-NNNN）を維持する。
 
 item_types:
   # ---- 仕様の系統（solution → use_case → requirement → design）----
@@ -43,6 +43,8 @@ item_types:
   - id: solution
     display_name: Solution
     prefix: SOL
+    # 以降の id_format は sara に検証されない人間向けの表記（冒頭「ID 形式」節を参照）。
+    # 実際の採番は devShell の sara-id が行う。
     id_format: '{prefix}-{uuid}'
     parent_types: []
     fields: []
@@ -123,15 +125,28 @@ item_types:
     id_format: '{prefix}-{seq:04}'
     parent_types: []
     fields:
+      # 既存 48 本の実表記に合わせた日本語 enum。`accepted` 等の英語表記は 1 本も無く、
+      # 英語化すると #208（47 本への frontmatter 追加）が全件翻訳になるため採らない。
+      #
+      # 「廃止」は当面値に持たない。ADR-0048 §3 の通り、文書丸ごとの失効を表す
+      # supersedes を定義していない現状では、廃止ステータスだけを先に置くと
+      # 「旧 ADR は読まなくてよい」という誤読を生む。supersedes の追加を再検討する
+      # 時点で「廃止」も併せて足す。
       - name: status
         display_name: Status
         field_type: !enum
           values:
-            - proposed
-            - accepted
-            - deprecated
+            - 提案
+            - 採用
         required: true
-        placeholder: accepted
+        placeholder: 採用
+      # ステータス行のカッコ書き注記（例: 「採用（2026-06-14 改訂: … → ADR-0015）」）の
+      # 受け皿。48 本中 10 本が持つ。docs/adr/README.md が「正しい運用例」として明示的に
+      # 保護している情報なので、enum 化で捨てずにここへ逃がす。
+      - name: status_note
+        display_name: Status note
+        field_type: text
+        required: false
       # 外部参照の逃がし先。sara の item にできない参照（GitHub Issue 番号・
       # grilling セッション等の起点）は text フィールドへ入れる。
       - name: issues
