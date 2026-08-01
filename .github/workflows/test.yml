@@ -116,6 +116,10 @@ jobs:
               - 'docs/**'
               - 'sara.toml'
               - 'dev/flake.nix'
+              # Pins the NUR rev that supplies sara, plus the nixpkgs behind
+              # sara-id's runtimeInputs — a lock bump swaps this job's entire
+              # execution environment.
+              - 'dev/flake.lock'
               - 'dev/tests/**'
               - '.github/workflows/test.yml'
 
