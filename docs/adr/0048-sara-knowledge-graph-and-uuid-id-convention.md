@@ -63,11 +63,33 @@ sara のカスタムスキーマは組み込みモデルを完全置換する仕
 **定義しない**。nput にハードウェアは無く、Scenario / SystemArchitecture に対応する実体（use_case と
 requirement の中間層・requirement と design の中間層）も持たない。
 
+残る組み込み型は汎用名へ改名して引き継ぐ。
+
+| 組み込み | 本モデル |
+|---|---|
+| `system_requirement` / `software_requirement` | `requirement` |
+| `software_detailed_design` | `design` |
+| `architecture_decision_record` | `adr` |
+
+nput にはハードウェア / ソフトウェアの区別が無く、system / software の 2 段も持たないため、
+1 つの `requirement` / `design` に統合する。
+
 型名・フィールド名は**汎用のまま保つ**（nput 固有の語彙を混ぜない）。当面 nput 内に置くが、型が安定したら
 skills リポジトリか専用リポジトリへ切り出して横展開する前提のため。切り出しに備えて設計意図を
 `docs/model.yaml` のコメントに残す。
 
 sara の item にできない外部参照は text フィールドへ逃がす（adr の `issues: !list text` / `origin: text`）。
+
+adr の `status` は既存 48 本の実表記に合わせ、`!enum {提案, 採用}` の**日本語値**とする。組み込みの
+`proposed` / `accepted` / `deprecated` をそのまま使うと #208（47 本への frontmatter 追加）が全件翻訳に
+なるため採らない（実データは全件が `採用` で、英語表記は 1 本も無い）。48 本中 10 本が持つカッコ書きの
+改訂注記（例: 「採用（2026-06-14 改訂: … → ADR-0015）」）は enum 値に収まらないので、`status_note: text`
+を受け皿として別に持つ。この注記は `docs/adr/README.md` が「正しい運用例」として明示的に保護している
+情報であり、enum 化で捨ててはならない。
+
+`deprecated` 相当の「廃止」は**当面値に持たない**。§3 の通り `supersedes` を定義していない現状で廃止
+ステータスだけを先に置くと、「旧 ADR は読まなくてよい」という誤読を招く。`supersedes` の追加を再検討する
+時点で「廃止」も併せて足す。
 
 ### 3. `supersedes` は当面定義せず、部分改訂を表す `revises` を独自に定義する
 
@@ -105,7 +127,7 @@ sara が扱う正式 ID はフル UUIDv4、人間が触る面は前方 8 文字�
 - **ULID / UUIDv7（時刻順序付き）を採用しない**。先頭が時刻部のため、(1) 8 文字省略形が同一秒のバッチ生成で
   全て同じ文字列になり衝突する、(2) フル形でも先頭が似通い diff レビューでの目視比較が効かない。v4 は
   先頭から乱数なので両方成立する。時系列の並びは ID ではなくファイル名の日付プレフィックスが担う
-- **ADR のみ連番を維持する**（`ADR-0044`）。47 本の相互参照・`docs/adr/README.md` の運用・Issue 言及を
+- **ADR のみ連番を維持する**（`ADR-NNNN`）。既存 47 本の相互参照・`docs/adr/README.md` の運用・Issue 言及を
   壊さないため
 - 8 文字 prefix の偶然重複（120 item で約 10⁻⁶）は採番コマンドの重複チェックが再生成で潰す
 
@@ -125,15 +147,42 @@ sara の ID 検証は「非空」「英数字 / ハイフン / アンダース�
 - 閾値ゲートを持たない点は `go-coverage` と同方針（→ ADR-0030）。他 PR とのマージ順依存を避ける
 - DoD の残り枠は温存する。strict 化・必須チェック化は移行完了後に判断する
 
-`changes` job の gate には掛けない。あの filter は nix / Go ソースを対象にしており、`sara check` が最も
-効くのは docs-only PR であるため。
+既存の `changes` job は再利用しない。あの filter は nix / Go ソースを対象にしており、`sara check` が最も
+効くのは docs-only PR であるため。代わりに job 内へローカルな filter（`docs/**` / `sara.toml` / `dev/**` /
+`test.yml`）を置き、無関係な PR では nix のセットアップごと skip する。
+
+同じ job で `dev/tests/sara-id.sh`（採番契約のテスト）も実行する。`checks.sara-id` として
+`nix flake check ./dev` にも載せているが、CI の `flake-check` job はルート flake を対象にするため
+dev の checks は CI に載らない。テストが「人が思い出したときだけ動く」状態を避けるための明示ステップ。
+
+## 根拠
+
+### なぜ item 分割まで踏み込むのか
+
+#206 の「散文構造と相性が悪い」は正しい観測だが、それは *現在の構造を維持する前提* の話である。本 ADR が
+主目的に置く「要求とリスクの紐付けの一貫性管理」はファイル粒度では原理的に達成できない。ファイル単位の
+item では「`spec.md` にテストがある」までしか言えず、「REQ-07 のテストが無い」を検出できない。検出できない
+なら導入する意味が無く、逆に検出したいなら構造を変えるしかない。分解コストはこの帰結として受け入れる。
+
+### なぜ `id_format` を書くのか（検証されないのに）
+
+sara は `id_format` を検証しない（`sara-core/src/model/item.rs` 実装確認済み）。それでも各型に書くのは、
+model.yaml 単体が ID 規約のドキュメントとして読まれるため。§2 が前提とする他プロジェクトへの切り出し後は、
+この ADR が付いてこない。実効性が無いことはファイル冒頭と `solution` 型のコメントで明示する。
+
+### なぜ CI を非必須で始めるのか
+
+必須にすると、移行の途中段階（親を持たない item・テスト未着手の要求が正常に存在する状態）でマージが
+止まる。移行そのものを止める仕組みは移行の役に立たない。`go-coverage` が閾値ゲートを持たない理由
+（→ ADR-0030）と同根で、他 PR とのマージ順依存も避けられる。
 
 ## 影響
 
 - `docs/model.yaml` / `sara.toml` が追加され、`docs/` 配下が sara のスキャン対象になる。frontmatter の
   無い `.md` は `ParseResult::Skipped` で静かに無視される（`sara-core/src/repository/scanner.rs` 確認済み）
   ため、README / 概要文書 / test-plan 等への除外設定は不要
-- devShell に `sara-id` と util-linux が加わる。CI 用に `devShells.sara`（sara 単体）を分けており、
+- devShell に `sara-id` が加わる（`uuidgen -r` を供給する util-linux は `sara-id` の `runtimeInputs`
+  として wrapper の PATH に前置されるため、devShell 側には載せない）。CI 用に `devShells.sara` を分けており、
   docs-only PR で nput のビルドと dogfood の shellHook を走らせない
 - `docs/adr/README.md` の「ADR は **supersede しない**」という断定表記は、本 ADR の §3（当面使わない・
   恒久排除ではない）と趣旨を揃えるため緩和が必要。この改訂は #208 のスコープで行う
@@ -142,9 +191,46 @@ sara の ID 検証は「非空」「英数字 / ハイフン / アンダース�
 - skills リポジトリ側の改修（テスト成果物の恒久化・全 ID のファイル分割・UUIDv4 採番手順など）は
   **nput 先行・skills は後追い**とし、移行の実地で必要な改修を確定させてから着手する。本 ADR のスコープ外
 
+## 棄却した代替案
+
+### `run.sh`（grep / awk 突合）に参照先実在チェックを足して独立に切り出す
+
+#206 が保留していた案。sara が同等以上（broken refs に加えて duplicate ID / cycles / 階層違反）を提供し、
+自前実装の保守を抱えずに済むため採らない。#206 自身が sara を実機検証して「テスト工程の文書管理としては
+`run.sh` より強い」と確認している。
+
+### 組み込みモデルをそのまま使う
+
+`hardware_requirement` / `hardware_detailed_design` は nput に対応する実体が無く、`scenario` /
+`system_architecture` も中間層として実在しない。空の型が並ぶと、後任が「ここを埋めるべきか」を毎回判断する
+コストを負う。カスタムスキーマは組み込みを完全置換する仕様なので、部分的に残す選択肢も無い。
+
+### `supersedes` を最初から定義しておく
+
+改訂実態の調査（2026-08-01）で、文書丸ごとの失効に該当する ADR は 1 本も無かった。実例の無い関係を先に
+定義すると、部分改訂に誤用されて「旧 ADR は読まなくてよい」という誤読を生む。これは `docs/adr/README.md`
+が防ごうとしている失敗そのもの。必要になった時点で足すほうが安全（→ §3）。
+
+### ID に ULID / UUIDv7（時刻順序付き）を使う
+
+先頭が時刻部になるため、(1) 8 文字省略形が同一秒のバッチ生成で全て同じ文字列になり衝突する、
+(2) フル形でも先頭が似通い diff レビューでの目視比較が効かない。v4 は先頭から乱数なので両方成立する。
+時系列の並びは ID ではなくファイル名の日付プレフィックスが担えば足りる（→ §4）。
+
+### ADR も UUID へ移行する
+
+既存 47 本の相互参照・`docs/adr/README.md` のセルフチェック運用・Issue 本文での言及がすべて連番前提で、
+移行すると壊れる範囲がリポジトリ外（Issue / PR）にまで及ぶ。連番の弱点（並列レーンでの採番衝突）は
+ADR の作成頻度では実害にならない（→ §4）。
+
+### `status` に組み込みの英語 enum（`proposed` / `accepted` / `deprecated`）を使う
+
+実データは全 48 本が `採用` で英語表記は 1 本も無く、採ると #208 が全件翻訳になる。さらに 10 本が持つ
+カッコ書きの改訂注記が enum 値に収まらず、退避先を各ファイルで判断することになる（→ §2）。
+
 ## 保留
 
-- **glossary（`CONTEXT.md` 約 25 用語）の item 化**。用語間参照と用語 → ADR の出典を機械検証できる展望は
+- **glossary（`CONTEXT.md` 21 用語）の item 化**。用語間参照と用語 → ADR の出典を機械検証できる展望は
   あるが、分割すると「一覧して語彙を身につける」用語集の機能を失う。用語は最も安定した資産で後から移行しても
   失うものが少なく、100 item を作る過程で判断材料が得られる
 - **strict 化・必須チェック化**（§5）
