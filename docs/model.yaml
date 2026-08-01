@@ -125,8 +125,9 @@ item_types:
     id_format: '{prefix}-{seq:04}'
     parent_types: []
     fields:
-      # 既存 48 本の実表記に合わせた日本語 enum。`accepted` 等の英語表記は 1 本も無く、
-      # 英語化すると #208（47 本への frontmatter 追加）が全件翻訳になるため採らない。
+      # 実データの表記に合わせた日本語 enum。ADR は全 48 本が「採用」で `accepted` 等の
+      # 英語表記は 1 本も無く、英語化すると #208（既存 47 本への frontmatter 追加）が
+      # 全件翻訳になるため採らない。
       #
       # 「廃止」は当面値に持たない。ADR-0048 §3 の通り、文書丸ごとの失効を表す
       # supersedes を定義していない現状では、廃止ステータスだけを先に置くと
@@ -141,7 +142,7 @@ item_types:
         required: true
         placeholder: 採用
       # ステータス行のカッコ書き注記（例: 「採用（2026-06-14 改訂: … → ADR-0015）」）の
-      # 受け皿。48 本中 10 本が持つ。docs/adr/README.md が「正しい運用例」として明示的に
+      # 受け皿。#208 が扱う既存 47 本のうち 10 本が持つ。docs/adr/README.md が「正しい運用例」として明示的に
       # 保護している情報なので、enum 化で捨てずにここへ逃がす。
       - name: status_note
         display_name: Status note
