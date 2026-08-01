@@ -101,6 +101,11 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      # Scoped to what this job actually exercises: the documents sara scans,
+      # its config, the sara-id implementation, and this workflow. On
+      # non-pull_request events the step is skipped and `relevant` stays empty,
+      # which the guard below treats as "run" — the event/filter decision lives
+      # in a single expression rather than being restated in a shell step.
       - name: Detect sara-relevant changes
         id: filter
         if: github.event_name == 'pull_request'
@@ -110,20 +115,12 @@ jobs:
             relevant:
               - 'docs/**'
               - 'sara.toml'
-              - 'dev/**'
+              - 'dev/flake.nix'
+              - 'dev/tests/**'
               - '.github/workflows/test.yml'
 
-      - name: Decide
-        id: decide
-        run: |
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=${{ steps.filter.outputs.relevant }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Setup Nix
-        if: steps.decide.outputs.run == 'true'
+        if: steps.filter.outputs.relevant != 'false'
         uses: ./.github/actions/setup-nix
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
@@ -133,14 +130,14 @@ jobs:
       # exactly this reason → 2c9f9fa). The dedicated `sara` devShell avoids
       # building nput and running the dogfood shellHook.
       - name: Run sara check
-        if: steps.decide.outputs.run == 'true'
+        if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c sara check
 
       # The numbering contract for sara-id (UUIDv4 two-tier IDs). Also exposed
       # as `checks.sara-id` for `nix flake check ./dev`, but that never runs in
       # CI because flake-check targets the root flake — hence this explicit step.
       - name: Run sara-id contract test
-        if: steps.decide.outputs.run == 'true'
+        if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c dev/tests/sara-id.sh
 
   e2e:
