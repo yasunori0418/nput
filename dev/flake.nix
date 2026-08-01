@@ -90,6 +90,15 @@
             '';
           };
 
+          # CI の sara check 専用シェル。default devShell は nput のビルドと
+          # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
+          # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
+          # yasunori0418.cachix.org から引くだけで済む。
+          devShells.sara = pkgs.mkShell {
+            packages = [ inputs'.nur.packages.sara ];
+            env.TERM = "dumb";
+          };
+
           # 非 NixOS E2E ハーネス（tests/e2e/run.sh）専用の最小 CI シェル（→ ADR-0012 §2）。
           # dev 専用ツール（statix / nixd / gopls 等）と dogfood の shellHook を持たず、
           # ハーネスが要する nput バイナリ + bash / git / jq / coreutils だけを提供する。
