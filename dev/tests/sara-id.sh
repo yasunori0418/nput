@@ -5,20 +5,25 @@
 #   nix develop ./dev -c dev/tests/sara-id.sh   # devShell から直接
 #   nix flake check ./dev                        # checks.sara-id 経由
 #
-# 検証対象（→ Issue #207・ADR-0048）:
-#   1. 正式 ID（<PREFIX>-<フル UUIDv4>）とファイル名素材（<YYYYMMDD>-<前方8文字>-<slug>.md）を出力する
-#   2. UUIDv4 として妥当（version nibble = 4・variant nibble ∈ {8,9,a,b}）
-#   3. 呼ぶたびに異なる ID を返す
-#   4. 8 文字 prefix が docs/ に既出なら再生成する（上限 16 回で打ち切る）
-#   5. 型名から prefix を引き、未知の入力はフォールバックで大文字化する
-#   6. slug 未指定でもファイル名素材を出す
-#   7. ADR は連番維持のため exit 2 で拒否する
-#   8. 異常系の終了コードを区別する（引数不正 = 2 / 候補枯渇 = 1）
+# 検証対象（→ Issue #207・ADR-0048）。番号は下の節見出しに対応する:
+#   1.  正式 ID・ファイル名素材・散文参照の 3 形式を出力し、UUIDv4 として妥当
+#       （version nibble = 4・variant nibble ∈ {8,9,a,b}）で、省略形が前方一致する
+#   2.  呼ぶたびに異なる ID を返す
+#   3.  8 文字 prefix が docs/ に既出なら再生成する（再帰走査・呼び出し回数）
+#   4.  再生成は 16 回で打ち切り exit 1（重複 ID を出さない）
+#   4b. 走査先を git のリポジトリルート基準で解決する
+#   4c. git 管理外ではカレント基準へフォールバックする
+#   5.  docs/ が無いリポジトリでも採番できる
+#   6.  型名・別名から prefix を引き、未知の入力はフォールバックで大文字化する
+#   7.  slug 未指定でもファイル名素材を出す
+#   8.  ADR は連番維持のため exit 2 で拒否する
+#   9.  異常系の終了コードを区別する（引数不正 = 2 / --help = 0）
 
-# -e は使わない。SUT（sara-id）の非ゼロ終了はこのテストが検知したい退行そのもので、
-# -e があるとその時点でスクリプトが打ち切られ、以降のアサーションが走らず
-# 「1 回の実行で全失敗を報告する」という集計設計が壊れる（tests/e2e/run.sh も同じ理由で
-# -e を採らない）。SUT 呼び出しは全て `|| true` 相当で受けて fault に流す。
+# -e は使わない。このテストは「1 回の実行で全失敗を報告する」集計方式を採っており、
+# -e があると最初の非ゼロ終了でスクリプトごと打ち切られて以降のアサーションが走らない
+# （退行時の診断が先頭 1 件で切れる）。SUT の非ゼロ終了自体は run_sara_id が受けるが、
+# アサーション周辺の想定外終了まで含めて集計を守るため -e を外す。既存の
+# tests/e2e/run.sh も同じ理由で set -uo pipefail を採っている。
 set -uo pipefail
 
 fail=0
@@ -30,6 +35,13 @@ fault() {
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
+
+# 実装は走査先を `git rev-parse --show-toplevel` で解決し、失敗時のみカレント基準へ
+# フォールバックする。以降の重複検出系アサーションは「$work/docs を走査する」ことを
+# 前提に既出ファイルを置くため、$work 自身を git repo のルートに固定して前提を明示する
+# （TMPDIR が git 作業ツリー内に置かれた環境だと、固定しない限り走査先が実リポジトリの
+# docs/ に解決され、アサーションが一斉に偽陽性化する）。
+git -C "$work" init -q
 
 # SUT を呼び、stdout を stdout_capture に、終了コードを status_capture に入れる。
 # 非ゼロ終了でもここでは落とさない（判定は各アサーションが行う）。
@@ -212,6 +224,9 @@ else
   fault "打ち切りまでにちょうど 16 回試行する（実際: $exhausted_calls）"
 fi
 
+# ここから先は本物の uuidgen を使う（形式・一意性の検査が固定値で素通りしないよう、
+# seam をグローバルから外す）。以降で偽 uuidgen を使うケースは呼び出しごとに
+# 環境変数を明示的に渡すこと。
 unset SARA_ID_UUIDGEN SARA_ID_FAKE_COUNT SARA_ID_FAKE_TAKEN SARA_ID_FAKE_FRESH SARA_ID_FAKE_SWITCH
 rm -f "$work/docs/existing.md"
 
@@ -237,16 +252,42 @@ else
   fault "サブディレクトリから叩いてもルートの docs/ を走査する（実際: $sub_id）"
 fi
 
+# --- 4c. git 管理外ではカレント基準へフォールバックする ----------------------
+#
+# `git rev-parse` が失敗する経路。カレント基準で重複検出が働くことを固定する
+# （この経路は他ケースが暗黙に依存している前提でもあるので明示的に押さえる）。
+
+nogit="$(mktemp -d)"
+mkdir -p "$nogit/docs"
+printf 'REQ-%s\n' "$taken" >"$nogit/docs/existing.md"
+: >"$count_file"
+nogit_out="$(cd "$nogit" &&
+  SARA_ID_UUIDGEN="$fake" SARA_ID_FAKE_COUNT="$count_file" \
+    SARA_ID_FAKE_TAKEN="$taken" SARA_ID_FAKE_FRESH="$fresh" SARA_ID_FAKE_SWITCH=1 \
+    sara-id req x 2>/dev/null)"
+nogit_id="$(printf '%s\n' "$nogit_out" | sed -n 's/^id:[[:space:]]*//p')"
+rm -rf "$nogit"
+if [[ "$nogit_id" == "REQ-$fresh" ]]; then
+  pass "git 管理外ではカレント基準の docs/ を走査する"
+else
+  fault "git 管理外ではカレント基準の docs/ を走査する（実際: $nogit_id）"
+fi
+
 # --- 5. docs/ が無いリポジトリでも動く ---------------------------------------
+#
+# 実装の `[ ! -d "$scan_dir" ]` 早期 break を固定する。ルート解決が成功したうえで
+# docs/ が無い状態を作る（git init 済み・docs/ なし）。git 管理外の一時ディレクトリ
+# だと、TMPDIR の置き場所次第で走査先が実リポジトリへ解決されこの分岐を通らない。
 
 nodocs="$(mktemp -d)"
+git -C "$nodocs" init -q
 nodocs_out="$(cd "$nodocs" && sara-id req x 2>/dev/null)" && nodocs_status=0 || nodocs_status=$?
 rm -rf "$nodocs"
 nodocs_id="$(printf '%s\n' "$nodocs_out" | sed -n 's/^id:[[:space:]]*//p')"
 if [[ "$nodocs_status" -eq 0 && "$nodocs_id" =~ ^REQ-${uuid_re}$ ]]; then
-  pass "docs/ が無いディレクトリでも採番できる"
+  pass "docs/ が無いリポジトリでも採番できる"
 else
-  fault "docs/ が無いディレクトリでも採番できる（exit=$nodocs_status id=$nodocs_id）"
+  fault "docs/ が無いリポジトリでも採番できる（exit=$nodocs_status id=$nodocs_id）"
 fi
 
 # --- 6. prefix の解決 --------------------------------------------------------
@@ -314,11 +355,19 @@ else
   fault "引数なしは exit 2（実際: exit=$status_capture）"
 fi
 
+# 境界は 2/3 の間（実装は $# -gt 2 で弾く）。無効側と有効側の両方を押さえる。
 run_sara_id sara-id req slug extra
 if [[ "$status_capture" -eq 2 ]]; then
-  pass "引数過多は exit 2"
+  pass "引数 3 個は exit 2"
 else
-  fault "引数過多は exit 2（実際: exit=$status_capture）"
+  fault "引数 3 個は exit 2（実際: exit=$status_capture）"
+fi
+
+run_sara_id sara-id req slug
+if [[ "$status_capture" -eq 0 ]]; then
+  pass "引数 2 個は受理する（境界の有効側）"
+else
+  fault "引数 2 個は受理する（実際: exit=$status_capture）"
 fi
 
 run_sara_id sara-id --help
