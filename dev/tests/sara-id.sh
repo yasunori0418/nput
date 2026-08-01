@@ -122,8 +122,12 @@ fresh='bbbbbbbb-2222-4222-9222-222222222222'
 # ヒアドキュメントはクオートして内側を一切展開させず、可変値は環境変数で渡す
 # （エスケープ漏れ 1 個で偽 uuidgen が壊れるのを避ける）。
 fake="$work/fake-uuidgen"
-cat >"$fake" <<'FAKE'
-#!/usr/bin/env bash
+# shebang は実行中の bash の絶対パスを埋め込む。`#!/usr/bin/env bash` だと
+# nix のビルドサンドボックス（checks.sara-id 経由）に /usr/bin/env が無く
+# exit 126 になる。
+{
+  printf '#!%s\n' "$BASH"
+  cat <<'FAKE'
 n=$(cat "$SARA_ID_FAKE_COUNT" 2>/dev/null || echo 0)
 n=$((n + 1))
 printf '%s' "$n" >"$SARA_ID_FAKE_COUNT"
@@ -133,6 +137,7 @@ else
   printf '%s\n' "$SARA_ID_FAKE_FRESH"
 fi
 FAKE
+} >"$fake"
 chmod +x "$fake"
 
 count_file="$work/fake-count"

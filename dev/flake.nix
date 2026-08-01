@@ -218,11 +218,17 @@
             '';
           };
 
-          # sara-id の採番契約を固定するテスト（dev/tests/sara-id.sh）を
-          # `nix flake check ./dev` に載せる。ローカルでは devShell から直接
-          # 叩けるが、それだけだと人が思い出したときにしか走らない。
-          # CI からは .github/workflows/test.yml の sara job が同じスクリプトを
-          # 実行する（そちらは devShell 経由で、この派生はローカル・dev flake 用）。
+          # sara-id の採番契約を固定するテスト（dev/tests/sara-id.sh）。同じスクリプトを
+          # 2 経路から走らせる意図的な二重化で、役割が違う:
+          #
+          # - この checks 派生: ローカルの `nix flake check ./dev`（CLAUDE.md の標準検証
+          #   手順）に載せ、dev flake を触ったときに手を動かさず走るようにする。
+          #   CI の flake-check job はルート flake を対象にするため、ここは CI では回らない。
+          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行する。
+          #   PR での退行検知はこちらが担保する。
+          #
+          # サンドボックス（runCommandLocal）と devShell では実行条件が違うので、
+          # 両経路とも緑であることを確認してから変更を入れること。
           checks.sara-id = pkgs.runCommandLocal "sara-id-test" {
             nativeBuildInputs = [
               sara-id
