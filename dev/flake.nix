@@ -236,6 +236,10 @@
               pkgs.coreutils
               # テストがルート解決経路を検証するため一時 repo を git init する。
               pkgs.git
+              # テストが sara-id の出力から id / filename / ref を抜くのに使う。
+              # stdenv 既定でも PATH に載るが、暗黙依存にすると実行条件の違う
+              # サンドボックスで踏み抜く（→ 0a18d87 の exit 126）ため明示する。
+              pkgs.gnused
             ];
           } ''
             bash ${./tests/sara-id.sh}
@@ -251,8 +255,12 @@
             packages = [
               inputs'.nur.packages.sara
               sara-id
+              # 以下は dev/tests/sara-id.sh が使う。stdenv 既定や runner の system
+              # PATH でも引けるが、checks.sara-id と揃えて明示する。
               pkgs.ripgrep
               pkgs.git
+              pkgs.gnused
+              pkgs.coreutils
             ];
             env.TERM = "dumb";
           };
