@@ -1,0 +1,15 @@
+# sara（ドキュメントのナレッジグラフ検証 CLI）の設定。
+# 型定義は docs/model.yaml で組み込みモデルを全面置換する（→ ADR-0048・epic #203）。
+
+model_schema = "docs/model.yaml"
+
+[repositories]
+# docs/ 配下を再帰スキャンする。frontmatter の無い .md は ParseResult::Skipped で
+# 静かに無視されるため、README / 概要文書 / test-plan.md 等への除外設定は不要。
+paths = ["./docs"]
+
+[validation]
+# 非必須チェックとして開始するため strict なし。orphan は警告に留める
+# （移行中・テスト未着手の要求が正常に存在するため）。検出対象は broken refs /
+# duplicate ID / cycles。strict 化・必須チェック化は移行完了後に判断する。
+strict_mode = false
