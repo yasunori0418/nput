@@ -1,10 +1,10 @@
 ---
 id: "REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7"
 type: requirement
+name: "entry の識別子は属性キー = target とし一意性は Nix が担保する"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "entry の識別子は属性キー = target とし一意性は Nix が担保する"
 specification: |
   `entries` SHALL be an attrset whose attribute key is the target path, which SHALL serve
   as the entry's identifier. Uniqueness of identifiers SHALL be guaranteed natively by

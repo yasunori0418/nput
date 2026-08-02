@@ -1,9 +1,9 @@
 ---
 id: "REQ-eaa8c0df-af44-4f52-9603-cd2bc22a67e9"
 type: requirement
+name: "gitignore は project mode 限定で非 project config を指定したらエラーで停止する"
 derives_from:
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "gitignore は project mode 限定で非 project config を指定したらエラーで停止する"
 specification: |
   `nput gitignore` SHALL be restricted to project mode. A bare `gitignore <name>` SHALL
   accept only a project mode config, and SHALL stop with an error when a non-project

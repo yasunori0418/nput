@@ -1,9 +1,9 @@
 ---
 id: "REQ-2b48620a-abaa-43df-a106-954bbba3de56"
 type: requirement
+name: "method 変更は symlink→copy のみ配置前除去で移行し、copy→symlink は移行しない"
 derives_from:
   - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
-name: "method 変更は symlink→copy のみ配置前除去で移行し、copy→symlink は移行しない"
 specification: |
   When the method for the same target changes from symlink to copy, and the previous
   generation recorded a symlink whose on-disk destination matches that record, the engine

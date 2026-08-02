@@ -1,9 +1,9 @@
 ---
 id: "REQ-5c6b07da-3d06-414d-8770-4f438234b322"
 type: requirement
+name: "target 衝突の検出経路を同一 manifest 内と cross-config で分ける"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "target 衝突の検出経路を同一 manifest 内と cross-config で分ける"
 specification: |
   A collision in which two distinct keys A and B explicitly override the `target` field to
   the same value SHALL be detected as a duplicate of the normalized target string and

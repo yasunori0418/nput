@@ -1,10 +1,10 @@
 ---
 id: "REQ-9ed6b500-a11f-414e-a763-adb47c89f7d4"
 type: requirement
+name: "--version は埋め込みバージョンを cobra 既定書式で表示して終了し短縮形を持たない"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "--version は埋め込みバージョンを cobra 既定書式で表示して終了し短縮形を持たない"
 specification: |
   The `--version` flag SHALL display the embedded version in the cobra default format
   (`nput version X.Y.Z`) and then terminate. It SHALL NOT have a short form, because `-v`

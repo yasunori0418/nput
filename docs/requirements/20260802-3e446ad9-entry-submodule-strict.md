@@ -1,10 +1,10 @@
 ---
 id: "REQ-3e446ad9-a6f4-4229-b5c5-184754b0ef51"
 type: requirement
+name: "entry submodule は strict とし未知キーと旧名を評価時エラーにする"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "entry submodule は strict とし未知キーと旧名を評価時エラーにする"
 specification: |
   The entry submodule SHALL be strict: an unknown key SHALL be an evaluation-time error.
   A typo or an old field name (`name` / `source` / `dir` / `mode`) SHALL therefore fail

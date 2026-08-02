@@ -1,9 +1,9 @@
 ---
 id: "REQ-eb363122-385a-499c-a074-c95efb949d07"
 type: requirement
+name: "mkOutOfStoreSymlink は out-of-store symlink を表すマーカーを返す"
 derives_from:
   - "UC-01b896b4-04b9-40d0-bf9e-966eaf64c3d4"
-name: "mkOutOfStoreSymlink は out-of-store symlink を表すマーカーを返す"
 specification: |
   `lib.mkOutOfStoreSymlink` SHALL be a pure function
   (`mkOutOfStoreSymlink :: string -> marker`) returning a marker that denotes an

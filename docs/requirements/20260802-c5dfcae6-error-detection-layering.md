@@ -1,10 +1,10 @@
 ---
 id: "REQ-c5dfcae6-6094-4850-99e5-bf14530bc60a"
 type: requirement
+name: "設定の誤りは評価時に、実体の不整合は engine 実行時に検出する層分けを守る"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "設定の誤りは評価時に、実体の不整合は engine 実行時に検出する層分けを守る"
 specification: |
   Errors SHALL be detected in the layer that can decide them. An error that is decidable
   from the configuration alone (an omitted `root`, an ill-typed value, an unknown key, a

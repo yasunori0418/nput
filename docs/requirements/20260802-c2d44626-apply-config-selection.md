@@ -1,9 +1,9 @@
 ---
 id: "REQ-c2d44626-d8f4-446a-a80a-319a500129b4"
 type: requirement
+name: "apply の config 選択は name 省略で default・明示で単一・--all で全件"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "apply の config 選択は name 省略で default・明示で単一・--all で全件"
 specification: |
   When the name is omitted, `nput apply` SHALL apply `nput.default`, following the flake
   `default` convention, and SHALL fail with an error when `default` is not defined.

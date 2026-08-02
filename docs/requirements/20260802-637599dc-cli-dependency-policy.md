@@ -1,10 +1,10 @@
 ---
 id: "REQ-637599dc-a1ec-4af5-9e97-e882c7df56d0"
 type: requirement
+name: "CLI が持ち込む依存は許可した第三者ライブラリと pin した Go に限り、いずれも固定する"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "CLI が持ち込む依存は許可した第三者ライブラリと pin した Go に限り、いずれも固定する"
 specification: |
   Everything the CLI brings in SHALL be confined to what has been explicitly allowed, and
   each SHALL be pinned, in contrast to the engine's stdlib-only constraint. A minimal set

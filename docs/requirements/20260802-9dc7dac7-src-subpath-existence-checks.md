@@ -1,10 +1,10 @@
 ---
 id: "REQ-9dc7dac7-4e9e-494a-a17b-73853c119653"
 type: requirement
+name: "配置元の実在は判定できる層で検査し、いずれの層でも停止する"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "配置元の実在は判定できる層で検査し、いずれの層でも停止する"
 specification: |
   The existence of the placement source SHALL be checked in the layer that can decide it,
   and SHALL stop the run in either layer. A `src` given as a store path (a path or a set)

@@ -1,10 +1,10 @@
 ---
 id: "REQ-774cef80-2872-4ea1-937b-a0fbabc305a9"
 type: requirement
+name: "要求された操作が成立しないときは CLI がエラーで停止し、暗黙のフォールバックを採らない"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "要求された操作が成立しないときは CLI がエラーで停止し、暗黙のフォールバックを採らない"
 specification: |
   When the operation the user asked for does not hold, the CLI SHALL stop with an error and
   SHALL NOT fall back implicitly. It SHALL stop when no entrypoint can be discovered — no

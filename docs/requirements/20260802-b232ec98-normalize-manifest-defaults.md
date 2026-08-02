@@ -1,10 +1,10 @@
 ---
 id: "REQ-b232ec98-af3b-41f3-a050-29d417322002"
 type: requirement
+name: "normalizeManifest が検査・デフォルト適用・marker 変換を行い mkManifest が derivation を組む"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "normalizeManifest が検査・デフォルト適用・marker 変換を行い mkManifest が derivation を組む"
 specification: |
   The input validation implementation SHALL be split in two stages.
   `normalizeManifest { lib, root, entries } -> attrset` SHALL be a pure data function that

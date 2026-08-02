@@ -1,9 +1,9 @@
 ---
 id: "REQ-cbd61281-64b0-4487-a4b7-ce76e70dc4f9"
 type: requirement
+name: "init のテンプレート参照はバイナリにハードコードした固定 flake ref とする"
 derives_from:
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "init のテンプレート参照はバイナリにハードコードした固定 flake ref とする"
 specification: |
   The template reference of `nput init` SHALL be the fixed flake ref
   `github:yasunori0418/nput`, hardcoded into the binary, so that it works without

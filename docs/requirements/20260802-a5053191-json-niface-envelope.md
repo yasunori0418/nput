@@ -1,10 +1,10 @@
 ---
 id: "REQ-a5053191-1c6a-449b-9c5e-5ff49dc5aead"
 type: requirement
+name: "--json は niface 規約準拠のエンベロープを出す第 2 契約とする"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "--json は niface 規約準拠のエンベロープを出す第 2 契約とする"
 specification: |
   When `--json` is given, the CLI SHALL write exactly one niface envelope to stdout. Its
   top level SHALL carry `specVersion` / `tool` / `command` / `status` / `dryRun` /

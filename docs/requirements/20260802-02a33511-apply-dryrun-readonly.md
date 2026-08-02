@@ -1,10 +1,10 @@
 ---
 id: "REQ-02a33511-0941-4813-b289-a05eb8e9aa57"
 type: requirement
+name: "apply --dryrun は読み取り専用で conflict 検出時に非ゼロ終了する"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "apply --dryrun は読み取り専用で conflict 検出時に非ゼロ終了する"
 specification: |
   `nput apply <name> --dryrun` SHALL be read-only, performing no filesystem write, no
   `--set`, and no flock, and SHALL display place / replace / remove / conflict / no-op

@@ -1,9 +1,9 @@
 ---
 id: "REQ-27b75fe6-6c36-44a8-8cd3-5cc98043022a"
 type: requirement
+name: "subpath は src 内の相対パスとし、リポジトリ全体は省略で表して専用トークンを設けない"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
-name: "subpath は src 内の相対パスとし、リポジトリ全体は省略で表して専用トークンを設けない"
 specification: |
   The `subpath` field SHALL be a relative path selecting which path inside `src` is taken,
   and SHALL accept both a file and a directory. Omitting `subpath` SHALL be the canonical

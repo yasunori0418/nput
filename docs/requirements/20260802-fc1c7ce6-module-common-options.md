@@ -1,9 +1,9 @@
 ---
 id: "REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10"
 type: requirement
+name: "全モジュールは共通オプションの同一集合を公開し、entries は configs 経由・root はモジュールが pin する"
 derives_from:
   - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
-name: "全モジュールは共通オプションの同一集合を公開し、entries は configs 経由・root はモジュールが pin する"
 specification: |
   Every module (home-manager / NixOS / nix-darwin) SHALL expose the same set of common
   options: `nput.enable :: bool` defaulting to false, `nput.configs :: attrsOf (submodule

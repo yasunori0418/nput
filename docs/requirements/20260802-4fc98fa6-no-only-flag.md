@@ -1,9 +1,9 @@
 ---
 id: "REQ-4fc98fa6-fd5f-4f25-8b10-60755bf49bd2"
 type: requirement
+name: "一部 entry だけを適用する --only は提供しない"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "一部 entry だけを適用する --only は提供しない"
 specification: |
   A `--only` flag that applies only some of the entries SHALL NOT be provided, because it
   conflicts with the atomicity of a profile generation. Selective updating SHALL instead

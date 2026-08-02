@@ -1,9 +1,9 @@
 ---
 id: "REQ-4cbd9a0d-9f94-4747-8881-56020dc6d5af"
 type: requirement
+name: "apply --all は辞書順に適用し部分失敗でも続行して最後に集約する"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "apply --all は辞書順に適用し部分失敗でも続行して最後に集約する"
 specification: |
   `nput apply --all` SHALL apply all of `nput.*` in lexical (key-sorted, deterministic)
   order, and SHALL continue with the remaining configs even when some of them fail,

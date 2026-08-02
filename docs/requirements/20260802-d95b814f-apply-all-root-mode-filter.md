@@ -1,9 +1,9 @@
 ---
 id: "REQ-d95b814f-aa7a-470e-9320-c14f9c14da7b"
 type: requirement
+name: "--all は root モードフィルタで対象 config を絞れる"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "--all は root モードフィルタで対象 config を絞れる"
 specification: |
   When `--project-root` / `--home-root` / `--system-root` is given together with
   `apply --all`, only the configs of the corresponding root mode SHALL be applied

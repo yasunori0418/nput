@@ -1,10 +1,10 @@
 ---
 id: "REQ-5c2e64c3-09a7-4ae8-b60c-4f1ccabce4fd"
 type: requirement
+name: "エンベロープはコマンド完了時に 1 回だけ出し成立条件を満たさない実行では出さない"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "エンベロープはコマンド完了時に 1 回だけ出し成立条件を満たさない実行では出さない"
 specification: |
   The envelope SHALL be written to stdout exactly once, at command completion (one
   document plus a trailing newline, with nothing else on stdout). It SHALL be emitted only

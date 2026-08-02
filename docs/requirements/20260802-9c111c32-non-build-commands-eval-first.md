@@ -1,10 +1,10 @@
 ---
 id: "REQ-9c111c32-8f6c-4eda-859c-dae02c0624fc"
 type: requirement
+name: "非 build コマンドも eval 先行を共通前段に持つ"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "非 build コマンドも eval 先行を共通前段に持つ"
 specification: |
   The non-building commands (`reset` / `rollback` / `list-generations`) SHALL also have
   eval-first as a common preliminary stage. They do not build, but determining
