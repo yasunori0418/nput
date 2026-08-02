@@ -35,6 +35,8 @@ REQ-2c5a10d8 の担当。
 
 ## 出典
 
-`docs/spec.md`「CLI 仕様」→「サブコマンド体系」のグローバルフラグ表 `--no-wait`。
+`docs/spec.md`「CLI 仕様」→「サブコマンド体系」のグローバルフラグ表 `--no-wait` と、
+「実行フロー」2a の flock 取得（blocking / try-lock の別・待機表示・skip 通知）。
 
-決定の実体は ADR-0013（flock の待ち方と `--no-wait` の位置づけ）。
+決定の実体は ADR-0013（flock の待ち方と `--no-wait` の位置づけ）と、shellHook の
+try-lock skip を無言にせず通知すると定めた ADR-0022 §5。
