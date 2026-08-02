@@ -7,23 +7,25 @@ specification: |
   profiles separated by role, each with its own generations, and role separation SHALL NOT
   be confined to the standalone CLI path. One `<name>` of `nput.configs` SHALL yield one
   manifest and one profile; the atomicity of "one config = one profile = one manifest"
-  SHALL be preserved and no helper for composing several configs SHALL be provided. The
-  profile directory SHALL sit on the `<name>` key of home mode, so that a config named
-  `default` resolves to the same place as before and no change of layout is entailed. The
-  definition of the options themselves — that `nput.configs.<name>.entries` is the
-  canonical form and the bare `nput.entries` a deprecated sugar onto
-  `configs.default.entries` — is stated by REQ-fc1c7ce6, being common to every module, and
-  is not restated here.
+  SHALL be preserved and no helper for composing several configs SHALL be provided.
+  Introducing the `<name>` dimension SHALL be non-breaking: a config named `default` SHALL
+  go on resolving to the same profile as before, and no change to the layout of the
+  profile directory SHALL be entailed. How the profile directory is keyed is stated by
+  REQ-d5a2e289, and the definition of the options themselves — that
+  `nput.configs.<name>.entries` is the canonical form and the bare `nput.entries` a
+  deprecated sugar onto `configs.default.entries` — by REQ-fc1c7ce6, being common to every
+  module; neither is restated here.
 specification_ja: |
   home-manager モジュールの利用者も、役割分離された複数の独立 profile（それぞれが自分の
   世代を持つ）を取れなければならず、役割分離を standalone CLI 経路に限ってはならない。
   `nput.configs` の `<name>` 1 つが 1 manifest = 1 profile に対応するものとする。
   「1 config = 1 profile = 1 manifest」の atomic 性は保ち、複数 config を合成するヘルパを
-  提供してはならない。profile ディレクトリは home mode の `<name>` キーに乗せ、`default`
-  という名の config は従来と同じ場所に解決されるものとし、レイアウトの変更を伴っては
-  ならない。オプション自体の定義（canonical な形が `nput.configs.<name>.entries` であり、
-  素の `nput.entries` が `configs.default.entries` への deprecated 糖衣であること）は
-  全モジュール共通であり REQ-fc1c7ce6 の担当で、本 item では規定しない。
+  提供してはならない。`<name>` 次元の導入は非破壊でなければならず、`default` という名の
+  config は従来と同じ profile に解決され続け、profile ディレクトリのレイアウト変更を伴っては
+  ならない。profile ディレクトリをどうキーするかは REQ-d5a2e289、オプション自体の定義
+  （canonical な形が `nput.configs.<name>.entries` であり、素の `nput.entries` が
+  `configs.default.entries` への deprecated 糖衣であること）は全モジュール共通であり
+  REQ-fc1c7ce6 の担当で、いずれも本 item では規定しない。
 ---
 # REQ-c6891aeb: HM モジュール経由でも名前つき config ごとに役割分離した独立 profile を取れる
 
@@ -34,8 +36,9 @@ specification_ja: |
   atomic 性を保つ（合成ヘルパは提供しない）
 - HM モジュール経由でも**役割分離ができる**。役割ごとに分けたいユーザーが standalone CLI 経路へ
   回る必要は無い
-- profile dir は home mode の `<name>` 直キー（`<state>/nix/profiles/nput/<name>`）にそのまま
-  乗る。`default` 以外の `<name>` が増えるだけでレイアウトの変更は無い
+- `<name>` 次元の導入は**非破壊**。profile dir は home mode の `<name>` 直キー
+  （`<state>/nix/profiles/nput/<name>`）にそのまま乗り、`default` 以外の `<name>` が増えるだけで
+  レイアウトの変更は無い
 
 > **`docs/spec.md` 原文と異なる理由**: 原文の blockquote は「`nput.entries` は単一 attrset =
 > 単一 manifest = 1 profile（固定名 `default`）で `<name>` 次元を持たず、**HM モジュール経由では
@@ -71,4 +74,7 @@ specification_ja: |
 blockquote「HM モジュールの profile 粒度（MVP）」。
 
 決定の実体は ADR-0035「HM モジュールに `nput.configs.<name>` を導入し複数 profile
-（役割分離）を可能にする」§1（ADR-0024 §2 / ADR-0025 §2 の MVP 限定を改訂）。
+（役割分離）を可能にする」§1〜§2（ADR-0024 §2 / ADR-0025 §2 の MVP 限定を改訂）。`<name>` 次元と
+atomic 性・合成ヘルパ不提供は §1、`default` が従来と同じ profile に解決され続ける非破壊性は
+§1（profile dir が `<name>` 直キーに乗ること）と §2（`nput.entries` を `configs.default.entries`
+への糖衣とすること）の双方に依る。
