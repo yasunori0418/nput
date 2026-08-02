@@ -7,6 +7,9 @@ origin: "実装着手前のドキュメント検査で、各文書が沈黙し�
 justifies:
   - "REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461"
   - "REQ-250d936c-1df0-491d-a7af-708f38b61f33"
+  - "REQ-07c3b735-3744-4778-a640-8c6fb66f4aa7"
+  - "REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0"
+  - "REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3"
 references:
   - "ADR-0002"
   - "ADR-0005"

@@ -9,6 +9,11 @@ justifies:
   - "REQ-14f0aec9-abae-4621-82f3-40536a1ad904"
   - "REQ-d0aef5af-e922-400b-b250-ca38719c480b"
   - "REQ-3e446ad9-a6f4-4229-b5c5-184754b0ef51"
+  - "REQ-622787dc-4512-4ce9-9c7d-7b32bbb70557"
+  - "REQ-053cfed2-265a-4997-a27b-97b0bed10d8a"
+  - "REQ-0e341430-17f0-498b-9439-65491652163a"
+  - "REQ-706de717-4e47-471a-a1c0-448635be159c"
+  - "REQ-fc1118b1-b0e8-4ddf-80f6-c70956651693"
 revises:
   - "ADR-0002"
   - "ADR-0007"

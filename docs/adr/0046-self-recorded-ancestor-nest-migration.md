@@ -6,6 +6,9 @@ status: 採用
 issues:
   - "#170"
 origin: "dotfiles 側での実遭遇（#170）と、次期マイルストーンの grilling セッション（2026-07-11）で設計確定"
+justifies:
+  - "REQ-c9ab91c1-f778-4f87-a2ea-c66d6b3c2575"
+  - "REQ-0e341430-17f0-498b-9439-65491652163a"
 revises:
   - "ADR-0015"
 references:

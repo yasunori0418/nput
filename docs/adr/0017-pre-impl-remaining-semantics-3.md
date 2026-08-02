@@ -7,6 +7,8 @@ origin: "ADR-0016 に続く実装前レビュー第 3 巡（grill）で surfaced
 justifies:
   - "REQ-d95b814f-aa7a-470e-9320-c14f9c14da7b"
   - "REQ-61c05e09-0bde-4f74-9a96-03185f9df606"
+  - "REQ-61856da1-8883-401e-ad57-9f326b96d400"
+  - "REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0"
 revises:
   - "ADR-0005"
   - "ADR-0006"
