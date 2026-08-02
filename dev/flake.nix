@@ -229,22 +229,25 @@
           #
           # サンドボックス（runCommandLocal）と devShell では実行条件が違うので、
           # 両経路とも緑であることを確認してから変更を入れること。
-          checks.sara-id = pkgs.runCommandLocal "sara-id-test" {
-            nativeBuildInputs = [
-              sara-id
-              pkgs.ripgrep
-              pkgs.coreutils
-              # テストがルート解決経路を検証するため一時 repo を git init する。
-              pkgs.git
-              # テストが sara-id の出力から id / filename / ref を抜くのに使う。
-              # stdenv 既定でも PATH に載るが、暗黙依存にすると実行条件の違う
-              # サンドボックスで踏み抜く（→ 0a18d87 の exit 126）ため明示する。
-              pkgs.gnused
-            ];
-          } ''
-            bash ${./tests/sara-id.sh}
-            touch "$out"
-          '';
+          checks.sara-id =
+            pkgs.runCommandLocal "sara-id-test"
+              {
+                nativeBuildInputs = [
+                  sara-id
+                  pkgs.ripgrep
+                  pkgs.coreutils
+                  # テストがルート解決経路を検証するため一時 repo を git init する。
+                  pkgs.git
+                  # テストが sara-id の出力から id / filename / ref を抜くのに使う。
+                  # stdenv 既定でも PATH に載るが、暗黙依存にすると実行条件の違う
+                  # サンドボックスで踏み抜く（→ 0a18d87 の exit 126）ため明示する。
+                  pkgs.gnused
+                ];
+              }
+              ''
+                bash ${./tests/sara-id.sh}
+                touch "$out"
+              '';
 
           # CI の sara check 専用シェル。default devShell は nput のビルドと
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
