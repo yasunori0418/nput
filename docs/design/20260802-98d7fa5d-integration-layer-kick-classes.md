@@ -7,9 +7,6 @@ satisfies:
   - "REQ-dec58330-6dad-47f7-8f56-2402764a89c7"
   - "REQ-8085f194-c903-4ecb-abd8-c719fe7b3292"
   - "REQ-a0bdf6db-6c0c-476c-916a-61ee4e4510d9"
-  - "REQ-844ee375-919f-4341-81e1-a5f89fd32840"
-  - "REQ-8d965ca2-f8fd-44a4-87f3-94e850e9f85b"
-  - "REQ-c2654ca5-62c2-4e4b-ad67-ffc5468f429b"
 ---
 # DSG-98d7fa5d: engine の起動を entrypoint 駆動とビルド済み manifest の 2 クラスに束ね、統合層の差を link-farm の取得方法だけに閉じる
 
@@ -24,15 +21,19 @@ satisfies:
 | **entrypoint 駆動** | standalone CLI / devShell | ユーザーが `nput.<name>` を entrypoint に公開し、CLI が発見 → `nix eval`（rootKind 先取り）→ `nix build` |
 | **ビルド済み manifest** | home-manager（将来の NixOS / nix-darwin）| モジュール評価時に `mkManifest` でビルドした link-farm を、activation から `nput apply --manifest <link-farm>` へ渡す |
 
-層ごとの内訳は次の通り。
+層ごとの割り当てと、engine の起動を担う配線は次の通り。
 
-| 層 | 起動方法 | root の解決 | ユーザー向け rollback |
-|---|---|---|---|
-| standalone（CLI）| `nput apply <name>` を明示実行 | マーカー（`homeRoot` / `projectRoot` 等）| `nput rollback <name>`（home mode 限定）|
-| home-manager | `home.activation` から `apply --manifest` | `$HOME`（`homeRoot` を pin）| host（`home-manager --rollback`）|
-| devShell | `shellHook` から `nput apply <name>` | project mode: git toplevel（`--root` 可）| なし（ephemeral 配置）|
-| NixOS（将来）| `system.activationScripts` から `apply --manifest` | `config.users.users.<user>.home` | host（`nixos-rebuild` 世代）|
-| nix-darwin（将来）| `system.activationScripts` から `apply --manifest` | `config.users.users.<user>.home` | host 世代 |
+| 層 | クラス | 起動方法 |
+|---|---|---|
+| standalone（CLI）| entrypoint 駆動 | `nput apply <name>` を明示実行 |
+| devShell | entrypoint 駆動 | `shellHook` から `nput apply <name>` |
+| home-manager | ビルド済み manifest | `home.activation` から `apply --manifest` |
+| NixOS（将来）| ビルド済み manifest | `system.activationScripts` から `apply --manifest` |
+| nix-darwin（将来）| ビルド済み manifest | `system.activationScripts` から `apply --manifest` |
+
+層ごとの root の供給元は REQ-8d965ca2 / REQ-9cb26ffd / REQ-c2654ca5、ユーザー向け
+rollback を公開する層は REQ-05abce3e / REQ-844ee375 が定める。どちらも起動クラスとは
+独立に決まるため、本 item の担当ではない。
 
 **2 クラスに束ねる**ことが実現手段になっているのは次の点。
 
@@ -44,17 +45,14 @@ satisfies:
   そこで REQ-dec58330 の `apply --manifest` と REQ-8085f194 の activation kick が
   必要になる。逆に entrypoint 駆動側（REQ-a0bdf6db の devShell 含む）は
   activation 内で `nix build` / `eval` を行わない制約が無いので発見経路を使える
-- **rollback の一本化（REQ-844ee375）がクラスと直交する**。nput profile は全層で持つが、
-  ユーザー向け rollback を公開するのは standalone（home mode）だけで、モジュール層では
-  host に一本化する。この差は起動クラスではなく層の性質で決まる
-
-root の供給元が層ごとに違う点（REQ-8d965ca2 / REQ-c2654ca5）も、engine から見れば
-`manifest.json` の root kind に還元されるため、engine 経路の分岐にはならない。
+- **層ごとに違う要素がクラスの分岐に持ち込まれない**。root の供給元は engine から見れば
+  `manifest.json` の root kind に還元され、rollback の公開有無は profile の使い方の差に
+  留まる。どちらも link-farm の取得方法とは無関係なので、2 クラスの外側で決まる
 
 ## 出典
 
-`docs/design.md`「モジュール統合設計」→「各統合層の動作」の統合層テーブル（L295-301）と
-engine kick 2 クラスの説明（L303-306）、および「実行タイミング」節（L321-329）。
+`docs/design.md`「モジュール統合設計」→「各統合層の動作」の統合層テーブルと
+engine kick 2 クラスの説明、および「実行タイミング」節。
 
 なお `docs/design.md` の統合層テーブルは home-manager 行に「MVP は profile `<name>` =
 `default` 固定の 1 profile・役割分離は不可」と書いているが、本 item はこれを採らない。
