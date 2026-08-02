@@ -1,3 +1,18 @@
+---
+id: "ADR-0035"
+type: adr
+name: "HM モジュールに `nput.configs.<name>` を導入し複数 profile（役割分離）を可能にする"
+status: 採用
+origin: "次期マイルストーン計画の grilling（2026-07-04）。ADR-0025 §2 が「消費側の要求が出た時点で追加」とした HM 複数 profile 化を実施する"
+revises:
+  - "ADR-0024"
+  - "ADR-0025"
+references:
+  - "ADR-0007"
+  - "ADR-0010"
+  - "ADR-0014"
+  - "ADR-0026"
+---
 # ADR-0035: HM モジュールに `nput.configs.<name>` を導入し複数 profile（役割分離）を可能にする
 
 - ステータス: 採用

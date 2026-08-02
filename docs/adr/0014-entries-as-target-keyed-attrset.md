@@ -1,3 +1,17 @@
+---
+id: "ADR-0014"
+type: adr
+name: "entries を target キーの attrset にし、手動 name と手動一意性チェックを廃する"
+status: 採用
+status_note: "2026-06-14 改訂: entry フィールド `mode` を `method` に改名 → ADR-0015"
+origin: "参照: home-manager `modules/lib/file-type.nix`（`home.file` の識別子モデル）"
+revises:
+  - "ADR-0010"
+references:
+  - "ADR-0001"
+  - "ADR-0008"
+  - "ADR-0013"
+---
 # ADR-0014: entries を target キーの attrset にし、手動 name と手動一意性チェックを廃する
 
 - ステータス: 採用（2026-06-14 改訂: entry フィールド `mode` を `method` に改名 → ADR-0015）

@@ -1,3 +1,16 @@
+---
+id: "ADR-0008"
+type: adr
+name: "entries の `source` を `subpath` に改名し、リポジトリ全体は subpath 省略で表す"
+status: 採用
+origin: "「リポジトリ全体を示す文字列として `\".\"` 以外の表現は無いか」という問いの設計検討"
+references:
+  - "ADR-0001"
+  - "ADR-0004"
+  - "ADR-0005"
+  - "ADR-0006"
+  - "ADR-0007"
+---
 # ADR-0008: entries の `source` を `subpath` に改名し、リポジトリ全体は subpath 省略で表す
 
 - ステータス: 採用

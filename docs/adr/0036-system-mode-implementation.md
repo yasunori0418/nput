@@ -1,3 +1,22 @@
+---
+id: "ADR-0036"
+type: adr
+name: "system mode（`root = systemRoot`）を実装する（root 権限チェック・profile は `/nix/var/nix/profiles` 配下・世代公開）"
+status: 採用
+origin: "次期マイルストーン計画の grilling（2026-07-04）。NixOS / nix-darwin モジュール実装（将来・別マイルストーン）に先行して、lib / engine / CLI の system mode 対応だけを縦に通す"
+revises:
+  - "ADR-0013"
+  - "ADR-0015"
+  - "ADR-0018"
+  - "ADR-0025"
+references:
+  - "ADR-0004"
+  - "ADR-0005"
+  - "ADR-0007"
+  - "ADR-0023"
+  - "ADR-0024"
+  - "ADR-0034"
+---
 # ADR-0036: system mode（`root = systemRoot`）を実装する（root 権限チェック・profile は `/nix/var/nix/profiles` 配下・世代公開）
 
 - ステータス: 採用

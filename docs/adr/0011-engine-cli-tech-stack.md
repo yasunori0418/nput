@@ -1,3 +1,14 @@
+---
+id: "ADR-0011"
+type: adr
+name: "engine / CLI の技術スタックを確定する（依存方針・cobra・store path 取得・vendorHash・ロック）"
+status: 採用
+revises:
+  - "ADR-0006"
+  - "ADR-0007"
+references:
+  - "ADR-0010"
+---
 # ADR-0011: engine / CLI の技術スタックを確定する（依存方針・cobra・store path 取得・vendorHash・ロック）
 
 - ステータス: 採用

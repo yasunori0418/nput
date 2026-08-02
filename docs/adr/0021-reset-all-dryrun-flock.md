@@ -1,3 +1,17 @@
+---
+id: "ADR-0021"
+type: adr
+name: "reset の `--all` 非対応・`--dryrun` 対応・flock / recopy 合成を確定する"
+status: 採用
+origin: "ADR-0020 で `reset` / `apply --recopy` を追加したことで開いた二次的な細目（`--all` 対応・`--dryrun`・flock・合成）"
+revises:
+  - "ADR-0020"
+references:
+  - "ADR-0006"
+  - "ADR-0013"
+  - "ADR-0017"
+  - "ADR-0018"
+---
 # ADR-0021: reset の `--all` 非対応・`--dryrun` 対応・flock / recopy 合成を確定する
 
 - ステータス: 採用

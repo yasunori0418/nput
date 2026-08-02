@@ -1,3 +1,14 @@
+---
+id: "ADR-0027"
+type: adr
+name: "flake check を CI で os×system マトリクス実行する（ADR-0012 の実装補足）"
+status: 採用
+origin: "参照: PR #40, `~/src/github.com/yasunori0418/cryoflow` の CI 構成"
+references:
+  - "ADR-0006"
+  - "ADR-0011"
+  - "ADR-0012"
+---
 # ADR-0027: flake check を CI で os×system マトリクス実行する（ADR-0012 の実装補足）
 
 - ステータス: 採用

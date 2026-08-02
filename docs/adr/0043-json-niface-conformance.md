@@ -1,3 +1,20 @@
+---
+id: "ADR-0043"
+type: adr
+name: "`--json` 機械可読出力を niface 規約準拠にし、JSON 出力の niface 準拠を恒常原則とする"
+status: 採用
+issues:
+  - "yasunori0418/niface#1"
+origin: "nput の niface 準拠化 grilling（2026-07-06）と、それを受けた niface 側 grilling による niface#1 の方針確定（batch エンベロープ + subject + §5 参照キー規約の 3 層化）。参照: niface specVersion 1（yasunori0418/niface）, niface ADR-0013（mode 廃止・subject 常時必須）"
+revises:
+  - "ADR-0023"
+  - "ADR-0033"
+references:
+  - "ADR-0004"
+  - "ADR-0018"
+  - "ADR-0031"
+  - "ADR-0042"
+---
 # ADR-0043: `--json` 機械可読出力を niface 規約準拠にし、JSON 出力の niface 準拠を恒常原則とする
 
 - ステータス: 採用

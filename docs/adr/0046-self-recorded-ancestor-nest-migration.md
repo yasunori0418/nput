@@ -1,3 +1,22 @@
+---
+id: "ADR-0046"
+type: adr
+name: "自己記録の祖先 symlink 配下ネストを許可する — 前世代 manifest 判定の祖先拡張 + 配置前除去（PreRemove）"
+status: 採用
+issues:
+  - "#170"
+origin: "dotfiles 側での実遭遇（#170）と、次期マイルストーンの grilling セッション（2026-07-11）で設計確定"
+revises:
+  - "ADR-0015"
+references:
+  - "ADR-0002"
+  - "ADR-0003"
+  - "ADR-0006"
+  - "ADR-0013"
+  - "ADR-0017"
+  - "ADR-0031"
+  - "ADR-0038"
+---
 # ADR-0046: 自己記録の祖先 symlink 配下ネストを許可する — 前世代 manifest 判定の祖先拡張 + 配置前除去（PreRemove）
 
 - ステータス: 採用

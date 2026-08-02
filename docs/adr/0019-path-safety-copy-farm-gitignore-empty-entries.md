@@ -1,3 +1,19 @@
+---
+id: "ADR-0019"
+type: adr
+name: "パス安全性・copy の farm/gitignore 扱い・空 entries の挙動を確定する"
+status: 採用
+origin: "ADR-0018 後の横断検証で surfaced した「3 巡で詰め切れていなかった」残 4 点"
+revises:
+  - "ADR-0005"
+  - "ADR-0006"
+  - "ADR-0010"
+references:
+  - "ADR-0002"
+  - "ADR-0013"
+  - "ADR-0014"
+  - "ADR-0016"
+---
 # ADR-0019: パス安全性・copy の farm/gitignore 扱い・空 entries の挙動を確定する
 
 - ステータス: 採用

@@ -1,3 +1,17 @@
+---
+id: "ADR-0029"
+type: adr
+name: "nput output を flake-parts module 化し flakeModules.default を公開する"
+status: 採用
+issues:
+  - "#26"
+origin: "起点 Issue: #26"
+references:
+  - "ADR-0006"
+  - "ADR-0007"
+  - "ADR-0015"
+  - "ADR-0023"
+---
 # ADR-0029: nput output を flake-parts module 化し flakeModules.default を公開する
 
 - ステータス: 採用

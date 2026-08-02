@@ -1,3 +1,18 @@
+---
+id: "ADR-0020"
+type: adr
+name: "copy の明示上書き（`apply --recopy`）と配置物のリセット（`nput reset`）を追加する"
+status: 採用
+origin: "「copy で配置した物を参照元更新に追従させたい」「entry の配置物を無い状態に戻したい（リセット）」という 2 つのユースケース未対応"
+revises:
+  - "ADR-0002"
+  - "ADR-0006"
+references:
+  - "ADR-0005"
+  - "ADR-0013"
+  - "ADR-0017"
+  - "ADR-0019"
+---
 # ADR-0020: copy の明示上書き（`apply --recopy`）と配置物のリセット（`nput reset`）を追加する
 
 - ステータス: 採用
