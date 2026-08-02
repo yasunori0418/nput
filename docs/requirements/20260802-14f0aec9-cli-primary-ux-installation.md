@@ -47,9 +47,8 @@ specification_ja: |
 > **上は原文の写しで、規範は frontmatter が正**。原文が併記する次の 2 点は本 item の
 > 規範ではない。
 >
-> - engine が自身の対応版より新しい `schemaVersion` を拒否すること（→ ADR-0006）と
->   MVP が v1 のみであること → `docs/spec.md`「manifest.json スキーマ（v1）」節の担当
->   （#209-PR3）
+> - engine が自身の対応版より新しい `schemaVersion` を拒否すること（→ ADR-0006）は
+>   REQ-79ce0a09、MVP が v1 のみであることは REQ-250d936c の担当
 > - devShell 同梱そのものの配線（`templates/project` の内容）→
 >   「`nput init`」→「テンプレートの内容」節の担当（REQ-196ddabf）
 

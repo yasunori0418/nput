@@ -50,8 +50,9 @@ nput apply --manifest <link-farm>  # ビルド済み link-farm を直接適用�
 >   上での位置づけで、`docs/spec.md`「実行フロー」節の同趣旨の箇条書きに対応する
 > - HM モジュールの activation が使う主経路であること → `docs/spec.md`
 >   「モジュール別動作仕様」節の担当（#209-PR5）
-> - module 経路で schemaVersion skew が構造的に起きないこと → 「manifest.json スキーマ
->   （v1）」節の担当（#209-PR3）
+> - module 経路で schemaVersion skew が構造的に起きないこと → `docs/spec.md`
+>   「モジュール別動作仕様」節の担当（#209-PR5）。同節の HM モジュールが同じ規範を
+>   述べており、manifest スキーマ節（#209-PR3 の担当範囲）には skew の記述が無い
 
 ## 出典
 
