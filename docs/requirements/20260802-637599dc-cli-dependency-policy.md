@@ -37,6 +37,9 @@ specification_ja: |
 
 `docs/spec.md`「依存関係」節の表の `cmd/nput` 行。
 
-決定の実体は ADR-0011「engine / CLI の技術スタック」で、CLI に cobra を許可し
+決定の実体は ADR-0011「engine / CLI の技術スタックを確定する」で、CLI に cobra を許可し
 `buildGoModule` + vendorHash・Go の pin でビルドを固定することを定めている。CLI を一次 UX と
-する位置づけは ADR-0007 による。
+する位置づけは ADR-0007「汎用 nput CLI を一次 UX に昇格し、entrypoint 発見＋root 明示モデルへ
+移行する」が定めるが、同 ADR は cobra / vendorHash / Go の pin のいずれにも触れておらず、
+この item の規範を決めていないため、側面の根拠として `justifies` は張らない（位置づけそのものの
+帰属は REQ-14f0aec9 / REQ-f4d7d4ab が担当する）。

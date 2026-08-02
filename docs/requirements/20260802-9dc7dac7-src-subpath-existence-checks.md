@@ -38,5 +38,6 @@ specification_ja: |
 
 `docs/spec.md`「エラー仕様」節の表の `src` / `subpath` 実在に関する 3 行。
 
-この 3 行に対応する決定を持つ ADR は無く、`docs/spec.md` が一次記述にあたる。層が分かれる
-こと自体の一般則は REQ-c5dfcae6 の担当。
+この 3 行に対応する決定を持つ ADR は無く、`docs/spec.md` が一次記述にあたる（原文の表でも
+この 3 行だけは `→ ADR-00xx` の参照注記を持たない）。よって本 item に `justifies` は
+張られないが、これは張り漏れではない。層が分かれること自体の一般則は REQ-c5dfcae6 の担当。
