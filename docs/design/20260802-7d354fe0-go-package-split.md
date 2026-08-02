@@ -6,7 +6,6 @@ satisfies:
   - "REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645"
   - "REQ-b74a118a-1272-44eb-944c-7725163211c6"
   - "REQ-637599dc-a1ec-4af5-9e97-e882c7df56d0"
-  - "REQ-6c4e174a-4d16-477a-96ff-17cb4eb5b564"
 ---
 # DSG-7d354fe0: Go 側は cmd/nput に CLI 面を、internal に配置ロジックを置く 2 パッケージ構成にする
 
