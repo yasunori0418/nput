@@ -13,15 +13,15 @@ satisfies:
 
 | 対象 | スコープ |
 |---|---|
-| standalone CLI（home mode）| 実装する |
+| standalone CLI（起動形態。配置モードは root マーカーが決める）| 実装する |
 | project mode（devShell / `projectRoot`）| 実装する（コア）|
 | home-manager モジュール | 実装する |
 | NixOS / nix-darwin モジュール | 将来拡張（スタブ公開のみ・→ DSG-0e186e89）|
 | system mode（`systemRoot`）| 将来拡張 |
 
 REQ-14f0aec9 が nput CLI を一次 UX に据え、project mode を devShell 同梱で canonical と
-する以上、**最初に完成させるべきは CLI と project mode**になる。home mode を同時に含めるのは、
-world mode（`homeRoot`）が rollback・世代管理という nput 固有機構を通る唯一の経路であり、
+する以上、**最初に完成させるべきは CLI と project mode**になる。home mode（`homeRoot`）を
+同時に含めるのは、そこが rollback・世代管理という nput 固有機構を通る唯一の経路であり、
 ここを外すと世代機構が実装されないまま残るため。
 
 将来拡張へ置く 2 つは、いずれも「engine 側の追加を必要としない」ことを条件に選んでいる。
@@ -42,5 +42,5 @@ switch と一括で動いてほしいユースケースを拾うために存在�
 
 ## 出典
 
-`docs/design.md`「プロジェクト構成」末尾の実装スコープ段落（L64）と、
-「モジュール統合設計」→「各統合層の動作」末尾のモジュール対応の位置づけ（L318-319）。
+`docs/design.md`「プロジェクト構成」末尾の実装スコープ段落と、
+「モジュール統合設計」→「各統合層の動作」末尾のモジュール対応の位置づけ。
