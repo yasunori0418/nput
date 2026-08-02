@@ -30,7 +30,7 @@ specification_ja: |
 ## 仕様
 
 ```
-1. target の親ディレクトリを作成（mkdir -p 相当。緩和対象の祖先 symlink / 実 dir target は PreRemove 除去済み・foreign は弾き済み）
+1. target の親ディレクトリを作成（mkdir -p 相当。緩和対象の祖先 symlink / 実 dir target は PreRemove 除去済み・foreign は 0 で弾き済み）
 2. target が既存 symlink のとき:
    - 自身の前世代 manifest が記録した symlink → そのまま置き換える（silent）
    - 記録の無い symlink（foreign = 他 nput profile / 他ツール / 手動）→ warning を出して置き換える（後勝ち）

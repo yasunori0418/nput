@@ -17,9 +17,9 @@ specification_ja: |
 **src ツリー内の symlink は symlink のまま複製する**（deref しない。循環・サイズ膨張回避）。
 相対 symlink はそのまま保つ。
 
-> 原文はこれに続けて「ただし store 内への絶対 symlink を複製すると store 依存
-> （read-only / GC 後 dangling）が残る点に注意」と注記するが、これは規範ではなく利用上の
-> 帰結の注意喚起なので規範文には含めない。
+> **上は原文の写しで、規範は frontmatter が正**。原文はこれに続けて「ただし store 内への
+> 絶対 symlink を複製すると store 依存（read-only / GC 後 dangling）が残る点に注意」と
+> 注記するが、これは規範ではなく利用上の帰結の注意喚起なので規範文には含めない。
 
 この複製規則は通常の place-once コピーと `apply --recopy` の再コピーの双方に適用される。
 place-once そのものは REQ-d2277c7a、recopy そのものは REQ-7cc32a2b / REQ-b4e4b65d の担当。
