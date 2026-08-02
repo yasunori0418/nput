@@ -12,8 +12,9 @@ specification: |
   SHALL stop the switch by exiting non-zero, matching the clobber error of `home.file`
   under a declarative switch. Because the pinned nput CLI (`packages.nput`) and
   `mkManifest` come of the same flake input, a schemaVersion skew SHALL NOT arise
-  structurally. This states the contract of a single kick; how many configs there are and
-  which option supplies their entries is stated by REQ-c6891aeb and is not restated here.
+  structurally. This states the contract of a single kick; how many configs there are is
+  stated by REQ-c6891aeb, and the definition of the option supplying their entries by
+  REQ-fc1c7ce6, neither being restated here.
 specification_ja: |
   home-manager モジュールは `home.activation.nput`（`entryAfter ["writeBoundary"]`）から
   `nput apply --manifest <link-farm>` で engine を kick しなければならない。link-farm は
@@ -23,8 +24,8 @@ specification_ja: |
   engine error（conflict 等）は非 0 終了で switch を止めなければならない（宣言的 switch・
   `home.file` の clobber エラーと同型）。pin 版 nput CLI（`packages.nput`）と `mkManifest` が
   同一 flake input 由来のため、schemaVersion skew は構造的に起こらないものとする。本 item が
-  規定するのは 1 起動あたりの契約であり、config がいくつあるか・その entries をどのオプションが
-  供給するかは REQ-c6891aeb の担当で、本 item では規定しない。
+  規定するのは 1 起動あたりの契約であり、config がいくつあるかは REQ-c6891aeb、その entries を
+  供給するオプションの定義は REQ-fc1c7ce6 の担当で、いずれも本 item では規定しない。
 ---
 # REQ-8085f194: home-manager モジュールの engine kick 1 回は activation からビルド済み link-farm を渡し、失敗で switch を止める
 
