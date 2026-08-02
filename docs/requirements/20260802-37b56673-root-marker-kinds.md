@@ -6,13 +6,13 @@ specification: |
   The type of `root` SHALL be a union of `string` (fixed at evaluation time) and marker
   (resolved at runtime). `nput.lib.projectRoot` SHALL select project mode (git toplevel
   at runtime, overridable with `--root`), `nput.lib.homeRoot` SHALL select home mode
-  (`$HOME` at runtime), `nput.lib.systemRoot` SHALL select system mode (`/`, future), and
-  an absolute path string SHALL select a fixed root determined at evaluation time.
+  (`$HOME` at runtime), `nput.lib.systemRoot` SHALL select system mode (`/` at runtime),
+  and an absolute path string SHALL select a fixed root determined at evaluation time.
 specification_ja: |
   `root` の型は `string`（評価時固定）と marker（実行時解決）の union でなければ
   ならない。`nput.lib.projectRoot` は project mode（実行時に git toplevel・`--root` で
   上書き可）、`nput.lib.homeRoot` は home mode（実行時の `$HOME`）、
-  `nput.lib.systemRoot` は system mode（`/`・将来）、絶対パス文字列は固定 root
+  `nput.lib.systemRoot` は system mode（実行時の `/`）、絶対パス文字列は固定 root
   （評価時に確定）へそれぞれ対応する。
 ---
 # REQ-37b56673: root は 3 マーカーと絶対パス文字列の union を取る
@@ -25,7 +25,7 @@ specification_ja: |
 |---|---|---|
 | `nput.lib.projectRoot` | project mode | 実行時に git toplevel（`--root` で上書き可）|
 | `nput.lib.homeRoot` | home mode | 実行時の `$HOME`（standalone / HM 共通）|
-| `nput.lib.systemRoot` | system mode | `/`（distro 構想・将来）|
+| `nput.lib.systemRoot` | system mode | 実行時の `/` |
 | 絶対パス文字列 | 固定 root | 評価時に確定する絶対パス（任意固定 root の seam）|
 
 home mode と project mode は世代の扱いが異なる（→ `docs/spec.md`「世代管理仕様」）。
@@ -35,3 +35,10 @@ item 化する。本 item は root の値と対応するモードまでを規定
 ## 出典
 
 `docs/spec.md`「lib API」→「`lib.mkManifest`」→「`root` の値」。
+
+> **`systemRoot` を「distro 構想・将来」としない理由**: `docs/spec.md` の当該表は
+> `systemRoot` を「`/`（distro 構想・将来）」と記すが、system mode は **ADR-0036 が
+> 実装を決定済み**（`rootKind = "system"` を正規値として通し、engine は root = `/` へ
+> 解決する）。`docs/spec.md` 側がこの改訂に追従できていないため、分割にあたって
+> 「将来」の限定を規範文へ持ち込まない判断をした（REQ-16faf428 で同じ ADR-0036 由来の
+> 未追従を扱ったのと同じ扱い）。`docs/spec.md` の追従は本 item の担当範囲外。
