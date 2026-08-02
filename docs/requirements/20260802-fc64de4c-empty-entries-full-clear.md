@@ -28,5 +28,5 @@ specification_ja: |
 
 `docs/spec.md`「エラー仕様」節の表の `entries = {}` 行。
 
-決定の実体は ADR-0019「パス安全性・copy の farm/gitignore 扱い・空 entries の挙動を確定する」で、空 entries を
-エラーにせず全クリアとして受理することを定めている。
+決定の実体は ADR-0019「パス安全性・copy の farm/gitignore 扱い・空 entries の挙動を
+確定する」で、空 entries をエラーにせず全クリアとして受理することを定めている。
