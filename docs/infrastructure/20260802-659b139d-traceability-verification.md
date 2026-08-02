@@ -25,8 +25,10 @@ depends_on:
 
 `sara` ジョブは `test.yml` に同居するが、CI パイプライン（INF-d1230e1f）の変更検出ジョブは
 **再利用しない**。あちらの filter は nix / Go のソースを対象にするのに対し、この検査が最も効くのは
-docs のみの PR だからで、job ローカルの filter（`docs/**` / `sara.toml` / `dev/**` /
-`.github/workflows/test.yml`）を別に置く。CI 用の devShell も sara 専用のものへ分ける。
+docs のみの PR だからで、job ローカルの filter を別に置く。対象はこの検査が実際に依存するものへ
+絞る — `docs/**`・`sara.toml`・`dev/flake.nix`・`dev/flake.lock`（sara 本体と sara-id の実行環境を
+丸ごと入れ替えるため）・`dev/tests/**`・`.github/workflows/test.yml`。CI 用の devShell も sara
+専用のものへ分ける。
 
 先行して試作された grep / awk による ID 突合は、参照先 ID の実在を検証しないという穴を抱えていた
 （存在しない `TC-999` を書いても検出されずカバー率に計上される）。sara の broken reference 検出が
@@ -45,7 +47,10 @@ ADR のみ連番（`ADR-NNNN`）を維持する。既存 47 本の相互参照�
 
 **非必須チェック + `strict_mode = false`** から開始する。orphan は警告のみに留める — 移行中の
 item やテスト未着手の要求が正常に存在するため。マージゲート（INF-8b97573f）の required status
-check には当面載せず、DoD の残り枠も温存する。strict 化・必須化は移行の完了後に判断する。
+check には当面載せず、DoD の残り枠も温存する。
+
+閾値ゲートを持たない点は `go-coverage` と同方針で、他 PR とのマージ順依存を避けるためでもある。
+strict 化・必須化は移行の完了後に判断する。
 
 ## 出典
 

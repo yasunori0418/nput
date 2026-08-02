@@ -21,10 +21,11 @@ Go バイナリへは nix build の `ldflags`（`-X`）で埋め込む。単一�
 | workflow | トリガ | 内容 |
 |---|---|---|
 | `bump-version.yml` | `workflow_dispatch` | バージョン文字列を入力に取り、非 main ブランチ上で `VERSION` を書き換えてコミット・push する |
-| `release.yml` | `push: main` + `VERSION` の `paths` | `VERSION` を読み、タグ `vX.Y.Z` 作成 + リリースノート自動生成 + GitHub Release 作成 |
+| `release.yml` | `push: main` + `VERSION` の `paths` | `VERSION` を読み、`softprops/action-gh-release`（バージョン pin）でタグ `vX.Y.Z` 作成 + リリースノート自動生成 + GitHub Release 作成 |
 
-bump のマージは通常の PR フローを通るため、マージゲート（INF-8b97573f）の required check が
-そのまま効く。「bump PR のマージがリリースを駆動する」形が main 直コミット禁止と整合する。
+マージゲート（INF-8b97573f）が効くのは **bump PR の側**で、`release.yml` 自体は main への push 後に
+走るため required check の対象外。「bump PR のマージがリリースを駆動する」形が main 直コミット
+禁止と整合する。
 手元で `VERSION` を編集して PR を作る手動経路も同格に有効で、`bump-version.yml` は省力化で
 あって唯一の経路ではない。
 
