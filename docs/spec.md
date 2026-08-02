@@ -123,7 +123,7 @@ eval して root を解決し、flock を取ってから `nix build` をロッ�
 - [REQ-2c5a10d8](requirements/20260802-2c5a10d8-exit-codes.md) — 終了コードは 0 = 成功 / 1 = 一般エラー / 2 = dryrun の conflict とする
 - [REQ-b7bb09d6](requirements/20260802-b7bb09d6-apply-all-dryrun-exit-code-priority.md) — apply --all --dryrun の終了コードは error を conflict より優先する
 
-niface 規約準拠の `--json`（第 2 契約・→ ADR-0043）:
+#### niface 準拠の `--json`（第 2 契約・→ ADR-0043）
 
 - [REQ-a5053191](requirements/20260802-a5053191-json-niface-envelope.md) — --json は niface 規約準拠のエンベロープを出す第 2 契約とする
 - [REQ-2353259f](requirements/20260802-2353259f-json-stdout-exclusive.md) — --json 指定時は行指向 stdout を出さずエンベロープが stdout を専有する
