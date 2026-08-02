@@ -8,15 +8,16 @@ specification: |
   that does not exist SHALL be an error at Nix evaluation time. A `src` given as an
   out-of-store marker whose local path does not exist, and a `subpath` that does not exist
   inside `src`, SHALL be errors that stop the engine at run time, since neither is decidable
-  until the actual filesystem is consulted. Neither SHALL be silently skipped nor placed
-  as a dangling symlink.
+  until the actual filesystem is consulted. Stopping SHALL be the behaviour in every one of
+  these cases, so that a missing source is not passed over silently or turned into a
+  dangling symlink.
 specification_ja: |
   配置元の実在は、それを判定できる層で検査し、いずれの層でも実行を停止させなければ
   ならない。store パス（path / set）として与えた `src` が存在しない場合は Nix 評価時の
   エラーとする。out-of-store marker として与えた `src` のローカルパスが存在しない場合と、
   `subpath` が `src` 内に存在しない場合は、実体を見るまで判定できないため engine 実行時の
-  エラーとして停止する。いずれも黙ってスキップしてはならず、dangling symlink として
-  配置してもならない。
+  エラーとして停止する。いずれの場合も停止を動作とし、配置元の不在を黙って見過ごしたり
+  dangling symlink に変えたりしないようにする。
 ---
 # REQ-9dc7dac7: 配置元の実在は判定できる層で検査し、いずれの層でも停止する
 
@@ -37,5 +38,5 @@ specification_ja: |
 
 `docs/spec.md`「エラー仕様」節の表の `src` / `subpath` 実在に関する 3 行。
 
-決定の実体は ADR-0013「engine のランタイム意味論」で、実体依存の検査を engine 実行時に
-置き失敗で停止させることを定めている。
+この 3 行に対応する決定を持つ ADR は無く、`docs/spec.md` が一次記述にあたる。層が分かれる
+こと自体の一般則は REQ-c5dfcae6 の担当。

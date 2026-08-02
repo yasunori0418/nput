@@ -40,7 +40,7 @@ specification_ja: |
 | foreign 祖先 symlink（記録なし / 記録 dest と不一致 / 前世代なし）| そのリンクを作った主体（別 config / 別ツール / 手動操作）を確認 |
 | 自己矛盾 manifest（次世代にも祖先 symlink が残ったまま配下 target を定義）| entry 定義を見直す（祖先と配下のどちらかに一本化）|
 | copy 構造不一致（`subpath` の dir/file 種別と既存 `target` の種別が食い違う）| entry 定義を見直す（または `apply --backup` で自動退避）|
-| backup 退避先が既存（`<target>.<suffix>` に前回の退避物が残っている）| 手動で退避物を移動・削除してから再実行 |
+| backup 退避先が既存（`apply --backup` 有効時、`<target>.<suffix>` に前回の退避物が残っている）| 手動で退避物を移動・削除してから再実行 |
 
 停止時の `error` は列挙の後に返す**件数付き集約メッセージ 1 本**（例:
 `nput: N conflict(s) detected; stopped without placing (see above)`）で、個別 conflict の
@@ -48,9 +48,10 @@ specification_ja: |
 `--dryrun` は `2`）。`--json` の `Conflicts` 配列も同じ全件集合と整合させる。
 
 > **上は原文の写しで、規範は frontmatter が正**。表が挙げる各 conflict 種別が「なぜ
-> conflict になるか」は、それぞれ REQ-053cfed2（foreign 実体）・REQ-c9ab91c1（祖先
-> symlink と自己矛盾）・REQ-7cee95dd（実 dir の条件不成立）・REQ-5dd5a4e9（backup 退避先の
-> 既存）の担当。終了コードの値そのものは REQ-2c5a10d8、`--dryrun` が読み取り専用で
+> conflict になるか」は、それぞれ REQ-053cfed2（foreign 実体。実 dir が例外にならない
+> 条件は REQ-7cee95dd）・REQ-c9ab91c1（祖先 symlink と自己矛盾）・REQ-d2277c7a（copy の
+> 構造不一致）・REQ-5dd5a4e9（backup 退避先の既存）の担当。終了コードの値そのものは
+> REQ-2c5a10d8、`--dryrun` が読み取り専用で
 > conflict を返すことは REQ-02a33511、`--json` エンベロープ側の形は REQ-a5053191 /
 > REQ-2ea19863、報告先が stderr であることの出力規律は REQ-fea038de / REQ-8ef34101 の
 > 担当。この「全件列挙してから 1 本の集約エラー」の形を巻き戻し失敗の報告にも用いる
@@ -60,6 +61,9 @@ specification_ja: |
 
 `docs/spec.md`「エラー仕様」→「conflict の全件報告」節。
 
-決定の実体は grilling 2026-07-12 D6 で、conflict を全件列挙する方針を定めている。
-出力先と沈黙規律は ADR-0031「成功時沈黙の出力規律」、`--backup` を脱出ハッチとする
-ガイダンスは ADR-0045「foreign 実体の rename 退避」による。
+決定の実体は grilling 2026-07-12 D6 で、conflict を全件列挙する方針を定めている。この決定を
+表明した ADR は無い（ADR-0047 が「#176（conflict 全件報告）はスコープ外のまま」と明記する
+とおり、ADR 化されていない）。`--backup` を脱出ハッチとするガイダンスと、退避先が既存の
+ときを conflict 種別に加えることは ADR-0045「`apply --backup[=suffix]` — 配置を塞ぐ記録外
+実体の rename 退避」による。報告を stderr に置き失敗経路を沈黙の対象にしない出力規律は
+ADR-0031 が定めるが、その規範自体は REQ-fea038de / REQ-8ef34101 の担当。
