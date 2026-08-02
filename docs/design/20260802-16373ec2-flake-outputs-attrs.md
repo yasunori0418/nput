@@ -4,7 +4,6 @@ type: design
 name: "nput 自身の flake outputs は packages / templates / 各モジュール / flakeModules / lib の 5 系統で構成する"
 satisfies:
   - "REQ-14f0aec9-abae-4621-82f3-40536a1ad904"
-  - "REQ-196ddabf-6569-4303-942e-050872972501"
   - "REQ-6be1cbf1-6c6e-498b-8acb-7f4b80037169"
   - "REQ-c50df875-2cb0-4e72-8a21-858359a11cae"
   - "REQ-637599dc-a1ec-4af5-9e97-e882c7df56d0"
@@ -39,12 +38,14 @@ outputs = { ... }: {
 定めるが、それを flake のどの attr 名で公開するかは設計側の判断になる。
 
 - **`packages.<system>.nput`**: REQ-14f0aec9 が求める PATH 常駐の CLI の配布口。
-  `buildGoModule` で `cmd/nput` + `internal` をまとめてビルドする（Go の pin と
-  vendorHash の扱いは REQ-637599dc）。project mode で devShell へ同梱するときも
+  `buildGoModule` で `cmd/nput` + `internal` をまとめてビルドする形にすることで、
+  REQ-637599dc が求める依存の固定（nixpkgs の go への pin と vendorHash）が
+  output の作り方として表れる。project mode で devShell へ同梱するときも
   この attr を参照する
 - **`templates.<name>`**: REQ-6be1cbf1 の `nput init` が `nix flake init -t` の
   透明なラッパーである以上、テンプレート実体は nix 標準の `templates` output に
-  置く必要がある。`standalone` / `project` の 2 本を置く根拠は REQ-196ddabf
+  置く必要がある。`standalone` / `project` の 2 本を置くことも同 REQ が定める
+  （各テンプレートの中身は REQ-196ddabf の担当で、本 item は attr 名とパスの公開のみ）
 - **`homeManagerModules` / `nixosModules` / `darwinModules`**: 各モジュールシステムの
   慣例 attr 名に合わせる。中身は `modules/` の各ファイルを指すだけ
   （NixOS / nix-darwin をスタブで公開する判断は DSG-0e186e89）
