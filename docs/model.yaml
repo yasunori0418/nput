@@ -143,7 +143,6 @@ item_types:
         display_name: Definition of Done
         field_type: !list text
         required: false
-        placeholder: DOD-02
     allowed_targets:
       - relation: depends_on
         targets:
