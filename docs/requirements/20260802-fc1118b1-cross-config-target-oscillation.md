@@ -8,7 +8,10 @@ specification: |
   A takes it back — which is an active oscillation rather than a single instance of the
   last writer winning. Not aiming at the same target from several configs SHALL be the
   responsibility of the user, and nput SHALL make the situation visible through the
-  foreign symlink warning and SHALL NOT hold any mechanism that detects and stops it.
+  foreign symlink warning and SHALL NOT hold any mechanism that detects and stops it at
+  engine runtime. Where several configs ride on a single evaluation, as the `nput.configs`
+  of one module configuration do, a static detection at eval time is possible and SHALL
+  NOT be precluded by this.
   The foreign warning during an oscillation will keep appearing under the high frequency
   at which a `shellHook` runs, and this SHALL be regarded as correct, being the signal of
   a misconfiguration; the warning SHALL be outside the scope of silence on success and
@@ -19,7 +22,9 @@ specification_ja: |
   別 config が同一 target を狙うと、ドリフト修復が「A が置く → B が foreign 検知して奪う →
   A が再奪取」と `shellHook` 再入のたびに振動しうる（単発の後勝ちではなく能動的オシレーション）。
   「同一 target を複数 config で狙わない」はユーザー責任とし、nput は foreign symlink warning で
-  可視化するに留め、検知して止める機構を持ってはならない。振動中の foreign warning は
+  可視化するに留め、engine 実行時に検知して止める機構を持ってはならない。単一の eval に載る
+  複数 config（1 つのモジュール config の `nput.configs` など）については eval 時の静的検出が
+  可能であり、本 item はそれを妨げない。振動中の foreign warning は
   `shellHook` の高頻度実行で出続けるが、これは設定ミスのシグナルとして正しい。この warning は
   成功時沈黙の対象外であり、`-v` の有無に関わらず常時出る。MVP では抑制 / 集約機構を持たず、
   config の同一 target 重複を解消して直す。
@@ -41,6 +46,14 @@ specification_ja: |
 > 後勝ちは REQ-622787dc、lstat ドリフト修復そのものは REQ-46fccb80、warning が成功時沈黙の
 > 対象外であることの出力規律そのものは REQ-8ef34101 の担当。同一 config 内での target 衝突を
 > 評価時に検出することは REQ-5c6b07da の担当（本 item は config をまたぐ場合を扱う）。
+>
+> **「検知して止める機構を持たない」を engine 実行時へ限定した理由**: **ADR-0035 §4 が、
+> 1 つのモジュール config 内の `nput.configs.<A>` と `<B>` は全 config が同一のモジュール eval に
+> 載るため正規化後 target の衝突を静的に検出でき、eval 時 assertion で停止すると決定済み**で、
+> 原文の無条件な言い切りはこれを否定してしまう（原文が ADR-0035 に未追従・REQ-5c6b07da と
+> 同じ扱い）。本 item は静的検出が可能な場合を妨げないことまでを規範とし、その場合に実際に
+> eval 停止する規範そのものは持たない（同 §4 の item 化は `docs/spec.md` の追従とあわせて
+> 別途扱う・→ REQ-c6891aeb の注記）。`docs/spec.md` の追従は本 item の担当範囲外。
 
 ## 出典
 
@@ -49,3 +62,6 @@ specification_ja: |
 
 決定の実体は ADR-0023「実装前残セマンティクス第5巡」（cross-config 同一 target をユーザー責任と
 すること）と ADR-0024「実装前残セマンティクス第6巡」（振動 warning を抑制しないこと）。
+「検知して止める機構を持たない」を engine 実行時へ限定したのは ADR-0035「HM モジュールに
+`nput.configs.<name>` を導入し複数 profile（役割分離）を可能にする」§4（単一のモジュール eval に
+載る config 間は静的検出が可能）。
