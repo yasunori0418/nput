@@ -67,6 +67,8 @@ status_note: "…"        # ステータス行のカッコ書きがあるとき�
 issues:                 # 「関連:」「起点 Issue:」「起点:」の GitHub Issue 番号
   - "#123"
 origin: "…"             # 「起点:」の内容（無ければ「起点 Issue:」「参照:」）
+justifies:              # この ADR が決めた requirement / design / infrastructure（任意）
+  - "REQ-8521e8f8-99cc-47f0-b7d0-70c24c837612"
 revises:                # 「改訂対象:」の ADR
   - "ADR-0020"
 references:             # 「関連:」の ADR
@@ -74,11 +76,19 @@ references:             # 「関連:」の ADR
 ---
 ```
 
+フィールドの順序は上記のとおり（`id` / `type` / `name` / `status` / `status_note` /
+`issues` / `origin` / `justifies` / `revises` / `references`）。`justifies` は
+`origin` の後・`revises` の前に置く。
+
 対応関係と分類の規則:
 
 - `- 日付:` は frontmatter に持たせない（機械検証に使わないため本文のみ）。
 - `- 関連:` のうち **ADR 参照**は `references`、**GitHub Issue 参照**は `issues`、**`docs/*.md` 参照**は
-  本文に残す（requirement / design の分割後に `justifies` へ置換する）。
+  本文に残す。
+  - `docs/*.md` 参照の除去は、その ADR が参照する**節が全て item へ分割され終わった時点**で行う
+    （→ #213）。分割が進行中の段階では、`justifies` を張った ADR でも本文の `関連:` に
+    `docs/spec.md` 等が残る。1 本の ADR が複数の節に影響しているのが通例で、一部の節だけ
+    分割された時点で参照を消すと、未分割の節への導線を失うため。
   - **他リポジトリの ADR は入れない**。`関連:` にリポジトリ名を前置した ADR 参照（例: ADR-0043 の
     `niface ADR-0013`）が混ざることがある。ID 空間が別なので `references` に入れると自リポジトリの
     同番号 ADR への誤った辺になる（`sara check` は実在する ID なので通してしまう）。本文に残す。
