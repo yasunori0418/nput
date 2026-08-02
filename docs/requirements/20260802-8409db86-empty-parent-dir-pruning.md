@@ -25,7 +25,8 @@ specification: |
   reported as a warning, being intended housekeeping: it SHALL instead be reported as a
   `pruned <path>` line of the placement report, and SHALL thereby fall under the ordinary
   output discipline of that report. A failure of the pruning itself, other than the
-  ENOTEMPTY case above, SHALL follow the existing policy of the caller.
+  ENOTEMPTY case above, SHALL follow the existing policy of the caller: stale removal and
+  `reset` SHALL leave the directory in place with a warning.
 specification_ja: |
   target を除去した後、その親ディレクトリチェーンを root 方向へ保守的に剪定しなければならない。
   nput は配置時に親 dir を自動作成するが manifest には記録しないため、剪定しないと entry 階層を
@@ -41,7 +42,8 @@ specification_ja: |
   途中で祖先剪定を挟むと、まだ実行していない後続の明示的な除去アクションの対象を先取りして消して
   しまいレポートが不正確になるためである。剪定は意図された掃除であり warning にしてはならない。
   配置レポートの `pruned <path>` 行として報告し、同レポートの通常の出力規律に従わせる。剪定
-  自体の失敗（上記 ENOTEMPTY を除く異常系）は呼び出し元の既存ポリシーに従う。
+  自体の失敗（上記 ENOTEMPTY を除く異常系）は呼び出し元の既存ポリシーに従い、stale 除去と
+  `reset` では warning を出してディレクトリを残置する。
 ---
 # REQ-8409db86: target 除去後は空の親ディレクトリチェーンを root 境界まで保守的に剪定する
 

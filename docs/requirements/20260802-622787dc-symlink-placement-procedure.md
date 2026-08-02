@@ -5,7 +5,8 @@ name: "symlink 配置は親 dir を作り配置元/subpath を指すリンクを
 specification: |
   To place a symlink the engine SHALL first create the parent directory of the target
   (equivalent to `mkdir -p`), then handle an existing symlink at the target: one recorded
-  by the entry's own previous-generation manifest SHALL be replaced silently, whereas an
+  by the entry's own previous-generation manifest SHALL be replaced without a warning,
+  falling under the ordinary output discipline of the placement report, whereas an
   unrecorded (foreign) symlink — belonging to another nput profile, another tool, or
   placed by hand — SHALL be replaced as well but SHALL emit a warning, the last writer
   thereby winning. It SHALL then create a symlink at `<root>/<target>` pointing at
@@ -18,8 +19,9 @@ specification: |
 specification_ja: |
   symlink の配置にあたり engine は、まず target の親ディレクトリを作成し（`mkdir -p` 相当）、
   次に target の既存 symlink を扱わなければならない。当該 entry 自身の前世代 manifest が記録
-  した symlink はそのまま silent に置き換え、記録の無い（foreign な）symlink——他 nput profile /
-  他ツール / 手動——も置き換えるが warning を出す（後勝ち）。そのうえで `<配置元>/<subpath>` を
+  した symlink は warning を出さずに置き換え（配置レポートの通常の出力規律に従う）、記録の無い
+  （foreign な）symlink——他 nput profile / 他ツール / 手動——も置き換えるが warning を出す
+  （後勝ち）。そのうえで `<配置元>/<subpath>` を
   指す symlink を `<root>/<target>` に作成する。配置元は store link では Nix ストアパス、
   out-of-store symlink では marker の絶対パスとする。subpath がファイル・ディレクトリの
   いずれでも処理は同じとする。別 config（別 profile）が同一 target を狙うことは起きない前提と
@@ -46,7 +48,10 @@ specification_ja: |
 > **上は原文の写しで、規範は frontmatter が正**。手順 0〜0.7（配置前除去・退避）は
 > REQ-c9ab91c1 / REQ-7cee95dd / REQ-2b48620a / REQ-9b0046e0、張替えを unlink + symlink の
 > 2 操作で行うことは REQ-61856da1 の担当。`shellHook` 再入で起きる cross-config の振動は
-> REQ-fc1118b1 の担当。
+> REQ-fc1118b1 の担当。記録済み symlink の張替えを既定 silent とし `-v` で可視化するという
+> 出力規律そのもの（→ ADR-0031）は REQ-8ef34101 / REQ-0a123b89 の担当で、本 item は
+> 「記録済みは warning にせず配置レポート側で扱い、foreign は warning を出す」という
+> 対比だけを規範とする。
 
 ## 出典
 
