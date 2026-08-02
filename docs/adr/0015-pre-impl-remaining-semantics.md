@@ -4,6 +4,8 @@ type: adr
 name: "実装前レビューで surfaced した残セマンティクスを確定する（devShell 同梱 / cross-config 衝突 / nix-env 統一 / 祖先 symlink / rollback diff / mode→method / flake check）"
 status: 採用
 origin: "ドキュメント計画段階の最終レビュー（grill）で surfaced した「実装前に決めておくべき」残細目の束"
+justifies:
+  - "REQ-5c6b07da-3d06-414d-8770-4f438234b322"
 revises:
   - "ADR-0002"
   - "ADR-0007"
