@@ -46,3 +46,12 @@ derivation の判別方式は REQ-1dcc9a33 が持つ。本 item は `src` が取
 ## 出典
 
 `docs/spec.md`「entries スキーマ仕様」→「フィールド定義（entry submodule）」→ `#### src`。
+
+> **「entries を動的に生成する」節を item 化しない理由**: 同節が示す
+> `builtins.listToAttrs` での target キー補間・`baseNameOf src` のアンチパターン・
+> subdir 列挙の応用例は、いずれも利用者向けの idiom であって nput 実装が満たすべき
+> 義務ではない。節の注記が述べる「eval 時 `readDir` の対象は既 realise の store パスに
+> 限る（生 derivation は IFD を誘発し marker は展開できない）」も、`listFilesInSrc` を
+> lib から除去して docs の応用 idiom へ降格した決定（`docs/publication-roadmap.md` ①・
+> 完了済み）により、規範を負う実装主体が存在しない。`src` が `set` / marker を許容する
+> 側（engine 実行時解決であるため成立する）は本 item の規範が担う。
