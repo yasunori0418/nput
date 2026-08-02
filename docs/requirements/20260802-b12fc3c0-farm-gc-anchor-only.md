@@ -4,9 +4,9 @@ type: requirement
 name: "symlink farm は GC アンカー専用でアンカーは store-backed な symlink entry に限る"
 specification: |
   The symlink farm contained in the derivation returned by `mkManifest` SHALL exist
-  solely as a GC anchor; the
-  values the engine uses for placement SHALL be the resolved `src` strings in
-  `manifest.json`. A farm anchor SHALL be held only by an entry that is both store-backed
+  solely as a GC anchor; the values the engine uses for placement SHALL be the resolved
+  `src` strings in `manifest.json`. A farm anchor SHALL be held only by an entry that is
+  both store-backed
   (`srcKind = "store"`) and `method = "symlink"`, so that the profile generation holds
   every store `src` as a GC root. An out-of-store entry (`srcKind = "outOfStore"`) points
   outside the store and SHALL NOT hold an anchor. A `method = "copy"` entry SHALL NOT
@@ -16,8 +16,8 @@ specification: |
   and stale detection.
 specification_ja: |
   `mkManifest` が返す derivation が含む symlink farm は GC アンカー専用でなければ
-  ならず、engine が配置に
-  使う値は `manifest.json` の解決済み `src` 文字列とする。farm アンカーを持つのは
+  ならず、engine が配置に使う値は `manifest.json` の解決済み `src` 文字列とする。
+  farm アンカーを持つのは
   store 由来（`srcKind = "store"`）かつ `method = "symlink"` の entry に限り、profile
   世代が GC root として全 store src を掴む。out-of-store entry
   （`srcKind = "outOfStore"`）は store 外を指すためアンカーを持ってはならない。
