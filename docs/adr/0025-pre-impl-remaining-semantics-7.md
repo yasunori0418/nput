@@ -7,6 +7,10 @@ origin: "ADR-0024 までの第6巡で設計は実装着手の閾値に達した�
 justifies:
   - "REQ-f9920c87-8551-4aa3-bf03-26fdf4191ed6"
   - "REQ-cbd61281-64b0-4487-a4b7-ce76e70dc4f9"
+  - "REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3"
+  - "REQ-1be4d678-959c-44d7-a346-44bfd95af56e"
+  - "REQ-31dae599-f3a3-4bbe-b367-c955535265da"
+  - "REQ-706de717-4e47-471a-a1c0-448635be159c"
 revises:
   - "ADR-0022"
   - "ADR-0023"

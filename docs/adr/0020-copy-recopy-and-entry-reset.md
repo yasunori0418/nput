@@ -8,6 +8,8 @@ justifies:
   - "REQ-7cc32a2b-eee4-4a29-8dc1-a1dc23e7a065"
   - "REQ-31f2882e-d2e3-4e3b-b783-feb627d73ac6"
   - "REQ-fa181aa6-29a2-48c3-ae07-cc1b9a3b0303"
+  - "REQ-d2277c7a-7992-49af-a9dc-4cc73843a6f9"
+  - "REQ-b4e4b65d-6e35-40c3-a00e-20c14043df6f"
 revises:
   - "ADR-0002"
   - "ADR-0006"

@@ -6,6 +6,8 @@ status: 採用
 justifies:
   - "REQ-8ef34101-8150-4124-92d5-94fabe6b5d90"
   - "REQ-0a123b89-0399-4f76-b988-56a5f7e0becf"
+  - "REQ-9fca28c9-d3b1-4ad7-8f24-13b2ec7aeab2"
+  - "REQ-8409db86-a1ba-4053-86dc-588985cc1ca7"
 revises:
   - "ADR-0023"
 references:

@@ -7,6 +7,8 @@ status_note: "2026-06-13 改訂: 「既定 `$HOME`（home mode）」前提を撤
 justifies:
   - "REQ-05abce3e-9797-432b-b93f-37c55d09afde"
   - "REQ-a480c183-40ce-4201-93b5-65a7a59c1b9e"
+  - "REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0"
+  - "REQ-d41b1d0a-c6d5-41cc-93f9-e5cc7f152da4"
 references:
   - "ADR-0002"
   - "ADR-0003"

@@ -7,6 +7,10 @@ issues:
   - "#175"
   - "#172"
 origin: "epic #172 の grilling セッション（2026-07-12）で確定した D1〜D6 のうち、PreRemove 一般化本体（D2, D3, D5）"
+justifies:
+  - "REQ-7cee95dd-bc5a-4e86-bebc-6080ef78fe26"
+  - "REQ-2b48620a-abaa-43df-a106-954bbba3de56"
+  - "REQ-8409db86-a1ba-4053-86dc-588985cc1ca7"
 revises:
   - "ADR-0015"
   - "ADR-0046"
