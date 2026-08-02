@@ -1,321 +1,94 @@
 # nput コンセプト
 
-## 解決したい課題
+nput が何であり何を解決するかの全体像と、solution / use_case item への索引。
 
-### Nix での外部リポジトリ配置に既製手段がない
+解決したい課題・解決策の核心・想定する使われ方は **`docs/solution/` と `docs/use-cases/` の
+item が持つ**。本文書は通読の入口として全体像を述べ、詳細は item へのリンクで示す
+（README → 本文書 → item の 3 層構造）。
 
-- `fetchFromGitHub` / `fetchGit` でリポジトリは取得できるが、ファイルシステムへの配置は別の話
-- home-manager の `home.file` を使えば配置できるが、home-manager への依存が前提になる
-- シェルスクリプトで `git clone` すれば動くが、バージョン固定・再現性・Nix との統合が失われる
+一方で「設計の哲学」「既存ツールとの比較」「north-star」「設計の変遷」は **item を立てず
+本文書に残す**（→ Issue #211）。要求へ落ちない位置づけ・展望・経緯であり、item にすると
+requirement を持たない use_case を作ることになるため。
 
-### home-manager の「全体管理」モデルの問題
-
-home-manager は強力だが、全てを管理対象にすることを前提とするモデルである。
-
-- vim プラグインも、シェル設定も、テーマも、全て home-manager の管理下に入れる必要がある
-- 設定が大きくなるにつれて管理が煩雑になる
-- `home-manager switch` は全てを一括で更新するため、**1つの変更が全体に影響する**
-- あるツールの更新が別のツールの設定を壊す「共倒れ」が発生しうる
-- 更新のタイミングをツールごとに制御できない
-
-「全体管理」というモデルレベルの問題とは別に、配置エンジンの意味論そのものにも差がある（自己記録の manifest を持つかどうかに起因する所有判定・自動移行・安全性の違い。→「既存ツールとの比較」内「home-manager `home.file` との配置意味論の差」）。
-
-### モジュール抽象がユーザーから配置の制御を奪う
-
-home-manager / NixOS / nix-darwin / system-manager はいずれも **Nix モジュールシステムで配置を宣言し、
-裏側の挙動を抽象で隠す**。これは簡易化と引き換えに次の代償を伴う。
-
-- 「何がどこにどう置かれるか」がモジュールの内部実装に隠れ、ユーザーが直接握れない
-- 配置ロジックがモジュールシステムと密結合し、純粋関数として切り出してテストすることが難しい
-  （home-manager の file モジュールを standalone ライブラリとして抜き出した実装は事実上存在せず、
-  多くの人が 20 行の bash や GNU Stow に落ちている）
-- プラットフォームごとにネイティブ機構（`home.file` / `systemd.tmpfiles` 等）へ翻訳され、振る舞いが層ごとに二重化する
+> **この文書の書き方（規約）**
+>
+> - 各セクションの散文は **20 行以内**（item 化しない節を抱えるため spec / design より緩い）
+> - item 化された内容は **リンクで示し、本文に書き下さない**
+> - 本文に残せるのは上記 4 節（哲学・比較・north-star・変遷）に限る。それ以外の内容が
+>   増えたら item を立てて本文書からはリンクへ置き換える
+> - item を横断して検索・追跡するには `sara query`（→ `docs/agents/domain.md`）を使う
 
 ---
 
-## コンセプトの核心
+## 解決したい課題とコンセプトの核心
 
-**「nix store の物を、任意の指定ディレクトリに配置する純粋関数である」**
+Nix で外部リポジトリを取得する手段はあるが、任意パスへ配置する既製手段は無い。home-manager は
+配置できるが「全体管理」モデルであり、1 つの変更が全体に影響する。さらにモジュール抽象は
+「何がどこにどう置かれるか」を内部実装に隠し、ユーザーから配置の制御を奪う。
 
-**「役割を分離し、各役割を独立して管理・更新できるようにする」**
+nput はフレームワークではなく **配置プリミティブ**である。「nix store のパスを root 相対の
+任意パスへ symlink または copy で置く」という単一の責務を、テスト可能な純粋関数として提供し、
+設定は生成しない。
 
-**「設定を生成しない。リポジトリの内容をそのまま置く」**
-
-**「モジュール抽象で隠さず、テスト可能な純粋関数群として、ユーザーが配置を明示的に握る」**
-
-nput の本質は、フレームワークではなく **配置プリミティブ**である。
-「nix store のパス（リポジトリ全体・サブディレクトリ・単一ファイル）を、root 相対の任意パスへ symlink または copy で置く」
-という単一の責務を、テスト可能な純粋関数として提供する。
-`home.file` 相当（root = `$HOME`）はその一適用に過ぎず、root は `projectRoot` / `homeRoot` / `systemRoot` で**明示的に選ぶ**（暗黙デフォルトは持たない・→ ADR-0004 改訂, ADR-0007）。
-
-nput は **project-first** に positioning する。中心的な使い方は「プロジェクト内に組み込み、repo 内の任意パスへ配置する」（project mode）であり、`$HOME` 配置（home mode）・system 配置は**明示マーカーで opt-in する例外**として位置づける（→ ADR-0007）。ユーザーは PATH 常駐の `nput` CLI を叩き、CLI が entrypoint（`flake.nix` / `shell.nix` / `default.nix`）を発見して配置する。
-
-home-manager のように全体を一括管理するのではなく、用途ごとに独立した配置単位（エントリ）を定義する。
-各エントリは互いに独立しており、任意のタイミングで個別に更新・適用できる。
-
-また、home-manager はユーザー設定を **Nix モジュールオプションから生成する** モデルである
-（例：`programs.neovim.enable = true` → neovim 設定ファイルを生成する）。
-本ツールはそのような設定生成を行わない。リポジトリに存在する内容をそのまま指定した場所に置くだけであり、
-ファイルの内容に関与しない。
-
-```
-home-manager モデル:
-  Nix モジュールオプション → 設定ファイルを生成 → 配置
-
-nput モデル:
-  リポジトリの内容 → そのまま配置（生成・変換なし）
-```
-
-対象は「既に存在するリポジトリの内容」であり、Nix の設定言語で表現された設定ではない。
-
-```
-home-manager モデル:
-  [全設定] → switch → 全てが一括で更新される
-
-nput モデル:
-  [vim-plugins]    → 任意のタイミングで独立更新
-  [zsh-plugins]    → 任意のタイミングで独立更新
-  [claude-skills]  → 任意のタイミングで独立更新
-```
-
-### store link をデフォルトとする（out-of-store は明示的退避路）
-
-配置先のデフォルトは常に **Nix ストアへの symlink** であり、再現性を担保する（→ ADR-0001）。
-
-手元の dotfiles リポジトリを直接参照してライブ編集したい場合に限り、
-明示関数 `nput.lib.mkOutOfStoreSymlink "/abs/path"` で Nix ストアを経由しない out-of-store symlink を選べる。
-これは headline 機能ではなく、開発中の dotfiles をライブ編集したいときの**明示的な退避路**である。
-
-| 配置元 | 反映タイミング | 向いている用途 |
-|---|---|---|
-| store link（デフォルト）| flake 更新 + 適用時 | バージョン固定した外部リポジトリ |
-| `mkOutOfStoreSymlink "/abs/path"`（明示）| ファイル編集と同時（ライブ）| 開発中の手元 dotfiles |
+- [SOL-9fcd1d6e](solution/20260802-9fcd1d6e-nput-placement-primitive.md) — nput は nix store の物を任意パスへ置く配置プリミティブであり、設定を生成せずユーザーが配置を明示的に握る
 
 ---
 
-## 役割の分離 — 具体的な用途
+## 想定する使われ方
 
-### vim プラグイン管理
+中心は project mode（プロジェクト内配置）。`$HOME` 配置（home mode）・system 配置は明示マーカーで
+opt-in する例外として位置づける（→ ADR-0007）。
 
-vim/neovim のプラグインは従来 `git clone` で特定ディレクトリに配置するパターンが多い。
-これを Nix で再現し、バージョンを固定する。
-
-```nix
-# entries の 1 entry（属性キー = target）
-".local/share/nvim/site/pack/foo/start/foo" = { src = inputs.vim-plugin-foo; };
-```
-
-### コーディングエージェントのスキル
-
-Claude Code などのコーディングエージェントはスキルをリポジトリで管理することがある。
-リポジトリ全体ではなく、特定のサブディレクトリだけを取り出して配置したい。
-
-```nix
-".claude/skills" = { src = inputs.skills-repo; subpath = "skills/nix"; };
-```
-
-### zsh / bash プラグイン
-
-zsh や bash のプラグインは特定ディレクトリに配置し、設定ファイルから `source` で読み込む
-パターンが一般的。プラグインごとに独立管理することで、1つの更新が他に波及しない。
-
-```nix
-".zsh/plugins/autosuggestions"     = { src = inputs.zsh-autosuggestions; };
-".zsh/plugins/syntax-highlighting" = { src = inputs.zsh-syntax-highlighting; };
-```
-
----
-
-## 独立した更新サイクル
-
-各配置単位は `nput.<name>` で識別され（1 つ = 1 profile）、独立した
-profile・世代系列として管理される。役割ごとに config を分けることで、1つの更新が他に波及しない。
-（entry 内の識別子は target = 属性キー。`nput.<name>` の config 名とは別軸・→ ADR-0014）
-
-```bash
-# 役割ごとに独立して更新・適用できる（それぞれ別 profile）
-nput apply vim-plugins
-nput apply zsh-plugins
-nput apply claude-skills
-```
-
-`src` を更新（flake input の更新 / npins update 等）した後、
-対象 config だけを再適用することで、他のツールへの影響を完全に排除できる。
-
----
-
-## 世代管理（standalone）
-
-初期方針の「世代管理をしない」を撤回し、**nix profile に乗せた世代管理**を導入する（→ ADR-0002）。
-
-- 純粋関数 `lib.mkManifest` が link farm derivation（`manifest.json` + ストア内の symlink ツリー）を生成し、
-  Go エンジン（CLI が import するライブラリ）が `nix-env --profile` で nix profile に登録する（→ ADR-0006, ADR-0007）。
-- 世代番号・GC root・ロールバックを Nix 標準機構から得る。profile symlink の差し替えだけで atomic に切り替わる。
-- 粒度は `nput.<name>` 単位 = 1 profile。役割ごとに独立したロールバック系列を持つ。
-
-```bash
-nput apply <name>            # 新世代を作って適用（name 省略時は nput.default）
-nput rollback <name>         # 前世代へ戻す
-nput list-generations <name> # 世代一覧
-```
-
-「純粋関数」と世代管理（副作用）は次の層で両立する。
-
-```
-純粋関数:  lib.mkManifest が link farm derivation（manifest.json + symlink farm）を生成（副作用なし）
-実行時:    固定 Go エンジンが配置し profile を swap（副作用はここだけ・→ ADR-0006）
-```
-
-nput は **全モードで自前 profile を持つ**（前世代マニフェストの出所を統一するため。HM が NixOS submodule でも
-自前 profile を持つのと同じ）。standalone では profile をユーザー向け rollback に使う。home-manager / NixOS / nix-darwin
-モジュール時は profile を**内部機構**（stale 追跡）に留め、ユーザー向け rollback は host に一本化する
-（host rollback は旧 config の再 activate で nput が自動追従する）。
-
-| 配置種別 | 世代管理 | 備考 |
-|---|---|---|
-| symlink（store）| あり（profile）| ロールバック可能 |
-| out-of-store symlink | あり（リンク先のみ）| 指す先の内容は設計上ライブ。版管理しない |
-| copy | **なし（世代外）** | place-once・ユーザー管理の副作用（下記）|
-
-### copy はユーザー管理の副作用
-
-copy モードは「初回マテリアライズしたら以後 nput は触らない」place-once とする。
-
-- target が既に在れば上書きしない。**src 更新の反映は `nput apply --recopy`**（全 copy target を src から無条件上書き）、または `nput reset` で撤去後に再 apply（→ ADR-0020）。
-- target に nput が置いていない foreign 実ファイルが在るときは skip しつつ **warning** で可視化する（「nput が中身を置いた」誤認の防止・symlink の foreign 警告と対称・→ ADR-0022）。
-- target を削除した場合は次の apply で place-once 再マテリアライズされる（project mode の世代スキップ時も lstat 検査で復帰。編集済みの内容は不可触・→ ADR-0022）。
-- 世代管理の対象外であり、ロールバックされない。
-- entry が消えても copy target は自動削除しない（手編集したデータのクロバーを避ける）。ただし orphan 化は警告で通知する。**明示的に撤去するには `nput reset <name> [target]`**（copy も削除・確認あり・→ ADR-0020）。
-- store の read-only mode（0444 / 0555）はコピー後に owner-write を付与して編集可能にする（perm の相対構造は保持・→ ADR-0016）。読み取り専用のままだと「編集したい」copy の用途に反するため。
-
----
-
-## プロジェクトに閉じた配置（project mode）
-
-nput の**中心的な配置モード**が **root = プロジェクトルート**の project mode（→ ADR-0005, ADR-0007）。
-任意のプロジェクト内に nput を組み込み、repo 内の任意パスへ nix store の物を配置する用途のためのモード。
-新規は `nput init project`、既に `flake.nix` がある既存 repo への後付けは手動 4 ステップで組み込む（手順は `docs/design.md` の「既存プロジェクトへの組み込み」・→ ADR-0024）。
-具体例は「repo 内の `.claude/skills/` をチームで共有」「project-local な tool 設定・hook を nix store から配置」など。
-
-- **root の解決**: `root = nput.lib.projectRoot` で明示選択。実行時に git toplevel を root に解決する（`--root` で上書き可）。
-  config ファイル相対は Nix で store path 化して成立せず、CWD 相対は冪等性を壊すため採らない（→ ADR-0005）。
-- **主トリガは devShell**: `devShells.<name>` の `shellHook` から nput をキックする。`nix develop` / direnv で
-  プロジェクトに入った瞬間に配置される。devShell は HM モジュールと同型の「エンジンを起動する配線」（→ ADR-0003, ADR-0005）。
-  CLI 本体は devShell の `packages` に **pin 版 `nput` を同梱**するのが canonical（flake.lock 固定で CLI と lib が一致・→ ADR-0015）。
-- **ephemeral 配置**: project mode の配置物は per-clone で再生成される前提で、**プロジェクトにコミットされない**。
-  ゆえに activation は `.gitignore` に触れず git 状態に干渉しない。`.gitignore` に入れるべき target は専用コマンド
-  `nput gitignore`（stdout 出力のみ・method を区別せず copy target も含む）で列挙し、プロジェクト管理者が一度登録する。
-  copy target も ephemeral 扱いで、各 clone で place-once 再マテリアライズされ編集は clone local（→ ADR-0019）。
-- **世代は内部機構のみ**: profile は解決済み root でキーしてクローン間衝突を避け、stale 除去と世代スキップ判定に使う。
-  `rollback` / `list-generations` は公開しない（ephemeral な配置で rollback の意味が薄いため）。
-
-```nix
-# entrypoint(flake.nix)が manifest を公開し、devShell で nput apply する
-nput.${system}.skills = nput.lib.mkManifest {
-  inherit pkgs;
-  root = nput.lib.projectRoot;
-  entries = {
-    ".claude/skills/nix" = { src = inputs.claude-skills; subpath = "skills/nix"; };
-  };
-};
-devShells.${system}.default = pkgs.mkShell {
-  packages  = [ nput.packages.${system}.nput ];   # pin 版 nput を PATH へ（project mode は同梱が canonical・→ ADR-0015）
-  shellHook = "nput apply skills --no-wait";
-};
-```
-
----
-
-## north-star: 配置プリミティブから組むミニマル distro
-
-nput の長期的な狙いは、**nixpkgs のパッケージ群（＝ストアパス）を活かしつつ、配置だけをユーザーに操作させ、
-Arch / Gentoo 的なミニマル Linux ディストリビューションの基盤を作る**ことである（→ ADR-0004）。
-
-- Linux ディストリビューションの本質はパッケージマネージャであり、Arch / Gentoo はユーザーのコマンド操作で
-  ディレクトリ作成・カーネル・必要パッケージのインストールを行う。
-- NixOS は同じことを巨大なモジュールシステムで行うが、その代償として nixpkgs への PR / リリースサイクルに縛られる。
-- nixpkgs から取得できるパッケージ群を活かしつつ「配置」だけをユーザーに握らせれば、
-  モジュール生態系から独立したシンプルな distro が組めそう、という見立てである。
-
-このため、コアの中心抽象は root を `$HOME` に固定せず一般化する。project 配置（`projectRoot`）も
-`home.file` 相当（`homeRoot`）も将来の system 配置（`systemRoot` = `/`）も、同じ関数に**明示マーカー**を渡して到達できるように設計する（→ ADR-0007）。
-
-**エコシステムへの接続（niface 規約準拠）**
-
-nput は単独ツールに留まらず、n プレフィックスのツール群（nput / nboot / nwrap / nherd / nshadow / ncompose）を **stdout / stdin の JSON パイプで合成する**エコシステムの一員である（→ niface `docs/ecosystem/overview.md`）。北極星は「単一責務のツールを niface 規格のパイプで合成して Nix 版 Arch / Gentoo を組む」ことであり、その前提は「**規格が契約**（ツール間の会話は niface 規約のみに依存する）」に尽きる。
-
-- nput の機械可読出力（`--json`）は **niface specVersion 1 規約に準拠する**。ツール固有情報は niface の `info` 配下にのみ置く（→ ADR-0043）。
-- これは今回の `--json` 機能に閉じた話ではなく、**今後追加するすべての機能の JSON 出力が niface 規約を守る**という恒常原則である。ncompose が nput を含む各ツールを合成できるのは各出力が規格準拠であるからで、**niface 準拠はディストリビューション構築（北極星）に向けた設計要件**である（→ ADR-0043）。
-
-**スコープの線引き（honest な但し書き）**
-
-- 今回の実装スコープは standalone CLI + project mode をコアとし、home mode（`homeRoot`）も対象。system 配置（`systemRoot` = `/`）は将来拡張（→ ADR-0007）。
-- 「関数ベースのパッケージ導入・PATH 追加」の具体機構は未定義であり、今回の仕様には含めない。
-- ブート / init / FS / パーティションの層は本構想でも空白であり、nput が担う領域ではない。
+- [UC-19a90989](use-cases/20260802-19a90989-project-mode-in-repo-placement.md) — プロジェクト repo 内へ nix store の物を devShell 入室のたびに配置してチームで共有する
+- [UC-f2436d68](use-cases/20260802-f2436d68-home-mode-pinned-repo-placement.md) — home mode で外部リポジトリの中身をバージョン固定して $HOME 配下の任意パスへ配置する
+- [UC-1c280dce](use-cases/20260802-1c280dce-independent-update-cycles.md) — 役割ごとに config を分けて更新を独立させ、1 つの更新を他の役割へ波及させない
+- [UC-0b6f60cb](use-cases/20260802-0b6f60cb-generation-rollback-standalone.md) — 配置に失敗・後悔したとき standalone で前の世代へロールバックして元の状態へ戻す
+- [UC-403fbe32](use-cases/20260802-403fbe32-copy-place-once-user-managed.md) — リポジトリの内容を copy で初回だけ配置し、その後はユーザーが手で編集して育てる
+- [UC-01b896b4](use-cases/20260802-01b896b4-out-of-store-live-editing.md) — 開発中の手元 dotfiles を out-of-store symlink で参照し、編集と同時に反映しながら育てる
+- [UC-d39c1994](use-cases/20260802-d39c1994-module-integration.md) — 既に home-manager / NixOS / nix-darwin を使っている環境へ nput をモジュールとして組み込む
 
 ---
 
 ## 設計の哲学
 
-### 取得と配置の分離
+**取得と配置の分離**: 取得は Nix の評価フェーズ（`src` = ストアパス）、配置は実行フェーズ。
+取得手段（npins / flake inputs / `fetchFromGitHub` 等）をツール側が抱えず「フェッチ済みの
+ストアパスを受け取る」設計にすることで、取得方法の変化から独立する。
 
-```
-取得：Nix の評価フェーズ（src = ストアパス）
-配置：Nix 管理下の実行フェーズ（symlink / copy）
-```
+**配置ロジックはコアが所有し、モジュールは配線に徹する**: 配置の実体は全層で nput 自身の
+固定 Go エンジンが実行する（→ ADR-0003, ADR-0006）。`home.file` / `systemd.tmpfiles` などの
+ネイティブ機構には委譲しない。ネイティブ統合の恩恵は捨てるが、振る舞いが単一コアに集約され、
+テスト可能性とクロスプラットフォームの一貫性を得る。
 
-取得手段（npins / flake inputs / fetchFromGitHub 等）をツール側が抱えることをやめ、
-「フェッチ済みのストアパス（`src`）を受け取る」設計にすることで、取得方法の変化から独立する。
+**home-manager に依存しない**: NixOS サーバー・最小構成の環境でも同じ設定定義で動くことを
+優先する。統合は「オプション」であり、統合層はコアの薄いラッパーに過ぎない。
 
-### 配置ロジックはコアが所有し、モジュールは配線に徹する
+**冪等性と粒度の柔軟性**: 同じ設定を何度実行しても同じ結果になる。リポジトリ全体・
+サブディレクトリ・単一ファイルを同一インターフェースで扱い、呼び出し側は型を意識しなくてよい。
 
-配置の実体は全層で **nput 自身の固定 Go エンジン（ネイティブ FS 操作）**が実行する（→ ADR-0003, ADR-0006）。
-`home.file` / `systemd.tmpfiles` などプラットフォームのネイティブ機構には委譲しない。
-モジュール（HM / NixOS / nix-darwin）は root と activation タイミングを供給して nput エンジンを起動するだけの薄い配線である。
+---
 
-```
-nput コア（配置エンジン）= 振る舞いの単一の源
-        ↑ 起動するだけ
-モジュール層 = root と activation hook を供給する薄い配線
-```
+## north-star: 配置プリミティブから組むミニマル distro
 
-これによりネイティブ統合の恩恵（プラットフォーム標準の追跡・GC）は捨てるが、
-振る舞いが単一コアに集約され、テスト可能性とクロスプラットフォームの一貫性を得る。
+長期的な狙いは、nixpkgs のパッケージ群（＝ストアパス）を活かしつつ配置だけをユーザーに操作させ、
+Arch / Gentoo 的なミニマル Linux ディストリビューションの基盤を作ること（→ ADR-0004）。NixOS は
+同じことを巨大なモジュールシステムで行うが、その代償として nixpkgs の PR / リリースサイクルに
+縛られる。このためコアの中心抽象は root を `$HOME` に固定せず一般化する。
 
-### home-manager に依存しない
+nput は単独ツールに留まらず、n プレフィックスのツール群（nput / nboot / nwrap / nherd /
+nshadow / ncompose）を stdout / stdin の JSON パイプで合成するエコシステムの一員でもある。
+その前提は「規格が契約」に尽きるため、nput の機械可読出力（`--json`）は **今回の機能に閉じず、
+今後追加するすべての機能で** niface specVersion 1 規約に準拠する（→ ADR-0043）。
 
-home-manager はユーザー環境管理の強力なツールだが、すべての環境で使われるわけではない。
-NixOS サーバー・最小構成の環境でも同じ設定定義で動くことを優先する。
-
-### 統合は「オプション」
-
-モジュールとして使えることは便利だが、コアロジックはモジュールシステムに依存しない関数として
-実装する。統合層（HM / NixOS / nix-darwin）はコアの薄いラッパーに過ぎない。
-
-```
-lib（コア）は何にも依存しない（nixpkgs のみ）
-モジュール層は nput エンジンの起動配線だけを持つ
-```
-
-### 冪等性
-
-同じ設定を何度実行しても同じ結果になる。
-
-- symlink：前世代の store マニフェストとの diff で、消えた entry の symlink を保守的に除去する（stale 除去、→ ADR-0002）。
-  既存 symlink を置き換える。通常ファイル・ディレクトリがある場合はエラー停止
-- copy：place-once。target が在れば触らない
-- 世代（standalone）：適用のたびに新世代を作り、profile で atomic に切り替える
-
-### 粒度の柔軟性
-
-リポジトリ全体・サブディレクトリ・単一ファイルを同一インターフェースで扱う。
-実行時にファイル・ディレクトリを判別するため、呼び出し側は型を意識しなくてよい。
+**スコープの線引き**: 実装スコープは standalone CLI + project mode をコアとし home mode も
+対象、system 配置は将来拡張（→ ADR-0007）。「関数ベースのパッケージ導入・PATH 追加」の具体機構は
+未定義。ブート / init / FS / パーティションの層は本構想でも空白であり、nput が担う領域ではない。
 
 ---
 
 ## 既存ツールとの比較
 
-比較軸は「機能の有無」ではなく **「モジュール抽象で隠すか、純粋関数でユーザーに握らせるか」**である。
+比較軸は「機能の有無」ではなく **「モジュール抽象で隠すか、純粋関数でユーザーに握らせるか」**。
 
 | ツール | 役割 | アプローチ | nput との違い |
 |---|---|---|---|
@@ -329,26 +102,34 @@ lib（コア）は何にも依存しない（nixpkgs のみ）
 | `git clone`（シェル）| クローンと配置 | 命令的 | 再現性・Nix との統合がない |
 | **本ツール** | 取得済みソースの独立配置 + 世代 + 明示 out-of-store | **純粋関数・ユーザー管理** | — |
 
-nput とほぼ同一のツールは存在しない。構成要素（symlink farm / nix profile / out-of-store / 任意パス symlink）は
-すべて既存だが、それらを「取得手段非依存 + 生成しない + エントリ個別適用 + HM 非依存の純粋関数コア +
-クロスプラットフォーム共通スキーマ + 任意パス配置 × 世代管理」として束ねたものは無い。
+nput とほぼ同一のツールは存在しない。構成要素（symlink farm / nix profile / out-of-store /
+任意パス symlink）はすべて既存だが、それらを「取得手段非依存 + 生成しない + エントリ個別適用 +
+HM 非依存の純粋関数コア + クロスプラットフォーム共通スキーマ + 任意パス配置 × 世代管理」として
+束ねたものは無い。特に system-manager とはドメインこそ重なるが、思想レベルでアプローチが
+異なるため競合しない。
 
 ### home-manager `home.file` との配置意味論の差
 
-home-manager の `home.file`（`files.nix`）と nput はどちらも「symlink を配置し前世代との diff で stale を除去する」という同型のモデルを持つ。しかし nput は配置のたびに**自己記録の manifest**（前世代 `manifest.json`）を持つのに対し、home-manager の cleanup 判定は on-disk の readlink パターンマッチに依存する。この一次情報の有無が、以下の観点で意味論の差として表れる（home-manager の現行実装〔2026-07 時点〕との比較）。
+`home.file` と nput はどちらも「symlink を配置し前世代との diff で stale を除去する」同型の
+モデルを持つ。しかし nput は配置のたびに**自己記録の manifest**（前世代 `manifest.json`）を
+持つのに対し、home-manager の cleanup 判定は on-disk の readlink パターンマッチに依存する。
+この一次情報の有無が意味論の差として表れる（HM 現行実装〔2026-07 時点〕との比較・
+→ ADR-0046, ADR-0047）。
 
-1. **同名 leaf を含む per-file → dir symlink 遷移の自動移行**: `foo/main.sh`（per-file 配置）を `foo`（dir symlink）へ定義変更したとき、home-manager は cleanup の存在判定が新世代の dir symlink を辿って旧 leaf の残存を誤認し、部分適用で失敗しうる。nput は manifest 記録との一致判定（recorded ∧ stale）で安全に自動移行する（→ ADR-0046, ADR-0047）。
-2. **所有判定の厳密さ**: home-manager は readlink の glob パターンマッチ（`*-home-manager-files/*` 相当）で「自分が置いたものか」を判定する。nput は「記録した配置先 + on-disk の readlink が記録 dest と完全一致」で判定する。この厳密さが、実 dir target 配下の recorded ∧ stale leaf を漏れなく検出する自動移行の土台になっている。
-3. **配置を塞ぐ空 dir の由来を問わない自動除去**: 配置先に空のディレクトリが既存のとき、home-manager は所有判定が readlink 依存で実 dir に効かないため collision として停止する（バックアップ指定や手動除去をユーザーに求める）。nput は rmdir が空 dir にしか成功しない＝損失ゼロであることを利用し、由来を問わず配置前除去（PreRemove）の対象に含めて自動で配置を通す。実 dir target 配下の空 sub dir も同様（→ ADR-0047、`docs/spec.md`「配置動作仕様」0.5）。
-4. **祖先 symlink の安全性**: home-manager は配置先の祖先 component が symlink でも無検査で辿る（`os.MkdirAll` 相当が書込可能な先なら無警告で汚染し、read-only な先なら部分適用停止になりうる）。nput は foreign な祖先 symlink を conflict で停止し、自己記録の stale 祖先symlink のみ配置前除去（PreRemove）で migration する（→ ADR-0046）。
-5. **rename 可用性 + fail-fast drift**: home-manager は cleanup（除去）を配置より先に行うため、rename 相当（旧 target 削除 + 新 target 追加）の適用中にクラッシュすると、新旧どちらのパスにも実体が無い瞬間が生じうる。nput は「配置を塞ぐ依存除去のみ」を前段化し、独立した stale 除去は本流どおり最後に行う（ADR-0006 の「新規・張替を先に、stale 除去を最後に」は不変）。前段化した除去が drift（記録との不一致）を検出した場合は skip せず error で停止し、握りつぶさない（→ ADR-0047）。
+1. **同名 leaf を含む per-file → dir symlink 遷移の自動移行** — HM は旧 leaf の残存を誤認して
+   部分適用で失敗しうるが、nput は manifest 記録との一致判定（recorded ∧ stale）で安全に移行する
+2. **所有判定の厳密さ** — HM は readlink の glob パターンマッチ、nput は「記録した配置先 +
+   on-disk の readlink が記録 dest と完全一致」で判定する
+3. **配置を塞ぐ空 dir の由来を問わない自動除去** — HM は collision で停止するが、nput は
+   rmdir が空 dir にしか成功しない＝損失ゼロを利用し、由来を問わず配置前除去の対象に含める
+4. **祖先 symlink の安全性** — HM は祖先 component が symlink でも無検査で辿るが、nput は
+   foreign な祖先 symlink を conflict で停止し、自己記録の stale のみ配置前除去で移行する
+5. **rename 可用性 + fail-fast drift** — nput は「配置を塞ぐ依存除去のみ」を前段化し、
+   前段化した除去が drift を検出したら skip せず error で停止する
 
-stale 除去後に残った空親ディレクトリの剪定（cleanup 後の掃除。観点 3 の「配置を塞ぐ空 dir の除去」とは別物）・conflict 全件報告は nput も同等の挙動を持つ（パリティ項目・HM 超えではない。→ `docs/spec.md`「空親ディレクトリ剪定」「conflict の全件報告」）。method 変更（symlink → copy）を跨ぐ自動移行や、copy を含めた `reset` によるロールバックは copy という概念自体が home-manager に存在しないカテゴリであり、比較の対象外である。
-
-特に **system-manager** とは、パッケージ / systemd / `/etc` というドメインこそ重なるが、
-「モジュールで隠す」か「純粋関数でユーザーが握る」かというアプローチが思想レベルで異なるため競合しない。
-distro 基盤を本気で狙う場合も、システム配置・サービス・パッケージ層は system-manager と併用 / 委譲し、
-nput は「任意パスへの粒度自由な配置プリミティブ」に徹するのが妥当な切り分けである。
+空親ディレクトリ剪定・conflict 全件報告は nput も同等の挙動を持つ（パリティ項目・HM 超えでは
+ない）。method 変更を跨ぐ自動移行や copy を含めた `reset` は、copy という概念自体が
+home-manager に存在しないため比較の対象外。
 
 ---
 
@@ -358,41 +139,31 @@ nput は「任意パスへの粒度自由な配置プリミティブ」に徹す
 |---|---|---|
 | 起点 | `fetchFromGitHub` + `lock.json` + シェルスクリプト | ロック管理をシェルで実装 |
 | ロック管理 | シェルスクリプト vs Nix 関数 | 副作用が必要なため `npins` 等を使う |
-| ソース管理 | npins の採用 | npins は `sources.json` でロック管理し attrset を返す。シェルより宣言的 |
 | 配置手段 | home-manager 依存可否 | コアを純粋関数として切り出し、HM 非依存と HM 統合を両立 |
 | src 設計 | npins を内包するか | `src` をストアパスとして受け取り取得手段を問わない設計に |
 | 役割分離 | 全体管理 vs 役割ごとの独立管理 | エントリに `name` を持たせ、個別更新・個別適用できる設計に |
-| out-of-store（ADR-0001）| 型ベース暗黙分岐 vs 明示関数 | store link をデフォルトに統一し、out-of-store は明示関数 `mkOutOfStoreSymlink` に降格 |
+| out-of-store（ADR-0001）| 型ベース暗黙分岐 vs 明示関数 | store link をデフォルトに統一し、out-of-store は明示関数へ降格 |
 | 世代管理（ADR-0002）| 世代を取らない vs 取る | nix profile に乗せた standalone 世代管理を追加。copy は世代外 |
 | 層モデル（ADR-0003）| ネイティブ翻訳 vs エンジン所有 | 配置ロジックは全層 nput エンジンが所有、モジュールは配線に徹する |
-| 抽象（ADR-0004）| `$HOME` 固定 vs root 一般化 | root を一般化し配置プリミティブに。distro は純粋関数を合成して組む north-star |
-| project mode（ADR-0005）| root=`$HOME` 固定 vs プロジェクト相対 | root を公開引数へ昇格し git toplevel 相対の project mode を追加。配置物は ephemeral・主トリガは devShell |
-| エンジン実装（ADR-0006）| config ごとの生成 bash vs 固定バイナリ | 配置ロジックを固定 Go エンジンに集約。lib はデータ生成に徹し、契約は manifest.json。CLI はサブコマンド体系 |
-| 露出 / root（ADR-0007）| per-config ラッパー vs 汎用 CLI、root 暗黙 vs 明示 | 汎用 `nput` CLI を一次 UX に昇格（entrypoint 発見・`nput.<name>`・`nput init`）。`mkActivationScript` 廃止・`mkManifest` 存続。root は明示必須（projectRoot/homeRoot/systemRoot）。positioning を project-first に |
-| src/subpath 分離（ADR-0008）| `source` を `src` の略称と誤読される問題 | `source` を `subpath` に改名。全体選択は省略で表現し、専用トークン/marker は追加しない |
-| entries 識別子（ADR-0014）| entry に `name` フィールドを持たせるか vs attrset キーを識別子にするか | `entries` を target キーの attrset に変更。`name` フィールドは廃止し、キー重複不可で一意性を native に担保 |
-| copy method と reset（ADR-0019〜0021）| symlink 以外の配置手段・撤去手段の要否 | `method = "copy"`（世代外・place-once）を追加、`--recopy` で無条件再コピー、`reset` サブコマンドで配置物を teardown |
-| module activation の経路（ADR-0026）| HM 等のモジュールも entrypoint 発見経由にするか | モジュールはビルド済み link-farm を `apply --manifest` で直接適用する専用経路を新設（entrypoint 発見・eval をスキップ）|
-| flake-parts 統合（ADR-0029）| flake-parts ユーザー向けの output 形をどう提供するか | `perSystem.nput` を `flake.nput.<system>` へ transpose する flakeModule を追加。直書きと同一 derivation を生成 |
-| 出力規律（ADR-0031）| 成功時に配置レポートを毎回出すか | 成功時はデフォルト沈黙に変更。`-v` で配置レポートを opt-in 表示（`--quiet` は廃止）|
+| 抽象（ADR-0004）| `$HOME` 固定 vs root 一般化 | root を一般化し配置プリミティブに。distro は純粋関数の合成で組む |
+| project mode（ADR-0005）| root=`$HOME` 固定 vs プロジェクト相対 | root を公開引数へ昇格し git toplevel 相対の project mode を追加 |
+| エンジン実装（ADR-0006）| 生成 bash vs 固定バイナリ | 配置ロジックを固定 Go エンジンに集約。契約は manifest.json |
+| 露出 / root（ADR-0007）| per-config ラッパー vs 汎用 CLI | 汎用 `nput` CLI を一次 UX に昇格。root は明示必須。project-first へ |
+| src/subpath 分離（ADR-0008）| `source` を `src` と誤読される問題 | `source` を `subpath` に改名。全体選択は省略で表現 |
+| entries 識別子（ADR-0014）| `name` フィールド vs attrset キー | `entries` を target キーの attrset に変更し一意性を native に担保 |
+| copy と reset（ADR-0019〜0021）| symlink 以外の配置・撤去手段 | `method = "copy"`（世代外・place-once）・`--recopy`・`reset` を追加 |
+| module activation（ADR-0026）| モジュールも entrypoint 発見経由か | ビルド済み link-farm を `apply --manifest` で直接適用する経路を新設 |
+| flake-parts 統合（ADR-0029）| flake-parts 向けの output 形 | `perSystem.nput` を `flake.nput.<system>` へ transpose する module を追加 |
+| 出力規律（ADR-0031）| 成功時に配置レポートを出すか | 成功時はデフォルト沈黙。`-v` で opt-in 表示（`--quiet` は廃止）|
 
-上記に挙げていない ADR-0009・0010〜0013・0015〜0018・0022〜0025・0027・0028・0030 等は、実装確定に伴う詳細な意味論整備（CI・型検査・flock・root 解決の細部等）。個々の内容は `docs/adr/` を参照。
+上記に挙げていない ADR は実装確定に伴う詳細な意味論整備（CI・型検査・flock・root 解決の細部等）。
+個々の内容は `docs/adr/` を参照。
 
 ---
 
-## 想定ユースケース
+## 関連文書
 
-**project mode（中心的な使い方・`root = projectRoot`）**
-
-- プロジェクト repo 内に `.claude/skills` 等を nix store から配置し、devShell キックでチーム共有する
-- project-local な tool 設定・hook をバージョン固定で repo 内に配置する（ephemeral・コミット対象外）
-- 社内共有の設定リポジトリから特定ディレクトリだけを取り出してプロジェクトに配置する
-
-**home mode（`root = homeRoot` で明示）**
-
-- vim/neovim プラグインをバージョン固定で `~/.local/share/nvim` 以下に配置
-- Claude Code や他のエージェントのスキルリポジトリから特定ディレクトリだけを `~/.claude/skills` に配置
-- zsh/bash プラグインをプラグインごとに独立管理し、任意のタイミングで個別更新・ロールバック
-- カラーテーマリポジトリから特定テーマだけを `~/.local/share/themes` に copy（place-once、以後ユーザー管理）
-- 複数マシン（Linux / macOS）で同一のリポジトリ配置設定を共有する
-- 開発中の手元 dotfiles を `mkOutOfStoreSymlink` でライブ反映しながら編集する
+- `docs/spec.md` — 仕様（requirement item への索引）
+- `docs/design.md` — 設計（design item への索引）
+- `docs/adr/` — 意思決定の記録
+- `docs/model.yaml` — sara の型定義（item の型・関係・ID 形式）
