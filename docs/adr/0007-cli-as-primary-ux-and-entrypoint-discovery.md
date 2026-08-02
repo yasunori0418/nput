@@ -28,7 +28,6 @@ justifies:
   - "REQ-81249072-56b8-42f5-807b-ea623c1efe99"
   - "REQ-a0bdf6db-6c0c-476c-916a-61ee4e4510d9"
   - "REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9"
-  - "REQ-774cef80-2872-4ea1-937b-a0fbabc305a9"
   - "REQ-637599dc-a1ec-4af5-9e97-e882c7df56d0"
 revises:
   - "ADR-0004"
