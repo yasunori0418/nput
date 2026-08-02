@@ -21,6 +21,10 @@ specification_ja: |
 `normalizeManifest` はクロスフィールドの `lib.throwIf` チェックを持つ。
 
 - `method = "copy"` かつ out-of-store marker の組み合わせを拒否する。
+- `root = systemRoot` を未実装として拒否する。
+
+上の箇条書きは原文の写しで、規範は frontmatter が正。`root = systemRoot` の拒否は
+規範に含めない（理由は下の注記）。
 
 単一フィールドの optionType では表現できない条件のため、型検査とは別に `throwIf` で
 評価時に停止させる。out-of-store は「ライブ symlink」、copy は「place-once
