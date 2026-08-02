@@ -8,6 +8,11 @@ origin: "ドキュメント計画段階のレビューで surfaced した「実�
 justifies:
   - "REQ-16faf428-77f3-492f-b858-222c5274cbf7"
   - "REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281"
+  - "REQ-4cbd9a0d-9f94-4747-8881-56020dc6d5af"
+  - "REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461"
+  - "REQ-a8edc58f-4adc-4637-b888-ab8ccc7e73e4"
+  - "REQ-a480c183-40ce-4201-93b5-65a7a59c1b9e"
+  - "REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9"
 references:
   - "ADR-0002"
   - "ADR-0005"

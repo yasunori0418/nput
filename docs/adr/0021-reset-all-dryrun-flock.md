@@ -4,6 +4,10 @@ type: adr
 name: "reset の `--all` 非対応・`--dryrun` 対応・flock / recopy 合成を確定する"
 status: 採用
 origin: "ADR-0020 で `reset` / `apply --recopy` を追加したことで開いた二次的な細目（`--all` 対応・`--dryrun`・flock・合成）"
+justifies:
+  - "REQ-a8edc58f-4adc-4637-b888-ab8ccc7e73e4"
+  - "REQ-6a950d6d-c191-4235-a1b4-73ffc7c2bb38"
+  - "REQ-687e225f-5046-46db-88fb-f9e527a1e97a"
 revises:
   - "ADR-0020"
 references:

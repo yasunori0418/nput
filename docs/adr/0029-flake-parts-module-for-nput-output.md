@@ -6,6 +6,9 @@ status: 採用
 issues:
   - "#26"
 origin: "起点 Issue: #26"
+justifies:
+  - "REQ-c50df875-2cb0-4e72-8a21-858359a11cae"
+  - "REQ-d0aef5af-e922-400b-b250-ca38719c480b"
 references:
   - "ADR-0006"
   - "ADR-0007"

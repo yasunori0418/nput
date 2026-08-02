@@ -4,6 +4,9 @@ type: adr
 name: "実装前レビュー第 3 巡で surfaced した残セマンティクスを確定する（--all の root モードフィルタ / --root の適用範囲 / 世代スキップとドリフト修復 / 張替えの atomic 性）"
 status: 採用
 origin: "ADR-0016 に続く実装前レビュー第 3 巡（grill）で surfaced した残細目の束"
+justifies:
+  - "REQ-d95b814f-aa7a-470e-9320-c14f9c14da7b"
+  - "REQ-61c05e09-0bde-4f74-9a96-03185f9df606"
 revises:
   - "ADR-0005"
   - "ADR-0006"

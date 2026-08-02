@@ -6,6 +6,11 @@ status: 採用
 origin: "ADR-0023 までの第5巡で潰し切れていない11点を、垂直トレーサー弾（ADR-0023 §4）着手の直前に再度の横断検査で洗い出した（実装前残セマンティクス確定の第6巡）"
 justifies:
   - "REQ-5c6b07da-3d06-414d-8770-4f438234b322"
+  - "REQ-9c111c32-8f6c-4eda-859c-dae02c0624fc"
+  - "REQ-a8edc58f-4adc-4637-b888-ab8ccc7e73e4"
+  - "REQ-b7bb09d6-74c4-44d6-905f-cb5e8383ea32"
+  - "REQ-535b811d-dfc5-4eac-92db-737e70eb5415"
+  - "REQ-fea038de-55eb-45ac-87fc-ec3a7287592a"
 revises:
   - "ADR-0010"
   - "ADR-0023"

@@ -6,6 +6,9 @@ status: 採用
 issues:
   - "#17"
 origin: "Issue #17（home-manager モジュール統合）の実装中に判明した計画外の仕様。docs（ADR-0003, ADR-0007, spec のモジュール別動作仕様）は「module は engine を kick する配線」とだけ述べ、具体的な invocation を一度も規定していなかった"
+justifies:
+  - "REQ-dec58330-6dad-47f7-8f56-2402764a89c7"
+  - "REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9"
 revises:
   - "ADR-0003"
   - "ADR-0007"

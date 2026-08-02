@@ -3,6 +3,9 @@ id: "ADR-0031"
 type: adr
 name: "成功時デフォルト沈黙化・`-v` で配置レポート opt-in・`--debug` で nix コマンド開示・`--quiet` 廃止（ADR-0023 §2 改訂）"
 status: 採用
+justifies:
+  - "REQ-8ef34101-8150-4124-92d5-94fabe6b5d90"
+  - "REQ-0a123b89-0399-4f76-b988-56a5f7e0becf"
 revises:
   - "ADR-0023"
 references:

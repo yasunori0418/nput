@@ -4,6 +4,10 @@ type: adr
 name: "copy の明示上書き（`apply --recopy`）と配置物のリセット（`nput reset`）を追加する"
 status: 採用
 origin: "「copy で配置した物を参照元更新に追従させたい」「entry の配置物を無い状態に戻したい（リセット）」という 2 つのユースケース未対応"
+justifies:
+  - "REQ-7cc32a2b-eee4-4a29-8dc1-a1dc23e7a065"
+  - "REQ-31f2882e-d2e3-4e3b-b783-feb627d73ac6"
+  - "REQ-fa181aa6-29a2-48c3-ae07-cc1b9a3b0303"
 revises:
   - "ADR-0002"
   - "ADR-0006"

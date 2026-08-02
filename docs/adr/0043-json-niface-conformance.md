@@ -6,6 +6,18 @@ status: 採用
 issues:
   - "yasunori0418/niface#1"
 origin: "nput の niface 準拠化 grilling（2026-07-06）と、それを受けた niface 側 grilling による niface#1 の方針確定（batch エンベロープ + subject + §5 参照キー規約の 3 層化）。参照: niface specVersion 1（yasunori0418/niface）, niface ADR-0013（mode 廃止・subject 常時必須）"
+justifies:
+  - "REQ-a5053191-1c6a-449b-9c5e-5ff49dc5aead"
+  - "REQ-5c2e64c3-09a7-4ae8-b60c-4f1ccabce4fd"
+  - "REQ-9341fa5d-836e-4023-af53-cc7d273438d1"
+  - "REQ-2353259f-5878-452a-8e11-3445de69abc2"
+  - "REQ-2a613337-7646-4ced-8807-e43bca18acf3"
+  - "REQ-57137302-de29-4f71-a565-034cd5de080b"
+  - "REQ-2ea19863-eaa2-466b-b1ed-3f56f6417c62"
+  - "REQ-fa181aa6-29a2-48c3-ae07-cc1b9a3b0303"
+  - "REQ-059eb4d5-63fb-4f8e-b705-11b5e2ed4ae5"
+  - "REQ-2381d93a-732e-4437-910b-fac14d398aa0"
+  - "REQ-0a123b89-0399-4f76-b988-56a5f7e0becf"
 revises:
   - "ADR-0023"
   - "ADR-0033"

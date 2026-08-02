@@ -4,6 +4,8 @@ type: adr
 name: "実装前残セマンティクス第4巡（schema 互換・copy ドリフト修復・profile パス・copy foreign 衝突・shellHook skip 通知）"
 status: 採用
 origin: "実装着手前のドキュメント検査で、各文書が沈黙していた5つの細目を洗い出した（ADR-0015/0016/0017 と同系列の「実装前残セマンティクス」確定）"
+justifies:
+  - "REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9"
 references:
   - "ADR-0002"
   - "ADR-0005"

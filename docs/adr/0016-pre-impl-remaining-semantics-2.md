@@ -4,6 +4,9 @@ type: adr
 name: "実装前レビュー第 2 巡で surfaced した残セマンティクスを確定する（copy の編集可能性 / --all 適用順 / copy 内 symlink / home mode skew / farm アンカー名 / pending gcroot）"
 status: 採用
 origin: "ADR-0015 に続く実装前レビュー第 2 巡（grill）で surfaced した「実装前に決めておくべき」残細目の束"
+justifies:
+  - "REQ-4cbd9a0d-9f94-4747-8881-56020dc6d5af"
+  - "REQ-840b3641-6e76-46da-82e9-680cabd65abe"
 revises:
   - "ADR-0011"
   - "ADR-0013"

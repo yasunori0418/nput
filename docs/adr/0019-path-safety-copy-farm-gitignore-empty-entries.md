@@ -6,6 +6,7 @@ status: 採用
 origin: "ADR-0018 後の横断検証で surfaced した「3 巡で詰め切れていなかった」残 4 点"
 justifies:
   - "REQ-6911eab6-12b4-457c-9db4-d7430a9e9b3f"
+  - "REQ-60787ed2-4176-4bdd-800f-1600c0315551"
 revises:
   - "ADR-0005"
   - "ADR-0006"

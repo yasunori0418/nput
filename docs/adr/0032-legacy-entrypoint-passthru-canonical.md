@@ -7,6 +7,11 @@ issues:
   - "#112"
   - "#107"
 origin: "起点 Issue: #112（親 epic #107）。ADR-0007 §5 で「採用済み」としつつ実装（`cmd/nput/nix.go`）が明示拒否していた乖離を解消する"
+justifies:
+  - "REQ-c890ce4a-6528-4ab3-ac86-23d7aebff7da"
+  - "REQ-496b1a07-5b74-416b-9e5f-3952b4c03737"
+  - "REQ-da253cab-34d4-4d6e-96f0-de99e012b376"
+  - "REQ-535b811d-dfc5-4eac-92db-737e70eb5415"
 revises:
   - "ADR-0007"
 references:
