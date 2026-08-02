@@ -1,0 +1,40 @@
+---
+id: "REQ-eb363122-385a-499c-a074-c95efb949d07"
+type: requirement
+name: "mkOutOfStoreSymlink は out-of-store symlink を表すマーカーを返す"
+specification: |
+  `lib.mkOutOfStoreSymlink` SHALL be a pure function
+  (`mkOutOfStoreSymlink :: string -> marker`) returning a marker that denotes an
+  out-of-store symlink to a local path. Its argument SHALL be an absolute path string
+  fixed at Nix evaluation time; a shell `$HOME` MUST NOT be usable. In the core lib it
+  SHALL do nothing but wrap the path in a marker attrset, and creating the actual link
+  SHALL be done by the engine. It MUST NOT delegate to a platform-native mechanism such
+  as home-manager's `config.lib.file.mkOutOfStoreSymlink`.
+---
+# REQ-eb363122: mkOutOfStoreSymlink は out-of-store symlink を表すマーカーを返す
+
+## 仕様
+
+ローカルパスへの out-of-store symlink を表すマーカーを返す。`entry.src` に渡すことで、
+その entry を Nix ストア経由ではなくローカル FS への symlink にする。ファイル編集が
+即座に反映されるライブ用途のための明示的退避路である。
+
+```
+mkOutOfStoreSymlink :: string -> marker
+```
+
+- core lib（nixpkgs のみ依存）では **パスをマーカー attrset に包むだけの純粋関数**。
+- 実際の link 生成は engine が行う。プラットフォームのネイティブ機構（HM の
+  `config.lib.file.mkOutOfStoreSymlink` 等）へは委譲しない。
+
+```nix
+src = nput.lib.mkOutOfStoreSymlink "/home/me/dotfiles";
+```
+
+**制約**: 引数は Nix 評価時に確定する絶対パスの文字列。シェルの `$HOME` は使えない。
+ローカルパスをポータブルにしたい場合は flake 内で変数として定義する
+（→ `docs/spec.md`「ローカルパス（out-of-store）の扱い」）。
+
+## 出典
+
+`docs/spec.md`「lib API」→「`lib.mkOutOfStoreSymlink`」。
