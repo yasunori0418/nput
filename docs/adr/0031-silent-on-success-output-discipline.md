@@ -8,7 +8,6 @@ justifies:
   - "REQ-0a123b89-0399-4f76-b988-56a5f7e0becf"
   - "REQ-9fca28c9-d3b1-4ad7-8f24-13b2ec7aeab2"
   - "REQ-8409db86-a1ba-4053-86dc-588985cc1ca7"
-  - "REQ-95e97d01-5c34-44b3-bc85-9ca53472bc3d"
 revises:
   - "ADR-0023"
 references:
