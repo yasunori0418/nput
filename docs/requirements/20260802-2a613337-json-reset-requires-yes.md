@@ -1,9 +1,11 @@
 ---
 id: "REQ-2a613337-7646-4ced-8807-e43bca18acf3"
 type: requirement
+name: "reset --json は --yes を必須とし無ければ fail fast する"
 derives_from:
   - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
-name: "reset --json は --yes を必須とし無ければ fail fast する"
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
   Because a confirmation prompt for a destructive operation cannot be handled by a machine
   consumer, `reset --json` SHALL NOT show the prompt even on a TTY, and SHALL fail fast

@@ -1,9 +1,11 @@
 ---
 id: "REQ-1be4d678-959c-44d7-a346-44bfd95af56e"
 type: requirement
+name: "世代は link farm derivation を nput 自前 profile へコミットして積み、前世代 manifest から stale を除去する"
 derives_from:
   - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
-name: "世代は link farm derivation を nput 自前 profile へコミットして積み、前世代 manifest から stale を除去する"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
+  - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
 specification: |
   The manifest of what has been placed SHALL be embedded inside the store, as part of the
   link farm derivation produced by `lib.mkManifest` (what that derivation contains is

@@ -1,9 +1,10 @@
 ---
 id: "REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3"
 type: requirement
+name: "profileDir は config 専用ディレクトリとし、profile リンク・世代・pending out-link をその中に並べる"
 derives_from:
   - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
-name: "profileDir は config 専用ディレクトリとし、profile リンク・世代・pending out-link をその中に並べる"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
   `profileDir` SHALL be a directory dedicated to each config, holding within it the
   profile link, the generations and the build out-link. Its base `<state>` SHALL be

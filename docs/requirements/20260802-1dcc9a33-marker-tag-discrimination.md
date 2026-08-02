@@ -1,9 +1,11 @@
 ---
 id: "REQ-1dcc9a33-b0f2-43e0-8310-fc4b19e68fe7"
 type: requirement
+name: "marker は判別タグで識別し manifest.json には漏らさない"
 derives_from:
   - "UC-01b896b4-04b9-40d0-bf9e-966eaf64c3d4"
-name: "marker は判別タグで識別し manifest.json には漏らさない"
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
   Markers (`mkOutOfStoreSymlink` and the root markers) SHALL carry a `_nputMarker`
   discriminator tag so that a custom optionType `check` can distinguish them from a

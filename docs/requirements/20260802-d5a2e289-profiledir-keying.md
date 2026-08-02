@@ -1,10 +1,11 @@
 ---
 id: "REQ-d5a2e289-40bc-45a9-9d44-21b8dc561b81"
 type: requirement
+name: "profileDir は home のみ name 直キーとし、fixed root と --root 上書きは roothash でキーする"
 derives_from:
   - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "profileDir は home のみ name 直キーとし、fixed root と --root 上書きは roothash でキーする"
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 specification: |
   The key of `profileDir` SHALL be determined by the root. Keying directly on `<name>`
   SHALL be confined to home mode without `--root`, where "one profile per user" holds.
