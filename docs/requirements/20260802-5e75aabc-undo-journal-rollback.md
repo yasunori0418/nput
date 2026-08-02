@@ -17,8 +17,8 @@ specification: |
   far SHALL be rolled back in reverse (LIFO) order before the error is returned. The
   journal SHALL be discarded once the commit through `nix-env --set` has succeeded, a
   failure of `--set` itself being outside the scope of rollback because an idempotent
-  re-run converges. Rollback SHALL delete the aside made by `--recopy` on success, whereas
-  the aside made by `--backup` SHALL be left in place even on success. Crashes such as
+  re-run converges. On the success of the run, the aside made by `--recopy` SHALL be
+  deleted, whereas the aside made by `--backup` SHALL be left in place. Crashes such as
   SIGKILL or power loss SHALL be out of scope, the journal existing only in process memory
   with no persistent write-ahead log; in that case the guarantee SHALL continue to rest on
   the generation being left uncommitted and on convergence by idempotent re-run. The drift
