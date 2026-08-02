@@ -7,7 +7,7 @@ How the engineering skills should consume this repo's domain documentation when 
 - **`CONTEXT.md`** at the repo root, or
 - **`CONTEXT-MAP.md`** at the repo root if it exists — it points at one `CONTEXT.md` per context. Read each one relevant to the topic.
 - **`docs/adr/`** — read ADRs that touch the area you're about to work in. In multi-context repos, also check `src/<context>/docs/adr/` for context-scoped decisions.
-- **the item that owns the area** — in this repo the normative content lives in per-item files, not in prose documents. See "Item graph" below.
+- **`docs/` の item** — in this repo the normative content lives in per-item files, not in prose documents. See "Item graph" below.
 
 If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The producer skill (`/grill-with-docs`) creates them lazily when terms or decisions actually get resolved.
 
@@ -16,6 +16,11 @@ If any of these files don't exist, **proceed silently**. Don't flag their absenc
 `docs/` is a sara knowledge graph: one file per item, each carrying YAML frontmatter with an `id`
 and its relations. The normative statements live in the items; `docs/spec.md` / `docs/design.md` /
 `docs/concept.md` are **overviews that index them** and deliberately carry no detail.
+
+**`docs/concept.md` is the one exception.** Four sections in it — the design philosophy, the
+comparison against existing tools, the north-star, and how the design evolved — were deliberately
+left un-itemised (they don't reduce to requirements), so that prose is the primary source. Read it,
+don't skim it as an index.
 
 | Directory | Type | Prefix | Holds |
 |---|---|---|---|
@@ -36,7 +41,7 @@ Full conventions — ID format, placement rules, which type owns what — are in
 
 ```bash
 sara query <full-id> -u      # upstream: requirement -> use_case -> solution
-sara query <full-id> -d      # downstream: requirement -> design -> risk -> test
+sara query <full-id> -d      # downstream: requirement -> design (risk / test not started yet)
 sara check                   # validate the whole graph (broken refs / duplicate IDs / cycles)
 sara report coverage         # coverage
 sara report matrix           # traceability matrix
@@ -62,9 +67,10 @@ This repo (single-context, with the item graph under `docs/`):
 /
 ├── CONTEXT.md
 ├── CLAUDE.md                          ← placement rules and ID conventions
+├── sara.toml                          ← which paths the graph covers
 └── docs/
-    ├── concept.md  design.md  spec.md ← overviews; index the items, hold no detail
-    ├── model.yaml  ../sara.toml       ← the graph's type definitions and config
+    ├── concept.md  design.md  spec.md ← overviews; index the items (concept.md: see exception above)
+    ├── model.yaml                     ← the graph's type definitions
     ├── solution/  use-cases/          ← SOL / UC
     ├── requirements/  design/         ← REQ / DSG
     ├── infrastructure/                ← INF
