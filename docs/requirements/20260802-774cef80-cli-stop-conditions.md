@@ -1,25 +1,25 @@
 ---
 id: "REQ-774cef80-2872-4ea1-937b-a0fbabc305a9"
 type: requirement
-name: "対象を確定できないときは CLI がエラーで停止し、暗黙のフォールバックを採らない"
+name: "要求された操作が成立しないときは CLI がエラーで停止し、暗黙のフォールバックを採らない"
 specification: |
-  When the CLI cannot determine what to operate on, it SHALL stop with an error and SHALL
-  NOT fall back implicitly. It SHALL stop when no entrypoint can be discovered — no
-  entrypoint file in the current working directory and no explicit `-f` — and when the
-  discovered entrypoint does not expose the requested `nput.<name>`. Likewise `rollback`
-  SHALL print an error message and stop when no previous generation exists. Guessing
-  another config, treating the situation as a no-op, or continuing with an empty manifest
-  MUST NOT be adopted in any of these cases, since each would silently produce a placement
-  the user did not request.
+  When the operation the user asked for does not hold, the CLI SHALL stop with an error and
+  SHALL NOT fall back implicitly. It SHALL stop when no entrypoint can be discovered — no
+  entrypoint file in the current working directory and no explicit `-f` — when the
+  discovered entrypoint does not expose the requested `nput.<name>`, and, for `rollback`,
+  when no previous generation exists, in which case it SHALL print an error message before
+  stopping. Guessing another config, treating the situation as a no-op, or continuing with
+  an empty manifest MUST NOT be adopted in any of these cases, since each would silently
+  produce a placement the user did not request.
 specification_ja: |
-  CLI は操作対象を確定できないときエラーで停止しなければならず、暗黙のフォールバックを
-  採ってはならない。entrypoint が発見できないとき（CWD に entrypoint ファイルが無く
-  `-f` の明示も無い）と、発見した entrypoint に指定の `nput.<name>` が存在しないときは
-  停止する。同様に `rollback` は前世代が存在しないとき、エラーメッセージを出力して停止する。
-  いずれの場合も、別 config の推測・no-op 扱い・空 manifest での続行を採ってはならない
-  （ユーザーが要求していない配置を黙って生むため）。
+  ユーザーが要求した操作が成立しないとき、CLI はエラーで停止しなければならず、暗黙の
+  フォールバックを採ってはならない。entrypoint が発見できないとき（CWD に entrypoint
+  ファイルが無く `-f` の明示も無い）、発見した entrypoint に指定の `nput.<name>` が存在
+  しないとき、および `rollback` で前世代が存在しないときに停止する（`rollback` は停止前に
+  エラーメッセージを出力する）。いずれの場合も、別 config の推測・no-op 扱い・空 manifest
+  での続行を採ってはならない（ユーザーが要求していない配置を黙って生むため）。
 ---
-# REQ-774cef80: 対象を確定できないときは CLI がエラーで停止し、暗黙のフォールバックを採らない
+# REQ-774cef80: 要求された操作が成立しないときは CLI がエラーで停止し、暗黙のフォールバックを採らない
 
 ## 仕様
 
