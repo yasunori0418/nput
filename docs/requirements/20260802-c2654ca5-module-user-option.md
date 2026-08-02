@@ -23,7 +23,9 @@ nput.user :: string       # 必須（配置先ユーザーの特定に使用）
 home-manager と standalone は `$HOME` を参照するため `user` は不要。
 
 > **上は原文の写しで、規範は frontmatter が正**。`user` から実際に root を解決する式
-> （`config.users.users.${cfg.user}.home`）は REQ-8d965ca2 の担当。
+> （`config.users.users.${cfg.user}.home`）は REQ-8d965ca2 の担当。原文の見出しが持つ
+> 「将来拡張」の限定を規範に採らない理由（実装時期は満たすべきことではない）は
+> REQ-c1b3ca5f の注記に集約している。
 
 ## 出典
 

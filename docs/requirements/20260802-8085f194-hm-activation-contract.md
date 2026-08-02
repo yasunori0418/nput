@@ -72,8 +72,8 @@ specification_ja: |
 >   **どの item も規範として持たない**（item 化は REQ-c6891aeb の注記のとおり別途扱う）
 > - flock を既定 blocking で取ること → REQ-1c1526b1。レポートと warning を stderr へ出す
 >   ストリーム規律 → REQ-fea038de。終了コードの体系 → REQ-2c5a10d8
-> - 世代が nput 自前 profile に乗ること → REQ-1be4d678。profile 名の次元と profileDir の
->   キー → REQ-c6891aeb / REQ-d5a2e289。rollback を host へ一本化すること → REQ-844ee375
+> - 世代が nput 自前 profile に乗ること → REQ-1be4d678。profile 名の次元 → REQ-c6891aeb、
+>   profileDir のキー → REQ-d5a2e289。rollback を host へ一本化すること → REQ-844ee375
 > - `manifest.json` が唯一の安定契約で `schemaVersion` が 1 に固定であること →
 >   REQ-79ce0a09 / REQ-250d936c。本 item はそれを前提に「module 経路では skew が構造的に
 >   起きない」ことだけを規定する
