@@ -30,8 +30,8 @@ profileDir 確定（= rootKind 先取り eval → root 解決）が前提にな�
 前段（`reset` が entries 読みのため entrypoint eval も行うこと）は各コマンドの item が
 規定し、本 item では扱わない（→ REQ-a8edc58f）。
 
-apply を含む実行フロー全体の順序規範は REQ-60c6b7ea、`--root` のキーイングは
-REQ-61c05e09 の担当。
+apply を含む実行フロー全体の順序規範は REQ-60c6b7ea、`--root` が全モードの解決 root を
+上書きすることは REQ-61c05e09、上書き後の profileDir のキーイングは REQ-d5a2e289 の担当。
 
 ## 出典
 
