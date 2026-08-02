@@ -1,13 +1,13 @@
 ---
 id: "DSG-17db0831-d7da-446d-ba3e-404df64c582d"
 type: design
-name: "層を CLI / engine / lib / common.nix / 統合層の 5 段に積み、依存を上から下への一方向に限る"
+name: "層を CLI / engine / lib / common.nix / 統合層の 5 段に積み、依存を呼ぶ側から呼ばれる側への一方向に限る"
 satisfies:
   - "REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645"
   - "REQ-d85f0cef-0f1e-4897-a841-41b61a8dae51"
   - "REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9"
 ---
-# DSG-17db0831: 層を CLI / engine / lib / common.nix / 統合層の 5 段に積み、依存を上から下への一方向に限る
+# DSG-17db0831: 層を CLI / engine / lib / common.nix / 統合層の 5 段に積み、依存を呼ぶ側から呼ばれる側への一方向に限る
 
 ## 設計
 
@@ -33,7 +33,7 @@ REQ-f4d7d4ab が規範化しているのは CLI と engine の 2 層境界（`ma
 lib・`common.nix`・統合層を含めた積み方と依存の向きは設計側の判断になる。この積み方が
 実現手段として効くのは次の点。
 
-- **engine から lib への依存を持たせない**ことで、
+- **lib から engine への依存を持たせない**ことで、
   REQ-d85f0cef の「lib は配置ロジックを持たず nixpkgs.lib のみに依存する」が
   依存の向きとして表現される。lib が engine を呼べると、配置ロジックが
   lib 側へ漏れ出す経路が開いてしまう
