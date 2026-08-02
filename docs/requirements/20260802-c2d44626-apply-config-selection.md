@@ -29,8 +29,7 @@ nput apply <name>              # nput.<name> をビルドし新世代を作っ�
 
 > **上は原文の写しで、規範は frontmatter が正**。`--all` の適用順・部分失敗時の挙動・
 > root モードフィルタは本 item の規範ではなく、REQ-4cbd9a0d / REQ-d95b814f の担当。
-> profile の atomic 性そのもの（→ ADR-0002）は `docs/spec.md`「世代管理仕様」節の担当
-> （#209-PR4）。
+> profile の atomic 性そのもの（→ ADR-0002）は REQ-1be4d678 の担当。
 
 ## 出典
 

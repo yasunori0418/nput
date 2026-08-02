@@ -167,8 +167,7 @@ specification_ja: |
 > **上は原文の写しで、規範は frontmatter が正**。原文が併記する実装 issue の進捗
 > （#131 時点の非対象・`reset --dryrun` は最小形のまま followup・`--all` は #164）は
 > 要求ではなく履歴の注記で、`apply --dryrun` のペイロードは REQ-fa181aa6、`--all` は
-> REQ-059eb4d5 の担当。undo ジャーナルそのものの規範（→ ADR-0044）は
-> `docs/spec.md`「配置動作仕様」節の担当（#209-PR4）。
+> REQ-059eb4d5 の担当。undo ジャーナルそのものの規範（→ ADR-0044）は REQ-5e75aabc の担当。
 
 > **注記（規範ではない）— items / changes / 部分失敗 / conflict / generation / warnings を
 > 1 item に束ねる理由**: これらは「同一の payload builder が engine 結果から生成する
