@@ -28,6 +28,8 @@ justifies:
   - "REQ-81249072-56b8-42f5-807b-ea623c1efe99"
   - "REQ-a0bdf6db-6c0c-476c-916a-61ee4e4510d9"
   - "REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9"
+  - "DSG-16373ec2-3496-4b12-b3b1-ef74e0435b58"
+  - "DSG-4a84f282-76ea-47c9-aede-deac12ff5257"
 revises:
   - "ADR-0004"
   - "ADR-0005"

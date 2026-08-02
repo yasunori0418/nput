@@ -12,6 +12,8 @@ justifies:
   - "REQ-496b1a07-5b74-416b-9e5f-3952b4c03737"
   - "REQ-da253cab-34d4-4d6e-96f0-de99e012b376"
   - "REQ-535b811d-dfc5-4eac-92db-737e70eb5415"
+  - "DSG-92f54490-872a-42ac-bbd7-d06e9ee381c6"
+  - "DSG-bb6e03fd-e1c4-47c4-bfa0-a73e9457b184"
 revises:
   - "ADR-0007"
 references:

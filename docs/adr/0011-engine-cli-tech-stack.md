@@ -9,6 +9,9 @@ justifies:
   - "REQ-79ce0a09-f9bd-4e61-ba7f-45fb5643137b"
   - "REQ-b74a118a-1272-44eb-944c-7725163211c6"
   - "REQ-637599dc-a1ec-4af5-9e97-e882c7df56d0"
+  - "DSG-7d354fe0-a333-495b-9f4b-14bba316dc47"
+  - "DSG-16373ec2-3496-4b12-b3b1-ef74e0435b58"
+  - "DSG-836aa5cb-0389-4adb-990b-144fe5aeffe3"
 revises:
   - "ADR-0006"
   - "ADR-0007"
