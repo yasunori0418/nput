@@ -7,17 +7,15 @@ specification: |
   because removing everything at once is a destructive footgun, consistently with the
   rejection of `rollback --all`; removing several configs SHALL be done by naming each of
   them in turn. `reset` SHALL acquire a blocking flock keyed on the resolved `profileDir`
-  so that it is serialized against a concurrent apply / reset. To determine `profileDir`,
-  the preliminary rootKind eval and root resolution SHALL precede even for this
-  non-building command, and with `--root` the same roothash key SHALL be used. `reset`
-  SHALL additionally evaluate the entrypoint in order to read the entries.
+  so that it is serialized against a concurrent apply / reset. Beyond the eval-first
+  preliminary stage common to the non-building commands, `reset` SHALL additionally
+  evaluate the entrypoint in order to read the entries.
 specification_ja: |
   `nput reset` は名指し必須とし、`--all` に対応してはならない（一斉撤去は破壊的な
   footgun であり、`rollback --all` の却下と一貫させるため）。複数撤去は名指しを複数回行う。
   `reset` は解決後 `profileDir` 単位の blocking flock を取得して、並行する apply / reset と
-  直列化しなければならない。profileDir 確定のため、build しないコマンドでも rootKind
-  先取り eval → root 解決を先行させる。`--root` 時は同じ roothash キーを使う。
-  `reset` はさらに entries 読みのため entrypoint eval も行う。
+  直列化しなければならない。非 build コマンド共通の eval 先行前段に加えて、`reset` は
+  entries 読みのため entrypoint eval も行う。
 ---
 # REQ-a8edc58f: reset は名指し必須で profileDir 単位の blocking flock を取る
 
@@ -29,8 +27,11 @@ specification_ja: |
 root 解決**を build しないコマンドでも先行する（apply と共通の前段・`--root` 時は同じ
 roothash キー）。`reset` はさらに entries 読みのため entrypoint eval も行う。
 
-非 build コマンド一般の eval 先行は REQ-9c111c32 が規定し、本 item は `reset` が
-それに従い entrypoint eval も加えることを規定する。
+> **上は原文の写しで、規範は frontmatter が正**。このうち非 build コマンド一般の
+> eval 先行（rootKind 先取り eval → root 解決・`--root` 時の roothash キー）は
+> REQ-9c111c32 の規範であり、本 item では規範化しない。本 item が規定するのは
+> `reset` 固有の 3 点（名指し必須・profileDir 単位の blocking flock・共通前段に加えて
+> 行う entrypoint eval）に限る。
 
 ## 出典
 

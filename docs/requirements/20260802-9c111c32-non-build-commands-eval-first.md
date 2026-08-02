@@ -25,10 +25,14 @@ specification_ja: |
 持つ**。build はしないが、profileDir 単位の flock / 前世代 manifest 読みのため
 profileDir 確定（= rootKind 先取り eval → root 解決）が前提になる。`--root` 上書き時は
 「root の解決」と同じ roothash キーで profileDir を引く（`--root` を付けた世代を操作するには
-同じ `--root` が要る）。`reset` はさらに entries 読みのため entrypoint eval も行う
-（REQ-a8edc58f）。
+同じ `--root` が要る）。
 
-eval 先行そのものの順序規範は REQ-60c6b7ea、`--root` のキーイングは REQ-61c05e09 の担当。
+**本 item が非 build コマンド一般の eval 先行を規定する**。個々のコマンドが加える固有の
+前段（`reset` が entries 読みのため entrypoint eval も行うこと）は各コマンドの item が
+規定し、本 item では扱わない（→ REQ-a8edc58f）。
+
+apply を含む実行フロー全体の順序規範は REQ-60c6b7ea、`--root` のキーイングは
+REQ-61c05e09 の担当。
 
 ## 出典
 

@@ -16,12 +16,11 @@ specification: |
   system = `/`, or a fixed path, overridable by `--root`) and determination of
   `profileDir`, `rootKind` being fixed at evaluation time as a passthru of `mkManifest`
   while the actual resolution of the git toplevel / `$HOME` happens at engine runtime;
-  then (2) driving the engine: (a) acquire the flock keyed on the determined `profileDir`,
-  an explicit apply / rollback blocking (LOCK_EX, waiting until acquisition and displaying
-  that it waits for another apply) while the shellHook path (`--no-wait`) uses a try-lock
-  (LOCK_NB) that skips when the lock is held and prints a one-line notice on stderr
-  without blocking shell entry, concurrent execution against the same `profileDir` being
-  the user's responsibility and last-writer-wins on collision; (b) inside the lock, run
+  then (2) driving the engine: (a) acquire the flock keyed on the determined `profileDir`
+  (whether that acquisition blocks or is a try-lock is stated by the `--no-wait`
+  specification and is not restated here), concurrent execution against the same
+  `profileDir` being the user's responsibility and last-writer-wins on collision;
+  (b) inside the lock, run
   `nix build` with `--out-link <profileDir>/.pending` and obtain the link-farm store path
   via `os.Readlink`, the out-link establishing an indirect gcroot that closes the GC
   window between placement and `--set`, and the build being inside the lock so that
@@ -54,10 +53,9 @@ specification_ja: |
   eval → root 解決（project = git rev-parse / home = `$HOME` / system = `/` / 固定パス、
   `--root` 上書き）→ profileDir 確定。rootKind は mkManifest の passthru として eval 時に
   確定し、git toplevel / `$HOME` の実体解決は engine 実行時に行う。(2) engine を駆動する:
-  (a) 確定 profileDir をキーに flock を取得する。明示 apply / rollback は blocking
-  （LOCK_EX・取得まで待ち「他の apply 完了待ち」を表示）、shellHook 経路（`--no-wait`）は
-  try-lock（LOCK_NB）で保持中ならスキップし stderr に 1 行通知する（シェル入室は
-  ブロックしない）。同一 profileDir への同時実行はユーザー責任で衝突時は後勝ちとする。
+  (a) 確定 profileDir をキーに flock を取得する（この取得が blocking か try-lock かは
+  `--no-wait` の仕様の担当で、本 item では規定しない）。同一 profileDir への同時実行は
+  ユーザー責任で衝突時は後勝ちとする。
   (b) ロック内で `nix build` を `--out-link <profileDir>/.pending` 付きで実行し、
   `os.Readlink` で link-farm store path を得る。out-link が indirect gcroot を張り、
   配置〜`--set` の GC 窓を塞ぐ。build がロック内なので out-link 競合は構造的に起きない。
@@ -130,6 +128,8 @@ rootKind は link-farm 内 `manifest.json` から engine が読む。2a（flock 
 >   「配置動作仕様」節の担当（#209-PR4）
 > - root 解決の各モードの規範 → 「root の解決」節の担当（#209-PR5）
 > - `apply --manifest` そのものの契約（引数・併用エラー）→ REQ-dec58330
+> - 2a の flock を blocking で取るか try-lock で取るか（`LOCK_EX` / `LOCK_NB`・
+>   skip 時の stderr 通知）→ REQ-1c1526b1。本 item はフロー上の位置（2a）だけを規定する
 
 ## 出典
 
