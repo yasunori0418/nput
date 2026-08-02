@@ -16,9 +16,10 @@ nput が「何を満たすべきか」の全体像と、個別仕様（requireme
 >
 > **item の `## 出典` は本文書の現行章立てを指さない。** 出典が記録するのは分割時点
 > （epic #203）の原文の記述箇所であり、節見出しに限らず表の行・blockquote・箇条書きの項も
-> 指す。縮退で章立てを再編したため、出典の節名の多くは現行の見出しと一致しない。原文を
-> 確かめるときは `git show <分割前の ref>:docs/spec.md` を読む。item から現行仕様へ辿るのは
-> 出典ではなく relation（`sara query`）の役割。
+> 指す。縮退で章立てを再編したため、出典の節名の多くは現行の見出しと一致しない。原文は
+> 縮退コミットの親（`git log --oneline -- docs/spec.md` で `docs(spec): spec.md を概要 + item
+> リンク集へ縮退する` を探し、その `^`）を `git show <ref>^:docs/spec.md` で読む。item から
+> 現行仕様へ辿るのは出典ではなく relation（`sara query`）の役割。
 
 ---
 
@@ -285,7 +286,11 @@ root は評価時にパスへ展開せず、マーカーが運ぶ kind をエン
 
 ## 関連文書
 
+- `README.md` / `README.ja.md` — 3 層構造の最上段（導入と使い方）
 - `docs/concept.md` — コンセプト（solution / use_case への索引）
 - `docs/design.md` — 設計（design item への索引）
 - `docs/adr/` — 意思決定の記録。requirement / design を `justifies` で裏づける
 - `docs/model.yaml` — sara の型定義（item の型・関係・ID 形式）
+
+設定の書き方の実例は本文書では扱わない。`templates/`（`nput init` が展開する実物）と
+README のコード例を参照する。
