@@ -12,6 +12,14 @@ specification: |
   `manifest.json` and assemble the symlink farm. The lib layer SHALL be unparameterized:
   each function SHALL require `lib` (`normalizeManifest`) or `pkgs` (`mkManifest`) as an
   explicit argument at call time.
+specification_ja: |
+  入力検査の実装は 2 段に分かれなければならない。`normalizeManifest { lib, root, entries }
+  -> attrset` は `evalModules` 検査・デフォルト適用（`subpath` → `"."` / `method` →
+  `"symlink"` / `target` → 属性キー）・内部 marker タグ（`_nputMarker`）から clean enum
+  （`srcKind` / `rootKind`）への変換を行う純データ関数とする。`mkManifest = args:
+  derivation` は `normalizeManifest` の出力を `manifest.json` に書き symlink farm を組む。
+  lib 層は unparameterized とし、各関数が呼び出し時に `lib`（`normalizeManifest`）または
+  `pkgs`（`mkManifest`）を明示引数として要求する。
 ---
 # REQ-b232ec98: normalizeManifest が検査・デフォルト適用・marker 変換を行い mkManifest が derivation を組む
 

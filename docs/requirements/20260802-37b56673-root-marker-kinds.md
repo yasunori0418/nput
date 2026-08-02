@@ -8,6 +8,12 @@ specification: |
   at runtime, overridable with `--root`), `nput.lib.homeRoot` SHALL select home mode
   (`$HOME` at runtime), `nput.lib.systemRoot` SHALL select system mode (`/`, future), and
   an absolute path string SHALL select a fixed root determined at evaluation time.
+specification_ja: |
+  `root` の型は `string`（評価時固定）と marker（実行時解決）の union でなければ
+  ならない。`nput.lib.projectRoot` は project mode（実行時に git toplevel・`--root` で
+  上書き可）、`nput.lib.homeRoot` は home mode（実行時の `$HOME`）、
+  `nput.lib.systemRoot` は system mode（`/`・将来）、絶対パス文字列は固定 root
+  （評価時に確定）へそれぞれ対応する。
 ---
 # REQ-37b56673: root は 3 マーカーと絶対パス文字列の union を取る
 

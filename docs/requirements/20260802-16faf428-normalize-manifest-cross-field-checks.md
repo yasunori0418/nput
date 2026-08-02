@@ -6,6 +6,10 @@ specification: |
   `normalizeManifest` SHALL reject, via `lib.throwIf`, the combinations that a
   single-field type check cannot express: `method = "copy"` together with an out-of-store
   marker, and `root = systemRoot` (not yet implemented).
+specification_ja: |
+  `normalizeManifest` は単一フィールドの型検査では表現できない組み合わせを
+  `lib.throwIf` で拒否しなければならない。対象は `method = "copy"` かつ out-of-store
+  marker の組み合わせと、`root = systemRoot`（未実装）である。
 ---
 # REQ-16faf428: 未実装の組み合わせをクロスフィールドチェックで評価時に拒否する
 

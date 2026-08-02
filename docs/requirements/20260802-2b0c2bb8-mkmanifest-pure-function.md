@@ -9,6 +9,12 @@ specification: |
   profile swap and filesystem placement SHALL be the engine's runtime responsibility.
   The entrypoint SHALL expose it at `nput.<name>`, which the nput CLI builds with
   `nix build` and hands to the engine.
+specification_ja: |
+  `lib.mkManifest` は配置データ（`manifest.json` + symlink farm を含む derivation）を
+  生成する純粋関数でなければならない。シグネチャは
+  `mkManifest :: { pkgs, entries, root } -> derivation`。副作用（profile swap・FS 配置）を
+  持ってはならず、それらは engine の実行時責務とする。entrypoint が `nput.<name>` に
+  公開し、nput CLI が `nix build` してエンジンへ渡す。
 ---
 # REQ-2b0c2bb8: mkManifest は配置データを生成する純粋関数である
 

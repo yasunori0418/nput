@@ -7,6 +7,10 @@ specification: |
   `anchorName` / `resolveEntry` / `farmEntries`) as a test seam for nix-unit and namaka.
   It SHALL NOT be a stable API and MUST NOT be covered by backward-compatibility
   guarantees.
+specification_ja: |
+  `lib.__internal` は private helper（`escapesBase` / `pathChecks` / `anchorName` /
+  `resolveEntry` / `farmEntries`）を nix-unit / namaka のテスト seam として公開する
+  内部 API でなければならない。これは安定 API ではなく、後方互換の保証対象に含めない。
 issues:
   - "#71"
 ---

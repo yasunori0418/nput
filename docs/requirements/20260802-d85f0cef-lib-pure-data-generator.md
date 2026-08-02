@@ -7,6 +7,10 @@ specification: |
   depends only on nixpkgs.lib. It MUST NOT carry placement logic (filesystem operations,
   profile swap, stale removal), and MUST NOT introduce a dependency on home-manager,
   NixOS or nix-darwin.
+specification_ja: |
+  `lib`（`mkManifest` / マーカー群）は nixpkgs.lib のみに依存する純データ生成器で
+  なければならない。配置ロジック（FS 操作・profile swap・stale 除去）を持ってはならず、
+  home-manager / NixOS / nix-darwin への依存を持ち込んではならない。
 ---
 # REQ-d85f0cef: lib は nixpkgs.lib のみに依存する純データ生成器である
 

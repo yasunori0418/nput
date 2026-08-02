@@ -12,6 +12,15 @@ specification: |
   input, invoke only `nix` (profile) and `git` (toplevel) as external commands, and use
   native filesystem operations for place / replace / remove, conservative stale removal
   and `nix-env --set`.
+specification_ja: |
+  nput は nput CLI（`packages.nput`・PATH 常駐の一次 UX）と engine（Go ライブラリ）の
+  2 層で構成しなければならない。CLI は entrypoint（`flake.nix` / `shell.nix` /
+  `default.nix`）を発見し（CWD 既定・`-f` で上書き）、内部で `nix build` / `nix eval` を
+  回して named manifest（`manifest.json` + symlink farm）の store path を得て、engine を
+  import して配置・stale 除去・profile swap を駆動する。engine は `manifest.json` を
+  入力に取り、`nix`（profile）と `git`（toplevel）のみを外部コマンドとして叩き、
+  ネイティブ FS 操作で place / replace / remove、保守的 stale 除去、`nix-env --set` を
+  行う。
 ---
 # REQ-f4d7d4ab: nput は CLI とエンジンの 2 層で構成する
 

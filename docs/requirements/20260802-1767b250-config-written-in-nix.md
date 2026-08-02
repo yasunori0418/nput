@@ -7,6 +7,10 @@ specification: |
   discovers SHALL be the entrypoint *file* (`flake.nix` / `shell.nix` / `default.nix`),
   not the configuration content. The CLI MUST NOT parse configuration in a format of
   its own.
+specification_ja: |
+  config は Nix で記述し、`nix build` によって評価されなければならない。CLI が発見する
+  のは entrypoint *ファイル*（`flake.nix` / `shell.nix` / `default.nix`）であって
+  config の内容ではない。CLI は config を独自形式でパースしてはならない。
 ---
 # REQ-1767b250: config は Nix で書き nix build で評価する
 

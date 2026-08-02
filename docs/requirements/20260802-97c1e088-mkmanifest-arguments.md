@@ -7,6 +7,10 @@ specification: |
   for derivation building such as `runCommandLocal` and to obtain `pkgs.lib`), `entries`
   (an attrset of placement definitions whose attribute keys are target paths), and `root`
   (`string | marker`, REQUIRED, the base of the placement destination).
+specification_ja: |
+  `lib.mkManifest` は引数として `pkgs`（attrset・必須。derivation ビルドと `pkgs.lib` の
+  取得に使う）、`entries`（配置定義の attrset。属性キーが target パス）、`root`
+  （`string | marker`・必須。配置先の基準）を取らなければならない。
 ---
 # REQ-97c1e088: mkManifest の引数は pkgs / entries / root の 3 つとする
 

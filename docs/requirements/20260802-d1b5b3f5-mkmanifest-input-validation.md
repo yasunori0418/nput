@@ -10,6 +10,13 @@ specification: |
   well. The entry type definition (the submodule in `lib/types.nix`) SHALL be shared with
   `attrsOf (submodule …)` in `modules/common.nix`, and the resulting double validation on
   the module path is acceptable because it is pure and idempotent.
+specification_ja: |
+  `lib.mkManifest` は内部で `lib.evalModules` を回して `entries` / `root` を検査・
+  正規化しなければならない。型をモジュールオプションに書くだけでは検査がモジュール経路
+  （`nput.entries`）でしか効かないため、CLI / entrypoint 経路（`mkManifest` 直呼び）でも
+  検査を効かせる目的で `mkManifest` 自身が検査を持つ。entry の型定義（`lib/types.nix` の
+  submodule）は `modules/common.nix` の `attrsOf (submodule …)` と共有し、モジュール経路
+  での二重検査（純粋・冪等）を許容する。
 ---
 # REQ-d1b5b3f5: mkManifest 自身が evalModules で入力を検査する単一ゲートになる
 
