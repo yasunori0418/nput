@@ -1,12 +1,23 @@
 # ADR 改訂注記の運用
 
-このリポジトリの ADR は **supersede しない**。後続 ADR が既存 ADR の決定を反転・精緻化・拡張したときも、
-旧 ADR のステータスは「採用」のまま残し、旧 ADR 本文に blockquote 注記（back-reference）を追記して読者を
-後続 ADR へ誘導する。ADR-0008 が起点。
+このリポジトリの ADR は **当面 supersede を使わない**（恒久的な排除ではない）。後続 ADR が既存 ADR の決定を
+反転・精緻化・拡張したときも、旧 ADR のステータスは「採用」のまま残し、旧 ADR 本文に blockquote 注記
+（back-reference）を追記して読者を後続 ADR へ誘導する。ADR-0008 が起点。
+
+supersede を使わないのは、現状の改訂が全て**節単位の部分改訂**で、文書丸ごとの失効を意味する `supersedes` で
+表現できる実例が無いため（改訂実態の調査 2026-08-01: 最も近い ADR-0033 ← ADR-0043 でも、タイトルになった決定
+自体は存続している）。実例の無い関係を先に定義すると、部分改訂に `supersedes` を誤用して「旧 ADR は読まなくて
+よい」と誤読させる。**全節が実質失効した ADR が現れた時点で、`supersedes` +「廃止」ステータスの追加を再検討する**
+（→ ADR-0048、Issue #203）。
 
 ADR-0021 以降、後続 ADR が自分のヘッダの「改訂対象」欄で旧 ADR を名指ししているのに、旧 ADR 側に対応する
-注記が無いケースが積み重なった（ADR-0023/ADR-0024/ADR-0025/ADR-0028/ADR-0031 と対象旧 ADR の間）。旧 ADR
-だけを読むと当時の（後に上書きされた）内容を最新仕様と誤認し、誤実装につながる。このドキュメントはその再発防止。
+注記が無いケースが積み重なった（当時の調査で ADR-0023/ADR-0024/ADR-0025/ADR-0028/ADR-0031 と対象旧 ADR の
+間を挙げた）。旧 ADR だけを読むと当時の（後に上書きされた）内容を最新仕様と誤認し、誤実装につながる。
+このドキュメントはその再発防止。
+
+2026-08-02 に frontmatter の `revises` を全件へ張った際、`revises` の全ペアを機械突合した。上の 5 本は
+いずれも解消済みで、残っていた漏れは ADR-0020 ← ADR-0021 の 1 件だった（同じ変更の中で追記済み）。
+以降は下の「セルフチェック」の手順で検出する。
 
 ## いつ書くか
 
@@ -18,7 +29,8 @@ ADR-0021 以降、後続 ADR が自分のヘッダの「改訂対象」欄で旧
 
 ## 書式
 
-対象 ADR のメタデータ行（ステータス／日付／関連／改訂対象／起点）と `## 背景` の間に、時系列順で blockquote を積む。
+対象 ADR の本文メタデータ行（ステータス／日付／関連／改訂対象／起点）と `## 背景` の間に、時系列順で
+blockquote を積む（frontmatter はさらにその上・下の「frontmatter」節を参照）。
 
 ```markdown
 > **YYYY-MM-DD 改訂注記（ADR-XXXX）**: <本 ADR の何 (§節番号があれば明記) が対象か>。
@@ -40,12 +52,61 @@ ADR-0021 以降、後続 ADR が自分のヘッダの「改訂対象」欄で旧
 ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0010, ADR-0013, ADR-0014 のヘッダ直後の
 blockquote 群を参照。
 
-## セルフチェック
+## frontmatter
 
-新しい ADR を書き終えたら、その ADR 番号が対象とした旧 ADR 全てに現れているか確認する。
+各 ADR は本文のメタデータ行に加えて、機械検証用の YAML frontmatter を持つ（→ ADR-0048、Issue #203）。
+本文のメタデータ行が人の読む一次情報で、frontmatter はその二重化。**両方を同じ変更の中で更新する**。
 
-```bash
-grep -rl "ADR-<新ADR番号>" docs/adr/*.md
+```yaml
+---
+id: "ADR-0049"
+type: adr
+name: "<タイトル行から `# ADR-0049: ` を除いた部分>"
+status: 採用            # 提案 / 採用
+status_note: "…"        # ステータス行のカッコ書きがあるときだけ
+issues:                 # 「関連:」「起点 Issue:」の GitHub Issue 番号
+  - "#123"
+origin: "…"             # 「起点:」の内容
+revises:                # 「改訂対象:」の ADR
+  - "ADR-0020"
+references:             # 「関連:」の ADR
+  - "ADR-0013"
+---
 ```
 
-ヘッダの `改訂対象:` に挙げた旧 ADR がこの結果に出てこなければ、注記漏れ。同じ変更の中で追記してから完了とする。
+対応関係と分類の規則:
+
+- `- 日付:` は frontmatter に持たせない（機械検証に使わないため本文のみ）。
+- `- 関連:` のうち **ADR 参照**は `references`、**GitHub Issue 参照**は `issues`、**`docs/*.md` 参照**は
+  本文に残す（requirement / design の分割後に `justifies` へ置換する）。
+- 同じ ADR が `関連:` と `改訂対象:` の両方に挙がっているときは **`revises` を優先し `references` からは除く**
+  （同一ペアに二重辺を張らない）。
+- `references` は**後発 → 先行の片方向**に張る。peer relation を双方向に張ると `sara check` が cycle として
+  error にするため。先行 ADR 側からは `sara query` の `Is referenced by` で逆引きできる。
+- `justifies` は任意。requirement / design / infrastructure が揃うまでは空でよい。
+- ID は連番を維持する（`ADR-0049`）。ファイル名も `NNNN-<slug>.md` のまま。他の型は UUIDv4 二層 ID を使う
+  （採番は devShell の `sara-id`）が、ADR だけは既存 48 本の相互参照・本ドキュメントの運用・Issue 言及を
+  壊さないため連番のまま。
+
+## セルフチェック
+
+新しい ADR を書き終えたら、`sara check` で参照の実在と重複 ID を機械検証する。
+
+```bash
+nix develop '.?dir=dev#sara' -c sara check
+```
+
+`Broken reference`（存在しない ADR への参照）と `Duplicate ID` が 0 件で exit 0 になること。
+`Orphan item` の warning は ADR 全件に出るが、ADR が仕様ツリーから分離した独立型で upstream parent を
+持たない設計どおりなので無視してよい。CI の `sara` job も同じコマンドを走らせる。
+
+**注記漏れの確認は `sara check` では代替できない**。sara は frontmatter しか見ず、旧 ADR 側の blockquote
+注記が本文に書かれているかを検証しないため。`revises` に挙げた旧 ADR それぞれについて、逆引きで関係を
+確かめたうえで**本文に注記があるかを目で見る**。
+
+```bash
+nix develop '.?dir=dev#sara' -c sara query ADR-<旧ADR番号>
+```
+
+`Is revised by` に新しい ADR が出ていれば frontmatter の対は張れている。そのうえで旧 ADR 本文に対応する
+blockquote 注記が無ければ注記漏れ。同じ変更の中で追記してから完了とする。
