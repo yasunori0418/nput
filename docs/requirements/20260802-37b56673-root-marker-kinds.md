@@ -25,8 +25,11 @@ specification_ja: |
 |---|---|---|
 | `nput.lib.projectRoot` | project mode | 実行時に git toplevel（`--root` で上書き可）|
 | `nput.lib.homeRoot` | home mode | 実行時の `$HOME`（standalone / HM 共通）|
-| `nput.lib.systemRoot` | system mode | 実行時の `/` |
+| `nput.lib.systemRoot` | system mode | `/`（distro 構想・将来）|
 | 絶対パス文字列 | 固定 root | 評価時に確定する絶対パス（任意固定 root の seam）|
+
+上の表は原文の写しで、規範は frontmatter が正。`systemRoot` の「distro 構想・将来」の
+限定は規範に含めない（理由は下の注記）。
 
 home mode と project mode は世代の扱いが異なる（→ `docs/spec.md`「世代管理仕様」）。
 この差異そのものは「世代管理仕様」節の要求であり、当該節を分割する後続 PR（#209-PR4）で
@@ -41,4 +44,11 @@ item 化する。本 item は root の値と対応するモードまでを規定
 > 実装を決定済み**（`rootKind = "system"` を正規値として通し、engine は root = `/` へ
 > 解決する）。`docs/spec.md` 側がこの改訂に追従できていないため、分割にあたって
 > 「将来」の限定を規範文へ持ち込まない判断をした（REQ-16faf428 で同じ ADR-0036 由来の
-> 未追従を扱ったのと同じ扱い）。`docs/spec.md` の追従は本 item の担当範囲外。
+> 未追従を扱ったのと同じ扱い）。
+>
+> **marker の関数適用形（`subdir`）を含めない理由**: **ADR-0040** は root マーカーを
+> `homeRoot { subdir = ".config"; }` の関数適用形へ拡張することを決定済みだが、
+> `docs/spec.md` の当該表はこれにも未追従。本 item は原文の範囲（root の値と対応する
+> モード）に留め、適用形は担当範囲外とする（REQ-3f541d39 に同じ注記）。
+>
+> いずれも `docs/spec.md` の追従は本 item の担当範囲外。

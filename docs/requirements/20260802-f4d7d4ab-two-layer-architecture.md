@@ -7,19 +7,19 @@ specification: |
   installed on PATH) and the engine (a Go library). The CLI SHALL discover an entrypoint,
   run `nix build` / `nix eval` internally to obtain the store path of the named manifest,
   and import the engine to drive placement, stale removal and profile swap. The engine
-  SHALL take `manifest.json` as its input and SHALL drive placement through native
-  filesystem operations. The boundary between the two layers SHALL be `manifest.json`
-  alone, so that the engine does not depend directly on Nix evaluation results. Which
-  files are discovered as entrypoints is stated by the CLI specification and is NOT
+  SHALL take `manifest.json` as its input. The boundary between the two layers SHALL be
+  `manifest.json` alone, so that the engine does not depend directly on Nix evaluation
+  results. Which files are discovered as entrypoints is stated by the CLI specification,
+  and how the engine carries out placement is stated by REQ-6c4e174a; neither is
   restated here.
 specification_ja: |
   nput は nput CLI（`packages.nput`・PATH 常駐の一次 UX）と engine（Go ライブラリ）の
   2 層で構成しなければならない。CLI は entrypoint を発見し、内部で `nix build` /
   `nix eval` を回して named manifest の store path を得て、engine を import して配置・
-  stale 除去・profile swap を駆動する。engine は `manifest.json` を入力に取り、
-  ネイティブ FS 操作で配置を行う。2 層の境界は `manifest.json` だけとし、engine が Nix の
-  評価結果へ直接依存しないようにしなければならない。どのファイルを entrypoint として
-  発見するかは CLI 仕様の担当で、本 item では規定しない。
+  stale 除去・profile swap を駆動する。engine は `manifest.json` を入力に取る。
+  2 層の境界は `manifest.json` だけとし、engine が Nix の評価結果へ直接依存しないように
+  しなければならない。どのファイルを entrypoint として発見するかは CLI 仕様の担当、
+  engine がどう配置を行うかは REQ-6c4e174a の担当で、いずれも本 item では規定しない。
 ---
 # REQ-f4d7d4ab: nput は CLI とエンジンの 2 層で構成する
 
