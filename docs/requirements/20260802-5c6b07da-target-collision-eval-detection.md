@@ -27,6 +27,13 @@ specification_ja: |
 cross-config（別 profile・別 manifest）の同一 target 衝突は eval では検出不可で、
 これは engine 実行時の後勝ち + foreign symlink warning になる。両者は別経路。
 
+> **HM モジュールの `configs` は上の cross-config の例外**（→ ADR-0035 §4）。単一の HM config 内の
+> `nput.configs.<A>` と `<B>` は全 config が同一のモジュール eval に載るため正規化後 target の
+> 衝突を静的に検出でき、ADR-0035 §4 はこれを eval 時 assertion で停止すると決定している。
+> 本 item の「cross-config は eval では検出不可」は別 entrypoint・別マシン・別ツールの場合を
+> 指し、この例外を否定しない。`docs/spec.md` が ADR-0035 に未追従で対応記述を持たないため、
+> 例外の item 化は原文の追従（epic #203 の段階 7）とあわせて別途扱う（→ REQ-c6891aeb の注記）。
+
 ## 出典
 
 `docs/spec.md`「lib API」→「入力検査（`evalModules` + `normalizeManifest`）」。

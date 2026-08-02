@@ -18,15 +18,16 @@ specification_ja: |
 
 ```bash
 --root <path>       # 解決 root を明示上書き（全モード共通。project は git toplevel を、home は $HOME を使わない）
-                    # 明示時は全モードで profileDir を上書き後 root の <roothash> でキー
 ```
 
-> **上は原文の写しで、規範は frontmatter が正**。写しの 2 行目（明示時の profileDir キーイング）は
-> **REQ-d5a2e289 の担当**で、本 item の規範には含めない。profileDir のキーは root の種別ごとに
-> 定まる一つの体系（home 直キー / fixed・project・`--root` は roothash）であり、`--root` の行だけを
-> 切り出して二重に規範化すると ADR-0023 §3 の改訂時に片方だけ直る事故が起きるため、REQ-d5a2e289 へ
-> 一本化した。profileDir のレイアウト（`<roothash>/<name>` の中に何を並べるか）は REQ-2aa3abbc、
-> `<roothash>`（解決後の絶対 root パスの sha256 を短縮した hex）の定義は REQ-46fccb80 の担当。
+> **上は原文の写しで、規範は frontmatter が正**。原文のフラグ表は上のコメントに続けて
+> 「明示時は全モードで profileDir を上書き後 root の `<roothash>` でキー」を併記するが、これは
+> **REQ-d5a2e289 の担当**なので写しから落とした。profileDir のキーは root の種別ごとに定まる
+> 一つの体系（home 直キー / fixed・project・`--root` は roothash）であり、`--root` の行だけを
+> 切り出して二重に規範化すると ADR-0023 §3 の改訂時に片方だけ直る事故が起きるため、
+> REQ-d5a2e289 へ一本化した。profileDir のレイアウト（`<roothash>/<name>` の中に何を並べるか）は
+> REQ-2aa3abbc、`<roothash>`（解決後の絶対 root パスの sha256 を短縮した hex）の定義は
+> REQ-46fccb80 の担当。
 
 ## 出典
 
