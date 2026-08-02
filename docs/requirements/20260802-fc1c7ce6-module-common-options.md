@@ -1,14 +1,14 @@
 ---
 id: "REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10"
 type: requirement
-name: "全モジュールは共通オプションの同一集合を公開し、root はモジュールが pin する"
+name: "全モジュールは共通オプションの同一集合を公開し、entries は configs 経由・root はモジュールが pin する"
 specification: |
   Every module (home-manager / NixOS / nix-darwin) SHALL expose the same set of common
   options: `nput.enable :: bool` defaulting to false, `nput.configs :: attrsOf (submodule
-  { entries :: attrsOf entry; })` with `entries` defaulting to `{}`,
-  `nput.backup.enable :: bool` defaulting to false, and `nput.backup.suffix :: str`
-  defaulting to `"nput-backup"`. The bare `nput.entries` SHALL be kept as a sugar renaming
-  onto `configs.default.entries`, non-breaking and deprecated. These SHALL be defined
+  { entries :: attrsOf entry; })` defaulting to `{}` and with `entries` likewise
+  defaulting to `{}`, `nput.backup.enable :: bool` defaulting to false, and
+  `nput.backup.suffix :: str` defaulting to `"nput-backup"`. The bare `nput.entries` SHALL
+  be kept as a sugar renaming onto `configs.default.entries`, non-breaking and deprecated. These SHALL be defined
   jointly for every module, so that the set does not diverge per module. What the `<name>`
   dimension of `configs` means for the granularity of profiles is stated by REQ-c6891aeb
   and is not restated here. A module SHALL pin the root by its own nature — home-manager
@@ -18,8 +18,8 @@ specification: |
 specification_ja: |
   全モジュール（home-manager / NixOS / nix-darwin）は共通オプションとして同一の集合を
   公開しなければならない: `nput.enable :: bool`（デフォルト false）・
-  `nput.configs :: attrsOf (submodule { entries :: attrsOf entry; })`（`entries` の
-  デフォルトは `{}`）・`nput.backup.enable :: bool`（デフォルト false）・
+  `nput.configs :: attrsOf (submodule { entries :: attrsOf entry; })`（デフォルト `{}`・
+  `entries` のデフォルトも `{}`）・`nput.backup.enable :: bool`（デフォルト false）・
   `nput.backup.suffix :: str`（デフォルト `"nput-backup"`）。素の `nput.entries` は
   `configs.default.entries` への rename 糖衣として非破壊に残し、deprecated とする。
   これらは全モジュール共通に定義し、モジュールごとに集合が分岐しないようにしなければ
@@ -30,13 +30,15 @@ specification_ja: |
   である。これは `root` を明示必須とする `mkManifest` / CLI entrypoint の層
   （REQ-4ec3accc）との差分である。
 ---
-# REQ-fc1c7ce6: 全モジュールは共通オプションの同一集合を公開し、root はモジュールが pin する
+# REQ-fc1c7ce6: 全モジュールは共通オプションの同一集合を公開し、entries は configs 経由・root はモジュールが pin する
 
 ## 仕様
 
 ```
 nput.enable  :: bool          # デフォルト: false
 nput.entries :: attrsOf entry # デフォルト: {}（属性キー = target・→ ADR-0014）
+                              # ← ADR-0035 により nput.configs.<name>.entries の
+                              #   deprecated 糖衣へ降格済み（規範は frontmatter・下の注記を参照）
 nput.backup.enable :: bool    # デフォルト: false（→ ADR-0045）
 nput.backup.suffix :: str     # デフォルト: "nput-backup"（→ ADR-0045）
 ```
