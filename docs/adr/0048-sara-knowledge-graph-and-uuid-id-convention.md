@@ -8,6 +8,8 @@ issues:
   - "#206"
   - "#207"
 origin: "epic #203 の grilling セッション（2026-07-31・2026-08-01）で確定"
+justifies:
+  - "INF-659b139d-0cf8-4c65-b30d-93c5ee2dfc71"
 references:
   - "ADR-0030"
   - "ADR-0037"
