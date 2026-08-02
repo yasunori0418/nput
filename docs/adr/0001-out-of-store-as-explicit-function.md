@@ -3,6 +3,8 @@ id: "ADR-0001"
 type: adr
 name: "out-of-store symlink を明示関数に降格し store link に統一する"
 status: 採用
+justifies:
+  - "REQ-eb363122-385a-499c-a074-c95efb949d07"
 ---
 # ADR-0001: out-of-store symlink を明示関数に降格し store link に統一する
 

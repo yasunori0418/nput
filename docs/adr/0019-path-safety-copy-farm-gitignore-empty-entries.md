@@ -4,6 +4,8 @@ type: adr
 name: "パス安全性・copy の farm/gitignore 扱い・空 entries の挙動を確定する"
 status: 採用
 origin: "ADR-0018 後の横断検証で surfaced した「3 巡で詰め切れていなかった」残 4 点"
+justifies:
+  - "REQ-6911eab6-12b4-457c-9db4-d7430a9e9b3f"
 revises:
   - "ADR-0005"
   - "ADR-0006"
