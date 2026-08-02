@@ -21,7 +21,7 @@ satisfies:
 | **entrypoint 駆動** | standalone CLI / devShell | ユーザーが `nput.<name>` を entrypoint に公開し、CLI が発見 → `nix eval`（rootKind 先取り）→ `nix build` |
 | **ビルド済み manifest** | home-manager（将来の NixOS / nix-darwin）| モジュール評価時に `mkManifest` でビルドした link-farm を、activation から `nput apply --manifest <link-farm>` へ渡す |
 
-層ごとの割り当てと、engine の起動を担う配線は次の通り。
+層ごとのクラス割り当てと起動方法は次の通り。
 
 | 層 | クラス | 起動方法 |
 |---|---|---|
