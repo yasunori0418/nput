@@ -51,11 +51,10 @@ specification_ja: |
 > conflict になるか」は、それぞれ REQ-053cfed2（foreign 実体。実 dir が例外にならない
 > 条件は REQ-7cee95dd）・REQ-c9ab91c1（祖先 symlink と自己矛盾）・REQ-d2277c7a（copy の
 > 構造不一致）・REQ-5dd5a4e9（backup 退避先の既存）の担当。終了コードの値そのものは
-> REQ-2c5a10d8、`--dryrun` が読み取り専用で
-> conflict を返すことは REQ-02a33511、`--json` エンベロープ側の形は REQ-a5053191 /
-> REQ-2ea19863、報告先が stderr であることの出力規律は REQ-fea038de / REQ-8ef34101 の
-> 担当。この「全件列挙してから 1 本の集約エラー」の形を巻き戻し失敗の報告にも用いる
-> ことは REQ-9fca28c9 の担当。
+> REQ-2c5a10d8、`--dryrun` が読み取り専用で conflict を返すことは REQ-02a33511、
+> `--json` エンベロープ側の形は REQ-a5053191 / REQ-2ea19863、報告先が stderr である
+> ことの出力規律は REQ-fea038de / REQ-8ef34101 の担当。この「全件列挙してから 1 本の
+> 集約エラー」の形を巻き戻し失敗の報告にも用いることは REQ-9fca28c9 の担当。
 
 ## 出典
 

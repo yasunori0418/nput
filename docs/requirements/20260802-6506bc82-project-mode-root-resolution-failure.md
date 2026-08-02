@@ -32,6 +32,8 @@ specification_ja: |
 
 `docs/spec.md`「エラー仕様」節の表の project mode の 2 行。
 
-決定の実体は ADR-0005「project mode（プロジェクト相対配置）と ephemeral 配置原則」で、
-project root を git toplevel に置くことを定めている。この 2 行が挙げる解決失敗時の停止
-そのものに対応する決定を持つ ADR は無く、`docs/spec.md` が一次記述にあたる。
+この 2 行が挙げる解決失敗時の停止そのものに対応する決定を持つ ADR は無く、
+`docs/spec.md` が一次記述にあたる。前提となる「project root を git toplevel に置く」ことは
+ADR-0005「project mode（プロジェクト相対配置）と ephemeral 配置原則」が定めるが、同 ADR は
+解決に失敗したときの扱いを決めていないため、側面の根拠として `justifies` は張らない
+（前提そのものの帰属は REQ-9cb26ffd が担当する）。

@@ -40,7 +40,8 @@ specification_ja: |
 
 ## 出典
 
-`docs/spec.md`「エラー仕様」節の表のうち、対象を確定できないことによる CLI 停止の 3 行。
+`docs/spec.md`「エラー仕様」節の表のうち、要求された操作が成立しないことによる CLI 停止の
+3 行（`rollback` で前世代なし・`nput.<name>` が entrypoint に不在・entrypoint が発見できない）。
 
 決定の実体は ADR-0007「CLI を一次 UX とし entrypoint を発見する」で、CLI が entrypoint と
 named manifest を解決する責務を負うことを定めている。
