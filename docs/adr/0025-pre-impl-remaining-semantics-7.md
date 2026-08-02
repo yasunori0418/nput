@@ -1,3 +1,24 @@
+---
+id: "ADR-0025"
+type: adr
+name: "実装前残セマンティクス第7巡（nix experimental-features 前提・HM profile 制約明記と seam・nput init 固定 ref・profile 専用ディレクトリレイアウト・reset 非TTY・Go fmt/lint・main 直コミット撤廃トリガ）"
+status: 採用
+origin: "ADR-0024 までの第6巡で設計は実装着手の閾値に達したが、`/grill-me` による横断検査で骨格に直結する未決・揺れ・考慮漏れが7点残っていた（実装前残セマンティクス確定の第7巡）"
+revises:
+  - "ADR-0022"
+  - "ADR-0023"
+  - "ADR-0024"
+references:
+  - "ADR-0002"
+  - "ADR-0005"
+  - "ADR-0007"
+  - "ADR-0011"
+  - "ADR-0012"
+  - "ADR-0013"
+  - "ADR-0016"
+  - "ADR-0020"
+  - "ADR-0021"
+---
 # ADR-0025: 実装前残セマンティクス第7巡（nix experimental-features 前提・HM profile 制約明記と seam・nput init 固定 ref・profile 専用ディレクトリレイアウト・reset 非TTY・Go fmt/lint・main 直コミット撤廃トリガ）
 
 - ステータス: 採用

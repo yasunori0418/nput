@@ -1,3 +1,15 @@
+---
+id: "ADR-0037"
+type: adr
+name: "ドキュメントサイトは Astro Starlight + 同一リポジトリ + Cloudflare Pages（ビルド時生成・英語ルート i18n）で構築する"
+status: 採用
+issues:
+  - "#57"
+origin: "起点 Issue: #57"
+references:
+  - "ADR-0027"
+  - "ADR-0028"
+---
 # ADR-0037: ドキュメントサイトは Astro Starlight + 同一リポジトリ + Cloudflare Pages（ビルド時生成・英語ルート i18n）で構築する
 
 - ステータス: 採用

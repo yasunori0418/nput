@@ -1,3 +1,15 @@
+---
+id: "ADR-0030"
+type: adr
+name: "テスト成功を main マージの必須条件にする（ruleset で required status check）"
+status: 採用
+status_note: "public 化を前提とする"
+origin: "参照: 現行 `.github/workflows/test.yml`, `.github/actions/setup-nix`"
+references:
+  - "ADR-0012"
+  - "ADR-0027"
+  - "ADR-0028"
+---
 # ADR-0030: テスト成功を main マージの必須条件にする（ruleset で required status check）
 
 - ステータス: 採用（public 化を前提とする）

@@ -1,3 +1,13 @@
+---
+id: "ADR-0012"
+type: adr
+name: "CI・テスト実行基盤を cryoflow 構成踏襲で確定する（flake check と E2E ジョブの分離）"
+status: 採用
+origin: "参照: `~/src/github.com/yasunori0418/cryoflow` の CI 構成（同一メンテナの実績構成）"
+references:
+  - "ADR-0006"
+  - "ADR-0011"
+---
 # ADR-0012: CI・テスト実行基盤を cryoflow 構成踏襲で確定する（flake check と E2E ジョブの分離）
 
 - ステータス: 採用

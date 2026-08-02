@@ -1,3 +1,12 @@
+---
+id: "ADR-0002"
+type: adr
+name: "世代管理を nix profile に乗せる（全モード自前 profile / rollback は standalone 中心）"
+status: 採用
+status_note: "2026-06-11 改訂: 実装機構を固定 Go エンジンに変更 → ADR-0006／2026-06-14 改訂: 世代操作 CLI を `nix-env` 系統一・rollback diff 基準を確定 → ADR-0015"
+references:
+  - "ADR-0001"
+---
 # ADR-0002: 世代管理を nix profile に乗せる（全モード自前 profile / rollback は standalone 中心）
 
 - ステータス: 採用（2026-06-11 改訂: 実装機構を固定 Go エンジンに変更 → ADR-0006／2026-06-14 改訂: 世代操作 CLI を `nix-env` 系統一・rollback diff 基準を確定 → ADR-0015）

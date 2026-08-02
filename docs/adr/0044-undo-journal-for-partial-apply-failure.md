@@ -1,3 +1,23 @@
+---
+id: "ADR-0044"
+type: adr
+name: "apply 途中失敗の完全巻き戻し — インメモリ undo ジャーナル"
+status: 採用
+issues:
+  - "#168"
+  - "#172"
+origin: "旧 epic #167 から統合された epic #172 の grilling セッション（2026-07-11・2026-07-12）で確定"
+revises:
+  - "ADR-0046"
+  - "ADR-0047"
+references:
+  - "ADR-0002"
+  - "ADR-0006"
+  - "ADR-0015"
+  - "ADR-0017"
+  - "ADR-0020"
+  - "ADR-0031"
+---
 # ADR-0044: apply 途中失敗の完全巻き戻し — インメモリ undo ジャーナル
 
 - ステータス: 採用

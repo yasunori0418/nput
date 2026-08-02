@@ -1,3 +1,22 @@
+---
+id: "ADR-0007"
+type: adr
+name: "汎用 nput CLI を一次 UX に昇格し、entrypoint 発見＋root 明示モデルへ移行する"
+status: 採用
+status_note: "2026-06-14 追記: project mode の `nput` は devShell 同梱が canonical → ADR-0015／2026-07-03 改訂: legacy entrypoint の addressing を `nix build -f` に統一 → ADR-0032"
+issues:
+  - "#2"
+  - "#3"
+  - "#4"
+origin: "起点 Issue: #2（root デフォルト）, #3（CLI 化）, #4（flake.nix 以外の entrypoint）"
+revises:
+  - "ADR-0004"
+  - "ADR-0005"
+  - "ADR-0006"
+references:
+  - "ADR-0002"
+  - "ADR-0003"
+---
 # ADR-0007: 汎用 nput CLI を一次 UX に昇格し、entrypoint 発見＋root 明示モデルへ移行する
 
 - ステータス: 採用（2026-06-14 追記: project mode の `nput` は devShell 同梱が canonical → ADR-0015／2026-07-03 改訂: legacy entrypoint の addressing を `nix build -f` に統一 → ADR-0032）

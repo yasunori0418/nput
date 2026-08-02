@@ -1,3 +1,9 @@
+---
+id: "ADR-0001"
+type: adr
+name: "out-of-store symlink を明示関数に降格し store link に統一する"
+status: 採用
+---
 # ADR-0001: out-of-store symlink を明示関数に降格し store link に統一する
 
 - ステータス: 採用

@@ -1,3 +1,16 @@
+---
+id: "ADR-0010"
+type: adr
+name: "manifest の型検査を `evalModules` + marker タグ方式で行う"
+status: 採用
+origin: "「manifest 内にセットする各 attrset（entries / root）の型検査に、NixOS モジュールシステムの `lib.types` / `mkOption` を再利用できるか」という確認"
+references:
+  - "ADR-0001"
+  - "ADR-0003"
+  - "ADR-0006"
+  - "ADR-0007"
+  - "ADR-0008"
+---
 # ADR-0010: manifest の型検査を `evalModules` + marker タグ方式で行う
 
 - ステータス: 採用

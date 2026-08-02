@@ -1,3 +1,15 @@
+---
+id: "ADR-0031"
+type: adr
+name: "成功時デフォルト沈黙化・`-v` で配置レポート opt-in・`--debug` で nix コマンド開示・`--quiet` 廃止（ADR-0023 §2 改訂）"
+status: 採用
+revises:
+  - "ADR-0023"
+references:
+  - "ADR-0007"
+  - "ADR-0024"
+  - "ADR-0026"
+---
 # ADR-0031: 成功時デフォルト沈黙化・`-v` で配置レポート opt-in・`--debug` で nix コマンド開示・`--quiet` 廃止（ADR-0023 §2 改訂）
 
 - ステータス: 採用

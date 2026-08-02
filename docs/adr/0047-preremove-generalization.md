@@ -1,3 +1,23 @@
+---
+id: "ADR-0047"
+type: adr
+name: "配置前除去（PreRemove）の一般化 — 配置を塞ぐ自己記録 stale の migration と空 dir の除去"
+status: 採用
+issues:
+  - "#175"
+  - "#172"
+origin: "epic #172 の grilling セッション（2026-07-12）で確定した D1〜D6 のうち、PreRemove 一般化本体（D2, D3, D5）"
+revises:
+  - "ADR-0015"
+  - "ADR-0046"
+references:
+  - "ADR-0002"
+  - "ADR-0003"
+  - "ADR-0006"
+  - "ADR-0017"
+  - "ADR-0020"
+  - "ADR-0031"
+---
 # ADR-0047: 配置前除去（PreRemove）の一般化 — 配置を塞ぐ自己記録 stale の migration と空 dir の除去
 
 - ステータス: 採用

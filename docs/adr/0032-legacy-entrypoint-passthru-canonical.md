@@ -1,3 +1,21 @@
+---
+id: "ADR-0032"
+type: adr
+name: "legacy entrypoint（shell.nix / default.nix）は mkShell passthru を canonical とし、addressing を `nix build -f` に統一する"
+status: 採用
+issues:
+  - "#112"
+  - "#107"
+origin: "起点 Issue: #112（親 epic #107）。ADR-0007 §5 で「採用済み」としつつ実装（`cmd/nput/nix.go`）が明示拒否していた乖離を解消する"
+revises:
+  - "ADR-0007"
+references:
+  - "ADR-0002"
+  - "ADR-0011"
+  - "ADR-0023"
+  - "ADR-0024"
+  - "ADR-0025"
+---
 # ADR-0032: legacy entrypoint（shell.nix / default.nix）は mkShell passthru を canonical とし、addressing を `nix build -f` に統一する
 
 - ステータス: 採用

@@ -1,3 +1,17 @@
+---
+id: "ADR-0048"
+type: adr
+name: "ドキュメントは sara でグラフ構造化する — model.yaml の全面置換・UUIDv4 二層 ID・CI 非必須開始"
+status: 採用
+issues:
+  - "#203"
+  - "#206"
+  - "#207"
+origin: "epic #203 の grilling セッション（2026-07-31・2026-08-01）で確定"
+references:
+  - "ADR-0030"
+  - "ADR-0037"
+---
 # ADR-0048: ドキュメントは sara でグラフ構造化する — model.yaml の全面置換・UUIDv4 二層 ID・CI 非必須開始
 
 - ステータス: 採用

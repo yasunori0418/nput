@@ -1,3 +1,23 @@
+---
+id: "ADR-0026"
+type: adr
+name: "モジュール activation の engine kick は `apply --manifest`（ビルド済み link-farm 直接適用）で行う"
+status: 採用
+issues:
+  - "#17"
+origin: "Issue #17（home-manager モジュール統合）の実装中に判明した計画外の仕様。docs（ADR-0003, ADR-0007, spec のモジュール別動作仕様）は「module は engine を kick する配線」とだけ述べ、具体的な invocation を一度も規定していなかった"
+revises:
+  - "ADR-0003"
+  - "ADR-0007"
+references:
+  - "ADR-0002"
+  - "ADR-0006"
+  - "ADR-0011"
+  - "ADR-0015"
+  - "ADR-0023"
+  - "ADR-0024"
+  - "ADR-0025"
+---
 # ADR-0026: モジュール activation の engine kick は `apply --manifest`（ビルド済み link-farm 直接適用）で行う
 
 - ステータス: 採用

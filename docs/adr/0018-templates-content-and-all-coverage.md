@@ -1,3 +1,18 @@
+---
+id: "ADR-0018"
+type: adr
+name: "templates の具体内容と `--all` のサブコマンド対応範囲を確定する"
+status: 採用
+origin: "ADR-0017 に続く実装前レビューで「templates の具体内容」「`gitignore` / `rollback` / `list-generations` の `--all` 対応」が未定義だった"
+references:
+  - "ADR-0005"
+  - "ADR-0006"
+  - "ADR-0007"
+  - "ADR-0013"
+  - "ADR-0015"
+  - "ADR-0016"
+  - "ADR-0017"
+---
 # ADR-0018: templates の具体内容と `--all` のサブコマンド対応範囲を確定する
 
 - ステータス: 採用

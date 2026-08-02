@@ -1,3 +1,20 @@
+---
+id: "ADR-0045"
+type: adr
+name: "`apply --backup[=suffix]` — 配置を塞ぐ記録外実体の rename 退避"
+status: 採用
+issues:
+  - "#169"
+  - "#172"
+origin: "旧 epic #167 から統合された epic #172 の grilling セッション（2026-07-11・2026-07-12）で確定"
+references:
+  - "ADR-0002"
+  - "ADR-0006"
+  - "ADR-0015"
+  - "ADR-0017"
+  - "ADR-0020"
+  - "ADR-0044"
+---
 # ADR-0045: `apply --backup[=suffix]` — 配置を塞ぐ記録外実体の rename 退避
 
 - ステータス: 採用
