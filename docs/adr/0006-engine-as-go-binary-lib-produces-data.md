@@ -6,6 +6,7 @@ status: 採用
 status_note: "2026-06-13 一部改訂: 「nput の露出と環境セットアップ」節・実行フロー・該当棄却案を ADR-0007 が反転"
 justifies:
   - "REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645"
+  - "REQ-6c4e174a-4d16-477a-96ff-17cb4eb5b564"
   - "REQ-d85f0cef-0f1e-4897-a841-41b61a8dae51"
   - "REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4"
   - "REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281"
