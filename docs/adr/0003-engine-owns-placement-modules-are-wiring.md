@@ -12,6 +12,8 @@ justifies:
   - "REQ-81249072-56b8-42f5-807b-ea623c1efe99"
   - "REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9"
   - "REQ-8085f194-c903-4ecb-abd8-c719fe7b3292"
+  - "DSG-17db0831-d7da-446d-ba3e-404df64c582d"
+  - "DSG-98d7fa5d-c590-441a-b682-0ab7afa14233"
 references:
   - "ADR-0001"
   - "ADR-0002"

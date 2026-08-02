@@ -9,6 +9,8 @@ origin: "起点 Issue: #26"
 justifies:
   - "REQ-c50df875-2cb0-4e72-8a21-858359a11cae"
   - "REQ-d0aef5af-e922-400b-b250-ca38719c480b"
+  - "DSG-16373ec2-3496-4b12-b3b1-ef74e0435b58"
+  - "DSG-aeb5e219-4784-4950-845c-35f9bab9179c"
 references:
   - "ADR-0006"
   - "ADR-0007"

@@ -6,6 +6,9 @@ status: 採用
 origin: "参照: `~/src/github.com/yasunori0418/cryoflow` の CI 構成（同一メンテナの実績構成）"
 justifies:
   - "REQ-6419e4b0-629c-435f-b1e1-0bc996b5e61d"
+  - "DSG-fb49e36c-eb20-4efa-8cac-88ef0873db8e"
+  - "DSG-836aa5cb-0389-4adb-990b-144fe5aeffe3"
+  - "DSG-2947b4a5-ba5c-4218-8478-624cba156116"
 references:
   - "ADR-0006"
   - "ADR-0011"
