@@ -166,6 +166,7 @@ home-manager に存在しないため比較の対象外。
 
 ## 関連文書
 
+- `README.md` / `README.ja.md` — 3 層構造の最上段（導入と使い方）
 - `docs/spec.md` — 仕様（requirement item への索引）
 - `docs/design.md` — 設計（design item への索引）
 - `docs/adr/` — 意思決定の記録
