@@ -25,7 +25,8 @@ home-manager / NixOS / nix-darwin / system-manager はいずれも Nix モジュ
 配置を宣言し、裏側の挙動を抽象で隠す。その代償として、何がどこにどう置かれるかがモジュールの
 内部実装に隠れてユーザーが直接握れず、配置ロジックがモジュールシステムと密結合して純粋関数と
 してテストできず、プラットフォームごとのネイティブ機構へ翻訳されて振る舞いが層ごとに
-二重化する。
+二重化する。密結合の実証として、home-manager の file モジュールを standalone ライブラリと
+して抜き出した実装は事実上存在せず、多くの人が 20 行の bash や GNU Stow に落ちている。
 
 ## 解決策の核心
 
@@ -60,9 +61,13 @@ nput モデル:
   [claude-skills]  → 任意のタイミングで独立更新
 ```
 
+> **上の 2 つの図は `docs/concept.md` からの写し**。solution は解決策の位置づけを述べる層で
+> 規範を持たないため、独立更新の粒度が config 単位であることの規範は REQ-c2d44626・
+> REQ-496b1a07 にあり、使われ方としての整理は UC-1c280dce が担う。
+
 `home.file` 相当（root = `$HOME`）はこのプリミティブの一適用に過ぎず、root は
 `projectRoot` / `homeRoot` / `systemRoot` で明示的に選ぶ（暗黙デフォルトは持たない・
-→ ADR-0004 改訂・ADR-0007）。
+→ ADR-0004 改訂 / ADR-0007）。
 
 positioning は **project-first**。中心的な使い方はプロジェクト内に組み込んで repo 内の
 任意パスへ配置する project mode であり、`$HOME` 配置・system 配置は明示マーカーで opt-in
@@ -77,7 +82,11 @@ entrypoint（`flake.nix` / `shell.nix` / `default.nix`）を発見して配置�
 
 `docs/concept.md`「解決したい課題」「コンセプトの核心」。
 
-「設計の哲学」「既存ツールとの比較」「設計の変遷（会話の流れ）」は item 化せず
-`docs/concept.md` に残す（→ Issue #211）。north-star（配置プリミティブから組むミニマル
-distro 構想）も同様に展望として `docs/concept.md` に残し、requirement を持たない
-use_case にはしない（2026-08-01 確定）。
+「設計の哲学」「既存ツールとの比較」「設計の変遷（会話の流れ）」は独立した item を立てず
+`docs/concept.md` に残す（→ Issue #211）。ただし「設計の哲学」のうちモジュール統合の
+使われ方に転化する 3 項（「配置ロジックはコアが所有し、モジュールは配線に徹する」
+「home-manager に依存しない」「統合は『オプション』」）は UC-d39c1994 が引き受けており、
+節そのものは concept.md に残るが主張は use_case 側にも写っている。
+
+north-star（配置プリミティブから組むミニマル distro 構想）も展望として `docs/concept.md` に
+残し、requirement を持たない use_case にはしない（2026-08-01 確定）。

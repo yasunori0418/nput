@@ -29,7 +29,7 @@ nput apply claude-skills
 一括適用を諦める理由にはならない。
 
 この使われ方は配置モードに依らない。home mode でも project mode でも、role ごとの config
-分割と個別適用は同じ形で成立する（→ UC-f2436d68・UC-19a90989）。
+分割と個別適用は同じ形で成立する（→ UC-f2436d68 / UC-19a90989）。
 
 ## この使われ方が要求すること
 

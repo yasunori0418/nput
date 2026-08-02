@@ -26,6 +26,9 @@ symlink であり、再現性を担保する（→ ADR-0001）。out-of-store �
 | store link（デフォルト）| flake 更新 + 適用時 | バージョン固定した外部リポジトリ |
 | `mkOutOfStoreSymlink "/abs/path"`（明示）| ファイル編集と同時（ライブ）| 開発中の手元 dotfiles |
 
+> **上表は `docs/concept.md` からの写し**。use_case は規範を持たないため、store link が
+> 既定で out-of-store が marker による opt-in であることの規範は REQ-99ca5381 にある。
+
 指す先の内容は設計上ライブであり、版管理されるのはリンク先のマッピングのみ。世代管理は
 リンク先のみが対象になる。
 
