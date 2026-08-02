@@ -80,12 +80,21 @@ references:             # 「関連:」の ADR
 - `- 関連:` のうち **ADR 参照**は `references`、**GitHub Issue 参照**は `issues`、**`docs/*.md` 参照**は
   本文に残す（requirement / design の分割後に `justifies` へ置換する）。
 - 同じ ADR が `関連:` と `改訂対象:` の両方に挙がっているときは **`revises` を優先し `references` からは除く**
-  （同一ペアに二重辺を張らない）。
-- `references` は**後発 → 先行の片方向**に張る。peer relation を双方向に張ると `sara check` が cycle として
-  error にするため。先行 ADR 側からは `sara query` の `Is referenced by` で逆引きできる。
+  （同一ペアに同じ relation を二重に張らない）。
+- `revises` は本文の `改訂対象:` 行に**一対一で従う**（方向は本文が決める）。番号順とは限らない: ADR-0044 は
+  `revises: ADR-0046, ADR-0047` と番号を逆行しているが、起票は 0046 → 0047 → 0044 の順で 0044 が後発なので
+  正しい。番号の前後を見て手を入れないこと。
+- `references` は**後発 → 先行の片方向**に張る。同一ペアに `references` を相互に張ると `sara check` が cycle と
+  して error にするため。先行 ADR 側からは `sara query` の `Is referenced by` で逆引きできる。
+  - **先発・後発は ADR 番号ではなく実際の起票順で判定する**（`git log --diff-filter=A -- docs/adr/<file>` で確認
+    できる）。同日に複数本を起票すると番号と起票順が食い違う（ADR-0044〜0047 は番号順 0044 → 0047 に対し
+    起票順は 0046 → 0047 → 0044 → 0045）。番号順で機械的に判定すると後発側の辺を取りこぼす。
+  - この結果、**先行 ADR が後から追記した前方参照（本文 `関連:` にある番号の大きい ADR）は `references` に
+    入らない**。本文と frontmatter が一対一にならない唯一の箇所で、その関係は後発側の `references` / `revises`
+    が表現する。例: ADR-0038 の `関連:` にある ADR-0039 / ADR-0040 は ADR-0038 の `references` には入れない。
 - `justifies` は任意。requirement / design / infrastructure が揃うまでは空でよい。
 - ID は連番を維持する（`ADR-0049`）。ファイル名も `NNNN-<slug>.md` のまま。他の型は UUIDv4 二層 ID を使う
-  （採番は devShell の `sara-id`）が、ADR だけは既存 48 本の相互参照・本ドキュメントの運用・Issue 言及を
+  （採番は devShell の `sara-id`）が、ADR だけは既存の相互参照・本ドキュメントの運用・Issue 言及を
   壊さないため連番のまま。
 
 ## セルフチェック
@@ -96,9 +105,9 @@ references:             # 「関連:」の ADR
 nix develop '.?dir=dev#sara' -c sara check
 ```
 
-`Broken reference`（存在しない ADR への参照）と `Duplicate ID` が 0 件で exit 0 になること。
-`Orphan item` の warning は ADR 全件に出るが、ADR が仕様ツリーから分離した独立型で upstream parent を
-持たない設計どおりなので無視してよい。CI の `sara` job も同じコマンドを走らせる。
+`Broken reference`（存在しない ADR への参照）・`Duplicate ID`・`Circular reference` がいずれも 0 件で
+exit 0 になること。`Orphan item` の warning は ADR 全件に出るが、ADR が仕様ツリーから分離した独立型で
+upstream parent を持たない設計どおりなので無視してよい。CI の `sara` job も同じコマンドを走らせる。
 
 **注記漏れの確認は `sara check` では代替できない**。sara は frontmatter しか見ず、旧 ADR 側の blockquote
 注記が本文に書かれているかを検証しないため。`revises` に挙げた旧 ADR それぞれについて、逆引きで関係を
