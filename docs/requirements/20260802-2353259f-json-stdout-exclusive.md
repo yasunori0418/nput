@@ -1,6 +1,9 @@
 ---
 id: "REQ-2353259f-5878-452a-8e11-3445de69abc2"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "--json 指定時は行指向 stdout を出さずエンベロープが stdout を専有する"
 specification: |
   When `--json` is given, the default line-oriented stdout (the enumeration of

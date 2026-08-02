@@ -1,6 +1,9 @@
 ---
 id: "REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "mkManifest は配置データを生成する純粋関数である"
 specification: |
   `lib.mkManifest` SHALL be a pure function with the signature

@@ -1,6 +1,9 @@
 ---
 id: "REQ-8d965ca2-f8fd-44a4-87f3-94e850e9f85b"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
 name: "home mode の root は層ごとに定まった供給元から解決する"
 specification: |
   In home mode (`root = homeRoot`) the root SHALL be resolved from the supplier determined

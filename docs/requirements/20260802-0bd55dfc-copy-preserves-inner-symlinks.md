@@ -1,6 +1,8 @@
 ---
 id: "REQ-0bd55dfc-b28c-4ad2-ad50-bb1f76b2246c"
 type: requirement
+derives_from:
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 name: "copy は src ツリー内の symlink を deref せず symlink のまま複製する"
 specification: |
   A symlink inside the source tree SHALL be reproduced as a symlink and SHALL NOT be

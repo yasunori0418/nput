@@ -32,3 +32,8 @@ issues:
 > **本 item の根拠は ADR ではなく Issue #71**: 原文が根拠として挙げるのは `→ #71` のみで、
 > `lib.__internal` を決めた ADR は存在しない。frontmatter の `issues` がこれを受けている。
 > `justifies` を持たないのは張り漏れではなく、根拠が ADR 以外にあることによる。
+
+> **`derives_from` を持たないのも意図的**（→ Issue #211）。この要求は評価テストから内部
+> 関数を叩くための seam であり、ユーザーの使われ方（use_case）から導かれない。テストの
+> ための要求という点で REQ-6419e4b0・REQ-2381d93a・REQ-690f2730 と同類で、いずれも
+> use_case を持たない orphan として残す。

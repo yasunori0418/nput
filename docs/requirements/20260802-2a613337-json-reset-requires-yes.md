@@ -1,6 +1,8 @@
 ---
 id: "REQ-2a613337-7646-4ced-8807-e43bca18acf3"
 type: requirement
+derives_from:
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 name: "reset --json は --yes を必須とし無ければ fail fast する"
 specification: |
   Because a confirmation prompt for a destructive operation cannot be handled by a machine

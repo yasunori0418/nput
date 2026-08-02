@@ -1,6 +1,9 @@
 ---
 id: "REQ-0a123b89-0399-4f76-b988-56a5f7e0becf"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "冗長度は -v、デバッグは --debug に分離し --json と直交させる"
 specification: |
   The placement report SHALL be written to stderr only when `-v` / `--verbose` is given

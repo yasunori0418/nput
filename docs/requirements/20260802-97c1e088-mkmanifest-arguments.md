@@ -1,6 +1,9 @@
 ---
 id: "REQ-97c1e088-a17e-46d9-a9a1-83d1757d0f7d"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "mkManifest の引数は pkgs / entries / root の 3 つとする"
 specification: |
   `lib.mkManifest` SHALL accept exactly three arguments: `pkgs`, `entries` and `root`.

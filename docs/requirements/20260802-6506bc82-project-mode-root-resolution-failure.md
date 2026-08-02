@@ -1,6 +1,8 @@
 ---
 id: "REQ-6506bc82-d1e1-4dbf-8c57-d5d1babf218a"
 type: requirement
+derives_from:
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "project mode で git から root を解決できないときは engine 実行時に停止する"
 specification: |
   In project mode, when the engine cannot resolve the root from git, it SHALL stop with an

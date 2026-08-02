@@ -1,6 +1,9 @@
 ---
 id: "REQ-2f9205ee-cec5-4072-ac3e-890caae79904"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "mkManifest の返り値は passthru で root kind を露出する"
 specification: |
   The derivation returned by `lib.mkManifest` SHALL carry `passthru.rootKind` (`"project"`

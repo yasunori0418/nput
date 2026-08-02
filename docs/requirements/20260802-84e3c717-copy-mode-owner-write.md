@@ -1,6 +1,8 @@
 ---
 id: "REQ-84e3c717-adf5-4ff3-b0db-d039b82ef19c"
 type: requirement
+derives_from:
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 name: "copy は元の mode を保存しつつ owner-write を付与する"
 specification: |
   A copy SHALL preserve the mode of the source while adding owner-write to it (for

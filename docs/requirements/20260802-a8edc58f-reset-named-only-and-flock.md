@@ -1,6 +1,8 @@
 ---
 id: "REQ-a8edc58f-4adc-4637-b888-ab8ccc7e73e4"
 type: requirement
+derives_from:
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 name: "reset は名指し必須で profileDir 単位の blocking flock を取る"
 specification: |
   `nput reset` SHALL require an explicitly named config and SHALL NOT support `--all`,

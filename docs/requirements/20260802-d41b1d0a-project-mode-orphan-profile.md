@@ -1,6 +1,8 @@
 ---
 id: "REQ-d41b1d0a-c6d5-41cc-93f9-e5cc7f152da4"
 type: requirement
+derives_from:
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "孤児 profile は backref で逆引き可能なまま放置許容とし、MVP では cleanup コマンドを持たない"
 specification: |
   When a clone is deleted, its profile SHALL remain as an orphan under

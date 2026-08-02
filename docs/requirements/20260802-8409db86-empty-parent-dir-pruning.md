@@ -1,6 +1,9 @@
 ---
 id: "REQ-8409db86-a1ba-4053-86dc-588985cc1ca7"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "target 除去後は空の親ディレクトリチェーンを root 境界まで保守的に剪定する"
 specification: |
   After a target has been removed, the chain of its parent directories SHALL be pruned

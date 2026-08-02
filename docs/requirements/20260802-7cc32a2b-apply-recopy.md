@@ -1,6 +1,8 @@
 ---
 id: "REQ-7cc32a2b-eee4-4a29-8dc1-a1dc23e7a065"
 type: requirement
+derives_from:
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 name: "apply --recopy は config 内の全 copy target を src から無条件に上書き再コピーする"
 specification: |
   In addition to an ordinary apply, `nput apply <name> --recopy` SHALL unconditionally

@@ -1,6 +1,8 @@
 ---
 id: "REQ-8085f194-c903-4ecb-abd8-c719fe7b3292"
 type: requirement
+derives_from:
+  - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
 name: "home-manager モジュールの engine kick 1 回は activation からビルド済み link-farm を渡し、失敗で switch を止める"
 specification: |
   The home-manager module SHALL kick the engine from `home.activation.nput`

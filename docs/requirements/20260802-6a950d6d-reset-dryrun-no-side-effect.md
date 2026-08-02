@@ -1,6 +1,8 @@
 ---
 id: "REQ-6a950d6d-c191-4235-a1b4-73ffc7c2bb38"
 type: requirement
+derives_from:
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 name: "reset --dryrun は副作用ゼロで削除対象を表示して終了する"
 specification: |
   `nput reset <name> --dryrun` SHALL display the deletion targets (symlinks / copy

@@ -1,6 +1,9 @@
 ---
 id: "REQ-8ef34101-8150-4124-92d5-94fabe6b5d90"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "成功時はデフォルト沈黙とし warning と error は常時 stderr へ出す"
 specification: |
   The default SHALL be silence on success. The success of `apply` / `reset` / `rollback`

@@ -1,6 +1,9 @@
 ---
 id: "REQ-37b56673-6e40-4a1b-a2a7-5d3c084e3e66"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "root は 3 マーカーと絶対パス文字列の union を取る"
 specification: |
   The type of `root` SHALL be a union of `string` (fixed at evaluation time) and marker

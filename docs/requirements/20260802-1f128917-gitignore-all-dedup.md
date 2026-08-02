@@ -1,6 +1,8 @@
 ---
 id: "REQ-1f128917-4424-4e37-8a88-e0bb23a09da7"
 type: requirement
+derives_from:
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "gitignore --all は projectRoot の全 config の target をソート + 重複除去して出力する"
 specification: |
   `nput gitignore --all` SHALL output the targets of every projectRoot config, sorted and

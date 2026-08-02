@@ -1,6 +1,9 @@
 ---
 id: "REQ-99ca5381-6c53-426c-b145-7b4297c53868"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-01b896b4-04b9-40d0-bf9e-966eaf64c3d4"
 name: "src は path / set / marker の 3 種を取り store link を既定として out-of-store は marker で opt-in する"
 specification: |
   The `src` field SHALL accept three kinds of value: a `path`, a `set` (derivation), and

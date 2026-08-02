@@ -1,6 +1,8 @@
 ---
 id: "REQ-c50df875-2cb0-4e72-8a21-858359a11cae"
 type: requirement
+derives_from:
+  - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
 name: "flake-parts 経路は直書きと同一の derivation を生み CLI のアドレッシングを変えない"
 specification: |
   A repository using flake-parts SHALL declare `perSystem.nput.<name> = mkManifest

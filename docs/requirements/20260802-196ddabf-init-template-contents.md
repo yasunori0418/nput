@@ -1,6 +1,8 @@
 ---
 id: "REQ-196ddabf-6569-4303-942e-050872972501"
 type: requirement
+derives_from:
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "template は動く example を 1 config だけ置きバリエーションはコメントで示す"
 specification: |
   Each template SHALL contain exactly one working example config, and SHALL present its

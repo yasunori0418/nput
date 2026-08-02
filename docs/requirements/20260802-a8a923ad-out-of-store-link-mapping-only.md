@@ -1,6 +1,8 @@
 ---
 id: "REQ-a8a923ad-07fb-4582-b90a-07a6e0c41baa"
 type: requirement
+derives_from:
+  - "UC-01b896b4-04b9-40d0-bf9e-966eaf64c3d4"
 name: "out-of-store symlink は marker の絶対パスを指し、版管理はリンク先マッピングのみとする"
 specification: |
   For an out-of-store entry, which is placed as a symlink pointing at the absolute path

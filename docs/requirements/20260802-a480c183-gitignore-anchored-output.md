@@ -1,6 +1,8 @@
 ---
 id: "REQ-a480c183-40ce-4201-93b5-65a7a59c1b9e"
 type: requirement
+derives_from:
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "gitignore は配置 target を stdout へ列挙するだけでファイルを書き込まない"
 specification: |
   `nput gitignore <name>` SHALL only enumerate the placed targets for use in `.gitignore`

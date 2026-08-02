@@ -1,6 +1,9 @@
 ---
 id: "REQ-7a71a049-5876-4cfc-a65e-44e9a0349856"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "--dryrun は root を解決するが flock も pending gcroot も取らない"
 specification: |
   `--dryrun` SHALL evaluate the root kind and resolve the root, in order to display the

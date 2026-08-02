@@ -1,6 +1,9 @@
 ---
 id: "REQ-1767b250-b475-4276-a551-20dc79e75a30"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "config は Nix で書き nix build で評価する"
 specification: |
   Configuration SHALL be written in Nix and evaluated by `nix build`. What the CLI

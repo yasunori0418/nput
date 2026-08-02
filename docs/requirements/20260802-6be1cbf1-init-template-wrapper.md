@@ -1,6 +1,8 @@
 ---
 id: "REQ-6be1cbf1-6c6e-498b-8acb-7f4b80037169"
 type: requirement
+derives_from:
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "nput init は nix flake init -t への透明なラッパーとしファイルを生成しない"
 specification: |
   `nput init <template>` SHALL be a transparent wrapper around
