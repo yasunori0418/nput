@@ -56,6 +56,8 @@ devShells.${system}.default = pkgs.mkShell {
 - devShell の `shellHook` からキックする配線が成立すること。入室のたびに走るため、変化が
   無いときの再配置コストが抑えられていること
 - 世代は内部機構に留め、ephemeral な配置に意味の薄い rollback を公開しないこと
+- 配置をやめたくなったときに、配置物を無い状態へ戻す手段があること（`reset`。rollback と違い
+  モードを限定せず project mode でも使える）
 
 ## 出典
 
