@@ -19,6 +19,7 @@ justifies:
   - "DSG-0b94308c-6b15-46d1-854c-5945ae587b0d"
   - "DSG-fb49e36c-eb20-4efa-8cac-88ef0873db8e"
   - "DSG-836aa5cb-0389-4adb-990b-144fe5aeffe3"
+  - "DSG-901351ea-f01b-4bb0-a470-b890d92c980b"
 references:
   - "ADR-0002"
   - "ADR-0003"
