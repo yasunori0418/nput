@@ -3,22 +3,23 @@ id: "REQ-a0bdf6db-6c0c-476c-916a-61ee4e4510d9"
 type: requirement
 name: "devShell は shellHook から engine を起動する配線で、シェル入室のたびに project mode で配置する"
 specification: |
-  The devShell SHALL be wiring that kicks the engine from the `shellHook` of
-  `devShells.<name>`, of the same form as the home-manager module: it SHALL hold no
-  placement logic of its own and SHALL supply only the root — the git toplevel of project
-  mode, `projectRoot` being pinned — and the timing of activation, which is entry into
-  the shell. It SHALL be kicked the moment a shell is entered by `nix develop` or by
-  direnv (`use flake`), and SHALL place within the project on the git toplevel as root.
-  Because a `shellHook` runs at high frequency, the generation-skip short circuit of
+  The devShell SHALL kick the engine from the `shellHook` of `devShells.<name>`, of the
+  same form as the home-manager module. The timing of activation it supplies SHALL be
+  entry into the shell: it SHALL be kicked the moment a shell is entered by `nix develop`
+  or by direnv (`use flake`), and SHALL place within the project on the git toplevel as
+  root. Because a `shellHook` runs at high frequency, the generation-skip short circuit of
   project mode, which makes an unchanged application a no-op, SHALL be a premise of this
-  wiring.
+  wiring. That it holds no placement logic of its own and supplies only the root and the
+  timing of activation is stated by REQ-c1b3ca5f, and that it pins `projectRoot` by
+  REQ-fc1c7ce6; neither is restated here.
 specification_ja: |
-  devShell は `devShells.<name>` の `shellHook` から engine を起動する配線でなければならない。
-  HM モジュールと同型で、配置ロジックを持たず、root（project mode の git toplevel・
-  `projectRoot` を pin）と activation タイミング（シェル入室）だけを供給する。
-  `nix develop` / direnv（`use flake`）でシェルに入った瞬間にキックされ、git toplevel を
-  root にプロジェクト内へ配置する。`shellHook` は高頻度で走るため、変更なしなら no-op に
-  なる project mode の世代スキップ短絡をこの配線の前提とする。
+  devShell は `devShells.<name>` の `shellHook` から engine を起動しなければならない
+  （HM モジュールと同型）。供給する activation タイミングはシェル入室とし、`nix develop` /
+  direnv（`use flake`）でシェルに入った瞬間にキックされ、git toplevel を root に
+  プロジェクト内へ配置する。`shellHook` は高頻度で走るため、変更なしなら no-op になる
+  project mode の世代スキップ短絡をこの配線の前提とする。配置ロジックを持たず root と
+  activation タイミングだけを供給することは REQ-c1b3ca5f、`projectRoot` を pin することは
+  REQ-fc1c7ce6 の担当で、いずれも本 item では規定しない。
 ---
 # REQ-a0bdf6db: devShell は shellHook から engine を起動する配線で、シェル入室のたびに project mode で配置する
 
