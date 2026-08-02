@@ -3,13 +3,13 @@ id: "REQ-a8a923ad-07fb-4582-b90a-07a6e0c41baa"
 type: requirement
 name: "out-of-store symlink は marker の絶対パスを指し、版管理はリンク先マッピングのみとする"
 specification: |
-  An out-of-store entry SHALL be placed as a symlink whose destination is the absolute
-  path held by the marker, on the local filesystem. Generations SHALL version only the
-  mapping of which absolute path is pointed at, and SHALL NOT version the content of the
-  destination, which is live by design and SHALL never be snapshotted.
+  For an out-of-store entry, which is placed as a symlink pointing at the absolute path
+  held by the marker (REQ-622787dc), generations SHALL version only the mapping of which
+  absolute path is pointed at, and SHALL NOT version the content of the destination, which
+  is live by design and SHALL never be snapshotted.
 specification_ja: |
-  out-of-store entry は symlink として配置しなければならず、指す先は marker の絶対パス
-  （ローカル FS）とする。世代が版管理するのは「どの絶対パスを指すか」というリンク先
+  marker の絶対パス（ローカル FS）を指す symlink として配置される out-of-store entry
+  （REQ-622787dc）について、世代が版管理するのは「どの絶対パスを指すか」というリンク先
   マッピングのみとし、指す先の内容は版管理してはならない（設計上ライブであり、永遠に
   スナップショットしない）。
 ---

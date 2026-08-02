@@ -66,7 +66,7 @@ specification_ja: |
 > 担当ではない。
 >
 > - flock を blocking で取るか try-lock で取るか → REQ-1c1526b1
-> - ネイティブ FS 操作で配置すること → REQ-35f485ff、各配置方法の手順 → REQ-622787dc /
+> - ネイティブ FS 操作で配置すること → REQ-6c4e174a、各配置方法の手順 → REQ-622787dc /
 >   REQ-d2277c7a / REQ-a8a923ad
 > - stale 除去の保守的不変条件 → REQ-16aef46b
 > - `profileDir` のオンディスクレイアウトと基底 `<state>` → REQ-2aa3abbc
