@@ -477,59 +477,27 @@ NixOS VM テスト（`runNixOSTest`）はモジュール経路を実装する段
 
 ## 設計上の判断
 
-### entries を target キーの attrset にする理由（ADR-0014）
+主要な設計判断の**決定と根拠は ADR が持つ**。ここでは判断の一覧と決定の所在だけを示し、
+理由の要約は置かない（ADR と二重管理になり、改訂時に片方だけ古くなるため）。
 
-エントリの識別子を別フィールド（`name`）で手動定義させると、命名と一意性管理がユーザー負担になる。home-manager `home.file` 同型に **属性キー = target** とすることで、識別子を考える行為自体が消え、一意性は Nix の attrset キー重複不可で native に担保される。target は配置先として元々一意であるべき値で identity に過不足なく、順序非依存なので index ベース命名の「並び替えで名前が変わる」問題も起きない。`target` フィールドはキーから既定値を取り、キーを論理ラベルにして明示上書きする逃げ道も残す。
+| 判断 | 決定の所在 |
+|---|---|
+| entries を target キーの attrset にする（手動 `name` と手動一意性チェックを廃する）| ADR-0014 |
+| 配置単位 `nput.<name>` を 1 profile とする | ADR-0002（世代の粒度）・ADR-0007（`<name>` の供給と `default` 解決）|
+| root を明示マーカー必須にする（暗黙デフォルトを持たない）| ADR-0007 |
+| CLI を一次 UX に昇格する（entrypoint 発見 + root 明示モデルへ移行する）| ADR-0007 |
+| out-of-store を明示関数へ降格し store link をデフォルトに統一する | ADR-0001 |
+| 世代を nix profile に乗せる | ADR-0002 |
+| 配置ロジックをコア（エンジン）が所有し、ネイティブ機構へ翻訳しない | ADR-0003 |
+| stale 除去を「世代由来の store マニフェスト + 保守的削除」で行う | ADR-0002・ADR-0003 |
+| copy を place-once・世代外にする | ADR-0002（世代外）・ADR-0020（`apply --recopy` / `nput reset`）|
 
-### 配置単位を `nput.<name>` = 1 profile とする理由（ADR-0002, ADR-0007）
-
-世代の粒度を配置単位 = 1 profile としたため（→ ADR-0002）。entrypoint が `nput.<name>` に named manifest を公開し、
-CLI が選択した `<name>` を profile の一意特定に使う。`name` 省略時は flake 慣例の `nput.default` を解決先にする（→ ADR-0007）。
-
-### root を明示マーカー必須にする理由（ADR-0007）
-
-暗黙の root デフォルトは「ユーザーが配置を明示的に握る」核心思想に反する隠れた選択であり、ephemeral/永続・rollback 有無という重い差を暗黙に選ばせる。
-`projectRoot` / `homeRoot` / `systemRoot` の明示マーカー（＋固定パス文字列）で `mkOutOfStoreSymlink` と同じ「マーカー opt-in」パターンに揃える。
-
-### CLI を一次 UX に昇格した理由（ADR-0007）
-
-`mkActivationScript` の per-config ラッパー（`nix run .#x`）を呼ばないと `nput` が使えなかった（#3）。flake.nix 以外（shell.nix / default.nix）からも動かしたい（#4）。
-汎用 `nput` CLI を PATH に置き entrypoint を発見させることで、config は依然 Nix 評価で確定しつつ standalone のエルゴノミクスを得る。config は Nix で書くモデルを保つため「設定を生成しない」thesis は不変。
+以下の 3 つは対応する ADR を持たない設計原則のため、根拠をここに残す。
 
 ### src をユーザー側で渡す理由
 
 取得手段（npins / flake inputs / fetchFromGitHub 等）を本プロジェクトが抱えると、取得方法の変更が
 本プロジェクトの変更を要求する依存が生まれる。`src` を「フェッチ済みのパス」として受け取ることで取得手段の変化から独立する。
-
-### out-of-store を明示関数に降格した理由（ADR-0001）
-
-型ベースの暗黙分岐（`string` → out-of-store）を廃止し store link をデフォルトに統一した。
-out-of-store は `mkOutOfStoreSymlink` で明示的に opt-in する。型マジックを排除し、Nix の再現性前提に揃える。
-
-### 世代を nix profile に乗せる理由（ADR-0002）
-
-profile symlink の差し替えだけで atomic な switch / rollback を実現し、GC root にもなる。Nix 標準機構を再利用できる。
-純粋関数は derivation を生成するだけで、副作用（profile swap）は activation 実行時に閉じる。
-
-### 配置ロジックをコアが所有する理由（ADR-0003）
-
-振る舞いを単一コアに集約し、テスト可能性とクロスプラットフォームの一貫性を得るため。
-ネイティブ機構へ翻訳すると層ごとに挙動が二重化し、nput の「単一コア・ユーザー管理」方針と逆行する。
-nput は「OS とは別の一機構」であり、`systemd.tmpfiles` など OS のファイル管理ツールへは翻訳しない（全モジュールは一律ランチャー）。
-
-### stale 除去を「世代由来の store マニフェスト + 保守的削除」にする理由（ADR-0002 / ADR-0003）
-
-可変 JSON 方式は store 外可変で世代に捕捉されず、GC root を作らないため rollback が壊れうる。
-代わりに「配置したもの」を link farm の一部として store に埋め込み、前世代の store マニフェストと diff する。
-これは不変・GC-root 済みで、home.file を再利用せずとも home-manager の cleanup アルゴリズムを踏襲できる。
-削除は保守的に行い（nput が張った link で、現状も記録通りを指す物のみ）、ユーザーの実ファイルを誤って消さない。
-
-### copy を place-once・世代外にする理由（ADR-0002）
-
-copy は元々再適用のたびに手編集を上書きしており、「ユーザー管理の副作用」と明示するのが整合的。
-世代に含めると store 外スナップショット管理が重くなる。
-place-once は既定で、src 更新追従は `apply --recopy`（全 copy target を無条件上書き）、撤去は `nput reset`（copy も削除）で
-ユーザー責任で明示的に行う（→ ADR-0020）。
 
 ### symlink と copy の両対応理由
 
