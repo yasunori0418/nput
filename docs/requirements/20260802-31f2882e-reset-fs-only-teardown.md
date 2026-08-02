@@ -1,9 +1,11 @@
 ---
 id: "REQ-31f2882e-d2e3-4e3b-b783-feb627d73ac6"
 type: requirement
+name: "reset は profile を触らない FS-only teardown で配置物を無い状態へ戻す"
 derives_from:
   - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
-name: "reset は profile を触らない FS-only teardown で配置物を無い状態へ戻す"
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
   `nput reset <name> [target...]` SHALL be a teardown that returns placed objects to the
   state of not being present; omitting `target` SHALL select every entry, and specifying

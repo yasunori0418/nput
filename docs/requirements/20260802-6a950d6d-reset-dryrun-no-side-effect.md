@@ -1,9 +1,11 @@
 ---
 id: "REQ-6a950d6d-c191-4235-a1b4-73ffc7c2bb38"
 type: requirement
+name: "reset --dryrun は副作用ゼロで削除対象を表示して終了する"
 derives_from:
   - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
-name: "reset --dryrun は副作用ゼロで削除対象を表示して終了する"
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
   `nput reset <name> --dryrun` SHALL display the deletion targets (symlinks / copy
   targets) with zero side effects and then exit, performing neither filesystem deletion,

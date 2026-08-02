@@ -1,9 +1,11 @@
 ---
 id: "REQ-16aef46b-7bb8-4ca1-b962-e9f3ed1fd1d2"
 type: requirement
+name: "stale 除去は前世代の記録通りを指す symlink のみに限り、copy は消さず orphan を警告する"
 derives_from:
   - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
-name: "stale 除去は前世代の記録通りを指す symlink のみに限り、copy は消さず orphan を警告する"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 specification: |
   Removal SHALL be conservative. Only a symlink that the previous-generation manifest
   records as having been placed by nput, and that still points at the destination so

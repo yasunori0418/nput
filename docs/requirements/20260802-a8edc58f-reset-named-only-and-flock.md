@@ -1,9 +1,11 @@
 ---
 id: "REQ-a8edc58f-4adc-4637-b888-ab8ccc7e73e4"
 type: requirement
+name: "reset は名指し必須で profileDir 単位の blocking flock を取る"
 derives_from:
   - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
-name: "reset は名指し必須で profileDir 単位の blocking flock を取る"
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
   `nput reset` SHALL require an explicitly named config and SHALL NOT support `--all`,
   because removing everything at once is a destructive footgun, consistently with the

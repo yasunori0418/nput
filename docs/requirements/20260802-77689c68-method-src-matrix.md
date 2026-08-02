@@ -1,10 +1,11 @@
 ---
 id: "REQ-77689c68-953c-4cbb-ab31-1ac1e4f5f2fe"
 type: requirement
+name: "method は配置方法を選び symlink は世代管理下・copy は世代管理外になる"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
-name: "method は配置方法を選び symlink は世代管理下・copy は世代管理外になる"
+  - "UC-01b896b4-04b9-40d0-bf9e-966eaf64c3d4"
 specification: |
   The `method` field SHALL select how an entry is placed. With `method = "symlink"` and a
   store-backed `src` the entry SHALL be a read-only symlink into the Nix store, and with

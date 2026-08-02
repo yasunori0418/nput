@@ -1,9 +1,11 @@
 ---
 id: "REQ-9fca28c9-d3b1-4ad7-8f24-13b2ec7aeab2"
 type: requirement
+name: "巻き戻し自体の失敗は best-effort で続行し、全件を stderr へ報告して停止する"
 derives_from:
   - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
-name: "巻き戻し自体の失敗は best-effort で続行し、全件を stderr へ報告して停止する"
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
   A failure of an individual inverse operation SHALL NOT abort the rollback: the remaining
   entries of the undo journal SHALL still be rolled back. Once every rollback attempt has

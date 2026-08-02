@@ -1,9 +1,11 @@
 ---
 id: "REQ-4ffda99a-7062-4c00-915f-70b525cb215b"
 type: requirement
+name: "内部実行する nix コマンドを開示し世代の切替と GC は標準の nix コマンドへ委譲する"
 derives_from:
   - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
-name: "内部実行する nix コマンドを開示し世代の切替と GC は標準の nix コマンドへ委譲する"
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
   The CLI SHALL disclose the nix commands it runs internally, for instance through
   `nput --help`, so that the user can run them selectively by hand. Switching to an
