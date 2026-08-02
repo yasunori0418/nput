@@ -4,25 +4,31 @@ type: requirement
 name: "全モジュールは共通オプションの同一集合を公開し、root はモジュールが pin する"
 specification: |
   Every module (home-manager / NixOS / nix-darwin) SHALL expose the same set of common
-  options: `nput.enable :: bool` defaulting to false, the option supplying entries, of
-  type `attrsOf entry` and defaulting to `{}`, `nput.backup.enable :: bool` defaulting to
-  false, and `nput.backup.suffix :: str` defaulting to `"nput-backup"`. Which option
-  supplies the entries, and whether it holds a `<name>` dimension, is stated by
-  REQ-c6891aeb and is not restated here. A module SHALL pin the root
-  by its own nature — home-manager to `homeRoot`, a devShell to `projectRoot` — and
-  SHALL NOT expose a `root` option, so that a user of a module never restates it. This
-  is a departure from `mkManifest` and the CLI entrypoint, where `root` is required to be
-  stated explicitly (REQ-4ec3accc).
+  options: `nput.enable :: bool` defaulting to false, `nput.configs :: attrsOf (submodule
+  { entries :: attrsOf entry; })` with `entries` defaulting to `{}`,
+  `nput.backup.enable :: bool` defaulting to false, and `nput.backup.suffix :: str`
+  defaulting to `"nput-backup"`. The bare `nput.entries` SHALL be kept as a sugar renaming
+  onto `configs.default.entries`, non-breaking and deprecated. These SHALL be defined
+  jointly for every module, so that the set does not diverge per module. What the `<name>`
+  dimension of `configs` means for the granularity of profiles is stated by REQ-c6891aeb
+  and is not restated here. A module SHALL pin the root by its own nature — home-manager
+  to `homeRoot`, a devShell to `projectRoot` — and SHALL NOT expose a `root` option, so
+  that a user of a module never restates it. This is a departure from `mkManifest` and the
+  CLI entrypoint, where `root` is required to be stated explicitly (REQ-4ec3accc).
 specification_ja: |
   全モジュール（home-manager / NixOS / nix-darwin）は共通オプションとして同一の集合を
-  公開しなければならない: `nput.enable :: bool`（デフォルト false）・entries を供給する
-  オプション（型は `attrsOf entry`・デフォルト `{}`）・`nput.backup.enable :: bool`
-  （デフォルト false）・`nput.backup.suffix :: str`（デフォルト `"nput-backup"`）。
-  entries をどのオプションが供給するか・それが `<name>` 次元を持つかは REQ-c6891aeb の
-  担当で、本 item では規定しない。モジュールは自分の性質で root を pin しなければならず（home-manager は `homeRoot`・
-  devShell は `projectRoot`）、`root` オプションを公開してはならない。モジュール利用者が
-  root を再指定しないようにするためである。これは `root` を明示必須とする `mkManifest` /
-  CLI entrypoint の層（REQ-4ec3accc）との差分である。
+  公開しなければならない: `nput.enable :: bool`（デフォルト false）・
+  `nput.configs :: attrsOf (submodule { entries :: attrsOf entry; })`（`entries` の
+  デフォルトは `{}`）・`nput.backup.enable :: bool`（デフォルト false）・
+  `nput.backup.suffix :: str`（デフォルト `"nput-backup"`）。素の `nput.entries` は
+  `configs.default.entries` への rename 糖衣として非破壊に残し、deprecated とする。
+  これらは全モジュール共通に定義し、モジュールごとに集合が分岐しないようにしなければ
+  ならない。`configs` の `<name>` 次元が profile の粒度にとって何を意味するかは
+  REQ-c6891aeb の担当で、本 item では規定しない。モジュールは自分の性質で root を pin
+  しなければならず（home-manager は `homeRoot`・devShell は `projectRoot`）、`root`
+  オプションを公開してはならない。モジュール利用者が root を再指定しないようにするため
+  である。これは `root` を明示必須とする `mkManifest` / CLI entrypoint の層
+  （REQ-4ec3accc）との差分である。
 ---
 # REQ-fc1c7ce6: 全モジュールは共通オプションの同一集合を公開し、root はモジュールが pin する
 
@@ -44,13 +50,15 @@ nput.backup.suffix :: str     # デフォルト: "nput-backup"（→ ADR-0045）
 > REQ-5dd5a4e9 の担当。`nput.backup` が manifest ではなく engine 起動の配線に効くことは
 > REQ-e1e1114b の担当。
 >
-> **`entries` の canonical 形は REQ-c6891aeb が正**。**ADR-0035 は HM の canonical を
-> `nput.configs.<name>.entries` とし、素の `nput.entries` を `configs.default.entries` への
-> deprecated 糖衣へ降格することを決定済み**で、`docs/spec.md` の当該表はこれに未追従。
-> 本 item の規範は「全モジュールが同一集合の共通オプションを公開すること」と各オプションの
-> 型・デフォルト値に留め、`entries` が単一 attrset か `<name>` 次元を持つかは規定しない
-> （REQ-c6891aeb の担当）。上の写しの `nput.entries` は原文逐語であり、canonical 形の主張
-> ではない。`docs/spec.md` の追従は本 item の担当範囲外。
+> **写しの `nput.entries` を canonical としない理由**: **ADR-0035 §1〜§2 は
+> `nput.configs.<name>.entries` を canonical とし、素の `nput.entries` を
+> `configs.default.entries` への deprecated 糖衣へ降格することを決定済み**で、`docs/spec.md`
+> の当該表はこれに未追従。ADR-0035 §1 は `configs` の定義先を `modules/common.nix`
+> （全モジュール共通）と定めているため、これは HM 固有ではなく共通オプション集合の一部で
+> あり、本 item の規範に含めた（REQ-37b56673 / REQ-16faf428 で ADR-0036 由来の未追従を
+> 扱ったのと同じ扱い）。`configs` の `<name>` 次元が profile の粒度にとって何を意味するか
+> （役割分離が可能になること・profile dir が home mode の `<name>` 直キーに乗ること）は
+> REQ-c6891aeb の担当。`docs/spec.md` の追従は本 item の担当範囲外。
 
 ## 出典
 
@@ -59,4 +67,5 @@ nput.backup.suffix :: str     # デフォルト: "nput-backup"（→ ADR-0045）
 
 決定の実体は root 明示必須とモジュール側 pin を定めた ADR-0007「汎用 nput CLI を一次 UX に
 昇格し、entrypoint 発見＋root 明示モデルへ移行する」と、配置ロジックを engine が所有し
-モジュールは配線に徹すると定めた ADR-0003。`nput.backup` の追加は ADR-0045。
+モジュールは配線に徹すると定めた ADR-0003。`nput.backup` の追加は ADR-0045、`nput.configs`
+の新設と `nput.entries` の糖衣化は ADR-0035。
