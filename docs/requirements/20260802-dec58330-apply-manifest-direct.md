@@ -1,0 +1,61 @@
+---
+id: "REQ-dec58330-6dad-47f7-8f56-2402764a89c7"
+type: requirement
+name: "apply --manifest はビルド済み link-farm を engine へ直接適用する"
+specification: |
+  `nput apply --manifest <link-farm>` SHALL apply a pre-built link-farm directly to the
+  engine, as the seam used by host / module activation. It SHALL NOT perform entrypoint
+  discovery, the preliminary rootKind eval, or `nix build`; instead the engine SHALL read
+  the rootKind from `manifest.json` inside the given link-farm, supporting all of the
+  project / home / fixed modes. After acquisition, its behaviour SHALL be identical to an
+  ordinary apply, and the placement logic SHALL NOT be duplicated. The argument SHALL be
+  the link-farm (the `mkManifest` output store path, the object committed as a
+  generation), and a bare `manifest.json` file SHALL NOT be accepted. Because the source
+  of the manifest conflicts, `--manifest` SHALL be an error when combined with `-f` or
+  `--all`, while it SHALL be orthogonal to the positional `name` argument (profile
+  selection) and usable together with it, with omission meaning `default`.
+specification_ja: |
+  `nput apply --manifest <link-farm>` はビルド済み link-farm を engine へ直接適用しなければ
+  ならない（host / module activation の seam）。entrypoint 発見・rootKind 先取り eval・
+  `nix build` を行わず、引数の link-farm 内 `manifest.json` から engine が rootKind を読む
+  （project / home / fixed の全モード対応）。取得後の挙動は通常 apply と同一とし、
+  配置ロジックは二重化してはならない。引数は link-farm（`mkManifest` 出力の store path =
+  世代としてコミットされる対象）であり、`manifest.json` 単体ファイルは受け付けない。
+  取得元が衝突するため `-f` / `--all` との併用はエラーとし、位置引数 `name`
+  （profile 選択）とは直交して両立する（省略 = `default`）。
+---
+# REQ-dec58330: apply --manifest はビルド済み link-farm を engine へ直接適用する
+
+## 仕様
+
+```bash
+nput apply --manifest <link-farm>  # ビルド済み link-farm を直接適用（entrypoint 発見・eval/build なし・host/module activation seam）
+```
+
+`apply --manifest <link-farm>` は **ビルド済み link-farm を engine へ直接適用**する
+（host / module activation の seam）。entrypoint 発見・rootKind 先取り eval・`nix build` を
+**行わず**、引数の link-farm 内 `manifest.json` から engine が rootKind を読む
+（project / home / fixed の全モード対応）。取得後の挙動（flock → 前世代 diff → 配置 →
+保守的 stale 除去 → `nix-env --set` → レポート）は通常 apply と同一で、配置ロジックは
+二重化しない（engine の `Build` / `LinkFarm` seam に対応）。
+
+引数は **link-farm**（`mkManifest` 出力の store パス = 世代としてコミットされる対象）で、
+`manifest.json` 単体ファイルは渡さない。`-f` / `--all` は取得元が衝突するため
+**併用エラー**、位置引数 `name`（profile 選択）とは直交し両立する（省略 = `default`）。
+
+> **上は原文の写しで、規範は frontmatter が正**。原文が併記する次の点は本 item の
+> 規範ではない。
+>
+> - 実行フローのどの段を skip するか（0〜1 と 2b）→ REQ-60c6b7ea が規定する実行フローの
+>   上での位置づけで、`docs/spec.md`「実行フロー」節の同趣旨の箇条書きに対応する
+> - HM モジュールの activation が使う主経路であること → `docs/spec.md`
+>   「モジュール別動作仕様」節の担当（#209-PR5）
+> - module 経路で schemaVersion skew が構造的に起きないこと → 「manifest.json スキーマ
+>   （v1）」節の担当（#209-PR3）
+
+## 出典
+
+`docs/spec.md`「CLI 仕様」→「サブコマンド体系」の `apply --manifest` の箇条書き。
+
+決定の実体は ADR-0026「モジュール activation の engine kick は `apply --manifest`
+（ビルド済み link-farm 直接適用）で行う」。
