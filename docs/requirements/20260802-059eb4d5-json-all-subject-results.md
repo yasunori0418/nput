@@ -4,6 +4,7 @@ type: requirement
 name: "--all は config ごとの SubjectResult を単一実行と同一形状で積む"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
+  - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
 specification: |
   For `apply --all` / `list-generations --all` / `gitignore --all`, one `SubjectResult`
   SHALL be pushed onto `results[]` per selected config. Its shape SHALL be exactly

@@ -5,6 +5,7 @@ name: "要求された操作が成立しないときは CLI がエラーで停�
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
+  - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
 specification: |
   When the operation the user asked for does not hold, the CLI SHALL stop with an error and
   SHALL NOT fall back implicitly. It SHALL stop when no entrypoint can be discovered — no

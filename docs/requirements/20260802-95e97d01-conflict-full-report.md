@@ -5,6 +5,7 @@ name: "conflict で停止するときは全件を対処ガイダンス付きで�
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
+  - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
 specification: |
   When `apply` or `rollback` stops on a conflict, every conflict collected by the planner
   SHALL be enumerated on stderr before stopping, so that the user is not forced into a
