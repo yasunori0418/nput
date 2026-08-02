@@ -32,8 +32,9 @@ nput apply <name> --dryrun     # dry-run。副作用ゼロで place/replace/remo
 非 conflict プランへ変わる（exit 0）。退避先が既存の場合は `--backup` 下でも conflict の
 まま。
 
-conflict に対応する終了コード 2 そのものは REQ-2c5a10d8、`--dryrun` でも link-farm の
-build は行うが gcroot を取らない点は REQ-60c6b7ea の担当。
+conflict に対応する終了コード 2 そのものは REQ-2c5a10d8、`--dryrun` が root を解決しつつ
+flock も pending gcroot も取らない点は REQ-7a71a049 の担当（通常 apply が out-link で
+gcroot を張る段そのものは REQ-60c6b7ea）。
 
 ## 出典
 
