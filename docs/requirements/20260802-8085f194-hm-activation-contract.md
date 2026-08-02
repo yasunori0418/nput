@@ -5,22 +5,26 @@ name: "home-manager モジュールは activation からビルド済み link-far
 specification: |
   The home-manager module SHALL kick the engine from `home.activation.nput`
   (`entryAfter ["writeBoundary"]`) with `nput apply --manifest <link-farm>`, the link-farm
-  being built from `nput.entries` by `mkManifest` at module evaluation time and its store
-  path passed from the activation script. The activation MUST NOT perform `nix eval` or
-  `nix build`, not being on the entrypoint path. The flock SHALL be taken blocking, the
-  placement report SHALL be visible, and an engine error such as a conflict SHALL stop the
-  switch by exiting non-zero, matching the clobber error of `home.file` under a
-  declarative switch. Because the pinned nput CLI (`packages.nput`) and `mkManifest` come
-  of the same flake input, a schemaVersion skew SHALL NOT arise structurally.
+  being built by `mkManifest` from the entries of a config at module evaluation time and
+  its store path passed from the activation script. The activation MUST NOT perform
+  `nix eval` or `nix build`, not being on the entrypoint path. The flock SHALL be taken
+  blocking, the placement report SHALL be visible, and an engine error such as a conflict
+  SHALL stop the switch by exiting non-zero, matching the clobber error of `home.file`
+  under a declarative switch. Because the pinned nput CLI (`packages.nput`) and
+  `mkManifest` come of the same flake input, a schemaVersion skew SHALL NOT arise
+  structurally. This states the contract of a single kick; how many configs there are and
+  which option supplies their entries is stated by REQ-c6891aeb and is not restated here.
 specification_ja: |
   home-manager モジュールは `home.activation.nput`（`entryAfter ["writeBoundary"]`）から
   `nput apply --manifest <link-farm>` で engine を kick しなければならない。link-farm は
-  モジュール評価時に `nput.entries` から `mkManifest` でビルドし、その store パスを
+  モジュール評価時に config の entries から `mkManifest` でビルドし、その store パスを
   activation script から渡す。activation は entrypoint 経路ではないため `nix eval` /
   `nix build` を行ってはならない。flock は blocking で取り、配置レポートを可視とし、
   engine error（conflict 等）は非 0 終了で switch を止めなければならない（宣言的 switch・
   `home.file` の clobber エラーと同型）。pin 版 nput CLI（`packages.nput`）と `mkManifest` が
-  同一 flake input 由来のため、schemaVersion skew は構造的に起こらないものとする。
+  同一 flake input 由来のため、schemaVersion skew は構造的に起こらないものとする。本 item が
+  規定するのは 1 起動あたりの契約であり、config がいくつあるか・その entries をどのオプションが
+  供給するかは REQ-c6891aeb の担当で、本 item では規定しない。
 ---
 # REQ-8085f194: home-manager モジュールは activation からビルド済み link-farm を渡して engine を kick し、失敗で switch を止める
 
@@ -53,6 +57,11 @@ specification_ja: |
 >   `-f` / `--all` との併用エラー）→ REQ-dec58330
 > - モジュールが root を pin し利用者が再指定しないこと → REQ-fc1c7ce6。`homeRoot` の
 >   層ごとの解決 → REQ-8d965ca2
+> - manifest を供給するオプション（canonical は `nput.configs.<name>.entries`・`nput.entries`
+>   はその糖衣）と config の個数 → REQ-c6891aeb。本 item の写しにある `nput.entries` は原文
+>   逐語であり、規範文では供給元を「config の entries」と述べて ADR-0035 と衝突しない形に
+>   している。activation が profile ごとに engine を kick する規律（ADR-0035 §3）は原文に
+>   対応記述が無く、item 化は REQ-c6891aeb の注記のとおり別途扱う
 > - flock を既定 blocking で取ること → REQ-1c1526b1。レポートと warning を stderr へ出す
 >   ストリーム規律 → REQ-fea038de。終了コードの体系 → REQ-2c5a10d8
 > - 世代が nput 自前 profile に乗ること → REQ-1be4d678。profile 名の次元と profileDir の

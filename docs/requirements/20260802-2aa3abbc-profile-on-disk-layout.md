@@ -59,11 +59,11 @@ specification_ja: |
   （孤児 profile 逆引き seam）
 
 > **上は原文の写しで、規範は frontmatter が正**。`profileDir` の**キー**（home は `<name>`・
-> project / fixed / `--root` 上書きは `<roothash>/<name>`・HM モジュール経由は固定名
-> `default`）そのものは `docs/spec.md`「root の解決」「モジュールオプション仕様」節の担当
-> （#209-PR5）で、`--root` 指定時に roothash でキーすることは REQ-61c05e09、project mode で
-> 解決済み root をキーにする理由と `<roothash>`（解決後の絶対 root パスの sha256 短縮 hex）の
-> 定義は REQ-46fccb80、孤児 profile の扱いは REQ-d41b1d0a の担当。本 item は「キーで指す先が
+> project / fixed / `--root` 上書きは `<roothash>/<name>`）そのものは REQ-d5a2e289 の担当で、
+> project mode で解決済み root をキーにする理由と `<roothash>`（解決後の絶対 root パスの
+> sha256 短縮 hex）の定義は REQ-46fccb80、孤児 profile の扱いは REQ-d41b1d0a の担当。
+> HM モジュール経由も home mode の `<name>` 直キーに乗る（原文が挙げる「固定名 `default`」の
+> MVP 限定は ADR-0035 が反転済み・REQ-c6891aeb）。本 item は「キーで指す先が
 > ディレクトリであり、その中に何をどう並べるか」という物理形を規定する。flock を blocking で
 > 取るか try-lock で取るかは REQ-1c1526b1、pending out-link が gcroot を持ち config あたり
 > 最大 1 に抑えられることは REQ-840b3641 の担当。

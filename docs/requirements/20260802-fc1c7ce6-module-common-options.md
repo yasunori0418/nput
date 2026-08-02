@@ -4,19 +4,22 @@ type: requirement
 name: "全モジュールは共通オプションの同一集合を公開し、root はモジュールが pin する"
 specification: |
   Every module (home-manager / NixOS / nix-darwin) SHALL expose the same set of common
-  options: `nput.enable :: bool` defaulting to false, `nput.entries :: attrsOf entry`
-  defaulting to `{}`, `nput.backup.enable :: bool` defaulting to false, and
-  `nput.backup.suffix :: str` defaulting to `"nput-backup"`. A module SHALL pin the root
+  options: `nput.enable :: bool` defaulting to false, the option supplying entries, of
+  type `attrsOf entry` and defaulting to `{}`, `nput.backup.enable :: bool` defaulting to
+  false, and `nput.backup.suffix :: str` defaulting to `"nput-backup"`. Which option
+  supplies the entries, and whether it holds a `<name>` dimension, is stated by
+  REQ-c6891aeb and is not restated here. A module SHALL pin the root
   by its own nature — home-manager to `homeRoot`, a devShell to `projectRoot` — and
   SHALL NOT expose a `root` option, so that a user of a module never restates it. This
   is a departure from `mkManifest` and the CLI entrypoint, where `root` is required to be
   stated explicitly (REQ-4ec3accc).
 specification_ja: |
   全モジュール（home-manager / NixOS / nix-darwin）は共通オプションとして同一の集合を
-  公開しなければならない: `nput.enable :: bool`（デフォルト false）・
-  `nput.entries :: attrsOf entry`（デフォルト `{}`）・`nput.backup.enable :: bool`
+  公開しなければならない: `nput.enable :: bool`（デフォルト false）・entries を供給する
+  オプション（型は `attrsOf entry`・デフォルト `{}`）・`nput.backup.enable :: bool`
   （デフォルト false）・`nput.backup.suffix :: str`（デフォルト `"nput-backup"`）。
-  モジュールは自分の性質で root を pin しなければならず（home-manager は `homeRoot`・
+  entries をどのオプションが供給するか・それが `<name>` 次元を持つかは REQ-c6891aeb の
+  担当で、本 item では規定しない。モジュールは自分の性質で root を pin しなければならず（home-manager は `homeRoot`・
   devShell は `projectRoot`）、`root` オプションを公開してはならない。モジュール利用者が
   root を再指定しないようにするためである。これは `root` を明示必須とする `mkManifest` /
   CLI entrypoint の層（REQ-4ec3accc）との差分である。
@@ -39,7 +42,15 @@ nput.backup.suffix :: str     # デフォルト: "nput-backup"（→ ADR-0045）
 > entry submodule のフィールド定義は REQ-cb77ea05 / REQ-a33a11e3、`root` が
 > `mkManifest` / CLI 層で明示必須であることは REQ-4ec3accc、`--backup` の退避契約そのものは
 > REQ-5dd5a4e9 の担当。`nput.backup` が manifest ではなく engine 起動の配線に効くことは
-> REQ-e1e1114b、HM の `entries` が単一 profile に限られることは REQ-c6891aeb の担当。
+> REQ-e1e1114b の担当。
+>
+> **`entries` の canonical 形は REQ-c6891aeb が正**。**ADR-0035 は HM の canonical を
+> `nput.configs.<name>.entries` とし、素の `nput.entries` を `configs.default.entries` への
+> deprecated 糖衣へ降格することを決定済み**で、`docs/spec.md` の当該表はこれに未追従。
+> 本 item の規範は「全モジュールが同一集合の共通オプションを公開すること」と各オプションの
+> 型・デフォルト値に留め、`entries` が単一 attrset か `<name>` 次元を持つかは規定しない
+> （REQ-c6891aeb の担当）。上の写しの `nput.entries` は原文逐語であり、canonical 形の主張
+> ではない。`docs/spec.md` の追従は本 item の担当範囲外。
 
 ## 出典
 
