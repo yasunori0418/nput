@@ -12,9 +12,12 @@ specification: |
   SHALL stop the switch by exiting non-zero, matching the clobber error of `home.file`
   under a declarative switch. Because the pinned nput CLI (`packages.nput`) and
   `mkManifest` come of the same flake input, a schemaVersion skew SHALL NOT arise
-  structurally. This states the contract of a single kick; how many configs there are is
-  stated by REQ-c6891aeb, and the definition of the option supplying their entries by
-  REQ-fc1c7ce6, neither being restated here.
+  structurally. This states the contract of a single kick; the correspondence of one
+  config to one manifest and one profile is stated by REQ-c6891aeb, and the definition of
+  the option supplying its entries by REQ-fc1c7ce6, neither being restated here. How many
+  times the activation kicks the engine when several configs are present (ADR-0035 §3) is
+  as yet held by no item — the original text carries no corresponding passage — and is
+  taken up separately, together with its following.
 specification_ja: |
   home-manager モジュールは `home.activation.nput`（`entryAfter ["writeBoundary"]`）から
   `nput apply --manifest <link-farm>` で engine を kick しなければならない。link-farm は
@@ -24,8 +27,11 @@ specification_ja: |
   engine error（conflict 等）は非 0 終了で switch を止めなければならない（宣言的 switch・
   `home.file` の clobber エラーと同型）。pin 版 nput CLI（`packages.nput`）と `mkManifest` が
   同一 flake input 由来のため、schemaVersion skew は構造的に起こらないものとする。本 item が
-  規定するのは 1 起動あたりの契約であり、config がいくつあるかは REQ-c6891aeb、その entries を
-  供給するオプションの定義は REQ-fc1c7ce6 の担当で、いずれも本 item では規定しない。
+  規定するのは 1 起動あたりの契約であり、1 config が 1 manifest = 1 profile に対応することは
+  REQ-c6891aeb、その entries を供給するオプションの定義は REQ-fc1c7ce6 の担当で、いずれも
+  本 item では規定しない。複数 config があるとき activation が engine を何回 kick するか
+  （ADR-0035 §3）は、原文に対応記述が無いためどの item も未だ規範として持たず、原文の追従と
+  あわせて別途扱う。
 ---
 # REQ-8085f194: home-manager モジュールの engine kick 1 回は activation からビルド済み link-farm を渡し、失敗で switch を止める
 
@@ -59,11 +65,11 @@ specification_ja: |
 > - モジュールが root を pin し利用者が再指定しないこと → REQ-fc1c7ce6。`homeRoot` の
 >   層ごとの解決 → REQ-8d965ca2
 > - manifest を供給するオプションの定義（canonical は `nput.configs.<name>.entries`・
->   `nput.entries` はその糖衣）→ REQ-fc1c7ce6、config の個数と profile 粒度 → REQ-c6891aeb。
->   本 item の写しにある `nput.entries` は原文逐語であり、規範文では供給元を「config の
->   entries」と述べて ADR-0035 と衝突しない形にしている。activation が profile ごとに engine を
->   kick する規律（ADR-0035 §3）は原文に対応記述が無く、item 化は REQ-c6891aeb の注記のとおり
->   別途扱う
+>   `nput.entries` はその糖衣）→ REQ-fc1c7ce6、1 config が 1 manifest = 1 profile に対応する
+>   ことと profile 粒度 → REQ-c6891aeb。本 item の写しにある `nput.entries` は原文逐語であり、
+>   規範文では供給元を「config の entries」と述べて ADR-0035 と衝突しない形にしている。
+>   activation が profile ごとに engine を kick する規律（ADR-0035 §3）は原文に対応記述が無く、
+>   **どの item も規範として持たない**（item 化は REQ-c6891aeb の注記のとおり別途扱う）
 > - flock を既定 blocking で取ること → REQ-1c1526b1。レポートと warning を stderr へ出す
 >   ストリーム規律 → REQ-fea038de。終了コードの体系 → REQ-2c5a10d8
 > - 世代が nput 自前 profile に乗ること → REQ-1be4d678。profile 名の次元と profileDir の

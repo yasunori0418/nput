@@ -60,8 +60,9 @@ nput.backup.suffix :: str     # デフォルト: "nput-backup"（→ ADR-0045）
 > （全モジュール共通）と定めているため、これは HM 固有ではなく共通オプション集合の一部で
 > あり、本 item の規範に含めた（REQ-37b56673 / REQ-16faf428 で ADR-0036 由来の未追従を
 > 扱ったのと同じ扱い）。`configs` の `<name>` 次元が profile の粒度にとって何を意味するか
-> （役割分離が可能になること・profile dir が home mode の `<name>` 直キーに乗ること）は
-> REQ-c6891aeb の担当。`docs/spec.md` の追従は本 item の担当範囲外。
+> （役割分離が可能になること・`<name>` 次元の導入が非破壊であること）は REQ-c6891aeb、
+> profile dir をどうキーするかは REQ-d5a2e289 の担当。`docs/spec.md` の追従は本 item の
+> 担当範囲外。
 >
 > **`nput.configs` のデフォルトを `{}` とする根拠**: ADR-0035 §1 は型
 > （`attrsOf (submodule { entries = entriesType; })`）のみを定めデフォルトに触れていないが、
