@@ -11,7 +11,8 @@ specification: |
   deleted, `reset` being the only explicit means of deleting a copy. After removing either
   a symlink or a copy, empty-parent-directory pruning SHALL be applied. Because of the
   risk of data loss, the command SHALL request consent, either through a confirmation
-  prompt or via `--yes`, and SHALL report the deleted targets. `reset` SHALL be an FS-only
+  prompt or via `-y` / `--yes` (the latter being for scripts and CI), and SHALL report the
+  deleted targets. `reset` SHALL be an FS-only
   teardown that leaves the profile and generations untouched; as long as the config still
   holds the entry, the next apply SHALL place it again. It SHALL be usable in both home
   and project mode.
@@ -20,8 +21,9 @@ specification_ja: |
   target 省略で全 entry、指定でその entry のみを対象とする。symlink は stale 除去と同じ
   保守的不変条件（nput 管理・記録通りのみ・foreign は warning で残す）で除去し、
   copy target も削除する（copy を消す唯一の明示手段）。symlink・copy いずれの除去後も
-  空親ディレクトリ剪定を適用する。データ損失リスクのため確認プロンプトを出すか `--yes` で
-  同意を要求し、削除 target をレポート表示しなければならない。`reset` は profile / 世代を
+  空親ディレクトリ剪定を適用する。データ損失リスクのため確認プロンプトを出すか
+  `-y` / `--yes`（スクリプト / CI 用）で同意を要求し、削除 target をレポート表示しなければ
+  ならない。`reset` は profile / 世代を
   触らない FS-only teardown であり、config が entry を残す限り次の apply で再配置される。
   home / project の両モードで使用できる。
 ---
