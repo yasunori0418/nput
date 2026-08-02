@@ -8,6 +8,7 @@ justifies:
   - "REQ-6911eab6-12b4-457c-9db4-d7430a9e9b3f"
   - "REQ-60787ed2-4176-4bdd-800f-1600c0315551"
   - "REQ-b12fc3c0-d7fe-4003-922c-f3ac0d969b66"
+  - "REQ-fc64de4c-c82b-419c-8706-07d8d97daa37"
 revises:
   - "ADR-0005"
   - "ADR-0006"
