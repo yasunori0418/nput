@@ -9,6 +9,9 @@ justifies:
   - "REQ-a480c183-40ce-4201-93b5-65a7a59c1b9e"
   - "REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0"
   - "REQ-d41b1d0a-c6d5-41cc-93f9-e5cc7f152da4"
+  - "REQ-9cb26ffd-071e-4c68-a6fc-faac6373b75e"
+  - "REQ-e79178f5-5865-4444-a05d-3ab06f33cd6d"
+  - "REQ-a0bdf6db-6c0c-476c-916a-61ee4e4510d9"
 references:
   - "ADR-0002"
   - "ADR-0003"

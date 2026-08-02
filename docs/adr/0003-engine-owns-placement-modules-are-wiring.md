@@ -6,6 +6,12 @@ status: 採用
 status_note: "2026-06-11 改訂: エンジンを Go バイナリ + ネイティブ FS に具体化 → ADR-0006"
 justifies:
   - "REQ-eb363122-385a-499c-a074-c95efb949d07"
+  - "REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10"
+  - "REQ-c2654ca5-62c2-4e4b-ad67-ffc5468f429b"
+  - "REQ-8d965ca2-f8fd-44a4-87f3-94e850e9f85b"
+  - "REQ-81249072-56b8-42f5-807b-ea623c1efe99"
+  - "REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9"
+  - "REQ-8085f194-c903-4ecb-abd8-c719fe7b3292"
 references:
   - "ADR-0001"
   - "ADR-0002"
