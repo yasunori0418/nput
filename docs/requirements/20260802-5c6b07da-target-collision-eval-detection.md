@@ -6,15 +6,20 @@ specification: |
   A collision in which two distinct keys A and B explicitly override the `target` field to
   the same value SHALL be detected as a duplicate of the normalized target string and
   SHALL stop evaluation via `lib.throwIf` at eval time, not at engine runtime. A
-  cross-config collision (a same target across separate profiles or manifests) cannot be
-  detected at eval time and SHALL instead be handled at engine runtime as last-writer-wins
-  plus a foreign symlink warning. The two SHALL remain separate paths.
+  cross-config collision that does not ride on a single evaluation (a same target across
+  separate entrypoints, machines or tools) cannot be detected at eval time and SHALL
+  instead be handled at engine runtime as last-writer-wins plus a foreign symlink warning.
+  The two SHALL remain separate paths. Where several configs do ride on a single
+  evaluation, as the `nput.configs` of one module configuration do, static detection is
+  possible and SHALL NOT be precluded by this.
 specification_ja: |
   別キー A / B が `target` フィールドを同値に明示上書きした衝突は、正規化後 target
   文字列の重複として eval 時に `lib.throwIf` で検出し停止しなければならない
-  （engine 実行時ではない）。cross-config（別 profile・別 manifest）の同一 target 衝突は
-  eval では検出できず、engine 実行時の後勝ち + foreign symlink warning として扱う。
-  両者は別経路とする。
+  （engine 実行時ではない）。単一の eval に載らない cross-config（別 entrypoint・別マシン・
+  別ツールに跨る場合）の同一 target 衝突は eval では検出できず、engine 実行時の後勝ち +
+  foreign symlink warning として扱う。両者は別経路とする。単一の eval に載る複数 config
+  （1 つのモジュール config の `nput.configs` など）については静的検出が可能であり、
+  本 item はそれを妨げない。
 ---
 # REQ-5c6b07da: target 衝突の検出経路を同一 manifest 内と cross-config で分ける
 
@@ -27,13 +32,22 @@ specification_ja: |
 cross-config（別 profile・別 manifest）の同一 target 衝突は eval では検出不可で、
 これは engine 実行時の後勝ち + foreign symlink warning になる。両者は別経路。
 
-> **HM モジュールの `configs` は上の cross-config の例外**（→ ADR-0035 §4）。単一の HM config 内の
-> `nput.configs.<A>` と `<B>` は全 config が同一のモジュール eval に載るため正規化後 target の
-> 衝突を静的に検出でき、ADR-0035 §4 はこれを eval 時 assertion で停止すると決定している。
-> 本 item の「cross-config は eval では検出不可」は別 entrypoint・別マシン・別ツールの場合を
-> 指し、この例外を否定しない。`docs/spec.md` が ADR-0035 に未追従で対応記述を持たないため、
-> 例外の item 化は原文の追従（epic #203 の段階 7）とあわせて別途扱う（→ REQ-c6891aeb の注記）。
+> **上は原文の写しで、規範は frontmatter が正**。原文が「cross-config」を無条件に「eval では
+> 検出不可」とするのに対し、規範文では**単一の eval に載らない場合**（別 entrypoint・別マシン・
+> 別ツール）へ限定した。**ADR-0035 §4 が、1 つのモジュール config 内の `nput.configs.<A>` と
+> `<B>` は全 config が同一のモジュール eval に載るため正規化後 target の衝突を静的に検出でき、
+> eval 時 assertion で停止すると決定済み**で、原文の無条件な言い切りはこれを否定してしまう
+> （原文が ADR-0035 に未追従・REQ-37b56673 / REQ-16faf428 で ADR-0036 由来の未追従を扱ったのと
+> 同じ扱い）。本 item は静的検出が可能な場合を妨げないことまでを規範とし、その場合に実際に
+> eval 停止する規範（ADR-0035 §4）そのものは持たない。同 §4 の item 化は `docs/spec.md` の
+> 追従（epic #203 の段階 7）とあわせて別途扱う（→ REQ-c6891aeb の注記）。`docs/spec.md` の
+> 追従は本 item の担当範囲外。
 
 ## 出典
 
 `docs/spec.md`「lib API」→「入力検査（`evalModules` + `normalizeManifest`）」。
+
+決定の実体は同一 manifest 内の target 衝突を eval 時に検出すると定めた ADR-0024
+「実装前残セマンティクス第6巡」§5 で、cross-config を「単一の eval に載らない場合」へ限定した
+のは ADR-0035「HM モジュールに `nput.configs.<name>` を導入し複数 profile（役割分離）を
+可能にする」§4（単一のモジュール eval に載る config 間は静的検出が可能）。
