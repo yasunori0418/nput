@@ -5,6 +5,8 @@ name: "成功時はデフォルト沈黙とし warning と error は常時 stder
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
+  - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 specification: |
   The default SHALL be silence on success. The success of `apply` / `reset` / `rollback`
   SHALL be conveyed by exit code 0, and the placement report (summary plus per-target

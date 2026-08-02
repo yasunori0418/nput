@@ -5,6 +5,8 @@ name: "target 除去後は空の親ディレクトリチェーンを root 境界
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
+  - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
 specification: |
   After a target has been removed, the chain of its parent directories SHALL be pruned
   conservatively towards the root, because nput creates parent directories automatically

@@ -5,6 +5,7 @@ name: "MVP は manifest v1 のみを発行・受理しマイグレーション�
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
+  - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
 specification: |
   The MVP SHALL emit and accept `schemaVersion = 1` only, and a migration mechanism for
   reading older schema versions MUST NOT be built up front. A backward-compatibility

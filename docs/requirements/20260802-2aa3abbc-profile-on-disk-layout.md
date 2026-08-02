@@ -5,6 +5,7 @@ name: "profileDir は config 専用ディレクトリとし、profile リンク�
 derives_from:
   - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 specification: |
   `profileDir` SHALL be a directory dedicated to each config, holding within it the
   profile link, the generations and the build out-link. Its base `<state>` SHALL be
