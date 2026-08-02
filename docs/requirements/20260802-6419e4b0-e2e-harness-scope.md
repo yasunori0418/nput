@@ -54,5 +54,5 @@ bash・詳細は `tests/e2e/README.md`）が、flake entrypoint からの `nix b
 
 `docs/spec.md`「E2E 検証範囲（非 NixOS）」節の導入文と表。
 
-決定の実体は ADR-0012「CI とテスト実行」で、非 NixOS の実 nix 上で E2E を回す検証範囲を
+決定の実体は ADR-0012「CI・テスト実行基盤を cryoflow 構成踏襲で確定する」で、非 NixOS の実 nix 上で E2E を回す検証範囲を
 定めている。

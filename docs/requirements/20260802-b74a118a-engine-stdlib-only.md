@@ -33,8 +33,8 @@ specification_ja: |
 
 `docs/spec.md`「依存関係」節の表の `internal/` 行。
 
-決定の実体は ADR-0011「engine / CLI の技術スタック」で、engine を stdlib-only の内部層と
-することを定めている。runtime に `nix` / `git` をサブプロセスで要求する形は ADR-0006
-「engine を Go バイナリとし lib はデータを生む」が定めるが、同 ADR は stdlib-only 自体を
-決めていないため、側面の根拠として `justifies` は張らない（外部コマンドの限定そのものの
-帰属は REQ-6c4e174a が担当する）。
+決定の実体は ADR-0011「engine / CLI の技術スタックを確定する」で、engine を stdlib-only の
+内部層とすることを定めている。runtime に `nix` / `git` をサブプロセスで要求する形は
+ADR-0006「エンジンを固定の Go バイナリにし、lib はデータ生成に徹する」が定めるが、同 ADR は
+stdlib-only 自体を決めていないため、側面の根拠として `justifies` は張らない（外部コマンドの
+限定そのものの帰属は REQ-6c4e174a が担当する）。
