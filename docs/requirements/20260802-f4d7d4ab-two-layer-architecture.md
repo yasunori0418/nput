@@ -41,6 +41,17 @@ nput は **2 層**で構成する。
 層の境界は `manifest.json` が担う。CLI と engine の間で受け渡すのはこの JSON 契約のみで、
 engine は Nix の評価結果へ直接依存しない。
 
+> **上の図は原文の写しで、規範は frontmatter が正**。図に含まれる次の 2 点は本 item の
+> 規範ではない。
+>
+> - entrypoint として発見するファイルと発見規則（`flake.nix` / `shell.nix` /
+>   `default.nix`・CWD 既定・`-f` 上書き）→ `docs/spec.md`「CLI 仕様」→
+>   「entrypoint の発見」節の担当（後続 PR で item 化）
+> - engine が叩く外部コマンドの限定とネイティブ FS 操作・`nix-env --set` → REQ-6c4e174a
+
 ## 出典
 
-`docs/spec.md`「アーキテクチャ概要」。
+`docs/spec.md`「アーキテクチャ概要」。層の境界が `manifest.json` だけであることは、
+同節の構成図が層間の受け渡しを `↓ manifest.json in` の 1 本だけで描いていることによる
+（`manifest.json` を「engine が読む唯一の安定契約」と明示するのは同「manifest.json
+スキーマ（v1）」節で、当該節は後続 PR の担当）。

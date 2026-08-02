@@ -34,4 +34,5 @@ entries = {
 
 ## 出典
 
-`docs/spec.md`「lib API」→「`lib.mkManifest`」引数表・「入力検査」節・使用例。
+`docs/spec.md`「lib API」→「`lib.mkManifest`」引数表・「入力検査（`evalModules` +
+`normalizeManifest`）」節・使用例。

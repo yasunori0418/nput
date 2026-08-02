@@ -22,8 +22,8 @@ specification_ja: |
 
 ## 仕様
 
-`lib.mkManifest` は配置データ（`manifest.json` + symlink farm を含む derivation）を
-生成する**純粋関数**。
+`lib.mkManifest` は配置データを生成する**純粋関数**。返り値 derivation が何を含むかは
+REQ-60e6b49c が正で、本 item では規定しない。
 
 ```
 mkManifest :: { pkgs, entries, root } -> derivation
