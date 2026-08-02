@@ -3,9 +3,10 @@ id: "REQ-1be4d678-959c-44d7-a346-44bfd95af56e"
 type: requirement
 name: "世代は link farm derivation を nput 自前 profile へコミットして積み、前世代 manifest から stale を除去する"
 specification: |
-  The manifest of what has been placed SHALL be embedded inside the store as
-  `manifest.json`, being part of the link farm derivation produced by `lib.mkManifest`;
-  no mutable JSON SHALL be kept outside the store, and `manifest.json` SHALL be immutable.
+  The manifest of what has been placed SHALL be embedded inside the store, as part of the
+  link farm derivation produced by `lib.mkManifest` (what that derivation contains is
+  stated by REQ-60e6b49c and is NOT restated here); no mutable JSON SHALL be kept outside
+  the store, and `manifest.json` SHALL be immutable.
   At run time the engine SHALL, in this order: acquire a flock keyed on the resolved
   `profileDir`; read the store manifest of the previous generation and diff it against the
   new generation so as to determine which entries have disappeared; place the symlinks,
@@ -22,8 +23,9 @@ specification: |
   tracking. One profile SHALL correspond to one config, each config being atomic.
 specification_ja: |
   「配置したもの」のマニフェストは、純粋関数 `lib.mkManifest` が生成する link farm derivation の
-  一部として `manifest.json` の形で store 内に埋め込まなければならない。store 外の可変 JSON は
-  持たず、`manifest.json` は不変とする。engine は実行時に、解決後 `profileDir` 単位の flock を
+  一部として store 内に埋め込まなければならない（当該 derivation が何を含むかは REQ-60e6b49c が
+  規定し、ここでは繰り返さない）。store 外の可変 JSON は持たず、`manifest.json` は不変とする。
+  engine は実行時に、解決後 `profileDir` 単位の flock を
   取得し、前世代の store マニフェストと新世代を diff して消えた entry を判定し、symlink /
   out-of-store symlink / place-once copy を配置し（新規・張替を先に、stale 除去を最後に）、
   全て成功してから `nix-env --profile <profileDir>/profile --set <link-farm-drv>` で nput の nix
@@ -76,10 +78,17 @@ specification_ja: |
 > `cleanup` を参考に Go で再実装する（`home.file` 自体は再利用しない）」は実装方針の注記で
 > 要求ではなく、「`nix` / `git` 以外はサブプロセスを使わない」は REQ-6c4e174a の担当。
 
+逆に、上の写しには現れないが規範文が持つものが 1 つある。**1 profile = 1 config の atomic
+性**で、原文はこれを本節ではなく「CLI 仕様」→「サブコマンド体系」の `apply` の箇条書き
+（「profile は config 単位で atomic」）で述べる。当該箇所を分割した REQ-c2d44626 と、
+これを論拠として引く REQ-c890ce4a がいずれも規範の所在を本 item に置いているため、profile の
+機構を持つ本 item が引き受けて規範化した。
+
 ## 出典
 
 `docs/spec.md`「世代管理仕様」→「機構」節の箇条書きと機構表、および同節の
-「nput は全モードで自前 profile を持つ」段落。
+「nput は全モードで自前 profile を持つ」段落。atomic 性のみ同「CLI 仕様」→
+「サブコマンド体系」の `apply` の箇条書き（上の注記を参照）。
 
 決定の実体は ADR-0002「世代管理を nix profile に乗せる（全モード自前 profile / rollback は
 standalone 中心）」と ADR-0006「エンジンを固定の Go バイナリにし、lib はデータ生成に徹する」

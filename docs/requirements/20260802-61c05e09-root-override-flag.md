@@ -21,9 +21,9 @@ specification_ja: |
                     # 明示時は全モードで profileDir を上書き後 root の <roothash> でキー
 ```
 
-profileDir のレイアウト（`<roothash>/<name>` の形）そのものは REQ-2aa3abbc の担当で、
-本 item は `--root` が全モードで root を上書きし profileDir のキーを roothash に切り替える
-ことを規定する。
+profileDir のレイアウト（`<roothash>/<name>` の形）そのものは REQ-2aa3abbc、`<roothash>`
+（解決後の絶対 root パスの sha256 を短縮した hex）の定義は REQ-46fccb80 の担当で、本 item は
+`--root` が全モードで root を上書きし profileDir のキーを roothash に切り替えることを規定する。
 
 ## 出典
 
