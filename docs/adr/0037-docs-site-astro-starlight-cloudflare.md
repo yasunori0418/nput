@@ -6,6 +6,8 @@ status: 採用
 issues:
   - "#57"
 origin: "起点 Issue: #57"
+justifies:
+  - "INF-0865477b-21b2-4feb-9c06-1a882a4e595a"
 references:
   - "ADR-0027"
   - "ADR-0028"

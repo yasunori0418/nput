@@ -5,6 +5,8 @@ name: "テスト成功を main マージの必須条件にする（ruleset で r
 status: 採用
 status_note: "public 化を前提とする"
 origin: "参照: 現行 `.github/workflows/test.yml`, `.github/actions/setup-nix`"
+justifies:
+  - "INF-8b97573f-d4d6-4abf-85e2-d859afbd96c6"
 references:
   - "ADR-0012"
   - "ADR-0027"

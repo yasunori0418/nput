@@ -5,6 +5,7 @@ name: "CI・テスト実行基盤を cryoflow 構成踏襲で確定する（flak
 status: 採用
 origin: "参照: `~/src/github.com/yasunori0418/cryoflow` の CI 構成（同一メンテナの実績構成）"
 justifies:
+  - "INF-d1230e1f-8ba8-49d8-8386-409bfbb7dd27"
   - "REQ-6419e4b0-629c-435f-b1e1-0bc996b5e61d"
   - "DSG-fb49e36c-eb20-4efa-8cac-88ef0873db8e"
   - "DSG-836aa5cb-0389-4adb-990b-144fe5aeffe3"

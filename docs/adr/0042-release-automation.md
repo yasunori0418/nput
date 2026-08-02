@@ -5,6 +5,7 @@ name: "リリースを bump PR 起点で自動化する（VERSION ファイル +
 status: 採用
 origin: "次期マイルストーン追加計画の grilling（2026-07-04）。参照実装として同作者の cryoflow リポジトリのリリース自動化（bump workflow + release workflow）を採用する"
 justifies:
+  - "INF-9878e9f5-1ec0-4ef2-879b-859ea538cc43"
   - "REQ-9ed6b500-a11f-414e-a763-adb47c89f7d4"
   - "REQ-a5053191-1c6a-449b-9c5e-5ff49dc5aead"
 references:
