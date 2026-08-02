@@ -5,7 +5,6 @@ name: "実装前残セマンティクス第4巡（schema 互換・copy ドリフ
 status: 採用
 origin: "実装着手前のドキュメント検査で、各文書が沈黙していた5つの細目を洗い出した（ADR-0015/0016/0017 と同系列の「実装前残セマンティクス」確定）"
 justifies:
-  - "REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9"
   - "REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461"
 references:
   - "ADR-0002"

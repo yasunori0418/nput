@@ -137,5 +137,7 @@ rootKind は link-farm 内 `manifest.json` から engine が読む。2a（flock 
 `apply --manifest` の skip を述べる最終箇条書き。
 
 決定の実体は ADR-0023「実行フロー順序」（eval 先行 → flock → build）で、out-link に
-よる indirect gcroot は ADR-0011、try-lock による shellHook skip は ADR-0022、
-同一 profileDir 同時実行の後勝ちは ADR-0013、`apply --manifest` の skip は ADR-0026。
+よる indirect gcroot は ADR-0011、同一 profileDir 同時実行の後勝ちは ADR-0013、
+`apply --manifest` の skip は ADR-0026。2a の flock を blocking で取るか try-lock で取るか
+（shellHook の skip 通知を含む）は REQ-1c1526b1 の担当で、その決定元となる ADR は
+本 item の出典には含めない。
