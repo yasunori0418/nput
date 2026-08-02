@@ -1,7 +1,7 @@
 ---
 id: "REQ-8085f194-c903-4ecb-abd8-c719fe7b3292"
 type: requirement
-name: "home-manager モジュールは activation からビルド済み link-farm を渡して engine を kick し、失敗で switch を止める"
+name: "home-manager モジュールの engine kick 1 回は activation からビルド済み link-farm を渡し、失敗で switch を止める"
 specification: |
   The home-manager module SHALL kick the engine from `home.activation.nput`
   (`entryAfter ["writeBoundary"]`) with `nput apply --manifest <link-farm>`, the link-farm
@@ -26,7 +26,7 @@ specification_ja: |
   規定するのは 1 起動あたりの契約であり、config がいくつあるか・その entries をどのオプションが
   供給するかは REQ-c6891aeb の担当で、本 item では規定しない。
 ---
-# REQ-8085f194: home-manager モジュールは activation からビルド済み link-farm を渡して engine を kick し、失敗で switch を止める
+# REQ-8085f194: home-manager モジュールの engine kick 1 回は activation からビルド済み link-farm を渡し、失敗で switch を止める
 
 ## 仕様
 
@@ -57,11 +57,12 @@ specification_ja: |
 >   `-f` / `--all` との併用エラー）→ REQ-dec58330
 > - モジュールが root を pin し利用者が再指定しないこと → REQ-fc1c7ce6。`homeRoot` の
 >   層ごとの解決 → REQ-8d965ca2
-> - manifest を供給するオプション（canonical は `nput.configs.<name>.entries`・`nput.entries`
->   はその糖衣）と config の個数 → REQ-c6891aeb。本 item の写しにある `nput.entries` は原文
->   逐語であり、規範文では供給元を「config の entries」と述べて ADR-0035 と衝突しない形に
->   している。activation が profile ごとに engine を kick する規律（ADR-0035 §3）は原文に
->   対応記述が無く、item 化は REQ-c6891aeb の注記のとおり別途扱う
+> - manifest を供給するオプションの定義（canonical は `nput.configs.<name>.entries`・
+>   `nput.entries` はその糖衣）→ REQ-fc1c7ce6、config の個数と profile 粒度 → REQ-c6891aeb。
+>   本 item の写しにある `nput.entries` は原文逐語であり、規範文では供給元を「config の
+>   entries」と述べて ADR-0035 と衝突しない形にしている。activation が profile ごとに engine を
+>   kick する規律（ADR-0035 §3）は原文に対応記述が無く、item 化は REQ-c6891aeb の注記のとおり
+>   別途扱う
 > - flock を既定 blocking で取ること → REQ-1c1526b1。レポートと warning を stderr へ出す
 >   ストリーム規律 → REQ-fea038de。終了コードの体系 → REQ-2c5a10d8
 > - 世代が nput 自前 profile に乗ること → REQ-1be4d678。profile 名の次元と profileDir の
