@@ -60,7 +60,8 @@ specification_ja: |
 
 > **上は原文の写しで、規範は frontmatter が正**。`profileDir` の**キー**（home は `<name>`・
 > project / fixed / `--root` 上書きは `<roothash>/<name>`・HM モジュール経由は固定名
-> `default`）そのものは root の解決とモジュール別動作の担当（#209-PR5）で、`--root` 指定時に
+> `default`）そのものは `docs/spec.md`「root の解決」「モジュールオプション仕様」節の
+> 担当（#209-PR5）で、`--root` 指定時に
 > roothash でキーすることは REQ-61c05e09、project mode で解決済み root をキーにする理由は
 > REQ-46fccb80 / REQ-d41b1d0a の担当。本 item は「キーで指す先がディレクトリであり、その中に
 > 何をどう並べるか」という物理形を規定する。flock を blocking で取るか try-lock で取るかは

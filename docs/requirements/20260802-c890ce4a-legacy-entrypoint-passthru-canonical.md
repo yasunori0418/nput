@@ -57,8 +57,7 @@ manifest を合成するヘルパは持たない（1 profile = 1 config の atom
 >
 > - legacy entrypoint の addressing がフラットな `nput.<name>` になること → REQ-496b1a07
 > - `apply --all` の一括 eval そのもの → REQ-535b811d
-> - 1 profile = 1 config の atomic 性（→ ADR-0002）→ `docs/spec.md`「世代管理仕様」節の
->   担当（#209-PR4）
+> - 1 profile = 1 config の atomic 性（→ ADR-0002）→ REQ-1be4d678
 
 ## 出典
 

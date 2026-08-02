@@ -21,9 +21,9 @@ specification_ja: |
                     # 明示時は全モードで profileDir を上書き後 root の <roothash> でキー
 ```
 
-profileDir のレイアウト（`<roothash>/<name>` の形）そのものは `docs/spec.md`
-「世代管理仕様」→「機構」節の担当（#209-PR4）で、本 item は `--root` が全モードで root を
-上書きし profileDir のキーを roothash に切り替えることを規定する。
+profileDir のレイアウト（`<roothash>/<name>` の形）そのものは REQ-2aa3abbc の担当で、
+本 item は `--root` が全モードで root を上書きし profileDir のキーを roothash に切り替える
+ことを規定する。
 
 ## 出典
 

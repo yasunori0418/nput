@@ -31,9 +31,8 @@ specification_ja: |
 上の表は原文の写しで、規範は frontmatter が正。`systemRoot` の「distro 構想・将来」の
 限定は規範に含めない（理由は下の注記）。
 
-home mode と project mode は世代の扱いが異なる（→ `docs/spec.md`「世代管理仕様」）。
-この差異そのものは「世代管理仕様」節の要求であり、当該節を分割する後続 PR（#209-PR4）で
-item 化する。本 item は root の値と対応するモードまでを規定する。
+home mode と project mode は世代の扱いが異なる。この差異そのものは REQ-46fccb80 の担当で、
+本 item は root の値と対応するモードまでを規定する。
 
 ## 出典
 

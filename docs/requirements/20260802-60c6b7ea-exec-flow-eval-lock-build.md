@@ -123,10 +123,10 @@ rootKind は link-farm 内 `manifest.json` から engine が読む。2a（flock 
 > **上のフロー図は原文の写しで、規範は frontmatter が正**。図が触れる次の規範は本 item の
 > 担当ではなく、本 item はそれらがフロー上のどの段に位置するかだけを規定する。
 >
-> - profileDir のレイアウト（`<roothash>/<name>` 等）と世代スキップ / ドリフト修復の
->   詳細 → `docs/spec.md`「世代管理仕様」節の担当（#209-PR4）
-> - 配置前除去（PreRemove）・保守的 stale 除去・undo ジャーナルの規範 →
->   「配置動作仕様」節の担当（#209-PR4）
+> - profileDir のレイアウト（`<roothash>/<name>` 等）→ REQ-2aa3abbc、世代スキップ /
+>   ドリフト修復の詳細 → REQ-46fccb80
+> - 配置前除去（PreRemove）→ REQ-c9ab91c1 / REQ-7cee95dd / REQ-2b48620a、保守的 stale
+>   除去 → REQ-16aef46b、undo ジャーナル → REQ-5e75aabc
 > - root 解決の各モードの規範 → 「root の解決」節の担当（#209-PR5）
 > - `apply --manifest` の契約（引数・併用エラー・entrypoint 発見と eval / build を
 >   行わないこと・rootKind を link-farm 内 `manifest.json` から読むこと）→ REQ-dec58330。
