@@ -7,15 +7,14 @@ specification: |
   eval-first as a common preliminary stage. They do not build, but determining
   `profileDir` (that is, the preliminary rootKind eval followed by root resolution) is a
   precondition for the per-`profileDir` flock and for reading the previous generation
-  manifest. When overridden with `--root`, `profileDir` SHALL be looked up under the same
-  roothash key as elsewhere, so that operating on a generation created with `--root`
-  requires the same `--root`.
+  manifest. Consequently, operating on a generation created with `--root` SHALL require
+  the same `--root`, `profileDir` being keyed the same way as for an apply.
 specification_ja: |
   非 build コマンド（`reset` / `rollback` / `list-generations`）も eval 先行を共通前段に
   持たなければならない。build はしないが、profileDir 単位の flock と前世代 manifest 読みの
-  ため profileDir 確定（= rootKind 先取り eval → root 解決）が前提になる。`--root` 上書き
-  時は同じ roothash キーで profileDir を引く（`--root` を付けた世代を操作するには同じ
-  `--root` が要る）。
+  ため profileDir 確定（= rootKind 先取り eval → root 解決）が前提になる。したがって
+  `--root` を付けた世代を操作するには同じ `--root` が要る（profileDir のキーの引き方は
+  apply と同一）。
 ---
 # REQ-9c111c32: 非 build コマンドも eval 先行を共通前段に持つ
 
