@@ -36,7 +36,10 @@ home mode と project mode は世代の扱いが異なる。この差異その�
 
 ## 出典
 
-`docs/spec.md`「lib API」→「`lib.mkManifest`」→「`root` の値」。
+`docs/spec.md`「lib API」→「`lib.mkManifest`」→「`root` の値」、および「root の解決」→
+「system mode（`root = systemRoot`・将来）」節。後者は「root = `/`」「distro 構想の system
+配置 seam」「今回の実装スコープ外」の 3 点からなり、規範として残る「root = `/`」が本 item の
+表と同一のため、独立 item を立てず本 item に畳んだ（残る 2 点を規範に採らない理由は下の注記）。
 
 > **`systemRoot` を「distro 構想・将来」としない理由**: `docs/spec.md` の当該表は
 > `systemRoot` を「`/`（distro 構想・将来）」と記すが、system mode は **ADR-0036 が

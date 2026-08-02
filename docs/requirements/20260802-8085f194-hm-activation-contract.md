@@ -1,0 +1,68 @@
+---
+id: "REQ-8085f194-c903-4ecb-abd8-c719fe7b3292"
+type: requirement
+name: "home-manager モジュールは activation からビルド済み link-farm を渡して engine を kick し、失敗で switch を止める"
+specification: |
+  The home-manager module SHALL kick the engine from `home.activation.nput`
+  (`entryAfter ["writeBoundary"]`) with `nput apply --manifest <link-farm>`, the link-farm
+  being built from `nput.entries` by `mkManifest` at module evaluation time and its store
+  path passed from the activation script. The activation MUST NOT perform `nix eval` or
+  `nix build`, not being on the entrypoint path. The flock SHALL be taken blocking, the
+  placement report SHALL be visible, and an engine error such as a conflict SHALL stop the
+  switch by exiting non-zero, matching the clobber error of `home.file` under a
+  declarative switch. Because the pinned nput CLI (`packages.nput`) and `mkManifest` come
+  of the same flake input, a schemaVersion skew SHALL NOT arise structurally.
+specification_ja: |
+  home-manager モジュールは `home.activation.nput`（`entryAfter ["writeBoundary"]`）から
+  `nput apply --manifest <link-farm>` で engine を kick しなければならない。link-farm は
+  モジュール評価時に `nput.entries` から `mkManifest` でビルドし、その store パスを
+  activation script から渡す。activation は entrypoint 経路ではないため `nix eval` /
+  `nix build` を行ってはならない。flock は blocking で取り、配置レポートを可視とし、
+  engine error（conflict 等）は非 0 終了で switch を止めなければならない（宣言的 switch・
+  `home.file` の clobber エラーと同型）。pin 版 nput CLI（`packages.nput`）と `mkManifest` が
+  同一 flake input 由来のため、schemaVersion skew は構造的に起こらないものとする。
+---
+# REQ-8085f194: home-manager モジュールは activation からビルド済み link-farm を渡して engine を kick し、失敗で switch を止める
+
+## 仕様
+
+| method | `src` | 動作 |
+|---|---|---|
+| `"symlink"` | path / set | engine が store link をネイティブ symlink |
+| `"symlink"` | marker | engine が out-of-store symlink をネイティブ作成（HM の mkOutOfStoreSymlink には委譲しない）|
+| `"copy"` | path / set | engine が place-once ネイティブコピー |
+
+- `home.activation.nput`（`entryAfter ["writeBoundary"]`）から engine を起動する。配置ロジックは
+  HM に依存しない。root は `homeRoot` を pin
+- engine kick は **`nput apply --manifest <link-farm>`**。モジュール評価時に `nput.entries` から
+  `mkManifest` で link-farm をビルドし、その store パスを activation script から渡す。
+  activation は `nix eval` / `build` を行わない（entrypoint 経路ではない）
+- **blocking flock・配置レポート可視・engine error（conflict 等）は非 0 終了で switch を止める**
+  （宣言的 switch・`home.file` の clobber エラーと同型）
+- pin 版 nput CLI（`packages.nput`）と `mkManifest` が同一 flake input 由来のため
+  schemaVersion skew は構造的に起きない
+
+> **上は原文の写しで、規範は frontmatter が正**。原文が参照する次の規範は本 item の担当では
+> ない。
+>
+> - method と `src` の組み合わせが選ぶ配置方法 → REQ-77689c68。表が HM でも engine が扱う
+>   （HM の `mkOutOfStoreSymlink` へ委譲しない）と述べる点は REQ-eb363122 / REQ-c1b3ca5f
+> - `apply --manifest` の契約そのもの（entrypoint 発見・eval・build を行わないこと・
+>   `-f` / `--all` との併用エラー）→ REQ-dec58330
+> - モジュールが root を pin し利用者が再指定しないこと → REQ-fc1c7ce6。`homeRoot` の
+>   層ごとの解決 → REQ-8d965ca2
+> - flock を既定 blocking で取ること → REQ-1c1526b1。レポートと warning を stderr へ出す
+>   ストリーム規律 → REQ-fea038de。終了コードの体系 → REQ-2c5a10d8
+> - 世代が nput 自前 profile に乗ること → REQ-1be4d678。profile 名の次元と profileDir の
+>   キー → REQ-c6891aeb / REQ-d5a2e289。rollback を host へ一本化すること → REQ-844ee375
+> - `manifest.json` が唯一の安定契約で `schemaVersion` が 1 に固定であること →
+>   REQ-79ce0a09 / REQ-250d936c。本 item はそれを前提に「module 経路では skew が構造的に
+>   起きない」ことだけを規定する
+
+## 出典
+
+`docs/spec.md`「モジュール別動作仕様」→「home-manager モジュール」節の表と箇条書き。
+
+決定の実体は ADR-0026「モジュール activation の engine kick は `apply --manifest`
+（ビルド済み link-farm 直接適用）で行う」。モジュールを配線に徹させることは ADR-0003 が
+定めている。

@@ -32,7 +32,12 @@ nput list-generations --all    # home mode の全 config の世代を一覧
 ## 出典
 
 `docs/spec.md`「CLI 仕様」→「サブコマンド体系」の `rollback` / `list-generations` の
-箇条書き。
+箇条書き、および「モジュール別動作仕様」→「standalone（CLI）」節の第 2 文
+（`root = homeRoot` の home mode で nix profile による世代管理を行い `rollback <name>` /
+`list-generations <name>` を提供する）。後者は独立 item を立てず本 item に畳んだ。同節の
+残る第 1 文（`nput apply <name>` の明示実行と CLI による entrypoint 発見・manifest ビルド・
+エンジン駆動）は REQ-f4d7d4ab / REQ-1cc080f6 が既に規定しており、世代管理の機構そのものは
+REQ-1be4d678 の担当。
 
 決定の実体は ADR-0005「project mode は世代を内部機構に留めユーザーに公開しない」と、
 `list-generations --all` を追加した ADR-0018。
