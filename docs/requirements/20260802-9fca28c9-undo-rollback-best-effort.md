@@ -29,8 +29,8 @@ specification_ja: |
 
 > **上は原文の写しで、規範は frontmatter が正**。undo ジャーナルそのものの規範は
 > REQ-5e75aabc、成功時沈黙の出力規律そのものは REQ-8ef34101 の担当。conflict の全件報告
-> （`reportConflicts`）は「エラー仕様」節の担当（#209-PR6）で、本 item はその形を巻き戻し
-> 失敗の報告にも用いることだけを規定する。
+> （`reportConflicts`）は REQ-95e97d01 の担当で、本 item はその形を巻き戻し失敗の報告にも
+> 用いることだけを規定する。
 
 ## 出典
 
