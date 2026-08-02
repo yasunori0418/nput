@@ -8,13 +8,14 @@ specification: |
   { entries :: attrsOf entry; })` defaulting to `{}` and with `entries` likewise
   defaulting to `{}`, `nput.backup.enable :: bool` defaulting to false, and
   `nput.backup.suffix :: str` defaulting to `"nput-backup"`. The bare `nput.entries` SHALL
-  be kept as a sugar renaming onto `configs.default.entries`, non-breaking and deprecated. These SHALL be defined
-  jointly for every module, so that the set does not diverge per module. What the `<name>`
-  dimension of `configs` means for the granularity of profiles is stated by REQ-c6891aeb
-  and is not restated here. A module SHALL pin the root by its own nature — home-manager
-  to `homeRoot`, a devShell to `projectRoot` — and SHALL NOT expose a `root` option, so
-  that a user of a module never restates it. This is a departure from `mkManifest` and the
-  CLI entrypoint, where `root` is required to be stated explicitly (REQ-4ec3accc).
+  be kept as a sugar renaming onto `configs.default.entries`, non-breaking and deprecated.
+  These SHALL be defined jointly for every module, so that the set does not diverge per
+  module. What the `<name>` dimension of `configs` means for the granularity of profiles
+  is stated by REQ-c6891aeb and is not restated here. A module SHALL pin the root by its
+  own nature — home-manager to `homeRoot`, a devShell to `projectRoot` — and SHALL NOT
+  expose a `root` option, so that a user of a module never restates it. This is a
+  departure from `mkManifest` and the CLI entrypoint, where `root` is required to be
+  stated explicitly (REQ-4ec3accc).
 specification_ja: |
   全モジュール（home-manager / NixOS / nix-darwin）は共通オプションとして同一の集合を
   公開しなければならない: `nput.enable :: bool`（デフォルト false）・
@@ -61,6 +62,13 @@ nput.backup.suffix :: str     # デフォルト: "nput-backup"（→ ADR-0045）
 > 扱ったのと同じ扱い）。`configs` の `<name>` 次元が profile の粒度にとって何を意味するか
 > （役割分離が可能になること・profile dir が home mode の `<name>` 直キーに乗ること）は
 > REQ-c6891aeb の担当。`docs/spec.md` の追従は本 item の担当範囲外。
+>
+> **`nput.configs` のデフォルトを `{}` とする根拠**: ADR-0035 §1 は型
+> （`attrsOf (submodule { entries = entriesType; })`）のみを定めデフォルトに触れていないが、
+> `attrsOf` の既定が空 attrset であることは Nix module system の帰結であり、原文の表が他 3
+> オプションのデフォルトを明示しているのに `configs` だけ欠けると非対称になるため規範に含めた。
+> 原文が `nput.entries` のデフォルトとする `{}` は、糖衣を通じて `configs.default.entries` の
+> デフォルトへ落ちる。
 
 ## 出典
 
