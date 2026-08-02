@@ -15,9 +15,9 @@ specification_ja: |
   （`path | set | marker`・必須）・`subpath`（`string`・省略可）・`target`
   （`string`・省略可）・`method`（`"symlink" | "copy"`・省略可）の 4 つでなければ
   ならない。`target` は `mkManifest` で明示選択した `root` からの相対パスとする。
-  各省略可フィールドの具体的なデフォルト値と、それを
-  検査・適用する主体は REQ-b232ec98 / REQ-cb77ea05 / REQ-d1b5b3f5 が規定しており、
-  本 item では重ねて規定しない。
+  各省略可フィールドの具体的なデフォルト値と、それを検査・適用する主体は
+  REQ-b232ec98 / REQ-cb77ea05 / REQ-d1b5b3f5 が規定しており、本 item では重ねて
+  規定しない。
 ---
 # REQ-a33a11e3: entry submodule のフィールドは src / subpath / target / method の 4 つとする
 
