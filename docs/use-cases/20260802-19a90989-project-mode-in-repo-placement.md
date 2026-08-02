@@ -63,3 +63,8 @@ devShells.${system}.default = pkgs.mkShell {
 
 `docs/concept.md`「プロジェクトに閉じた配置（project mode）」と「想定ユースケース」の
 project mode 節。
+
+あわせて「設計の哲学」の「home-manager に依存しない」節も、UC-f2436d68 とともに本 item が
+引き受ける。同節が述べる「HM 不在の環境でも同じ設定定義で動く」ことを体現するのは統合ではなく
+standalone の使われ方であり、本 item では devShell の `shellHook` から engine を起動する配線が
+HM を介さずに成立することが同節に対応する。
