@@ -6,6 +6,7 @@ status: 採用
 justifies:
   - "REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9"
   - "REQ-7a71a049-5876-4cfc-a65e-44e9a0349856"
+  - "REQ-79ce0a09-f9bd-4e61-ba7f-45fb5643137b"
 revises:
   - "ADR-0006"
   - "ADR-0007"
