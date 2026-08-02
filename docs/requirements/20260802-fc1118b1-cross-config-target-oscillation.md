@@ -12,17 +12,17 @@ specification: |
   The foreign warning during an oscillation will keep appearing under the high frequency
   at which a `shellHook` runs, and this SHALL be regarded as correct, being the signal of
   a misconfiguration; the warning SHALL be outside the scope of silence on success and
-  SHALL therefore appear regardless of `-v`. No mechanism for suppressing or aggregating
-  it SHALL be held, the situation being resolved by removing the duplicate target from the
-  configs.
+  SHALL therefore appear regardless of `-v`. The MVP SHALL NOT hold any mechanism for
+  suppressing or aggregating it, the situation being resolved by removing the duplicate
+  target from the configs.
 specification_ja: |
   別 config が同一 target を狙うと、ドリフト修復が「A が置く → B が foreign 検知して奪う →
   A が再奪取」と `shellHook` 再入のたびに振動しうる（単発の後勝ちではなく能動的オシレーション）。
   「同一 target を複数 config で狙わない」はユーザー責任とし、nput は foreign symlink warning で
   可視化するに留め、検知して止める機構を持ってはならない。振動中の foreign warning は
   `shellHook` の高頻度実行で出続けるが、これは設定ミスのシグナルとして正しい。この warning は
-  成功時沈黙の対象外であり、`-v` の有無に関わらず常時出る。抑制 / 集約機構は持たず、config の
-  同一 target 重複を解消して直す。
+  成功時沈黙の対象外であり、`-v` の有無に関わらず常時出る。MVP では抑制 / 集約機構を持たず、
+  config の同一 target 重複を解消して直す。
 ---
 # REQ-fc1118b1: 同一 target を複数 config で狙うことによる振動はユーザー責任とし warning で可視化するに留める
 

@@ -1,14 +1,14 @@
 ---
 id: "REQ-d41b1d0a-c6d5-41cc-93f9-e5cc7f152da4"
 type: requirement
-name: "孤児 profile は backref で逆引き可能なまま放置許容とし、cleanup コマンドを持たない"
+name: "孤児 profile は backref で逆引き可能なまま放置許容とし、MVP では cleanup コマンドを持たない"
 specification: |
   When a clone is deleted, its profile SHALL remain as an orphan under
   `<state>/nix/profiles/nput/`. The store SHALL be freed by `nix-collect-garbage` but the
   profile directory SHALL remain; that SHALL be tolerated, or removed by hand, and SHALL
   be noted in the public documentation. Which root an orphan originated from SHALL be
-  recoverable from the backref file `.root` at the `<roothash>` level. No cleanup command
-  SHALL be held, the actual harm being small; the presence of the backref SHALL,
+  recoverable from the backref file `.root` at the `<roothash>` level. The MVP SHALL NOT
+  hold a cleanup command, the actual harm being small; the presence of the backref SHALL,
   nonetheless, leave a seam at which a future `nput prune` — resolving orphan series that
   point at a root no longer in existence, and deleting them — can be implemented once
   demand for it arises.
@@ -16,11 +16,11 @@ specification_ja: |
   クローンを削除すると profile は `<state>/nix/profiles/nput/` 下に孤児として残る。store は
   `nix-collect-garbage` で解放されるが profile ディレクトリは残る。これは放置許容（または手動
   削除）とし、公開ドキュメントに注記しなければならない。どの root 由来の孤児かは `<roothash>`
-  階層の backref ファイル `.root` で逆引きできるものとする。実害が小さいため cleanup コマンドは
-  持ってはならない。ただし backref があることで、実在しない root を指す孤児系列を逆引きして
-  削除する将来の `nput prune` を、消費側の要求が出た時点で実装できる seam を残す。
+  階層の backref ファイル `.root` で逆引きできるものとする。実害が小さいため MVP では cleanup
+  コマンドを持ってはならない。ただし backref があることで、実在しない root を指す孤児系列を
+  逆引きして削除する将来の `nput prune` を、消費側の要求が出た時点で実装できる seam を残す。
 ---
-# REQ-d41b1d0a: 孤児 profile は backref で逆引き可能なまま放置許容とし、cleanup コマンドを持たない
+# REQ-d41b1d0a: 孤児 profile は backref で逆引き可能なまま放置許容とし、MVP では cleanup コマンドを持たない
 
 ## 仕様
 
