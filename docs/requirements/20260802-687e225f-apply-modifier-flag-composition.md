@@ -4,6 +4,7 @@ type: requirement
 name: "apply 修飾フラグは --all と合成できる"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 specification: |
   `apply --all --recopy` SHALL be composable: `--recopy` SHALL be applied to each config
   selected by `--all` (with a filter such as `--project-root` when given), since

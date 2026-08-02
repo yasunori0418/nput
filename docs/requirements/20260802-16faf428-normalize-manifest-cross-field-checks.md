@@ -5,6 +5,8 @@ name: "意図が矛盾する組み合わせをクロスフィールドチェッ�
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
+  - "UC-01b896b4-04b9-40d0-bf9e-966eaf64c3d4"
 specification: |
   `normalizeManifest` SHALL reject, via `lib.throwIf`, a combination that a single-field
   type check cannot express: `method = "copy"` together with an out-of-store marker.
