@@ -132,11 +132,16 @@ item_types:
     fields:
       # `docs/dev/definition-of-done.md` の項目 ID（DOD-01 …）への対応。DoD は sara の
       # item ではないため relation にはせず text フィールドへ逃がす（→ #212）。
-      # 対応する DoD 項目を持たない基盤（キャッシュ・リリース・docs サイト）もあるので
-      # required: false。
+      # DOD-01 / DOD-02 のように複数項目に対応する基盤があるため、adr の issues と同じく
+      # !list text を採る（区切り文字の暗黙契約を消費側へ持ち込まない）。対応する DoD 項目を
+      # 持たない基盤もあるので required: false。
+      #
+      # 値が実在する DoD 項目かは機械検証されない。sara は text フィールドの中身を見ず、
+      # broken reference 検出の対象は relation だけであるため。存在しない DOD-99 を書いても
+      # sara check は通る。
       - name: dod
         display_name: Definition of Done
-        field_type: text
+        field_type: !list text
         required: false
         placeholder: DOD-02
     allowed_targets:
