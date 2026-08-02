@@ -1,20 +1,22 @@
 ---
 id: "REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461"
 type: requirement
-name: "--no-wait は flock 競合時に待たずスキップする"
+name: "flock の取得は既定 blocking とし --no-wait のときだけ try-lock でスキップする"
 specification: |
-  The `--no-wait` flag SHALL make the command skip instead of waiting when the flock is
-  contended, for use from a shellHook. It SHALL acquire the lock as a try-lock (LOCK_NB):
-  when the lock is held it SHALL skip and print a one-line notice to stderr, and SHALL NOT
-  block entry into the shell. The default, without the flag, SHALL be that an explicit
-  apply / rollback waits for the lock (LOCK_EX, blocking).
+  Without the flag, an explicit apply / rollback SHALL wait for the flock (LOCK_EX,
+  blocking), and while waiting it SHALL display that it is waiting for another apply to
+  finish. The `--no-wait` flag SHALL make the command skip instead of waiting when the
+  flock is contended, for use from a shellHook: it SHALL acquire the lock as a try-lock
+  (LOCK_NB), and when the lock is held it SHALL skip, print a one-line notice to stderr,
+  and SHALL NOT block entry into the shell.
 specification_ja: |
+  フラグ無しの既定では、明示 apply / rollback は flock を待たなければならない
+  （`LOCK_EX`・blocking）。待っている間は、他の apply の完了待ちである旨を表示する。
   `--no-wait` は flock 競合時に待たずスキップさせるフラグでなければならない
   （shellHook 用）。ロックは try-lock（`LOCK_NB`）で取得し、保持中ならスキップして
-  stderr に 1 行通知し、シェル入室をブロックしてはならない。フラグ無しの既定は
-  明示 apply / rollback がロックを待つ（`LOCK_EX`・blocking）ものとする。
+  stderr に 1 行通知し、シェル入室をブロックしてはならない。
 ---
-# REQ-1c1526b1: --no-wait は flock 競合時に待たずスキップする
+# REQ-1c1526b1: flock の取得は既定 blocking とし --no-wait のときだけ try-lock でスキップする
 
 ## 仕様
 
