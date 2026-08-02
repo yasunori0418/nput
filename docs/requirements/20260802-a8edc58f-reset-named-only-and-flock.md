@@ -32,7 +32,8 @@ roothash キー）。`reset` はさらに entries 読みのため entrypoint eva
 >
 > - 非 build コマンド一般の eval 先行（build しないコマンドでも rootKind 先取り eval →
 >   root 解決を先行する）→ REQ-9c111c32
-> - `--root` 時に profileDir を roothash でキーすること → REQ-61c05e09
+> - `--root` 時に profileDir を roothash でキーすること → REQ-d5a2e289（`--root` が全モードの
+>   解決 root を上書きすること自体は REQ-61c05e09）
 >
 > 本 item が規定するのは `reset` 固有の 3 点（名指し必須・profileDir 単位の blocking
 > flock・共通前段に加えて行う entrypoint eval）に限る。

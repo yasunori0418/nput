@@ -33,7 +33,7 @@ specification_ja: |
 - CWD（`$PWD`）相対は採らない（実行場所で配置先がズレ冪等性を壊すため）
 
 > **上は原文の写しで、規範は frontmatter が正**。`--root` が project mode に限らず全モードの
-> 解決 root を一律上書きすることと、明示時の profileDir キーイングは REQ-61c05e09 / REQ-d5a2e289、
+> 解決 root を一律上書きすることは REQ-61c05e09、明示時の profileDir キーイングは REQ-d5a2e289、
 > `projectRoot` が marker であることは REQ-3f541d39 / REQ-37b56673、engine が外部コマンドとして
 > `git` を叩くことは REQ-6c4e174a、project mode の配置物が ephemeral であることは REQ-e79178f5、
 > 世代の扱い（非公開・世代スキップ）は REQ-46fccb80 の担当。
