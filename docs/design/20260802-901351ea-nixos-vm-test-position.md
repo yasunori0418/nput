@@ -4,7 +4,6 @@ type: design
 name: "NixOS VM テストは runNixOSTest でモジュール経路の実装時に追加し、E2E ハーネスとは別系統に置く"
 satisfies:
   - "REQ-690f2730-2628-420d-8e72-ed1ce747ac1e"
-  - "REQ-c2654ca5-62c2-4e4b-ad67-ffc5468f429b"
 ---
 # DSG-901351ea: NixOS VM テストは runNixOSTest でモジュール経路の実装時に追加し、E2E ハーネスとは別系統に置く
 
