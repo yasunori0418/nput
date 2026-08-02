@@ -6,7 +6,7 @@ specification: |
   Everything the CLI brings in SHALL be confined to what has been explicitly allowed, and
   each SHALL be pinned, in contrast to the engine's stdlib-only constraint. A minimal set
   of third-party dependencies SHALL be allowed — cobra, for subcommands and help — while
-  placement itself SHALL be done by importing the engine. Those dependencies SHALL be
+  placement itself is done by importing the engine. Those dependencies SHALL be
   fixed by building with `buildGoModule` and a vendorHash string. The Go toolchain SHALL
   be pinned to the go of nixpkgs, and the `toolchain` directive SHALL NOT be used, so that
   the build does not fetch a toolchain of its own and stays reproducible under Nix.
@@ -26,10 +26,12 @@ specification_ja: |
 |---|---|
 | `cmd/nput`（CLI = `packages.nput`）| 配置エンジンを import。最小依存を許可（**cobra** = サブコマンド / help）。entrypoint 発見と `nix`（build / eval）オーケストレーションを担う。`buildGoModule` + **vendorHash 文字列**でビルド。Go は nixpkgs の go に pin し `toolchain` ディレクティブ不使用 |
 
-> **上は原文の写しで、規範は frontmatter が正**。CLI が entrypoint 発見と `nix` の
-> オーケストレーションを担う役割分担そのものは REQ-f4d7d4ab、entrypoint の探索順は
-> REQ-1cc080f6、実行フローにおける eval / build の順序は REQ-60c6b7ea、engine 側の
-> stdlib-only 制約は REQ-b74a118a の担当。
+> **上は原文の写しで、規範は frontmatter が正**。CLI が engine を import して配置を駆動
+> すること、および entrypoint 発見と `nix` のオーケストレーションを担う役割分担そのものは
+> REQ-f4d7d4ab、entrypoint の探索順は REQ-1cc080f6、実行フローにおける eval / build の
+> 順序は REQ-60c6b7ea、engine 側の stdlib-only 制約は REQ-b74a118a の担当。規範文が
+> engine の import に触れるのは、第三者依存を最小限に抑えられる前提が「配置を自前で
+> 持たず engine に委ねること」にあるためで、その役割分担自体を規範化するものではない。
 
 ## 出典
 
