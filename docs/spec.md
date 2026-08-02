@@ -1,1207 +1,285 @@
 # nput 仕様書
 
+nput が「何を満たすべきか」の全体像と、個別仕様（requirement item）への索引。
+
+規範的な仕様は **すべて `docs/requirements/` の item が持つ**。本文書は通読の入口として
+全体像だけを述べ、詳細は item へのリンクで示す（README → 本文書 → item の 3 層構造）。
+
+> **この文書の書き方（規約）**
+>
+> - 各セクションの散文は **10 行以内**。表・リンク列挙はこの制限に含めない
+> - **詳細は必ず item へリンクし、本文に書き下さない**。仕様の断片をここへ写すと item と
+>   二重管理になり、改訂時に片方だけ古くなる
+> - 章立ては requirement item の `## 出典` が指す節名と対応させる。item を足したら
+>   本文書のリンク集にも足す
+> - item を横断して検索・追跡するには `sara query`（→ `docs/agents/domain.md`）を使う
+
+---
+
 ## アーキテクチャ概要
 
-nput は **2 層**で構成する（→ ADR-0006, ADR-0007）。
+nput は **CLI とエンジンの 2 層**で構成する（→ ADR-0006, ADR-0007）。CLI は entrypoint
+（`flake.nix` / `shell.nix` / `default.nix`）を発見して `nix build` / `nix eval` を回し、得た
+manifest をエンジンへ渡す。エンジンは `manifest.json` を唯一の入力とし、ネイティブ FS 操作で
+配置・stale 除去・profile swap を行う。層の境界は `manifest.json` だけ。
 
-```
-[nput CLI]  packages.nput（PATH 常駐・一次 UX）
-  ・entrypoint(flake.nix/shell.nix/default.nix)を発見（CWD 既定 / -f 上書き）
-  ・内部で nix build/eval を回し named manifest(manifest.json + symlink farm)の store path を得る
-  ・engine(ライブラリ)を import して配置・stale 除去・profile swap を駆動
-   ↓ manifest.json in
-[engine]  Go ライブラリ
-  ・manifest.json を入力に取り nix(profile)/git(toplevel)のみ叩く
-  ・ネイティブ FS 操作で place/replace/remove、保守的 stale 除去、nix-env --set
-```
-
-config は **Nix で書き `nix build` で評価**される。CLI が発見するのは entrypoint *ファイル* であって config 内容ではない（→ ADR-0007）。
+- [REQ-f4d7d4ab](requirements/20260802-f4d7d4ab-two-layer-architecture.md) — nput は CLI とエンジンの 2 層で構成する
+- [REQ-1767b250](requirements/20260802-1767b250-config-written-in-nix.md) — config は Nix で書き nix build で評価する
+- [REQ-6c4e174a](requirements/20260802-6c4e174a-engine-external-command-constraint.md) — engine が叩く外部コマンドは nix と git のみに限る
 
 ---
 
 ## lib API
 
-`lib`（`mkManifest` / マーカー群）は nixpkgs.lib のみに依存する純データ生成器。配置ロジックは持たない（→ ADR-0006）。
+`lib`（`mkManifest` / マーカー群）は nixpkgs.lib のみに依存する純データ生成器で、配置ロジックは
+持たない（→ ADR-0006）。入力検査は `mkManifest` 自身が `evalModules` + `normalizeManifest` で
+行う単一ゲートに集約する。
 
-`lib.__internal` は private helper（`escapesBase` / `pathChecks` / `anchorName` / `resolveEntry` / `farmEntries`）を nix-unit / namaka のテスト seam として公開する内部 API で、安定 API ではない（→ #71）。
+- [REQ-d85f0cef](requirements/20260802-d85f0cef-lib-pure-data-generator.md) — lib は nixpkgs.lib のみに依存する純データ生成器である
+- [REQ-901993e9](requirements/20260802-901993e9-lib-internal-test-seam.md) — lib.\_\_internal は private helper のテスト seam として公開する
 
 ### `lib.mkManifest`
 
-配置データ（`manifest.json` + symlink farm を含む derivation）を生成する**純粋関数**（→ ADR-0006, ADR-0007）。
-entrypoint が `nput.<name>` に公開し、nput CLI が `nix build` してエンジンに渡す。Nix 評価テスト（nix-unit / namaka）の単体対象でもある。
+- [REQ-2b0c2bb8](requirements/20260802-2b0c2bb8-mkmanifest-pure-function.md) — mkManifest は配置データを生成する純粋関数である
+- [REQ-97c1e088](requirements/20260802-97c1e088-mkmanifest-arguments.md) — mkManifest の引数は pkgs / entries / root の 3 つとする
+- [REQ-60e6b49c](requirements/20260802-60e6b49c-mkmanifest-return-value.md) — mkManifest は manifest.json と symlink farm を含む store オブジェクトを返す
+- [REQ-2f9205ee](requirements/20260802-2f9205ee-mkmanifest-passthru-rootkind.md) — mkManifest の返り値は passthru で root kind を露出する
+- [REQ-cb77ea05](requirements/20260802-cb77ea05-entry-identity-by-target-key.md) — entry の識別子は属性キー = target とし一意性は Nix が担保する
+- [REQ-4ec3accc](requirements/20260802-4ec3accc-root-explicit-required.md) — root は明示必須で暗黙デフォルトを持たない
+- [REQ-37b56673](requirements/20260802-37b56673-root-marker-kinds.md) — root は 3 マーカーと絶対パス文字列の union を取る
 
-```
-mkManifest :: { pkgs, entries, root } -> derivation
-```
+### マーカー構築子
 
-**引数**
+- [REQ-eb363122](requirements/20260802-eb363122-mkoutofstoresymlink-marker.md) — mkOutOfStoreSymlink は out-of-store symlink を表すマーカーを返す
+- [REQ-3f541d39](requirements/20260802-3f541d39-root-markers-runtime-resolution.md) — root マーカーは kind を運ぶ入れ物でパス解決は engine が行う
 
-| 引数 | 型 | デフォルト | 説明 |
-|---|---|---|---|
-| `pkgs` | attrset（nixpkgs） | **なし（必須）** | derivation ビルド（`runCommandLocal` 等）と `pkgs.lib` の取得に使う |
-| `entries` | attrset of entry | — | 配置定義の attrset。**属性キー = target パス**が識別子（後述・→ ADR-0014）|
-| `root` | string \| marker | **なし（必須）** | 配置先の基準。暗黙デフォルトを持たない（→ ADR-0007）|
+### 入力検査（`evalModules` + `normalizeManifest`）
 
-> 配置単位名（profile を一意特定する `name`）は **entrypoint の `nput.<name>` 属性キー**が供給する。CLI が選択した `<name>` をエンジンへ渡す。
-
-#### `root` の値
-
-`root` は**明示必須**で、暗黙デフォルトを持たない（→ ADR-0004 改訂, ADR-0007）。型は `string（評価時固定）| marker（実行時解決）` の union。
-
-| `root` の値 | モード | root の解決 |
-|---|---|---|
-| `nput.lib.projectRoot` | project mode | 実行時に git toplevel（`--root` で上書き可）（→ ADR-0005）|
-| `nput.lib.homeRoot` | home mode | 実行時の `$HOME`（standalone / HM 共通）|
-| `nput.lib.systemRoot` | system mode | `/`（distro 構想・将来）|
-| 絶対パス文字列 | 固定 root | 評価時に確定する絶対パス（任意固定 root の seam）|
-
-- マーカーは「**実行時解決の種別を運ぶ入れ物**」であってパス文字列を返す糖衣ではない。`homeRoot` / `projectRoot` は評価時にパスへ展開できない（`$HOME` / git toplevel は実行環境依存・→ ADR-0005）。`mkManifest` は kind を `manifest.json` に記録し、エンジンが実行時に解決する。
-- home mode と project mode は世代の扱いが異なる（後述「世代管理仕様」）。
-
-**返り値**
-
-profile が指す store オブジェクト。`manifest.json`（`schemaVersion` 付き・エンジンの入力契約）と、配置元への明示 symlink farm（GC アンカー）を含む（→ ADR-0006）。
-`manifest.json` は各 entry の解決済み配置元（store パス / out-of-store 絶対パス）・`subpath`・`target`・`method`・root の kind（project / home / system / 固定パス）を記録する（全フィールドは後述「manifest.json スキーマ（v1）」・→ ADR-0013）。
-副作用は持たない（profile swap・FS 配置は engine の実行時責務）。
-
-> **passthru で root kind を露出する**（→ ADR-0023）: 返り値 derivation は `passthru.rootKind`（`"project"` / `"home"` / `"system"` / `"fixed"`、`fixed` のときは `passthru.root` に絶対パス文字列）を持つ。CLI が **ビルド前に** `nix eval <ep>#nput.<system>.<name>.rootKind` で profileDir を確定し flock → build の順に進む実行フロー（前述「実行フロー」）を成立させるため。`rootKind` は eval 時に確定する（実体パス解決は engine 実行時）。
-
-#### 入力検査（`evalModules` + `normalizeManifest`・→ ADR-0010）
-
-`mkManifest` は内部で `lib.evalModules` を回して `entries` / `root` を検査・正規化する。型をオプションに書くだけだと検査が効くのはモジュール経路（`nput.entries`）のみだが、コアである CLI / entrypoint 経路（`mkManifest` 直呼び）でも検査を効かせるため `mkManifest` 自身が `evalModules` を回す。`lib.types` / `mkOption` / `evalModules` は `nixpkgs.lib` のコアなので「lib は nixpkgs.lib のみ依存」を満たす。
-
-実装は 2 段に分かれる。lib 層は unparameterized（`lib` / `pkgs` を自身で保持しない）で、各関数が呼び出し時に `lib`（`normalizeManifest`）または `pkgs`（`mkManifest`）を明示引数として要求する。
-
-- **`normalizeManifest { lib, root, entries } -> attrset`**: `evalModules` 検査・デフォルト適用（`subpath` → `"."` / `method` → `"symlink"` / `target` → 属性キー）+ クロスフィールド `lib.throwIf` チェック（`method = "copy"` かつ out-of-store marker / `root = systemRoot` の未実装拒否・→ ADR-0013）+ **パス安全性検査**（target / subpath が絶対パス（`/` 始まり）ならエラー・`filepath.Clean` 相当で正規化し `..` で root / src の外へ出るものを拒否・→ ADR-0019）+ 内部 marker タグ（`_nputMarker`）→ clean enum（`srcKind` / `rootKind`）変換を行う純データ関数。nix-unit / namaka の単体対象。**識別子の一意性は Nix attrset のキー重複不可で native に担保**し、重複 name の throwIf は持たない（→ ADR-0014）。target の静的な絶対 / `..` 判定は root の実体値（実行時解決）に依らず eval 時に可能（→ ADR-0019）。**別キー A/B が `target` フィールドを同値に明示上書きした衝突は、正規化後 target 文字列の重複として eval 時に `lib.throwIf` で検出・停止する**（engine 実行時ではない・→ ADR-0024）。cross-config（別 profile・別 manifest）の同一 target 衝突は eval では検出不可で、これは engine 実行時の後勝ち + foreign symlink warning（→ ADR-0015）になる（両者は別経路）。
-- **`mkManifest = args: derivation`**: `normalizeManifest` の出力を `manifest.json` に書き symlink farm を組む。
-
-entry の型定義（`lib/types.nix` の submodule）は `modules/common.nix` の `attrsOf (submodule …)` と共有する。モジュール経路では host の `evalModules`（`attrsOf`）と `mkManifest` の `evalModules` で二重に検査されるが、純粋・冪等で害はなく、`mkManifest` を「entries が必ず通る単一の検査ゲート」に保つ。
-
-> **marker のタグ方式**: `src` の `set`（derivation）と marker（`mkOutOfStoreSymlink`）はどちらも attrset で構造判別できないため、marker には `_nputMarker` 判別タグを持たせ custom optionType の `check` で判別する。`_nputMarker` は Nix 評価内で完結させ `manifest.json` には漏らさない（Go 契約は `srcKind` / `rootKind` の clean enum・→ ADR-0010）。
-
-**使用例（entrypoint への公開）**
-
-```nix
-# flake.nix
-outputs.nput.${system}.dotfiles = nput.lib.mkManifest {
-  inherit pkgs;
-  root = nput.lib.projectRoot;
-  entries = {
-    # 属性キー = target。target フィールドは省略（キーから既定）
-    ".local/share/nvim/site/pack/foo/start/foo" = { src = inputs.vim-foo; };
-    ".zsh/plugins/autosuggestions" = { src = inputs.zsh-sugg; };
-  };
-};
-```
+- [REQ-d1b5b3f5](requirements/20260802-d1b5b3f5-mkmanifest-input-validation.md) — mkManifest 自身が evalModules で入力を検査する単一ゲートになる
+- [REQ-b232ec98](requirements/20260802-b232ec98-normalize-manifest-defaults.md) — normalizeManifest が検査・デフォルト適用・marker 変換を行い mkManifest が derivation を組む
+- [REQ-6911eab6](requirements/20260802-6911eab6-path-safety-validation.md) — target / subpath のパス安全性を評価時に検査する
+- [REQ-5c6b07da](requirements/20260802-5c6b07da-target-collision-eval-detection.md) — target 衝突の検出経路を同一 manifest 内と cross-config で分ける
+- [REQ-16faf428](requirements/20260802-16faf428-normalize-manifest-cross-field-checks.md) — 意図が矛盾する組み合わせをクロスフィールドチェックで評価時に拒否する
+- [REQ-1dcc9a33](requirements/20260802-1dcc9a33-marker-tag-discrimination.md) — marker は判別タグで識別し manifest.json には漏らさない
 
 ---
 
-### `lib.mkOutOfStoreSymlink`
+## CLI 仕様（一次 UX）
 
-ローカルパスへの out-of-store symlink を表すマーカーを返す（→ `docs/adr/0001`）。
-`entry.src` に渡すことで、その entry を Nix ストア経由ではなくローカル FS への symlink にする。
-ファイル編集が即座に反映されるライブ用途のための明示的退避路である。
+`nput` CLI は PATH に常駐する一次 UX（→ ADR-0007）。entrypoint を発見し、rootKind を先取り
+eval して root を解決し、flock を取ってから `nix build` をロック内で回してエンジンを駆動する。
 
-```
-mkOutOfStoreSymlink :: string -> marker
-```
+- [REQ-14f0aec9](requirements/20260802-14f0aec9-cli-primary-ux-installation.md) — nput CLI は PATH 常駐の一次 UX で、project mode は devShell 同梱を canonical とする
+- [REQ-f9920c87](requirements/20260802-f9920c87-nix-experimental-features-prerequisite.md) — nix experimental-features は前提条件とし、CLI は自動付与せず案内エラーで停止する
 
-- core lib（nixpkgs のみ依存）では **パスをマーカー attrset に包むだけの純粋関数**。
-- 実際の link 生成は engine が行う。プラットフォームのネイティブ機構（HM の `config.lib.file.mkOutOfStoreSymlink` 等）へは委譲しない（→ ADR-0003）。
+### entrypoint の発見・アドレッシング
 
-```nix
-src = nput.lib.mkOutOfStoreSymlink "/home/me/dotfiles";
-```
-
-> **制約**: 引数は Nix 評価時に確定する絶対パスの文字列。シェルの `$HOME` は使えない。
-> ローカルパスをポータブルにしたい場合は flake 内で変数として定義する（後述の「ローカルパスの扱い」参照）。
-
----
-
-### `lib.projectRoot` / `lib.homeRoot` / `lib.systemRoot`
-
-`root` 引数に渡す **root マーカー**（→ ADR-0004 改訂, ADR-0005, ADR-0007）。`mkOutOfStoreSymlink` と同じ「マーカーを渡して挙動を opt-in する」パターン。
-
-```
-projectRoot :: marker   # 実行時に git rev-parse --show-toplevel（--root で上書き可）
-homeRoot    :: marker   # 実行時に $HOME
-systemRoot  :: marker   # /（distro 構想・将来）
-```
-
-- core lib（nixpkgs のみ依存）では **kind を運ぶマーカー attrset を返す純粋関数**。実体パス解決は engine の実行時責務。
-- 暗黙デフォルトは無い。`root` を省略すると Nix 評価時にエラー（後述「エラー仕様」）。
-
----
-
-## CLI 仕様（一次 UX・→ ADR-0007）
-
-`nput` CLI（`packages.nput`）は PATH に常駐する一次 UX。
-
-- **standalone（home mode）**: `nix profile install github:yasunori0418/nput` 等でグローバルに導入する。
-  グローバル CLI とユーザー flake が pin する `nput.lib`（manifest 生成側）は別入力になり `schemaVersion` が skew し得るが、
-  engine が自身の対応版より新しい `schemaVersion` を拒否する（→ ADR-0006）ため skew は明確な error になる（MVP は v1 のみ・→ ADR-0015）。
-  skew を避けるには **CLI と flake pin の `nput` を同一 input から揃える**ことを推奨する（→ ADR-0016）。project mode のような devShell 同梱は強制しない（PATH 常駐の利便を優先）。
-- **project mode（canonical）**: `templates/project` の devShell に **pin 版 `nput` を同梱**する（`packages = [ nput.packages.${system}.nput ]`）。
-  `nix develop` / direnv 入室時に flake.lock で固定した `nput` が PATH に載り、CLI と `nput.lib`（manifest `schemaVersion`）が
-  同一 flake 入力から来て一致する。グローバル install 依存だと flake.lock の pin を CLI で破り version skew を招くため、
-  project mode では devShell 同梱を canonical とする（→ ADR-0015）。
-
-> **前提条件: nix experimental-features**（→ ADR-0025）: CLI は内部で `nix eval` / `nix build`（新 CLI）を使うため、ユーザー環境で
-> `experimental-features = nix-command`（flake entrypoint はさらに `flakes`）が**有効化済みであることを前提**とする。CLI は
-> `--extra-experimental-features` を自動付与せず（nix.conf / Determinate Nix / 組織ポリシーの設定を黙って上書きしないため）、未有効で
-> nix が機能未有効エラーを返したら**前提条件と有効化方法を案内する分かりやすいエラーで停止**する（生の nix エラーを握り潰さない）。
-
-### entrypoint の発見
-
-CLI は **entrypoint ファイル**（`nput.<name>` に named manifest を公開する nix ファイル）を発見する。
-
-| 方法 | 挙動 |
-|---|---|
-| 既定（自動探索）| CWD で `flake.nix` → `shell.nix` → `default.nix` の優先順で探す |
-| `-f` / `--file <path>` | entrypoint を明示指定（自動探索を上書き）|
-
-### アドレッシング（`nput.<name>`）
-
-entrypoint は `nput.<name>` に named manifest（`mkManifest` の結果）を公開する。1 プロジェクトに複数 config を置ける（役割ごと独立 profile・→ concept.md）。
-
-| entrypoint | 公開形 | CLI が叩く build |
-|---|---|---|
-| `flake.nix`（直書き）| `outputs.nput.<system>.<name> = mkManifest { ... }` | `nix build <ep>#nput.<system>.<name>`（CLI が現行 `<system>` を差し込む）|
-| `flake.nix`（flake-parts）| `perSystem.nput.<name> = mkManifest { inherit pkgs; ... }`（flakeModule 経由）| `nix build <ep>#nput.<system>.<name>`（同上）|
-| `default.nix` / `shell.nix`（passthru・canonical・→ ADR-0032）| `pkgs.mkShell { ...; passthru.nput.<name> = mkManifest { ... }; }` | `nix build -f <ep> nput.<name>` |
-| `default.nix` / `shell.nix`（トップレベル attrset）| `{ nput.<name> = mkManifest { ... }; }` | `nix build -f <ep> nput.<name>` |
-
-> **flake-parts 経路（→ ADR-0029）**: flake-parts を使う repo は `imports = [ inputs.nput.flakeModules.default ]` の上で `perSystem.nput.<name> = mkManifest { inherit pkgs; ... }` を宣言する。flake-parts が `flake.nput.<system>.<name>` へ **transpose** し、直書きと**同一の derivation を生む**（CLI のアドレッシングは不変）。`pkgs` が perSystem 由来になり `packages.nput` と一貫する（二重解決なし）。flake-parts 利用者にはこちらが canonical で、直書きは plain flake と `shell.nix` / `default.nix` の canonical。`mkManifest` は両形で唯一の公開 API（flakeModule の option は `mkManifest` の derivation を格納するだけ）。
-
-> **legacy entrypoint の canonical 形（→ ADR-0032）**: `shell.nix` / `default.nix` は **nixpkgs `mkShell` と共存できる passthru 形**を canonical とする。`shell.nix` は素の `mkShell` derivation を返し、`passthru.nput.<name>` に named manifest を載せる（`project` template の devShell 同梱・→ ADR-0015 と両立する）。`passthru` はホスト derivation の attrset にマージされるため、**CLI が叩く attr path（`nput.<name>`）はトップレベル attrset 形と同一**で実装分岐を持たない。素の `nix-shell`（`-A` 不要）はどちらの形でも壊れない。
->
-> ```nix
-> # shell.nix（canonical: passthru 形）
-> { pkgs ? import <nixpkgs> {}, nput ? import (fetchTarball "https://github.com/yasunori0418/nput/archive/....tar.gz") }:
-> pkgs.mkShell {
->   packages = [ ];
->   shellHook = "nput apply skills --no-wait";
->   passthru.nput = {
->     skills = nput.lib.mkManifest { inherit pkgs; root = nput.lib.projectRoot; entries = { }; };
->   };
-> }
-> ```
->
-> legacy entrypoint には flake の `<system>` に相当する次元が無く、addressing はフラットな `nput.<name>` になる（→ 下記「アドレッシング」表）。複数 manifest の一括処理は既存の `apply --all` の一括 eval（`nix eval -f <ep> nput --apply … --json`）でそのまま充足し、`mkShell` の `inputsFrom` で manifest を合成するヘルパは持たない（1 profile = 1 config の atomic 性・→ ADR-0002 と衝突するため）。
->
-> **`src` の store 化は自動ではない**: flake は評価前にディレクトリ全体が store へコピーされるため相対 path リテラル（`src = ./foo;`）がそのまま store symlink になるが、legacy（`-f` eval）にはこの事前コピーが無く、相対 path はファイルの実位置基準で解決される live な作業木パスのまま manifest に載る（→ ADR-0032）。reproducible / store-backed にしたい場合は `src` に `builtins.path { path = ./foo; }` や `fetchTarball` / `builtins.fetchGit` など明示的に store へ add する手段を使う。
-
-`<name>` = `default` は flake の `default` 慣例に倣う特別な名前で、`nput apply`（name 省略）が解決先に使う。専用 `nput` 名前空間を使い `packages` を汚さない（manifest が通常パッケージとして `nix flake show` / `nix build` に混ざらない・→ ADR-0007）。
+- [REQ-1cc080f6](requirements/20260802-1cc080f6-entrypoint-discovery-order.md) — entrypoint は CWD で flake.nix → shell.nix → default.nix の順に探し -f で上書きする
+- [REQ-496b1a07](requirements/20260802-496b1a07-named-manifest-addressing.md) — entrypoint は nput.\<name\> に named manifest を公開し CLI は形ごとの attr path で build する
+- [REQ-205d744d](requirements/20260802-205d744d-default-config-name-and-namespace.md) — config 名 default を慣例の解決先とし専用 nput 名前空間で packages を汚さない
+- [REQ-c50df875](requirements/20260802-c50df875-flake-parts-module-path.md) — flake-parts 経路は直書きと同一の derivation を生み CLI のアドレッシングを変えない
+- [REQ-c890ce4a](requirements/20260802-c890ce4a-legacy-entrypoint-passthru-canonical.md) — legacy entrypoint は mkShell passthru 形を canonical とし CLI の attr path を分岐させない
+- [REQ-da253cab](requirements/20260802-da253cab-legacy-src-not-auto-stored.md) — legacy entrypoint では相対 path の src が自動で store 化されない
 
 ### サブコマンド体系
 
-```bash
-nput apply                     # name 省略時は nput.default を適用（flake の default 慣例。無ければエラー）
-nput apply <name>              # nput.<name> をビルドし新世代を作って適用
-nput apply <name> --dryrun     # dry-run。副作用ゼロで place/replace/remove/conflict/no-op を表示
-nput apply <name> --recopy     # 通常 apply に加え config 内の全 copy target を src から無条件上書き再コピー（→ ADR-0020）
-nput apply <name> --backup           # 既存の記録外実体を <target>.nput-backup へ rename 退避してから配置（既定 suffix・→ ADR-0045）
-nput apply <name> --backup=<suffix>  # 退避 suffix を明示（"=" 区切り必須・スペース区切り不可・→ ADR-0045）
-nput apply --manifest <link-farm>  # ビルド済み link-farm を直接適用（entrypoint 発見・eval/build なし・host/module activation seam・→ ADR-0026）
-nput reset <name> [target...]  # 配置物を無い状態へ戻す。target 省略で全 entry、指定でその entry のみ。名指し必須（--all 非対応）（→ ADR-0020, ADR-0021）
-nput reset <name> --dryrun     # 副作用ゼロで削除対象（symlink / copy target）を表示して exit（confirm/flock なし・→ ADR-0021）
-nput apply --all               # entrypoint の nput.* を全て辞書順に適用
-nput apply --all --project-root # nput.* のうち projectRoot の config のみ適用（--home-root / --system-root も同様・→ ADR-0017）
-nput rollback <name>           # 前世代へ戻す（home mode 限定・名指し必須。--all 非対応・→ ADR-0018）
-nput list-generations <name>   # 世代一覧を表示（home mode 限定）
-nput list-generations --all    # home mode の全 config の世代を一覧（→ ADR-0018）
-nput gitignore <name>          # 配置 target を .gitignore 向けに stdout 出力（書き込みなし）
-nput gitignore --all           # projectRoot の全 config の target をソート + 重複除去して出力（→ ADR-0018）
-nput init <template>           # nix flake init -t <nput>#<template> のラッパー（後述）
-```
+- [REQ-c2d44626](requirements/20260802-c2d44626-apply-config-selection.md) — apply の config 選択は name 省略で default・明示で単一・--all で全件
+- [REQ-4cbd9a0d](requirements/20260802-4cbd9a0d-apply-all-lexical-order-continue.md) — apply --all は辞書順に適用し部分失敗でも続行して最後に集約する
+- [REQ-d95b814f](requirements/20260802-d95b814f-apply-all-root-mode-filter.md) — --all は root モードフィルタで対象 config を絞れる
+- [REQ-687e225f](requirements/20260802-687e225f-apply-modifier-flag-composition.md) — apply 修飾フラグは --all と合成できる
+- [REQ-02a33511](requirements/20260802-02a33511-apply-dryrun-readonly.md) — apply --dryrun は読み取り専用で conflict 検出時に非ゼロ終了する
+- [REQ-7cc32a2b](requirements/20260802-7cc32a2b-apply-recopy.md) — apply --recopy は config 内の全 copy target を src から無条件に上書き再コピーする
+- [REQ-5dd5a4e9](requirements/20260802-5dd5a4e9-apply-backup-rename-aside.md) — apply --backup は配置を塞ぐ記録外実体を rename 退避してから配置する
+- [REQ-dec58330](requirements/20260802-dec58330-apply-manifest-direct.md) — apply --manifest はビルド済み link-farm を engine へ直接適用する
+- [REQ-31f2882e](requirements/20260802-31f2882e-reset-fs-only-teardown.md) — reset は profile を触らない FS-only teardown で配置物を無い状態へ戻す
+- [REQ-a8edc58f](requirements/20260802-a8edc58f-reset-named-only-and-flock.md) — reset は名指し必須で profileDir 単位の blocking flock を取る
+- [REQ-6a950d6d](requirements/20260802-6a950d6d-reset-dryrun-no-side-effect.md) — reset --dryrun は副作用ゼロで削除対象を表示して終了する
+- [REQ-05abce3e](requirements/20260802-05abce3e-rollback-list-generations-home-only.md) — rollback と list-generations は home mode 限定にする
+- [REQ-89c7baf9](requirements/20260802-89c7baf9-rollback-named-only.md) — rollback は名指し必須で --all に対応しない
+- [REQ-a480c183](requirements/20260802-a480c183-gitignore-anchored-output.md) — gitignore は配置 target を stdout へ列挙するだけでファイルを書き込まない
+- [REQ-eaa8c0df](requirements/20260802-eaa8c0df-gitignore-project-mode-only.md) — gitignore は project mode 限定で非 project config を指定したらエラーで停止する
+- [REQ-60787ed2](requirements/20260802-60787ed2-gitignore-includes-copy-targets.md) — gitignore は method を区別せず copy target も含めて全 target を列挙する
+- [REQ-1f128917](requirements/20260802-1f128917-gitignore-all-dedup.md) — gitignore --all は projectRoot の全 config の target をソート + 重複除去して出力する
+- [REQ-6be1cbf1](requirements/20260802-6be1cbf1-init-template-wrapper.md) — nput init は nix flake init -t への透明なラッパーとしファイルを生成しない
+- [REQ-cbd61281](requirements/20260802-cbd61281-init-fixed-flake-ref.md) — init のテンプレート参照はバイナリにハードコードした固定 flake ref とする
+- [REQ-196ddabf](requirements/20260802-196ddabf-init-template-contents.md) — template は動く example を 1 config だけ置きバリエーションはコメントで示す
+- [REQ-61c05e09](requirements/20260802-61c05e09-root-override-flag.md) — --root は全モード共通で解決 root を明示上書きする
+- [REQ-1c1526b1](requirements/20260802-1c1526b1-flock-acquisition-mode.md) — flock の取得は既定 blocking とし --no-wait のときだけ try-lock でスキップする
+- [REQ-9ed6b500](requirements/20260802-9ed6b500-version-flag.md) — --version は埋め込みバージョンを cobra 既定書式で表示して終了し短縮形を持たない
+- [REQ-4fc98fa6](requirements/20260802-4fc98fa6-no-only-flag.md) — 一部 entry だけを適用する --only は提供しない
+- [REQ-4ffda99a](requirements/20260802-4ffda99a-nix-command-transparency-and-delegation.md) — 内部実行する nix コマンドを開示し世代の切替と GC は標準の nix コマンドへ委譲する
 
-**グローバルフラグ**
+### 出力ストリームと終了コード
 
-```bash
--f, --file <path>   # entrypoint を明示（自動探索を上書き）
---root <path>       # 解決 root を明示上書き（全モード共通。project は git toplevel を、home は $HOME を使わない・→ ADR-0017）
-                    # 明示時は全モードで profileDir を上書き後 root の <roothash> でキー（→ ADR-0023）
---no-wait           # flock 競合時に待たず skip（shellHook 用。既定は明示 apply=blocking wait・→ ADR-0013）
--v, --verbose       # 配置レポート（サマリ + per-target 行）を出力（既定は成功時沈黙・→ ADR-0031）
---version           # 埋め込みバージョンを表示して終了（cobra 既定書式 `nput version X.Y.Z`。
-                    # -v は --verbose に割当済みのため短縮形なし・→ ADR-0042）
---debug             # 内部実行する nix コマンドを stderr に開示（troubleshooting 用・→ ADR-0031）
---project-root      # --all の修飾。nput.* のうち projectRoot の config のみ適用（→ ADR-0017）
---home-root         # --all の修飾。homeRoot の config のみ適用
---system-root       # --all の修飾。systemRoot の config のみ適用（system mode は未実装のため当面マッチなし・将来 seam）
---recopy            # apply の修飾。config 内の全 copy target を src から無条件上書き再コピー（→ ADR-0020）
---backup[=<suffix>] # apply 専用。既存の記録外実体を <target>.<suffix> へ rename 退避してから配置（cobra NoOptDefVal。
-                    # 値なし = suffix "nput-backup"。suffix 指定は "=" 区切り必須・スペース区切り不可・→ ADR-0045）
---manifest <path>   # apply 専用。ビルド済み link-farm を直接適用（entrypoint 発見・eval/build なし・host/module activation seam・→ ADR-0026）
--y, --yes           # reset の確認プロンプトをスキップ（スクリプト / CI 用・→ ADR-0020）
-```
+- [REQ-fea038de](requirements/20260802-fea038de-stream-discipline.md) — stdout は機械可読出力を専有しレポートと warning は stderr へ出す
+- [REQ-8ef34101](requirements/20260802-8ef34101-silent-on-success.md) — 成功時はデフォルト沈黙とし warning と error は常時 stderr へ出す
+- [REQ-0a123b89](requirements/20260802-0a123b89-verbose-and-debug-separation.md) — 冗長度は -v、デバッグは --debug に分離し --json と直交させる
+- [REQ-2c5a10d8](requirements/20260802-2c5a10d8-exit-codes.md) — 終了コードは 0 = 成功 / 1 = 一般エラー / 2 = dryrun の conflict とする
+- [REQ-b7bb09d6](requirements/20260802-b7bb09d6-apply-all-dryrun-exit-code-priority.md) — apply --all --dryrun の終了コードは error を conflict より優先する
 
-> `--json`（機械可読出力）は **niface 規約準拠のエンベロープ**を stdout に出す（opt-in の第 2 契約・→ ADR-0043・niface specVersion 1）。デフォルトのテキスト出力 + 下記のストリーム規律は不変で、`--json` 時のみ niface エンベロープに切り替わる。ペイロード詳細は各コマンド仕様（#130 以降で追記）。
+niface 規約準拠の `--json`（第 2 契約・→ ADR-0043）:
 
-- `apply` の **name 省略時は `nput.default` を適用**する（flake の `default` 慣例に倣う。`default` が未定義ならエラー）。`<name>` を明示すればその config を、`--all` で `nput.*` 全てを適用する。profile は config 単位で atomic（→ ADR-0002）。
-- `apply --manifest <link-farm>` は **ビルド済み link-farm を engine へ直接適用**する（host / module activation の seam・→ ADR-0026）。entrypoint 発見・rootKind 先取り eval・`nix build` を**行わず**、引数の link-farm 内 `manifest.json` から engine が rootKind を読む（project / home / fixed の全モード対応）。取得後の挙動（flock → 前世代 diff → 配置 → 保守的 stale 除去 → `nix-env --set` → レポート）は通常 apply と同一で、配置ロジックは二重化しない（engine の `Build` / `LinkFarm` seam に対応・→ ADR-0011, ADR-0003）。引数は **link-farm**（`mkManifest` 出力の store パス = 世代としてコミットされる対象）で、`manifest.json` 単体ファイルは渡さない。`-f` / `--all` は取得元が衝突するため**併用エラー**、位置引数 `name`（profile 選択）とは直交し両立する（省略 = `default`・→ ADR-0024）。HM モジュールの activation が使う主経路（→「モジュール別動作仕様」）。module 経路は CLI と `mkManifest` が同一 flake input 由来のため schemaVersion skew が構造的に起きない（→ ADR-0026, ADR-0006）。
-- `apply --all` は **entrypoint の `nput.*` を辞書順（キーソート・決定的）に適用**し、**一部が失敗しても残りを続行**する（各 config は独立 profile で atomic なため）。Nix attrset は定義順を保持せず `builtins.attrNames` が辞書順を返すため適用順は辞書順になるが、各 config が独立 atomic なので順序は結果に影響しない（表示・失敗集約のための決定的順序・→ ADR-0016）。最後に成功 / 失敗を集約表示し、**1 つでも失敗なら非ゼロ終了**する。`--all` 自体は全体 atomic にしない（project mode は rollback 非公開で意味論が崩れるため・→ ADR-0013）。
-- `apply --all` に **`--project-root` / `--home-root` / `--system-root`** を付けると、`nput.*` のうち該当 root モードの config **のみ**を適用する（root マーカー名に揃えたフィルタ・opt-in・→ ADR-0017）。素の `--all` は全 config を適用する。home mode と project mode の config が混在する entrypoint で devShell の `shellHook` から `--all` を打つと home mode config も `$HOME` に配置される footgun があるため、devShell は **`nput apply --all --project-root`**（または名指し `nput apply <name>`）を使う。フィルタは `--all` 修飾で、名指し apply では `<name>` が 1 config を pin するため無意味。
-- `rollback` / `list-generations` は **home mode 限定**。project mode は世代を内部機構に留めユーザーに公開しない（→ ADR-0005）。
-- `rollback` は **名指し必須**（`--all` 非対応）。全 config を一斉に戻すのは破壊的で footgun、途中失敗で状態が不揃いになり得るため（→ ADR-0018）。
-- `list-generations --all` は home mode の全 config の世代を一覧（読み取り専用）。`gitignore --all` は projectRoot の全 config の target を **ソート + 重複除去**して出力する（repo の `.gitignore` は 1 つなので一括列挙が自然・→ ADR-0018）。
-- `apply <name> --recopy` は通常 apply に加え **config 内の全 copy target を現 `src`/`subpath` から無条件に上書き再コピー**する（→ ADR-0020）。copy は世代外で hash 追跡しないため差分判定はせず無条件。上書きした target をレポート表示し、フラグ自体が opt-in なので確認は出さない。**ローカルの copy 編集は破棄され src 内容に戻る**（= upstream 追従の意図）。symlink 部の世代コミット挙動は不変（copy は世代を増やさない）。
-- `apply <name> --backup[=<suffix>]` は、配置を塞ぐ既存の**記録外**実体（foreign な通常ファイル / ディレクトリ・copy 構造不一致・copy foreign 実ファイル・method 変更 copy→symlink）を `<target>.<suffix>` へ rename 退避してから配置する、conflict の脱出ハッチ（→ ADR-0045, issue #169）。値なし = suffix `nput-backup`。suffix 指定は cobra `NoOptDefVal` の制約で **`=` 区切り必須**（`--backup=bak`。スペース区切り `--backup bak` は次の位置引数として扱われ suffix にならない）。**祖先 symlink conflict は対象外のまま**（構造問題であり退避では解消しない・→ ADR-0015, ADR-0046）。退避発動は warning 級で**常時 stderr** に出す。退避先 `<target>.<suffix>` が既に存在する（前回の退避物が残っている）ときは conflict で停止し、黙って上書きしない。退避も途中失敗時の undo ジャーナル対象（→「途中失敗時の巻き戻し」節）。**`reset` は退避物を復元しない**（ユーザー所有物として残置。復元は手動 `mv`）。
-- `reset <name> [target...]` は配置物を**無い状態へ戻す** teardown（→ ADR-0020）。symlink は stale 除去と同じ**保守的不変条件**（nput 管理・記録通りのみ・foreign は warning で残す）で除去し、**copy target も削除**する（copy を消す唯一の明示手段）。symlink・copy いずれの除去後も空親ディレクトリ剪定を適用する（→「空親ディレクトリ剪定」節）。データ損失リスクのため**確認プロンプト**を出すか `--yes` で同意を要求し、削除 target をレポート表示する。**profile / 世代は触らない FS-only teardown** で、config が entry を残す限り次の apply で再配置される（transient・project mode は ADR-0017 の lstat 検査で復帰）。恒久除去は config から entry を消して apply、profile 完全除去は `nix-env --profile <profileDir>/profile --delete-generations`。home / project 両モード可。
-- `reset` は **名指し必須（`--all` 非対応）**（一斉撤去は破壊的 footgun・`rollback --all` 却下と一貫・→ ADR-0018, ADR-0021）。複数撤去は名指しを複数回。**解決後 `profileDir` 単位の blocking flock を取得**して並行 apply / reset と直列化する（→ ADR-0013, ADR-0021）。profileDir 確定のため **rootKind 先取り eval → root 解決**を build しないコマンドでも先行する（apply と共通の前段・`--root` 時は同じ roothash キー・→ ADR-0024）。
-- `reset <name> --dryrun` は**副作用ゼロ**で削除対象（symlink / copy target）を表示して exit する（FS 削除・confirm・flock いずれも行わない・`apply --dryrun` と対称・→ ADR-0021）。終了コードは削除対象の有無に依らず 0。
-- `apply --all --recopy` は**合成可**。`--all`（必要なら `--project-root` 等フィルタ）が選んだ各 config に `--recopy` を適用する（`--recopy` は apply 修飾で `--all` と直交・→ ADR-0021）。`--all --backup[=<suffix>]` も同様に合成可（`--backup` も apply 修飾・→ ADR-0045）。
-- `apply <name> --dryrun` は FS 書込・`--set`・flock いずれも行わない読み取り専用。`conflict` があれば非ゼロ終了（CI の事前 gate に使える）（→ ADR-0006）。**`--dryrun --backup` は組み合わせ可**で、`--backup` 無しなら conflict（exit 2）になる箇所が「backup + 配置予定」の非 conflict プランへ変わる（exit 0・→ ADR-0045）。退避先が既存の場合は `--backup` 下でも conflict のまま。
-- `gitignore <name>` は配置 target を `.gitignore` 向けに列挙して stdout に出力するだけで、ファイルは書き込まない。更新責務はプロジェクト管理者（→ ADR-0005）。出力は **root 相対 target に先頭 `/` を付けたアンカー形式**（例: `/.claude/skills/nix`）で 1 行 1 件。project mode の root = git toplevel = `.gitignore` 置き場所なので先頭 `/` が正しくアンカーし、別階層の同名パスを誤って無視しない。ディレクトリ / ファイルとも末尾 `/` は付けない（→ ADR-0013）。
-- `gitignore` は **project mode 限定**。単体 `gitignore <name>` も project mode の config のみ受理し、**非 project config（home / fixed）を指定したらエラーで停止**する（出力のアンカー形式が git toplevel = `.gitignore` 置き場所を前提とし、home / fixed では意味を成さないため）。`rollback` / `list-generations` が home mode 限定なのと対称（→ ADR-0023）。
-- `gitignore` は **`method` を区別せず全 target を列挙**する（copy target も含む・→ ADR-0019）。project mode の copy target も ephemeral 扱いで、各 clone で place-once で再マテリアライズされ**編集は clone local / 使い捨て**（`git clean` で消える）。copy を committed（vendoring）にするのは nput の責務外（手動コミット）で、project mode の ephemeral 原則は崩さない（→ ADR-0019）。
-- 透明性: `nput --help` 等で内部実行する nix コマンドを開示し、ユーザーが選択的に手で実行できる（→ ADR-0007）。
-- 任意世代への切替・世代の GC は標準の `nix-env` / `nix-collect-garbage` を profile パスに対して使う。
-- `--only`（一部 entry だけ適用）は profile 世代の atomic 性と衝突するため提供しない。選択的更新は config（`nput.<name>`）の分割で担保する。
-
-### 出力ストリームと終了コード（→ ADR-0023）
-
-- **成功時はデフォルト沈黙**（UNIX 哲学「沈黙は金」・→ ADR-0031）。`apply` / `reset` / `rollback` の**成功は終了コード 0 が語り、配置レポート（サマリ + per-target 行）・try-lock skip 通知・`apply --all` 完了サマリは既定では出さない**。**warning（foreign symlink 等）と error は常時 stderr に出す**（沈黙対象外）。`reset` の確認プロンプト・中止通知も存続する。
-- **ストリーム規律**: **stdout は機械可読出力を専有**する（`gitignore` の列挙・`apply --dryrun` のプラン）。**配置レポート（placed / replaced / removed / skipped）・warning・shellHook の skip 通知はすべて stderr**。これにより `nput gitignore <name> >> .gitignore` や `nput apply <name> --dryrun | ...` が安全にパイプできる。
-- **終了コード**:
-
-  | code | 意味 |
-  |---|---|
-  | `0` | 成功 / no-op / `--no-wait` の try-lock skip（正常スキップ）|
-  | `1` | 一般エラー（eval エラー・engine 実行時エラー・`apply --all` の部分失敗）|
-  | `2` | `apply --dryrun` で conflict を検出（CI の事前 gate に使える）|
-
-- **niface 準拠の `--json` 出力（→ ADR-0043・niface specVersion 1）**: `--json` 指定時、stdout に **niface エンベロープ**を 1 文書だけ出す。トップレベルは `specVersion` / `tool` / `command` / `status` / `dryRun` / `startedAt` / `finishedAt` / `errors[]` / **`results[]`**（camelCase・時刻 RFC 3339）。**single / batch を問わずトップレベルは常に `results[]`**（要素数は 0 以上・実行形態の判別子フィールドは持たない）で、`items` / `changes` / `info` は各 `results[i].result` 配下に入る。デフォルトの行指向 stdout（`gitignore` の列挙・`apply --dryrun` のプラン）は不変で、`--json` は opt-in の第 2 契約。エラーは niface エンベロープに構造化（前段の全体エラーはトップ `errors[]`・主体起因は `results[i].errors[]`・item 起因は `item.error`）しつつ **stderr の人間向けテキストも常時併存**する（上記ストリーム規律の骨子は不変・エラー畳み込みは ADR-0023 §2 / ADR-0033 §2 の再改訂）。終了コード表 0 / 1 / 2 は不変で、niface `status` は exit 0 → `success` / 1・2 → `error` に連動する。`--all` は `results[]` に config ごとの `SubjectResult` を列挙する（形状は単一実行と同一。`subject` は全 `SubjectResult` で常時必須・`specVersion` / `tool` / `command` はトップに 1 度だけ）。read-only 列挙（`list-generations` の世代・`gitignore` のパス）は `results[i].result.info` のツール固有インベントリに置き id 導出 item にはしない。**nput の JSON 出力は現在も将来の機能も niface 規約に準拠する**（エコシステム合成の北極星要件・→ 概念は concept.md 北極星節）。基盤（#130）の詳細は以下。ペイロード充実は変更系（`apply` / `reset` / `rollback` の items / changes / generation / warnings）が #131（**実装済み**・下記「#131 変更系ペイロード」）、読み取り系（`--dryrun` / `list-generations` / `gitignore` / `init`）が #132（**実装済み**・下記「読み取り系ペイロード」）、`--all` の複数 `SubjectResult` が #164（**実装済み**・下記「`--all` の複数 `SubjectResult`」）。
-  - **emit タイミングと成立条件**: エンベロープは**コマンド完了時に 1 回だけ** stdout へ書く（1 文書 + 末尾改行・それ以外 stdout には何も出ない）。emit するのは nput 自身のサブコマンド実行（フラグ解析・引数検証を通過して RunE に到達したもの）のみ。`--help` / `--version`・cobra 自動生成の `help` / `completion` はエンベロープを出さない（それぞれのテキストが stdout を使う）。フラグ解析・引数検証の失敗もエンベロープなし（`--json` の指定有無をその時点で確定できないため）で、終了コード + stderr がシグナル。エンベロープ書き込み自体の失敗（EPIPE 等）はコマンド成功時でも非ゼロ終了にする（欠損文書を成功と読ませない）。
-  - **#130 時点の最小形**: 全サブコマンドが最小エンベロープを返す。単一 config コマンド（`apply <name>` / `reset` / `rollback` / `list-generations <name>` / `gitignore <name>`）は `results[]` に **subject = config 名**の `SubjectResult` を 1 要素配線し（`subject{name}` / `status` / 主体ごとの `startedAt` / `finishedAt` / `errors[]` / `result{items:[]}`）、`--all` 系と `init` は `results: []`。`items` / `changes` / `info` の中身はまだ空（**以上は #130 時点のスナップショット**。現状は下位節が正で、ペイロードは #131 / #132 で充填され、`--all` は #164 で config ごとの `SubjectResult` を積む形になった。`init` だけは現在も subject を持たず `results: []` のまま）。
-  - **時刻**: RFC 3339・`T` 区切り・オフセット必須（ローカルオフセット・UTC は `Z`・niface ADR-0025 の format assertion 対象）。`tool.version` は ldflags 埋め込みの `main.version`（VERSION ファイル由来・→ ADR-0042）。
-  - **エラーの層と stderr 併存**: 単一 config コマンドは RunE 冒頭・name 引数の時点で subject が確定するため、その実行の失敗（entrypoint 発見・eval / build・lock・engine 実行時）は**全て `results[0].errors[]`** に載る。トップ `errors[]` に載るのは **subject を持たない実行の失敗のみ**（ADR-0043 §6 の「主体列挙・解決の前段」に相当。#164 以降は `--all` も config ごとに subject を持つため、トップに載るのは列挙前の失敗〔entrypoint 発見・一括 eval〕と `init` の失敗だけ）。どちらも stderr の人間向けテキスト（op + 対象パスの wrap 規約）を常時併存させ、終了コード表 0 / 1 / 2 は不変。
-  - **エラーコード**: sentinel / 型で判定できるものを分類する — `E_LOCK`（flock）/ `E_NPUT_BUILD`（内部 nix eval / build 呼び出しの失敗・#131 で追加）/ `E_NOTFOUND` / `E_PERMISSION` / `E_IO`（上記に該当しない FS / 外部 I/O 失敗の形〔PathError 等〕・#131 で追加）/ `E_NPUT_COLLISION`（`apply --dryrun` の conflict = exit 2）。それ以外はツール総称 fallback `E_NPUT_FAILED`（世代 commit 失敗等）。item 単位の `E_NPUT_COLLISION`（非 dryrun conflict の failed item）は下記 #131 節。`apply --dryrun` の conflict を item に写すのは #132（下記「読み取り系ペイロード」節・実装済み）。
-  - **`--json` 時の stdout 専有**: 既定の行指向 stdout（`gitignore` の列挙・`apply --dryrun` / `reset --dryrun` のプラン・`list-generations` の一覧）は `--json` 指定時には**出さない**（エンベロープが stdout を専有する）。`--json` なしの既定契約は不変。
-  - **`reset --json` は `--yes` 必須**: 破壊的操作の確認プロンプトは機械消費で扱えないため、TTY でもプロンプトを出さず、`--yes` が無ければ即 `status:"error"` + 非ゼロで fail fast する（→ ADR-0043 §8）。
-  - **item id 導出 seam**: `id = lowercase-hex(sha256(JCS(identity)))`・identity は `kind="entry"`, `key={target}`（root 相対 target のみ・config 名は含めない・→ ADR-0043 §3）。#130 は導出関数を配線し niface の id-vectors（`niface.IDVectorsV1()`・`UseNumber` デコード）との整合をテストで固定する。変更系（apply / reset / rollback）の items への実配線は #131 で実装済み（下記）。読み取り系は #132 で実装済み（下記「読み取り系ペイロード」節）。
-  - **#131 変更系ペイロード（`apply` / `reset` / `rollback`・単一 config・非 dryrun）**: JSON ペイロードは `-v` レポートと**同一の engine 結果**（`engine.Result` / `engine.ResetResult`）から DTO 経由で生成する（二重集計しない・→ ADR-0043 §8）。
-    - **items = フルインベントリ**: `apply` / `rollback` は新（rollback は戻り先）manifest の全 entry + **stale 除去計画に載った旧 entry**（前世代記録・除去の完遂と無関係に列挙）、`reset` は選択済み teardown entry（`[target...]` 絞り込み後）。各 item は `kind="entry"`・`label` = target・`info={target, method, subpath}`（`subpath` 空は省略。ビルド毎に変わる src は item info に置かない）。変更の無い entry も `success`。method 変更で新旧両方に現れる target は新 entry が item を代表する。
-    - **changes = 実差分のみ**（noop を含めない・niface §4）: place / copy 新規 → `add`、replace / recopy → `modify`、stale 除去 / reset の除去 → `remove`。`kind` は意図した遷移ではなく**実際に生じた遷移**。同一 target の unlink + 再配置（symlink→copy の method 変更）は 1 つの `modify` に合体する。記録どおりの dest への機械的 re-link（old == new）は状態遷移が無いため change にしない（`-v` の op 表示とは意図的に非対称）。`change.info = {old, new}`（symlink 先 / copy src。replace の `old` は re-link 直前の実 on-disk dest〔foreign 含む〕・stale 除去の `old` は記録 dest。recopy の `old` と copy 削除の info は旧内容を追跡していないため省略）。**reversible**: symlink の add / modify / remove と copy 新規 = `true`、recopy 上書きと reset の copy 削除 = `false`（`W_IRREVERSIBLE` は付けず `change.reversible` のみで表現・→ ADR-0043 §4）。
-    - **部分失敗のマッピング**（niface ADR-0016 / ADR-0020・MUST）: 失敗した entry → `item.status:"failed"` + `item.error`（コードは上記分類）。前段の失敗で未到達だった entry → `"skipped"`（この用途のみ）。失敗までに完了した entry → `"success"` + 対応する change を**全て**含む（niface §4 の changes 完全性 MUST）。undo ジャーナルが巻き戻した実行（→ ADR-0044）でも changes は「失敗時点までに生じた差分」の記録として保ち、subject 警告 **`W_NPUT_UNWOUND`** で差分がディスク上に残っていないことを通知する。commit / build / lock など entry 非依存の失敗は item を落とさず `results[0].errors[]` へ（→ ADR-0043 §6）。
-    - **conflict**: 非 dryrun の conflict 停止は該当 entry を `item.status:"failed"` + `error.code:"E_NPUT_COLLISION"`（message = planner の理由）にし、残りの計画 entry は skipped（何も実行されていない）。集約エラー（`N conflict(s) detected`）は item 起因のため `subjectResult.errors[]` へ重複させない（niface §2）。exit 1 / 2 は内部意味のまま。
-    - **generation**（niface ADR-0015・観測記録）: **`apply` / `rollback` のみ** `generation = {profile, before?, after?}` を出す（実行開始 / 終了時点の観測値・観測できない値は省略: 初回 apply の `before`、世代リンク形でない profile）。失敗時は動かなかったポインタの観測（before == after）。`rollback` の From→To は `generation.before/after` が運び、`result.info` には置かない（二重符号化回避）。**`reset` は generation スロット自体を出さない**（前世代 manifest を読んで FS を除去するだけの FS-only teardown で、profile / 世代は untouched・遷移が存在しない）。
-    - **warnings**（niface ADR-0019）: planner の構造化 warning を W_NPUT_* に写像し、対象 target がインベントリ内なら該当 `item.warnings`、外（entry が config を離れた copy orphan 等）なら `subjectResult.warnings` へ。コード: `W_NPUT_FOREIGN_SYMLINK`（foreign symlink 上書き）/ `W_NPUT_COPY_FOREIGN`（place-once の copy skip）/ `W_NPUT_STALE_MISMATCH`（記録不一致で残した stale symlink）/ `W_NPUT_STALE_NON_SYMLINK`（symlink でないため残した stale target）（後 2 者 = 保守的不変条件による keep・reset の kept-foreign も同じ。当該 item は success のまま = 方針による不作為）/ `W_NPUT_COPY_ORPHAN`（copy orphan・subject 級）/ `W_NPUT_UNWOUND`（上記・subject 級）。`detail = {target}`。stderr の人間向けテキストは常時併存。
-    - **`reset` の changes**: 実際に除去したもののみ（symlink remove = `reversible:true` + `info.old` = 記録 dest、copy 削除 = `reversible:false`・info なし）。確認プロンプトで中止した実行（`--json` では起き得ない・下記 `--yes` 必須）は差分ゼロ。
-    - **#131 時点の非対象**: `--backup` の退避（BackedUp）と空親ディレクトリ剪定（Pruned）は entry の状態遷移ではないため changes / items に載らない（`-v` / stderr のみ）。`apply --dryrun` のペイロードは #132（下記・同一 builder で実装済み）、`reset --dryrun` は最小形のまま（followup）、`--all` は #164（下記・同一 builder で実装済み）。
-  - **適合検証**: Go テストが niface `conformance.NewDefaultChecker()`（embed 正本 schema〔format assertion 込み〕+ schema 外 lint MUST）で emit 文書を全形状（成功 / subject あり・なし / 前段エラー / 主体エラー / conflict / `--all` の複数 subject〔部分失敗・0 件・dryrun conflict〕）について検証する。E2E は dev flake の niface input が提供する `niface-validate` CLI（`-schema` 省略 = embed 正本）でシナリオ 01–07 の実出力を検証し、item id は同 input の `testdata/v1/id-vectors.json`（`NIFACE_ID_VECTORS`）と突き合わせる（→ #132）。
-  - **読み取り系ペイロード（#132）**:
-    - **`apply --dryrun`**: apply と **dryRun パリティ**。実装も同一の変換（#131 の payload builder）を通すため、スキーマの一致は構造的に保証され、値（観測結果）だけが異なる。`items` = 新 manifest の全 entry + stale 除去計画に載った旧 entry（フルインベントリ・item 形は #131 と同一〔`info={target, method, subpath}`〕）。dryrun は何も実行しないため skipped 区分は現れない。conflict の entry は `item.status:"failed"` + `error.code:"E_NPUT_COLLISION"`（message は planner の理由）で、**JSON 出力と exit 2 は両立**し、item 起因エラーは `results[i].errors[]` へ二重化しない（niface §2 の MUST NOT）。
-    - **`apply --dryrun` の changes**: 予定差分のみ（place / copy 新規 → `add`・replace → `modify`・除去 → `remove`。同一 target の unlink + 再配置〔method 変更〕は #131 と同じく 1 つの `modify` に合体）。dryrun は re-link を実行しないため re-link 直前の on-disk dest（noop 判定の材料）を観測せず、記録どおりの dest への予定 re-link も `modify` として残る（テキスト plan の replace 行と同写像・実 apply の noop 抑止〔上記 #131 節〕とは意図的な非対称）。`--recopy` の上書きは dryrun の plan に現れない（planner は place-once 分類のみで recopy は engine の materialize 側経路・→ ADR-0020）。reversible は ADR-0043 §4 の規則どおり（dryrun に現れる change は全て `true`）。空親ディレクトリ剪定（rmdir）と `--backup` の rename 退避は entry 識別を持たず item / change を生まない。`generation` = 観測記録（切替が起きないため **before = after**・profile 未作成の初回 plan では **before / after を両省略**し `profile` のみ・niface ADR-0015）。warnings の写像・振り分けは #131 と共通（上記 W_NPUT_* 一覧。インベントリ外 = copy orphan・除去されず残る stale 旧 entry）。
-    - **`list-generations <name>`**: `results[i].result.info.generations = [{number, date, current}]`（`date` は nix-env 表示の生文字列）・`items: []`。`SubjectResult.generation` スロットは出さない（世代番号の二重符号化回避）。空 profile でも `"generations": []` を明示する。
-    - **`gitignore <name>`**: `results[i].result.info.paths` = anchor 形 target（先頭 `/`）・`items: []`。デフォルトの行指向 stdout は不変（`--json` は opt-in の第 2 契約）。entry 0 件でも `"paths": []` を明示する。
-    - **`init <template>`**: 主体（config）を持たないため `results: []` のまま、トップレベル `info` に `{template, ref}`（展開テンプレート名と flake ref）を載せる（niface ADR-0018）。info は展開実行前に確定するため、失敗時もトップ `errors[]` と並んで「何を展開しようとしたか」が残る。
-    - **読み取り系の `dryRun` は常に `false`**（list-generations / gitignore / init）。`dryRun` は `--dryrun` フラグの反映に限定し、副作用の無さを `dryRun` で表現しない。
-  - **`--all` の複数 `SubjectResult`（#164・`apply --all` / `list-generations --all` / `gitignore --all`・→ ADR-0043 §7）**: 選択した config ごとに `SubjectResult` を 1 つ `results[]` へ積む。**形状は単一 config 実行と完全に同一**で、`--all` を判別するフィールドは持たない（niface ADR-0011〜0013・単一実行は N=1 の特殊形であって別文書ではない）。`specVersion` / `tool` / `command` / `dryRun` / `startedAt` / `finishedAt` はトップに 1 度だけ置き、`results[i]` を切り出しても単独で valid な文書にはならない。各 `results[i]` の中身（items / changes / generation / warnings / info）の写像規則は上記 #131 / #132 節と同一で、`--all` 固有の写像は無い。
-    - **順序**: `results[]` はコマンドごとの選択規則（`apply --all` は `--project-root` 等のフィルタ適用後・`gitignore --all` は projectRoot config のみ・`list-generations --all` は profile ディレクトリ走査で見つかった home mode config）を適用したあとの辞書順で並ぶ。ただし各 config は独立 atomic なので順序は結果に影響せず、消費側は `subject.name` で引くこと（`changes[].itemId` の解決は**同一 `SubjectResult` 内**に閉じる・result 跨ぎ参照は niface lint MUST 違反）。
-    - **集約 `status`**: **1 主体でも `error` なら `error`**、全て成功なら `success`。**部分失敗でも成功した config の `SubjectResult` は全て残る**（失敗した config だけが `status:"error"` になる）。対象 0 件（フィルタにマッチせず / profile 未作成 / projectRoot config 無し）は `results: []` + `status:"success"`（N=0 でも同一形状・キーは常に存在する）。
-    - **エラーの層**: config 単位の item 非依存な失敗（build / eval / lock 等）は**該当 `results[i].errors[]`**、item 起因の失敗（entry 失敗 / conflict）は `item.error` に埋めて `results[i].errors[]` へ重複させない（niface §2）。**トップ `errors[]` に載るのは主体列挙前の失敗のみ**（entrypoint 発見・一括 eval・RunE 到達後の引数拒否〔`apply cannot combine <name> with --all` 等〕など、subject が 1 つも確定していない段階の失敗。cobra の `Args:` 検証やフラグ解析の失敗はそもそもエンベロープを出さない・上記「emit タイミングと成立条件」）。`--all` の集約エラー（`N config(s) failed`）は既に各 subject が持つ失敗の言い換えなのでトップへ重ねない。
-    - **try-lock skip**: `ErrSkipped`（他の apply が進行中）は名指し apply が exit 0 を返すのと対称に、その subject を `status:"success"` として扱う（skip は失敗ではない）。
-    - **`apply --all --dryrun`**: 本 apply と同一の payload builder を通すため構造 parity は #132 の単一 `--dryrun` と同じ。conflict のある config は該当 entry が `item.status:"failed"` + `error.code:"E_NPUT_COLLISION"`（item 起因）で、その **subject は `status:"error"`**、したがって**集約も `status:"error"`**（→ ADR-0043 §6「conflict 1 件でも status:error」・niface ADR-0002 / ADR-0008）。終了コードは `error(1) > conflict(2) > 0` の優先度（上記終了コード節・ADR-0024）で不変であり、`status` は「非 0 ⇔ error」だけを厳守する（1 と 2 の内訳は exit code が語る）。単一 `apply --dryrun` の conflict と完全対称。
-    - **`gitignore --all` は JSON で cross-config dedup をしない**: 各 `results[i].result.info.paths` はその config 自身の target のみを持ち、複数 config が共有する path は**双方の `SubjectResult` に現れる**（どちらか一方へ帰属させるのは「どの config が宣言しているか」の偽り）。union が必要な消費側が `results` を跨いで union + dedup する。**テキスト既定出力は従来どおり dedup + sort**（repo の `.gitignore` は 1 つ・ADR-0018 不変）で、テキスト集約 / JSON per-config の非対称を意図的に保つ。
-    - **`list-generations --all`**: profile ディレクトリ走査で見つかった home mode config ごとに `result.info.generations` を持つ（`items: []`・単一実行と同一）。列挙途中の読み取り失敗は従来どおりそこで打ち切り、失敗した config の subject がその失敗を持ち、既に列挙済みの config の結果は残る。
-    - **読み取り系 `--all` は打ち切り以降の config を `results[]` に載せない**（`list-generations --all` / `gitignore --all`）。両者は最初の失敗で列挙を中断するため、`results[]` は「失敗した config まで」で終わり、未到達の config は要素として現れない。**`apply --all` は部分失敗でも全 config を続行する**（各 config が独立 atomic なため）ので、選択された全 config が必ず `results[]` に載る。この非対称は「読み取り系は打ち切り / 変更系は続行」という既存の実行方針（→ 上記「部分失敗でも続行」）の反映であり、消費側は **`results[]` の subject 集合が対象 config 集合と一致することを前提にしてはならない**（成功時は一致する）。
-- **`-v` / `--verbose` を付けたときだけ配置レポートを stderr に出す**（既定沈黙の opt-in・skip 通知・`apply --all` 完了サマリも含む・→ ADR-0031）。**内部実行する nix コマンドの開示は `--debug`** に分離する（冗長度＝`-v` と、デバッグ＝`--debug` を直交させる）。`--json`（stdout・機械向け）は `-v`（stderr・人間向け）と直交・併用可（→ ADR-0043）。`--quiet` は既定沈黙化（ADR-0031）に伴い廃止した。
-- **沈黙化の対象は stderr の配置レポートのみ**で、**stdout 専有の機械可読出力（`apply --dryrun` の plan・`gitignore` の列挙）は既定でも `-v` 下でも常に出す**（→ ADR-0024）。stdout 専有原則を貫き、`nput apply <name> --dryrun | ...` や `nput gitignore <name> >> .gitignore` のパイプを壊さない。
-- **`apply --all --dryrun` の終了コードは「いずれかが error なら 1、error が無く conflict があれば 2、どちらも無ければ 0」**（error(1) 最優先 → conflict(2) → 0・→ ADR-0024）。単純な最大値（2 > 1 で conflict 優先）は採らない（より深刻な eval / engine エラーを CI で隠すため）。非 dryrun の `--all` は conflict 概念が無く 0 / 1 のみ。
-
-### `nput init`（テンプレート展開）
-
-```bash
-nput init standalone   # nix flake init -t github:yasunori0418/nput#standalone のラッパー
-nput init project      # nix flake init -t github:yasunori0418/nput#project のラッパー（devShell shellHook 配線 + .gitignore ガイド入り）
-```
-
-- `nix flake init -t github:yasunori0418/nput#<template>` への**透明なラッパー**。ファイルを作るのは nix の templates 機構であり nput 自身は generate しない（「設定を生成しない」thesis を維持・→ ADR-0007）。
-- `nix flake init` の「既存ファイルを上書きしない」保守性を継承する。
-- **テンプレート参照はバイナリにハードコードした固定 flake ref `github:yasunori0418/nput`**（→ ADR-0025）。registry 登録に依存せず動く。`init` は新規 bootstrap 用途で、CLI 版と template 版のズレ（常に latest main 参照）は許容する。apply 時の `schemaVersion` 整合は project mode の devShell 同梱 pin（→ ADR-0015）が担う。
-- `--json` 時は `results: []` + トップレベル `info` に `{template, ref}` を載せる（→「出力ストリームと終了コード」の読み取り系ペイロード・#132）。
-
-#### テンプレートの内容（最小 + 手厚いコメント・→ ADR-0018）
-
-各 template は**動く example を 1 config だけ**置き、バリエーション（`subpath` / `method = "copy"` / `mkOutOfStoreSymlink` / 複数 entry / 動的生成）は**コメントで示す**。starter を小さく保ち、ユーザーが不要分を削除する手間を最小化する。
-
-| template | ファイル | 内容 |
-|---|---|---|
-| `standalone` | `flake.nix` | `homeRoot` の 1 config 例（`nput.<system>.<name> = mkManifest { root = homeRoot; entries = {...}; }`）+ バリエーションコメント |
-| `project` | `flake.nix` | `projectRoot` の 1 config 例 + devShell（`packages = [ nput.packages.${system}.nput ]`・shellHook = 名指し apply）+ 「配置物は ephemeral・`.gitignore` へ `nput gitignore <name>` 出力を追記」コメント |
-| `project` | `.gitignore` | 先頭に `# nput: regenerate with 'nput gitignore <name>'` ヘッダコメント付きの雛形 |
-
-- project template の `shellHook` は **`nput apply <name> --no-wait`（名指し）**を既定にする。example が 1 config なので最も明確で混在 footgun（→ ADR-0017）が起きない。「複数 config なら `nput apply --all --project-root --no-wait`」をコメントで示す。
-- `.envrc`（direnv）は同梱しない（非利用者に不要ファイルを増やすため。コメント案内に留める・→ ADR-0018）。
-
-### 再現性スタンス（→ ADR-0007）
-
-| entrypoint | eval | 再現性 |
-|---|---|---|
-| `flake.nix` | pure（root 解決はエンジン実行時なので eval は pure のまま）| flake.lock で固定 |
-| `shell.nix` / `default.nix` | impure（NIX_PATH / channels 依存）を許容 | **ユーザー責任**。nput lib を含め nixpkgs を npins / fetchTarball / flake-compat 等で固定することを推奨 |
-
-> **`nix flake check` と `nput` カスタム output**（→ ADR-0015）: consumer の `outputs.nput.<system>.<name>`（`packages` 汚染回避の
-> 専用 namespace・ADR-0007）は `nix flake check` で **`warning: unknown flake output 'nput'` を出すが exit 0**（CI を壊さない・想定内・無害）。
-> `flake check` は `nput` 直下 attrset の eval 健全性は検査するが、**配下の `.<system>.<name>` derivation は build も eval もしない**
-> （誤 build しない）。**flake-parts module で `flake.nput.<system>` へ transpose しても警告は消えない**（nix 本体が known-output を hardcode
-> するため・→ ADR-0029）。output 名を変えても消えない（`lib` 以外は unknown 警告）。`nput` 成果物の主検証は
-> `nix build .#nput.<system>.<name>` で行う。将来 upstream の flake-schemas（PR #8892）がマージされたら `schemas.nput` で消す余地を残す。
+- [REQ-a5053191](requirements/20260802-a5053191-json-niface-envelope.md) — --json は niface 規約準拠のエンベロープを出す第 2 契約とする
+- [REQ-2353259f](requirements/20260802-2353259f-json-stdout-exclusive.md) — --json 指定時は行指向 stdout を出さずエンベロープが stdout を専有する
+- [REQ-5c2e64c3](requirements/20260802-5c2e64c3-json-emit-timing.md) — エンベロープはコマンド完了時に 1 回だけ出し成立条件を満たさない実行では出さない
+- [REQ-2ea19863](requirements/20260802-2ea19863-json-change-payload.md) — 変更系の JSON ペイロードは engine 結果からフルインベントリと実差分を導く
+- [REQ-fa181aa6](requirements/20260802-fa181aa6-json-readonly-payload.md) — 読み取り系の JSON ペイロードは dryRun パリティと info インベントリで表す
+- [REQ-059eb4d5](requirements/20260802-059eb4d5-json-all-subject-results.md) — --all は config ごとの SubjectResult を単一実行と同一形状で積む
+- [REQ-9341fa5d](requirements/20260802-9341fa5d-json-error-layering.md) — エンベロープのエラーは主体の有無で層を分けコードを分類する
+- [REQ-57137302](requirements/20260802-57137302-json-item-id-derivation.md) — item id は identity の JCS を SHA-256 した小文字 hex とする
+- [REQ-2a613337](requirements/20260802-2a613337-json-reset-requires-yes.md) — reset --json は --yes を必須とし無ければ fail fast する
+- [REQ-2381d93a](requirements/20260802-2381d93a-json-conformance-verification.md) — エンベロープの niface 適合を Go テストと E2E の両方で検証する
 
 ### 実行フロー
 
-**順序は「eval 先行 → flock → build」**（→ ADR-0023）。profileDir は root 解決後にしか確定せず（project / `--root` 時は `<roothash>`）、root 解決には `manifest.json` の `rootKind` が要る。これを安価な `nix eval`（root kind のみ）で**ビルド前に**先取りし、profileDir を確定してから flock を取り、**build をロック内**に閉じる。これで profileDir 未確定の循環と、ロック外 build の `.pending` out-link 競合（並行 apply の奪い合い）が同時に解消する。`profileDir` は config 専用ディレクトリで profile リンクは `<profileDir>/profile`・pending out-link は `<profileDir>/.pending`（レイアウトは「世代管理仕様」の「機構」節・→ ADR-0025）。
+- [REQ-60c6b7ea](requirements/20260802-60c6b7ea-exec-flow-eval-lock-build.md) — 実行フローの順序は eval 先行 → flock → build とし build をロック内に閉じる
+- [REQ-9c111c32](requirements/20260802-9c111c32-non-build-commands-eval-first.md) — 非 build コマンドも eval 先行を共通前段に持つ
+- [REQ-535b811d](requirements/20260802-535b811d-apply-all-batched-eval.md) — apply --all は rootKind を 1 回の一括 eval で取る
+- [REQ-7a71a049](requirements/20260802-7a71a049-dryrun-no-lock-no-gcroot.md) — --dryrun は root を解決するが flock も pending gcroot も取らない
+- [REQ-840b3641](requirements/20260802-840b3641-pending-gcroot-bounded.md) — 失敗時に残る pending gcroot は config あたり最大 1 個に有界とし回収処理を持たない
 
-```
-nput apply <name> [-f <ep>] [--root <p>]
-  0. entrypoint 発見（-f 上書き）
-  1. root kind を先取り eval:
-     nix eval <ep>#nput.<system>.<name>.rootKind（legacy は per-system 次元なし: nix eval -f <ep> nput.<name>.rootKind・→ ADR-0032）
-     → root 解決（kind: project=git rev-parse / home=$HOME / system=/ / 固定パス、--root 上書き）
-     → profileDir 確定（home: <name> / project: <roothash>/<name>。--root 明示時は全モード <roothash>/<name>・→ ADR-0023）
-       ※ rootKind は mkManifest の passthru として eval 時に確定（git toplevel / $HOME の実体解決は engine 実行時）
-  2. engine を駆動:
-     a. flock を取得（キー = 確定 profileDir）。
-        明示 apply / rollback は blocking（LOCK_EX・取得まで待ち「他の apply 完了待ち」を表示）。
-        shellHook 経路（--no-wait）は try-lock（LOCK_NB）で保持中ならスキップし、stderr に1行通知する
-        （例: `nput: another apply in progress, skipped (run \`nput apply\` manually)`・シェル入室はブロックしない・→ ADR-0022）。
-        同一 profileDir への同時実行はユーザー責任で衝突時は後勝ち（→ ADR-0013）
-     b. ロック内で nix build <ep>#nput.<system>.<name> --out-link <profileDir>/.pending
-        （legacy は nix build -f <ep> nput.<name> --out-link <profileDir>/.pending・→ ADR-0032）
-        → os.Readlink で link-farm store path を得る。out-link が indirect gcroot を張り
-          配置〜--set の GC 窓を塞ぐ（→ ADR-0011）。build がロック内なので out-link 競合は構造的に起きない（→ ADR-0023）
-     c. profileDir の前世代 manifest.json を読む（無ければ初回 = 削除対象ゼロ）
-     d. project mode かつ新 link-farm が前世代と同一なら新世代は積まない（世代スキップ）。ただし各 target を lstat 検査し、
-        ドリフトした entry だけ再張りする（完全 no-op にしない・→ ADR-0017）
-     e. manifest.json を新旧 diff → 配置を塞ぐ自己記録 stale（祖先 symlink・実 dir target・method 変更）を配置前除去
-        （PreRemove・migration・→ ADR-0046, ADR-0047）→ 新規/張替を配置 → 保守的 stale 除去（ネイティブ FS）
-        ※ e の 4 段（PreRemove / 配置 / copy 反映 / stale 除去）のいずれかが途中失敗すると、この run が行った
-           FS 変更を全てインメモリ undo ジャーナルで巻き戻し pre-apply 状態へ戻す（→ ADR-0044, 後述「途中失敗時の巻き戻し」）
-     f. nix-env --profile <profileDir>/profile --set <link-farm>（サブプロセス・コミット点）
-     g. --set 成功後に <profileDir>/.pending を削除（世代リンクが gcroot を引き継ぐ・→ ADR-0011）
-```
+### 再現性スタンス
 
-- **非 build コマンド（`reset` / `rollback` / `list-generations`）も eval 先行を共通前段に持つ**（→ ADR-0024）。build はしないが、profileDir 単位の flock / 前世代 manifest 読みのため profileDir 確定（= rootKind 先取り eval → root 解決）が前提になる。`--root` 上書き時は §「root の解決」と同じ roothash キーで profileDir を引く（`--root` を付けた世代を操作するには同じ `--root` が要る）。`reset` はさらに entries 読みのため entrypoint eval も行う。
-- **`apply --all` は rootKind を 1 回の一括 eval で取る**（→ ADR-0024）。`nix eval <ep>#nput.<system> --apply 'cs: builtins.mapAttrs (_: c: c.rootKind) cs' --json`（legacy は per-system 次元なし: `nix eval -f <ep> nput --apply 'cs: …' --json`・→ ADR-0032）で config 名 → rootKind マップを 1 回で取得し、各 profileDir を確定する。`--project-root` 等のフィルタもこの結果で振り分ける。build だけは atomic 性のため config ごと N 回。eval プロセス起動コストを N→1 に固定する。
-- `--dryrun` は root kind を eval し root を解決するが（プラン表示のため）、link-farm を build しても配置しない読み取り専用なので、flock も pending gcroot（out-link）も取らない（→ ADR-0011, ADR-0023）。
-- `--set`（f）到達前に apply が失敗すると `<profileDir>/.pending` gcroot が残り、ビルド済み未使用 link-farm を掴み続けるが、次回 apply が**同名**（`.pending`）で上書きするため config あたり最大 1 個に有界。回収処理は持たず許容する（→ ADR-0016）。
-- **`apply --manifest <link-farm>` は 0〜1（entrypoint 発見・rootKind 先取り eval）と 2b（ロック内 `nix build`）を skip する**（→ ADR-0026）。ビルド済み link-farm を engine へ直接渡し、rootKind は link-farm 内 `manifest.json` から engine が読む。2a（flock 取得）以降〜2g は通常 apply と同一。pending out-link は build しないため張らない。host / module activation（HM 等）が switch 時に使う経路で、`-f` / `--all` とは取得元衝突で併用エラー。
+- [REQ-67095391](requirements/20260802-67095391-reproducibility-stance.md) — flake は pure eval で flake.lock が固定し legacy は impure を許容しユーザー責任とする
+- [REQ-d0aef5af](requirements/20260802-d0aef5af-flake-check-unknown-output.md) — nput カスタム output は nix flake check の unknown 警告を許容し主検証は nix build で行う
 
 ---
 
 ## entries スキーマ仕様
 
-`entries` は **attrset で属性キー = target**（→ ADR-0014）。各値が entry submodule。
+`entries` は **属性キー = target の attrset**で、キーが識別子になる（→ ADR-0014）。
 
-```nix
-entries :: {
-  "<target>" = entry;   # 属性キー = root 相対 target パス（識別子）
-  ...
-}
-```
-
-### フィールド定義（entry submodule）
-
-```
-entry :: {
-  src    : path | set | marker # 必須（type/marker によって挙動が変わる）
-  subpath: string              # 省略可、デフォルト: "."（省略 = リポジトリ全体）
-  target : string              # 省略可、デフォルト: 属性キー
-  method : "symlink"
-         | "copy"              # 省略可、デフォルト: "symlink"
-}
-```
-
-各フィールドは `lib/types.nix` の entry submodule（`lib.types`）として定義され、`mkManifest` の `evalModules` が検査・デフォルト適用する（→ ADR-0010）。submodule は **strict**（未知キー拒否）で、タイポや旧名（`name` / `source` / `dir` / `mode`・→ ADR-0008, ADR-0014, ADR-0015）は評価時エラーになる。識別子（target）の一意性は attrset のキー重複不可で native に担保される（→ ADR-0014）。
-
-#### `src`
-
-- **必須**: yes
-- **説明**: 配置元。デフォルトは Nix ストアへの symlink。out-of-store は明示マーカーで opt-in する（→ ADR-0001）。
-
-| `src` の値 | 例 | symlink の指す先 | 用途 |
-|---|---|---|---|
-| `path` | `inputs.myrepo` | Nix ストア（不変）| 外部リポジトリ（バージョン固定）|
-| `path` | `builtins.path { path = /home/...; name = "..."; }` | Nix ストア（ローカルをコピー）| ローカルをストア経由で扱う |
-| `set` | `pkgs.fetchFromGitHub { ... }` | Nix ストア（不変）| 外部リポジトリ（バージョン固定）|
-| `marker` | `nput.lib.mkOutOfStoreSymlink "/abs/path"` | ローカル FS（ライブ）| 開発中の手元 dotfiles |
-
-```nix
-# 外部リポジトリ（store link）
-src = inputs.myrepo;
-src = pkgs.fetchFromGitHub { owner = "..."; repo = "..."; rev = "..."; hash = "..."; };
-
-# ローカルをストア経由（評価時点の内容をストアにコピー）
-src = builtins.path { path = /path/to/dotfiles; name = "dotfiles"; };
-
-# ローカルを out-of-store symlink（ライブ反映）— 明示関数で opt-in
-src = nput.lib.mkOutOfStoreSymlink "/path/to/dotfiles";
-
-# 廃止: string を直接渡す暗黙の out-of-store 分岐は提供しない
-# src = "/path/to/dotfiles";   # NG
-```
-
-#### `subpath`
-
-- **型**: string / **必須**: no / **デフォルト**: `"."`（リポジトリルート全体）
-- **説明**: `src` 内のどのパスを取り出すかを表す相対パス。ファイル・ディレクトリどちらも指定可能。
-- **リポジトリ全体は `subpath` を省略する**のが canonical（`subpath = "."` は同義の明示形）。「`"."` 以外で全体を表す専用トークン / marker」は設けない。`subpath` は評価時に確定する subpath 選択であり、糖衣 marker は marker パターン（実行時解決の種別を運ぶ入れ物）と相反するため（→ ADR-0007, ADR-0008）。
-- 旧称は `source`。`src`（どの物か）との命名衝突を解消するため `subpath`（その中のどのパスか）へ改名した（→ ADR-0008）。
-
-```nix
-# 省略 = リポジトリ全体（canonical）
-subpath = ".";                  # リポジトリ全体（明示形）
-subpath = "skills/nix";         # サブディレクトリのみ取り出す
-subpath = "themes/dark.json";   # 単一ファイル
-```
-
-#### `target`
-
-- **型**: string / **必須**: no / **デフォルト**: **属性キー**（→ ADR-0014）
-- **説明**: 配置先パス。**root**（`mkManifest` の `root` で明示選択した基準）からの相対パスで指定する。
-- entries は **attrset で属性キー = target**。キーをそのまま target とするのが canonical（`target` 省略）。キーを論理ラベルにして `target` を明示上書きすることもできる（home-manager の `home.file` と同型）。
-- **identity（stale 除去の diff キー・一意性）は解決後 target**。同一 target を 2 つ置くことは attrset のキー重複として表現できず、Nix が一意性を担保する。
-
-#### `method`
-
-- **型**: `"symlink"` | `"copy"` / **必須**: no / **デフォルト**: `"symlink"`
-- 旧名は `mode`。unix file mode（`0644` 等）との誤読を避けるため `method`（配置方法）へ改名した（→ ADR-0015）。
-
-| method | `src` の種別 | 動作 | 世代管理 |
-|---|---|---|---|
-| `"symlink"` | path / set | Nix ストアへの symlink（読み取り専用）| あり（profile）|
-| `"symlink"` | marker | ローカルパスへの out-of-store symlink（ライブ）| あり（リンク先のみ）|
-| `"copy"` | path / set | place-once コピー（書き込み可・ユーザー管理）| **なし** |
-| `"copy"` | marker | **eval 時エラー**（意図矛盾・`lib.throwIf`・→ ADR-0013）| — |
-
-### entries を動的に生成する（target キーの string interpolation）
-
-`entries` は attrset で**キー = target**。キー（target）に名前を補間して動的に組み立てる。list から attrset を作るには `builtins.listToAttrs`（`{ name; value; }` の `name` がキー = target）等を使う（→ ADR-0014）。
-
-#### 基本形：名前を target キーに補間する
-
-配置先ディレクトリ名を `src` 選択と同じ変数から導き、target キーに補間する。
-
-```nix
-# nvim プラグインを名前リストから一括生成
-let
-  plugins = [ "telescope" "treesitter" "cmp" ];
-in
-nput.lib.mkManifest {
-  inherit pkgs;
-  root = nput.lib.homeRoot;
-  entries = builtins.listToAttrs (map (n: {
-    name  = ".local/share/nvim/site/pack/plugins/start/${n}";  # キー = target
-    value = { src = inputs.${n}; };                            # subpath 省略 = リポジトリ全体
-  }) plugins);
-}
-```
-
-#### ⚠️ アンチパターン：`src` の store パスから target を導く
-
-`baseNameOf src` で target を作るのは**罠**。`src`（flake input / `fetchFromGitHub`）は `/nix/store/<hash>-source` のような **hash 前置の store 名**に解決されるため、`baseNameOf` は `<hash>-source` を返し target には使えない。
-
-```nix
-# NG: キー(target) が ".config/abcd1234...-source" のようになる
-entries = { ".config/${baseNameOf inputs.foo}" = { src = inputs.foo; }; };
-```
-
-target は **`src` の store 名ではなく、ユーザーが制御する変数から導く**（上の基本形）。
-
-#### 応用：subdir を列挙して動的に entry 展開する
-
-動的に entry を生成したいときは、**既 realise の store パス / `flake = false` の flake input** を `builtins.readDir` で直接走査し、各 subdir を 1 entry に展開する。target キーと `subpath` の両方を列挙した名前で補間する。
-
-> `builtins.readDir` の対象は eval 時にパスへ展開できる **path（store パス）に限る**。`fetchFromGitHub` の生 derivation を直接 readDir すると IFD（import-from-derivation）を誘発し flake pure eval で破綻するため、`flake = false` の flake input（= 既 realise の store path）を使う（`mkOutOfStoreSymlink` の marker も実行時解決の入れ物で eval 時に展開できないため不可）。entries の `src` が derivation / marker を許容するのは engine 実行時解決だからで、eval 時 readDir とは非対称（→ ADR-0023, ADR-0024）。
-
-```nix
-let
-  # claude-skills/skills 配下の dir 名を列挙（flake input = 既 realise の store path を readDir）
-  skills = builtins.readDir "${inputs.claude-skills}/skills";
-  names  = builtins.attrNames (nixpkgs.lib.filterAttrs (_: t: t == "directory") skills);
-in
-nput.lib.mkManifest {
-  inherit pkgs;
-  root = nput.lib.homeRoot;
-  entries = builtins.listToAttrs (map (n: {
-    name  = ".claude/skills/${n}";                                # キー = target（配置先）
-    value = { src = inputs.claude-skills; subpath = "skills/${n}"; };  # 取り出す側も補間
-  }) names);
-}
-```
+- [REQ-a33a11e3](requirements/20260802-a33a11e3-entry-submodule-fields.md) — entry submodule のフィールドは src / subpath / target / method の 4 つとする
+- [REQ-3e446ad9](requirements/20260802-3e446ad9-entry-submodule-strict.md) — entry submodule は strict とし未知キーと旧名を評価時エラーにする
+- [REQ-99ca5381](requirements/20260802-99ca5381-src-kinds-store-default.md) — src は path / set / marker の 3 種を取り store link を既定として out-of-store は marker で opt-in する
+- [REQ-27b75fe6](requirements/20260802-27b75fe6-subpath-omission-whole-repo.md) — subpath は src 内の相対パスとし、リポジトリ全体は省略で表して専用トークンを設けない
+- [REQ-77689c68](requirements/20260802-77689c68-method-src-matrix.md) — method は配置方法を選び symlink は世代管理下・copy は世代管理外になる
 
 ---
 
-## manifest.json スキーマ（v1・Nix↔Go 契約・→ ADR-0010, ADR-0013）
+## manifest.json スキーマ（v1・Nix↔Go 契約）
 
-`manifest.json` は `lib.mkManifest` が生成し engine が読む**唯一の安定契約**（→ ADR-0011）。`schemaVersion` は **`1`** で固定し、engine は自身の対応版より新しい `schemaVersion` を拒否する（→ ADR-0006）。内部タグ `_nputMarker` は manifest に漏らさず clean enum で写す（→ ADR-0010）。**MVP は v1 のみを発行・受理し、マイグレーション（schema 後方互換）は現時点では考慮しない**（古い版の受理機構を最初から作らない）。**最初のリリース後、フィールド追加で v2 が必要になった時点で**、後方互換ポリシー（engine が古い版の manifest を stale 除去 / rollback のために読めること。アップグレード直後の stale 除去は前世代 manifest を読む）を改めて検討する（→ ADR-0022）。
+`manifest.json` は Nix とエンジンの唯一の安定契約（→ ADR-0010, ADR-0013）。
 
-### トップレベル
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `schemaVersion` | int | 契約バージョン。v1 は `1` |
-| `root` | object | 配置先基準の kind（下記）|
-| `entries` | array of object | 配置定義（下記）|
-
-### `root`
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `rootKind` | `"project"` \| `"home"` \| `"system"` \| `"fixed"` | root マーカーの種別。engine が実行時に解決 |
-| `root` | string | `rootKind = "fixed"` のときのみ存在する絶対パス。それ以外は省略 |
-
-`project` / `home` / `system` は実行時解決（git toplevel / `$HOME` / `/`）のためパスを持たない。`fixed` のみ評価時確定の絶対パスを `root` に持つ。
-
-### `entries[]`
-
-attrset を**配列に正規化**して記録する（Go は配列を読む）。identity は `target`（→ ADR-0014）。
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `srcKind` | `"store"` \| `"outOfStore"` | 配置元の種別 |
-| `src` | string | `store`: 解決済み store パス文字列 / `outOfStore`: marker の絶対パス |
-| `subpath` | string | src 内の相対パス（デフォルト適用後。省略形も `"."` で記録）|
-| `target` | string | root 相対の配置先。**entry の identity**（属性キー由来・stale 除去の diff キー）|
-| `method` | `"symlink"` \| `"copy"` | 配置種別（デフォルト適用後。旧名 `mode`・→ ADR-0015）|
-
-> entry の `name` フィールドは廃止した（→ ADR-0014）。symlink farm の GC アンカー名は **`target` のハッシュ（sha256 の短縮 hex・固定長・FS 安全）**を用いる（→ ADR-0016）。`target` をサニタイズ（`/` 除去等）すると別 target が同名に潰れ linkFarm のキー一意制約に反するため。farm は GC アンカー専用でアンカー名は可読である必要がなく、衝突不可能なハッシュで十分（engine が配置に使う値は `manifest.json` の解決済み `src` 文字列・→ ADR-0010）。
-
-### symlink farm との対応
-
-derivation は `manifest.json` と symlink farm を含む。farm は **GC アンカー専用**で、engine が配置に使う値は `manifest.json` の解決済み `src` 文字列（→ ADR-0010）。
-
-- store-backed entry（`srcKind = "store"`）**かつ `method = "symlink"`** は farm に store パスへの symlink アンカーを持ち、profile 世代が GC root として全 store src を掴む。
-- out-of-store entry（`srcKind = "outOfStore"`）は store 外を指すため farm アンカーを持たない。
-- **`method = "copy"` entry は farm アンカーを持たない**（store src でも・→ ADR-0019）。copy は place-once でマテリアライズ後は store から独立（世代外・→ ADR-0002）なので store src を掴む必要がなく、`nix-collect-garbage` で解放されてよい。`manifest.json` には記録する（orphan 警告・stale 判定のため）。
-
-### 例
-
-```json
-{
-  "schemaVersion": 1,
-  "root": { "rootKind": "project" },
-  "entries": [
-    {
-      "srcKind": "store",
-      "src": "/nix/store/abcd1234...-source",
-      "subpath": "skills/nix",
-      "target": ".claude/skills/nix",
-      "method": "symlink"
-    },
-    {
-      "srcKind": "outOfStore",
-      "src": "/home/me/dotfiles",
-      "subpath": "home/.config/nvim",
-      "target": ".config/nvim",
-      "method": "symlink"
-    }
-  ]
-}
-```
+- [REQ-79ce0a09](requirements/20260802-79ce0a09-manifest-single-stable-contract.md) — manifest.json が Nix と engine の唯一の安定契約であり schemaVersion は 1 に固定する
+- [REQ-250d936c](requirements/20260802-250d936c-manifest-v1-only-no-migration.md) — MVP は manifest v1 のみを発行・受理しマイグレーション機構を持たない
+- [REQ-dedd2c28](requirements/20260802-dedd2c28-manifest-toplevel-fields.md) — manifest.json のトップレベルは schemaVersion / root / entries の 3 フィールドとする
+- [REQ-dd10d820](requirements/20260802-dd10d820-manifest-root-object.md) — manifest.json の root は rootKind を持ち fixed のときだけ絶対パスを併記する
+- [REQ-0b0cd1e3](requirements/20260802-0b0cd1e3-manifest-entries-array.md) — manifest.json の entries は attrset を配列へ正規化し 5 フィールドを記録する
+- [REQ-b12fc3c0](requirements/20260802-b12fc3c0-farm-gc-anchor-only.md) — symlink farm は GC アンカー専用でアンカーは store-backed な symlink entry に限る
+- [REQ-62eda895](requirements/20260802-62eda895-farm-anchor-name-hash.md) — symlink farm の GC アンカー名は target のハッシュとする
 
 ---
 
 ## 配置動作仕様
 
-engine が**ネイティブ FS 操作**で行う（`ln` / `rsync` は使わない・→ ADR-0006）。
+symlink は配置前除去 → 配置 → stale 除去の順で進み、途中失敗はインメモリ undo ジャーナルで
+巻き戻す（→ ADR-0044, ADR-0046, ADR-0047）。copy は place-once でユーザー管理に委ねる。
 
 ### symlink モード
 
-```
-0. target の各祖先 component を lstat で walk。symlink の祖先があれば非対称に扱う:
-   - 自己記録 stale（自身の前世代 manifest が記録・on-disk が記録 dest と一致・次世代に無い）
-     → その祖先を配置前に除去（PreRemove）し、配下子を新規配置してネスト移行する（silent・`-v` で可視・→ ADR-0046）
-   - foreign（記録なし / 記録 dest と不一致 / 前世代なし）または次世代にも祖先が残る自己矛盾
-     → エラーで停止（配下にネストできない。store 汚染 / dangling を防ぐ・→ ADR-0015 §4, ADR-0046）
-0.5. target 自身が実 dir のとき、配下（任意深さ）の全 leaf を判定する（→ ADR-0047）:
-   - 全 leaf が「recorded ∧ stale な symlink（自身の前世代が記録・on-disk 一致・次世代に無い）」
-     または「空の sub dir（由来を問わない）」なら → target 全体を配置前に除去（PreRemove: leaf は Unlink・
-     dir は子から親へ Rmdir・silent・`-v` で可視）してから symlink を新規配置
-   - 上記以外の leaf が 1 つでもある（中身のある実 file/dir・foreign symlink・次世代にも残る自己矛盾）
-     → target 全体をエラーで停止（部分除去はしない・→ ADR-0047 D2）
-0.6. target と同一 target で method が symlink→copy に変わるとき、前世代が記録した symlink で on-disk が
-   記録通りなら → 配置前に除去（PreRemove・silent）してから copy を新規配置（→ ADR-0047 D5）。
-   readlink drift（on-disk が記録と不一致）は移行せず通常の foreign 判定へフォールバックする。
-0.7. `apply --backup` 有効時、上記 0〜0.6 が「エラーで停止」または「copy foreign スキップ」と判定した
-   記録外実体（foreign な通常ファイル/ディレクトリ・実 dir migration 失敗・copy 構造不一致・
-   copy foreign 実ファイル・method 変更 copy→symlink）を、配置前に `<target>.<suffix>` へ rename 退避
-   （Backup。PreRemove の後・配置の前）してから新規配置する（→ ADR-0045）。祖先 symlink conflict は
-   対象外のまま（構造問題であり退避では解消しない）。退避先が既存なら conflict で停止する。
-1. target の親ディレクトリを作成（mkdir -p 相当。緩和対象の祖先 symlink / 実 dir target は PreRemove 除去済み・foreign は 0 で弾き済み）
-2. target が既存 symlink のとき:
-   - 自身の前世代 manifest が記録した symlink → そのまま置き換える（silent）
-   - 記録の無い symlink（foreign = 他 nput profile / 他ツール / 手動）→ warning を出して置き換える（後勝ち・→ ADR-0015）
-3. <配置元>/<subpath> を指す symlink を <root>/<target> に作成（os.Symlink）
-   - store link:        配置元 = Nix ストアパス
-   - out-of-store:      配置元 = marker の絶対パス
-```
+- [REQ-622787dc](requirements/20260802-622787dc-symlink-placement-procedure.md) — symlink 配置は親 dir を作り配置元/subpath を指すリンクを張り、foreign symlink は警告して後勝ちする
+- [REQ-61856da1](requirements/20260802-61856da1-symlink-replace-unlink-symlink.md) — 既存 symlink の張替えは unlink + symlink の 2 操作で行い冪等な再実行で収束させる
+- [REQ-053cfed2](requirements/20260802-053cfed2-conflict-on-real-file-or-dir.md) — target に通常ファイル・ディレクトリが在れば上書きせずエラーで停止する
+- [REQ-c9ab91c1](requirements/20260802-c9ab91c1-ancestor-symlink-nest-migration.md) — 祖先 symlink は自己記録 stale のみ配置前除去し、それ以外はエラーで停止する
+- [REQ-7cee95dd](requirements/20260802-7cee95dd-real-dir-target-migration.md) — 実 dir の target は全 leaf が除去可能なときだけ全体を配置前除去して symlink 化する
+- [REQ-2b48620a](requirements/20260802-2b48620a-method-change-symlink-to-copy-migration.md) — method 変更は symlink→copy のみ配置前除去で移行し、copy→symlink は移行しない
+- [REQ-9b0046e0](requirements/20260802-9b0046e0-backup-stage-position.md) — backup 退避は配置前除去の後・配置の前に置き、drift 修復経路でも同じく実施する
 
-- 既存 symlink の張替えは **unlink + symlink の 2 操作**で行う（rename ベースの atomic swap は採らない）。間でクラッシュすると target が一時消失しうるが、**冪等な再実行で収束**する（ADR-0006「積まれる世代は常に完全適用済み」と整合・→ ADR-0017）。クラッシュ（SIGKILL・電源断）以外でこの run 自身が後続の段でエラーを検知した場合は、unlink 前の張替え先を undo ジャーナルが記録しており re-symlink で復元する（→ ADR-0044）。
-- target に通常ファイルまたはディレクトリが存在する場合はエラーで停止（上書きしない）。ただし実 dir は §0.5 の条件を満たせば例外的に PreRemove で除去して配置する（→ ADR-0047）
-- subpath がファイル・ディレクトリどちらでも同じ処理
-- 別 config（別 profile）が同一 target を狙うのは基本「衝突させない前提」。後勝ちを許容しつつ foreign symlink 上書きは warning で可視化する（→ ADR-0015）
-- method 変更 copy→symlink は自動移行しない（ユーザー編集済み copy データの保護を優先し、従来通り conflict のまま・→ ADR-0047 D5）。`--backup` を付ければ conflict の代わりに退避 + 配置される（→ ADR-0045）
+### 途中失敗時の巻き戻し
 
-### 途中失敗時の巻き戻し（インメモリ undo ジャーナル・→ ADR-0044）
+- [REQ-5e75aabc](requirements/20260802-5e75aabc-undo-journal-rollback.md) — 途中失敗した apply / rollback はインメモリ undo ジャーナルで全 FS 変更を巻き戻す
+- [REQ-9fca28c9](requirements/20260802-9fca28c9-undo-rollback-best-effort.md) — 巻き戻し自体の失敗は best-effort で続行し、全件を stderr へ報告して停止する
 
-apply / rollback が PreRemove・Backup（`--backup`）・配置（symlink / copy）・stale 除去のいずれかの段で途中失敗すると、その run が行った FS 変更を**全て**巻き戻し、pre-apply 状態へ復元する（「失敗した apply は FS に痕跡を残さない」）。フラグなし・常時有効。
+### copy モード・out-of-store・recopy / reset
 
-```
-各段（PreRemove / Backup / place / copy 反映 / stale 除去）の FS 書き込みごとに、インメモリの undo ジャーナルへ逆操作を 1 件記録する:
-  新規配置 symlink / copy         → 削除
-  張替え（unlink 前に旧リンク先を捕捉）→ 旧リンク先で symlink を再作成
-  stale 除去したリンク            → 前世代 manifest の記録 dest で symlink を再作成
-  PreRemove の Unlink             → 記録 dest で symlink を再作成
-  PreRemove の Rmdir              → 空 dir を再作成
-  --recopy の rename 退避         → 退避物を rename back（成功時は退避物を削除）
-  --backup の rename 退避         → 退避物を rename back（成功時も退避物は削除せず残置・→ ADR-0045）
-
-いずれかの段でエラーが発生したら、それまでに記録したジャーナルを逆順（LIFO）で巻き戻してからエラーを返す。
-nix-env --set（コミット）が成功した後はジャーナルを破棄する（--set 自体の失敗は巻き戻し対象外・冪等再実行で収束）。
-```
-
-- **巻き戻し自体の失敗は best-effort 続行**: 個々の逆操作が失敗してもジャーナルの残りの巻き戻しは続行する。全ての巻き戻し試行が終わった時点で、元の apply エラーと巻き戻せなかった項目の一覧を stderr へ全報告して停止する（`reportConflicts` と同じ「全件列挙してから 1 本の集約エラー」の形）。
-- **報告は常時 stderr**（失敗経路のため沈黙対象外・既定 silent の対象にしない・→ ADR-0031）。
-- **クラッシュ（SIGKILL・電源断）は対象外**。undo ジャーナルはプロセスメモリ上にのみ存在し、永続 WAL は持たない。この場合は変わらず「世代未コミット + 冪等再実行で収束」（ADR-0006, ADR-0017）が保証を担う。
-- 世代スキップ経路の drift 修復（repairDrift）も同じ機構で巻き戻される。PreRemove は ADR-0046/0047 の不変条件によりこの経路に到達しないが、**Backup（`--backup`）はその不変条件の対象外**（target の記録外実体の出現は manifest/derivation の変化を伴わず、shell 再入間でも起こり得るため）で、drift 修復の一環として通常 apply と同じく退避 + 配置される。
-- `rollback` も apply と同じ機構（PreRemove → place → stale 除去）で途中失敗時に巻き戻す。プロファイルポインタ移動（`--switch-generation`）はこの時点で全 FS 変更が成功済みのため巻き戻し対象外。`rollback` に `--backup` 相当のフラグはなく、Backup ステージは常に空。
-
-### copy モード（place-once・ユーザー管理）
-
-```
-subpath がディレクトリの場合:
-  target が不在のとき: <root>/<target> を作成しネイティブ再帰コピー（mode 保存 + owner-write 付与。<src>/<subpath>/ → <root>/<target>/）
-  target が存在するとき: 何もしない（ユーザー管理に委ねる）
-
-subpath がファイルの場合:
-  target が不在のとき: 親ディレクトリを作成しネイティブコピー（mode 保存 + owner-write 付与。<src>/<subpath> → <root>/<target>）
-  target が存在するとき: 何もしない
-```
-
-- **foreign 実ファイルの skip は warning で可視化する**: target が存在し**かつ前世代 manifest にこの copy entry が無い**（= nput が置いていない foreign ファイル）のとき、place-once により skip するが **warning を出す**（「target に既存ファイルがあり copy をスキップした」）。symlink の foreign 警告（→ ADR-0015）と対称化し、「nput が中身を置いた」と誤認する masking を防ぐ。上書きはせず apply 全体も止めない（→ ADR-0022）。「自分が置いたか」は前世代 manifest の entry 有無で判別し、内容は判別しない。**`apply --backup` 有効時はこの skip + warning の代わりに、target を `<target>.<suffix>` へ退避してから copy を新規配置する**（→ ADR-0045）。
-- `subpath` がディレクトリのとき `target` に通常ファイルが存在する場合、または `subpath` がファイルのとき `target` がディレクトリの場合は構造不一致でエラーで停止するが、**`apply --backup` 有効時は退避してから copy を新規配置する**（→ ADR-0045）。
-- **place-once**: 初回マテリアライズ後、target が在れば触らない。ストア更新の反映は **`apply --recopy`（全 copy target を src から無条件上書き）**、または `reset <name> [target]` で撤去後に再 apply で行う（→ ADR-0020）。
-- **mode は保存しつつ owner-write を付与する**（例: `0444 → 0644` / `0555 → 0755`・→ ADR-0016）。store パスは read-only（0444 / 0555）のため、そのまま保存すると編集できない。copy は「store から切り離してユーザーが所有・編集する」用途なので、perm の相対構造（実行ビット・group/other）は保ちつつ所有者が編集できる状態にする。
-- **src ツリー内の symlink は symlink のまま複製する**（deref しない。循環・サイズ膨張回避・→ ADR-0016）。ただし store 内への絶対 symlink を複製すると **store 依存（read-only / GC 後 dangling）が残る**点に注意。相対 symlink はそのまま保つ。
-- 世代管理の対象外。ロールバックされない。
-
-### out-of-store symlink
-
-- symlink として配置する。指す先は marker の絶対パス（ローカル FS）。
-- 世代では「どの絶対パスを指すか」のリンク先マッピングのみ版管理する。指す先の内容は設計上ライブで、永遠にスナップショットしない（→ ADR-0002）。
-
-### recopy（`apply --recopy`）・reset（`nput reset`）（→ ADR-0020）
-
-place-once（copy は触らない）と保守的 stale 除去（copy は消さない）の既定を、ユーザー責任で明示的に破る 2 経路。
-
-**recopy（`apply --recopy`）** — copy target を src 更新へ追従させる。
-
-```
-config 内の各 copy entry について:
-  target が存在 → 同一親ディレクトリ内の一時名へ rename 退避してから <src>/<subpath> を再コピー
-                  （mode 保存 + owner-write 付与・symlink 複製は通常 copy と同じ）。この apply run が
-                  最終的に成功すれば退避物を削除、途中失敗して巻き戻すときは rename back（→ ADR-0044）
-  target が不在 → 通常の place-once コピー
-```
-
-- 全 copy entry を**無条件**に上書き（差分判定なし）。ローカル編集は破棄され src 内容に戻る。上書き target をレポート表示。
-- symlink 部の通常 apply（stale 除去 + 世代コミット）は同時に行う。copy は世代外のまま（世代を増やさない）。
-- 上書きは削除ではなく**rename 退避**で行う（rename はメタデータ操作のみで ENOSPC 下でも退避物が壊れない・→ ADR-0044）。同一 apply run 内で後続の段が失敗した場合、退避物から元の内容が復元される（後述「途中失敗時の巻き戻し」）。
-
-**reset（`nput reset <name> [target...]`）** — 配置物を無い状態へ戻す FS-only teardown。
-
-```
-対象 entry（target 省略で全 entry・指定でその entry）について:
-  method = symlink → 保守的不変条件（nput 管理・記録通りのみ）を満たす symlink を削除。foreign symlink は warning で残す
-  method = copy    → target を削除（copy を消す唯一の明示手段。事前存在ファイルを消すリスクは確認で守る）
-profile / 世代は触らない（FS のみ）。
-```
-
-- データ損失リスク（copy のユーザー編集・事前存在ファイル）のため**確認プロンプト**を出すか `--yes` を要求。削除 target をレポート表示。確認プロンプトは **stdin が TTY のときのみ**出す。**非 TTY（CI / direnv / パイプ）かつ `-y/--yes` 未指定なら、プロンプトを出さず即エラー停止（exit 1）**する（ハングと空入力誤削除を防ぐ・→ ADR-0025）。
-- profile / 世代は不変。config が entry を残す限り**次の apply で再配置される**（transient・project mode は ADR-0017 の lstat 検査で復帰）。
-- 恒久除去は config から entry を消して apply、profile 完全除去は `nix-env --profile <profileDir>/profile --delete-generations`。home / project 両モード可。
-- **名指し必須（`--all` 非対応）**・**blocking flock を取得**（`--dryrun` は読み取り専用で flock を取らない）。`--dryrun` は削除対象を表示して exit（FS 削除・confirm なし・→ ADR-0021）。
+- [REQ-d2277c7a](requirements/20260802-d2277c7a-copy-place-once.md) — copy は target 不在のときだけマテリアライズする place-once で世代管理の対象外とする
+- [REQ-07c3b735](requirements/20260802-07c3b735-copy-foreign-skip-warning.md) — copy が foreign 実ファイルを skip したときは warning で可視化する
+- [REQ-84e3c717](requirements/20260802-84e3c717-copy-mode-owner-write.md) — copy は元の mode を保存しつつ owner-write を付与する
+- [REQ-0bd55dfc](requirements/20260802-0bd55dfc-copy-preserves-inner-symlinks.md) — copy は src ツリー内の symlink を deref せず symlink のまま複製する
+- [REQ-a8a923ad](requirements/20260802-a8a923ad-out-of-store-link-mapping-only.md) — out-of-store symlink は marker の絶対パスを指し、版管理はリンク先マッピングのみとする
+- [REQ-b4e4b65d](requirements/20260802-b4e4b65d-recopy-rename-aside.md) — recopy の上書きは削除ではなく同一親内への rename 退避で行う
+- [REQ-31dae599](requirements/20260802-31dae599-reset-confirm-non-tty.md) — reset の確認プロンプトは stdin が TTY のときだけ出し、非 TTY で同意が無ければ即エラー停止する
 
 ---
 
 ## 世代管理仕様
 
-→ `docs/adr/0002`
+世代は link farm derivation を nput 自前の profile へコミットして積む（→ ADR-0002, ADR-0025）。
+stale 除去は前世代 manifest の記録通りを指す symlink だけに限る保守的な操作。
 
-### 機構
-
-- 純粋関数 `lib.mkManifest` が **link farm derivation**（`manifest.json` + 配置元への symlink ツリー）を生成する（→ ADR-0006）。
-  「配置したもの」のマニフェストは `manifest.json` として link farm の一部に **store 内に**埋め込む（store 外の可変 JSON は持たない。`manifest.json` は不変）。
-- **engine**（Go ライブラリ）が実行時の副作用として（→ ADR-0006, ADR-0007）:
-  0. 解決後 `profileDir` 単位の flock を取得（明示 apply は blocking wait / shellHook は try-lock skip・衝突時は後勝ち・→ ADR-0013）。
-  1. **前世代の store マニフェスト**（`manifest.json`）と新世代を diff し、消えた entry の **symlink を除去**（stale 除去）
-     - 前世代は **全モード共通で nput 自身の profile の前世代**から読む（standalone も module も同一。ホストの oldGenPath には依存しない）
-  2. symlink / out-of-store / place-once copy を**ネイティブ FS 操作**で配置（`ln` / `rsync` は使わない。新規・張替を先に、stale 除去を最後に）
-  3. 全て成功してから `nix-env --profile <profileDir>/profile --set <link-farm-drv>` で nput の nix profile を更新（コミット点・全モード・→ ADR-0025）
-  - project mode は新 link-farm が前世代と同一なら新世代を積まない（世代スキップ・3 の `--set` を省く）。ただし lstat 検査でドリフトした entry だけ再張りする（完全 no-op にしない・→ ADR-0017）。途中失敗は 3 に到達せず前世代を保つ（部分失敗のコミット最後・→ ADR-0006）。
-
-配置・cleanup アルゴリズムは home-manager の `linkGeneration`/`cleanup` を参考に Go で再実装する（`home.file` 自体は再利用しない）。`nix` / `git` 以外はサブプロセスを使わない（配置エンジン層）。
-
-**nput は全モードで自前 profile を持つ**（→ ADR-0002）。standalone では profile をユーザー向け rollback に使う。
-module（HM/NixOS/darwin）では profile を**内部機構**（前世代マニフェスト + stale 追跡）に留め、ユーザー向け rollback は
-host（`home-manager --rollback` 等）に一本化する。`nput rollback <name>` は home mode 限定。host rollback は旧 config を
-再 activate して nput を再 kick することで自動追従する（nput profile は前進のみ＝旧内容の新世代を積む）。
-
-| 機構 | 役割 | 適用層 | 位置（確定）|
-|---|---|---|---|
-| 世代由来の store マニフェスト | stale 除去のための前回状態（不変・GC-root 済み）| 全層共通 | `manifest.json` として link farm derivation 内に埋め込み（→ ADR-0006）|
-| nput の nix profile | 前世代の保持・世代番号・GC root | 全モード（standalone はユーザー向け / module は内部）| `profileDir`（下記レイアウト）。home（`--root` なし）: `<state>/nix/profiles/nput/<name>/` / project・fixed・`--root` 上書き: `<state>/nix/profiles/nput/<roothash>/<name>/` / HM モジュール経由: `<state>/nix/profiles/nput/default/`（MVP は固定名 1 profile・→ ADR-0024）（→ ADR-0005, ADR-0022, ADR-0024, ADR-0025）|
-
-> profile の基底 `<state>` は **`$XDG_STATE_HOME` があればそれ、無ければ `~/.local/state`**（nix 本体の profile 既定と整合・→ ADR-0022）。
-> `<roothash>` / backref / flock キーはこの確定パスを基準にする（→ ADR-0005, ADR-0013）。
-
-#### profile のオンディスクレイアウト（→ ADR-0025）
-
-`profileDir` は**各 config 専用のディレクトリ**であり（= flock キー）、その中に profile リンク・世代・build out-link を置く。`profileDir` の**キー**（`<name>` / `<roothash>/<name>`）は ADR-0023 §「root の解決」・ADR-0024 で確定済みで、本レイアウトは「キーで指す先がディレクトリで、profile リンクはその中の `profile`」という物理形を定める。
-
-```
-<state>/nix/profiles/nput/<roothash>/.root              # backref（roothash 階層・複数 <name> で共有・→ ADR-0013）
-<state>/nix/profiles/nput/<roothash>/<name>/             # ← profileDir（flock キー）
-<state>/nix/profiles/nput/<roothash>/<name>/profile        # profile リンク（nix-env --profile <profileDir>/profile の対象）
-<state>/nix/profiles/nput/<roothash>/<name>/profile-N-link # 世代（nix-env が profile の兄弟に作成）
-<state>/nix/profiles/nput/<roothash>/<name>/.pending       # nix build --out-link（profile を貫通しない兄弟）
-# home（--root なし）: <state>/nix/profiles/nput/<name>/{profile, profile-N-link, .pending}
-```
-
-- profile 操作は `nix-env --profile <profileDir>/profile ...`、build は `nix build --out-link <profileDir>/.pending`。世代兄弟 `profile-N-link` と `.pending` が profile リンクを貫通せず兄弟として並ぶため、read-only な store パスを貫通する破綻が構造的に起きない。
-- **pending out-link は専用ディレクトリ内に 1 個なので名は `.pending`**（ADR-0022/0023 の `.pending-<name>` を改訂。`<name>` 次元はディレクトリ階層が表す）。`--set` 前失敗で残る pending は config あたり最大 1（→ ADR-0016）。
-- **flock キー = profileDir（専用ディレクトリ）**。同一 config の apply / reset / rollback を直列化し、同 roothash でも別 `<name>` dir とは独立する。
-- **backref `.root` は roothash 階層**（`<name>` dir の親）に置き、複数 `<name>` で共有する（孤児 profile 逆引き seam・→ ADR-0013）。
-
-### stale 除去の対象と安全不変条件
-
-削除は保守的に行う（→ ADR-0002）。前世代マニフェストが「nput が配置した」と記録し、
-**かつ現状もその記録通りの先（その世代の store パス／記録された out-of-store パス）を指す symlink** のみ削除する。
-通常ファイルや nput 非管理の link には触れない。記録と実体が不一致なら削除せず警告する。初回／記録なしは何も消さない。
-
-| 配置種別 | entry が消えたとき |
-|---|---|
-| symlink（store / out-of-store）| **除去する**（ただし上記の保守的不変条件を満たすもののみ）|
-| copy | **除去しない**（ユーザー所有データ）。ただし orphan を警告で通知する |
-
-#### 空親ディレクトリ剪定（→ Issue #174, epic #172 D4）
-
-target を除去した後、その親ディレクトリチェーンを root 方向へ保守的に剪定する
-（HM の `rmdir -p --ignore-fail-on-non-empty` 対称）。nput は配置時に親 dir を
-`mkdir -p` 相当で自動作成するが manifest には記録しないため、剪定しないと
-entry 階層を変更するたびに空 dir が積もり、後続配置を塞ぐ conflict の温床になる。
-
-- **空のときだけ** rmdir する。rmdir は空ディレクトリでしか成功しないため、
-  非空（`ENOTEMPTY`。一部 rmdir(2) 実装では `EEXIST`）は**成功扱いとして黙って残す**
-  （追加ロック不要・TOCTOU 安全。並行書き込みで非空になれば rmdir がそこで失敗し自然に停止する）。
-- **root 自体は絶対に消さない**。親チェーンの走査は root 境界で必ず停止する。
-- **祖先チェーンに symlink が現れたら、それに触れず停止する**（symlink 自体を rmdir すると
-  リンクそのものを消してしまい実体には触れないため、安全側に倒して何もしない）。
-- **適用範囲は最終段の除去経路**: removeStale（apply / rollback から共用）・
-  `reset` の symlink 除去・copy target 削除。除去した target ごとに独立して walk するため、
-  別 entry が同じ dir を共有していれば非空として自然に残る。
-- **PreRemove は本剪定ヘルパを呼ばない**（→ ADR-0047 §5）。PreRemove の各除去（Unlink /
-  Rmdir）は必ず直後の配置で同じ場所に何かが再配置される前提のため、剪定しても即座に
-  作り直されるだけで無駄な往復になる。一般化後（実 dir target migration）は 1 回の
-  PreRemove 呼び出しで複数の Unlink/Rmdir を bottom-up 順に処理するため、途中で祖先剪定を
-  挟むと、まだ実行していない後続の明示的 Rmdir アクションの対象を先取りして消してしまい
-  レポートが不正確になる。実 dir migration で除去する dir チェーンは、そもそも planner の
-  `classifyDirMigration` が子から親まで明示的に `RemoveAction`(`Kind = RemoveRmdir`) として
-  列挙済みであり、剪定ヘルパによる探索的な追加除去を必要としない。
-- **出力規律**: 剪定は意図された掃除であり warning にはしない。既定 silent、`-v` で
-  配置レポートに `pruned <path>` として可視化する（→ ADR-0031）。剪定ヘルパ自体の失敗
-  （権限エラー等の異常系。ENOTEMPTY は上記の通り対象外）は、呼び出し元の既存ポリシーに従う:
-  removeStale / `reset` は warning で残置。空 dir の残置は cosmetic な取りこぼしに過ぎない。
-
-### GC とストレージ解放
-
-profile の各世代は GC root。`nix-env --profile <profileDir>/profile --delete-generations <gens>` で旧世代を間引き、
-`nix-collect-garbage` で無参照になった store パスを解放する（`<profileDir>` のレイアウトは「機構」節・→ ADR-0025）。
-（可変 JSON 方式は GC root を作らず参照中 store パスが GC で消えるため採らない。）
-
-> **世代操作は `nix-env --profile <profileDir>/profile` 系で統一する**（→ ADR-0015, ADR-0025）。コミット（`--set`）・rollback（`--rollback`）・
-> 任意世代切替（`--switch-generation`）・一覧（`--list-generations`）・間引き（`--delete-generations`）。store GC のみ `nix-collect-garbage`。
-> 新 `nix profile`（`list` / `wipe-history` / `rollback`）は profile 直下に自身の profile-manifest を要求するが、`nix-env --set` 製
-> profile は profile 直下が link-farm（nput の `manifest.json` を含む）なので **`nix profile` サブコマンドとは非互換**。`<profileDir>` は config 専用ディレクトリで profile リンクは `<profileDir>/profile`（→ ADR-0025）。
-
-### ロールバック
-
-- **standalone（home mode）**: `nput rollback <name>` で前世代に戻す。nput は profile dir 自体ではなく任意 root に配置するため、
-  profile ポインタ移動だけでは FS が変わらず**再配置が必須**。stale 除去の diff は次の基準・順序で行う（→ ADR-0015）:
-  1. `baseline` = 現世代 N の manifest（FS の現状）／ `target` = 戻る世代 N-1 の manifest。
-  2. `(baseline, target)` で planner を計算し、apply と同順（**PreRemove → place/replace → stale 除去**）で FS へ反映する。
-     N が自己記録の祖先 symlink を配下ネスト entries へ移行した世代なら、`plan.PreRemove` は戻り先 N-1 の祖先 symlink を
-     塞いでいる自己記録 symlink を配置前除去する（apply の PreRemove と同一実行経路・drift 時は同じく error 停止・→ ADR-0046）。
-  3. **最後に** `nix-env --profile <profileDir>/profile --rollback`（または `--switch-generation N-1`）で profile ポインタを移す。
-  ポインタを先に動かすと baseline が N-2 へずれ stale 除去が誤るため、FS 収束を先に・ポインタ移動を最後にする。apply エンジンを
-  `(baseline, target)` 差し替えで再利用する。任意世代切替・世代 GC は `nix-env --profile <profileDir>/profile` 系 / `nix-collect-garbage` を使う。
-- **module**: `nput rollback` は公開しない。ユーザー向けロールバックは host（`home-manager --rollback` 等）に一本化する。
-- **project mode**: rollback は公開しない（ephemeral・→ ADR-0005）。
-
-### モジュール時
-
-nput は自前 profile を**持つ**が、それは前世代マニフェスト + stale 追跡のための内部機構に留める（→ ADR-0002）。
-ユーザー向けロールバックは host に一本化し、host rollback は旧 config を再 activate して nput を再 kick することで
-FS を自動収束させる（nput profile は前進のみ＝旧内容の新世代を積む）。host から nput へ要求するのは「switch 時の kick」だけで、
-ホストの oldGenPath 配管は不要。
-
-### project mode の世代（→ ADR-0005）
-
-- **profile は解決済み root でキーする**（例: `<state>/nix/profiles/nput/<roothash>/<name>`・`<state>` は `$XDG_STATE_HOME` か `~/.local/state`・→ ADR-0022）。同一 entrypoint を複数箇所に
-  クローンしても profile が衝突せず、stale 除去が互いのクローンの配置を破壊しない。home mode（1 ユーザー 1 つ）では起きない問題。
-  `<roothash>` は **解決後の絶対 root パスの sha256 を短縮した hex**（固定長・FS 安全）。`<roothash>` 階層に **元 root の絶対パスを
-  記録した backref ファイル**（例: `.root`）を置き、孤児 profile の逆引きを可能にする（→ ADR-0013）。flock のキーもこの解決後 profileDir。
-- **世代はユーザーに公開しない**。profile は stale 除去 + 世代スキップ判定の内部機構に留め、`rollback` / `list-generations` を出さない。
-  配置物が ephemeral で rollback の意味が薄く、devShell キック時は戻し先 host 世代も無いため。
-- **世代スキップ短絡（必須）**: 新 link farm derivation が前世代と同一なら**新世代を積まない**。
-  devShell / direnv 運用では `shellHook` がシェル再入のたびに走るため、毎回新世代を積むと世代が無限増殖する。
-  home mode は従来通り「適用のたびに新世代」のまま（世代スキップは project mode 限定）。
-- **ただし世代スキップ時も FS 検査だけは軽量に行う**（完全 no-op にしない・→ ADR-0017）。各 entry の target を **lstat で検査**し、
-  記録通りでない（foreign tool に書き換えられた・消えた）entry があればその entry **だけ**再張りする（foreign symlink なら warning・→ ADR-0015）。
-  「derivation 同一 ⇒ FS 同一」は foreign 書き換えで崩れるため、新世代を積まずに FS だけ収束させる。lstat 比較は安価で `shellHook` 高頻度実行に耐える。
-  - **cross-config 同一 target の振動はユーザー責任**（→ ADR-0023）: 別 config A / B が同一 target を狙うと、この lstat 修復が「A が置く → B が foreign 検知して奪う → A が再奪取」と `shellHook` 再入のたびに振動しうる（単発「後勝ち」ではなく能動的オシレーション）。「同一 target を複数 config で狙わない」をユーザー責任とし、foreign symlink warning（→ ADR-0015）で可視化する。検知して止める機構は持たない。
-  - **振動中の foreign warning は `shellHook` 高頻度実行で出続けるが、これは設定ミスのシグナルとして正しい**（→ ADR-0024）。warning は成功時沈黙（ADR-0031）の対象外なので `-v` の有無に関わらず常時出る。抑制 / 集約機構は MVP で持たず、config の同一 target 重複を解消して直す（document-only）。
-  この lstat ドリフト修復は **symlink と copy の両方**を対象にする。**copy entry は target が不在のときだけ** place-once で再マテリアライズし、
-  **存在するが内容が異なる（ユーザー編集）場合は触らない**（home mode の place-once と振る舞いを一致させる。src 追従は `apply --recopy` 限定・内容ハッシュ比較はしない・→ ADR-0022）。
-- **orphan profile**: クローンを削除すると profile が `<state>/nix/profiles/nput/` 下に孤児として残る。store は `nix-collect-garbage` で解放されるが
-  profile ディレクトリは残る。放置許容（または手動削除）とし、公開ドキュメントに注記する（→ ADR-0005）。どの root 由来の孤児かは
-  `<roothash>` 階層の backref ファイル（`.root`）で逆引きできる（→ ADR-0013）。**cleanup コマンドは MVP では持たない**（実害が小さく `.pending` も config あたり最大1）。backref があるので**将来 `nput prune`（実在しない root を指す孤児系列を逆引きして削除）を実装できる seam** を残す（消費側の要求が出た時点で追加・→ ADR-0024）。
-
----
-
-## モジュールオプション仕様
-
-### 共通オプション（全モジュール）
-
-```
-nput.enable  :: bool          # デフォルト: false
-nput.entries :: attrsOf entry # デフォルト: {}（属性キー = target・→ ADR-0014）
-nput.backup.enable :: bool    # デフォルト: false（→ ADR-0045）
-nput.backup.suffix :: str     # デフォルト: "nput-backup"（→ ADR-0045）
-```
-
-モジュールは自分の性質で root を pin する（HM → `homeRoot` / devShell → `projectRoot`）ため、モジュール利用者は `root` を再指定しない（→ ADR-0003, ADR-0007）。
-
-`nput.backup`（submodule・全モジュール共通）は activation の `nput apply --manifest` 起動へ `--backup=<suffix>` を配線する（→ ADR-0045, issue #169）。`enable = true` かつ `suffix` 省略で既定 `nput-backup` が使われる。`entries`（manifest v1 契約・`lib/types.nix`）とは独立な起動配線レイヤーのオプションで、manifest 自体には影響しない。
-
-> **HM モジュールの profile 粒度（MVP）**（→ ADR-0024, ADR-0025）: `nput.entries` は**単一 attrset = 単一 manifest = 1 profile（固定名 `default`）**で、`<name>` 次元を持たない。**standalone / CLI が entrypoint の `nput.<name>` で複数の独立 profile（役割分離・個別 rollback）を持てるのに対し、HM モジュール経由では役割分離はできない**。役割ごとに分けたいユーザーは standalone CLI 経路を使う。HM の複数 profile 化（`nput.configs.<name>.entries` 等）は将来拡張の seam として残す（HM の低い positioning〔ADR-0007〕に鑑み MVP では背負わない）。
-
-### NixOS / nix-darwin 追加オプション（将来拡張）
-
-```
-nput.user :: string       # 必須（配置先ユーザーの特定に使用）
-```
-
-home-manager と standalone は `$HOME` を参照するため `user` は不要。
+- [REQ-1be4d678](requirements/20260802-1be4d678-generation-mechanism-link-farm-manifest.md) — 世代は link farm derivation を nput 自前 profile へコミットして積み、前世代 manifest から stale を除去する
+- [REQ-2aa3abbc](requirements/20260802-2aa3abbc-profile-on-disk-layout.md) — profileDir は config 専用ディレクトリとし、profile リンク・世代・pending out-link をその中に並べる
+- [REQ-16aef46b](requirements/20260802-16aef46b-stale-removal-invariants.md) — stale 除去は前世代の記録通りを指す symlink のみに限り、copy は消さず orphan を警告する
+- [REQ-8409db86](requirements/20260802-8409db86-empty-parent-dir-pruning.md) — target 除去後は空の親ディレクトリチェーンを root 境界まで保守的に剪定する
+- [REQ-706de717](requirements/20260802-706de717-generation-gc.md) — 世代操作は nix-env --profile 系で統一し、GC root の間引きと store 解放を分けて行う
+- [REQ-0e341430](requirements/20260802-0e341430-rollback-refit-then-pointer.md) — rollback は FS を先に収束させてから profile ポインタを最後に移す
+- [REQ-844ee375](requirements/20260802-844ee375-module-mode-profile-internal.md) — module 時は rollback を host へ一本化し、nput profile は前進のみで追従する
+- [REQ-46fccb80](requirements/20260802-46fccb80-project-mode-generation-skip.md) — project mode は世代を非公開にし、derivation 同一なら世代を積まず lstat ドリフト修復だけ行う
+- [REQ-d41b1d0a](requirements/20260802-d41b1d0a-project-mode-orphan-profile.md) — 孤児 profile は backref で逆引き可能なまま放置許容とし、MVP では cleanup コマンドを持たない
+- [REQ-fc1118b1](requirements/20260802-fc1118b1-cross-config-target-oscillation.md) — 同一 target を複数 config で狙うことによる振動はユーザー責任とし warning で可視化するに留める
 
 ---
 
 ## root の解決
 
-target を絶対パスに変換する基準（root）の解決方法。配置の実体は全層で engine が実行する（→ ADR-0003）。
-root は `mkManifest` の `root` 引数で**明示必須**に選ぶ（暗黙デフォルトなし・→ ADR-0004 改訂, ADR-0005, ADR-0007）。
+root は評価時にパスへ展開せず、マーカーが運ぶ kind をエンジンが実行時に解決する
+（→ ADR-0005, ADR-0007）。
 
-### home mode（`root = homeRoot`）
-
-| 層 | root の解決方法 | 備考 |
-|---|---|---|
-| standalone | `$HOME`（実行時のシェル環境変数）| OS 問わず動作 |
-| home-manager | `$HOME`（HM が内部解決・モジュールが `homeRoot` を pin）| OS 問わず動作 |
-| NixOS（将来）| `config.users.users.${cfg.user}.home` | `isNormalUser = true` で `/home/<user>` |
-| nix-darwin（将来）| `config.users.users.${cfg.user}.home` | デフォルト値なし。明示設定が必須 |
-
-### project mode（`root = projectRoot`）
-
-| 解決方法 | 備考 |
-|---|---|
-| `git rev-parse --show-toplevel`（既定）| どのサブディレクトリから実行しても同じ root に解決される |
-| `--root <path>`（上書き）| git 外で使う場合や別ルートを指す場合に明示 |
-
-- config ファイル相対は採らない（Nix で flake source が store にコピーされ store path 化するため成立しない、→ ADR-0005）。
-- CWD（`$PWD`）相対は採らない（実行場所で配置先がズレ冪等性を壊すため、→ ADR-0005）。
-- `--root` は **project mode に限らず全モードの解決 root を一律上書き**する（home mode の `$HOME` / fixed root も対象・デバッグ / テスト / 特殊配置の脱出路・→ ADR-0017）。
-- **`--root` 明示時は全モードで profileDir を上書き後 root の `<roothash>` でキーする**（→ ADR-0023）。home / fixed mode も `<state>/nix/profiles/nput/<roothash>/<name>` になり、異なるオーバーライド root が独立した世代系列に分離されて silent orphan を防ぐ。`apply` / `reset` / `rollback` / `list-generations` で一貫し、`--root` を付けた世代を操作するには再び同じ `--root` が要る。`--root` なしの通常 home は従来どおり `<name>` キー（1 ユーザー 1 profile）。`<roothash>` 算出・backref（`.root`）は project mode と同一機構（→ ADR-0013）。
-- **fixed root mode（`root` に絶対パス文字列・`--root` なし）も常に `<roothash>/<name>` でキーする**（→ ADR-0024）。fixed root は評価時確定の任意絶対パスなので project / `--root` 上書きと同じく root ごとに独立系列へ分離し、別 root の同名 config が世代系列を共有する silent orphan を構造的に防ぐ。`<name>` 直キーは「1 ユーザー 1 profile」が成立する home（`--root` なし）に限る。
-
-  | 状況 | profileDir |
-  |---|---|
-  | home（`--root` なし）| `<state>/nix/profiles/nput/<name>` |
-  | home / fixed（`--root /p`）| `<state>/nix/profiles/nput/<roothash(/p)>/<name>` |
-  | fixed（`--root` なし・`root = "/abs"`）| `<state>/nix/profiles/nput/<roothash(/abs)>/<name>` |
-  | project（`--root` 有無）| `<state>/nix/profiles/nput/<roothash>/<name>` |
-  | HM モジュール経由（MVP）| `<state>/nix/profiles/nput/default`（固定名 1 profile・→ ADR-0024）|
-
-  > 上表の各値は **profileDir（config 専用ディレクトリ）**であり、profile リンクはその中の `<profileDir>/profile`、世代は `profile-N-link`、build out-link は `.pending`、backref `.root` は `<roothash>` 階層に置く（レイアウト詳細は「世代管理仕様」の「機構」節・→ ADR-0025）。
-- project mode の配置物は **ephemeral**（コミット対象外）。activation は `.gitignore` に触れず git 状態に干渉しない（→ ADR-0005）。
-
-### system mode（`root = systemRoot`・将来）
-
-- root = `/`。distro 構想の system 配置 seam（→ ADR-0004, ADR-0007）。今回の実装スコープ外。
-
-### ローカルパス（out-of-store）の扱い
-
-`mkOutOfStoreSymlink` の引数は Nix 評価時に確定する絶対パス。`$HOME` は使えない。
-`target` の root 解決は実行時に行われるため `target` 側には影響しない。
-
-```
-Nix 評価時:  mkOutOfStoreSymlink "/path/to/dotfiles"  →  manifest にハードコード
-実行時:      root を engine が解決                       →  target を絶対パス化
-```
-
-macOS / Linux でホームの慣例が異なるため、ローカルパスは flake 内で OS 判別して解決するのが推奨。
-
-```nix
-let
-  username = "<username>";
-  homeDir  = if pkgs.stdenv.isDarwin then "/Users/${username}" else "/home/${username}";
-  dotfiles = "${homeDir}/dotfiles";
-in
-nput.lib.mkManifest {
-  inherit pkgs;
-  root = nput.lib.homeRoot;
-  entries = {
-    ".config/nvim" = { src = nput.lib.mkOutOfStoreSymlink dotfiles; subpath = "home/.config/nvim"; };
-  };
-}
-```
-
-`builtins.getEnv "HOME"`（`--impure` 必要）や flake の `specialArgs` 注入も使えるが、通常は上の OS 判別で十分。
+- [REQ-8d965ca2](requirements/20260802-8d965ca2-home-mode-root-resolution.md) — home mode の root は層ごとに定まった供給元から解決する
+- [REQ-9cb26ffd](requirements/20260802-9cb26ffd-project-mode-root-resolution.md) — project mode の root は git toplevel から解決し、config 相対も CWD 相対も採らない
+- [REQ-e79178f5](requirements/20260802-e79178f5-project-mode-ephemeral.md) — project mode の配置物は ephemeral とし、activation は git 状態に干渉しない
+- [REQ-d5a2e289](requirements/20260802-d5a2e289-profiledir-keying.md) — profileDir は home のみ name 直キーとし、fixed root と --root 上書きは roothash でキーする
+- [REQ-81249072](requirements/20260802-81249072-out-of-store-eval-time-path.md) — out-of-store のローカルパスは評価時に確定し、target の root 解決には影響しない
 
 ---
 
-## モジュール別動作仕様
+## モジュールオプション仕様・モジュール別動作仕様
 
-基本的な利用は **project mode（プロジェクト内配置）と standalone CLI** を中心に考える（→ ADR-0007）。モジュール対応は、他のモジュールシステムの switch と**一括で動いてほしいユースケース**を拾うためだけに存在する。全モジュール（HM / NixOS / nix-darwin）と devShell は **一律「nput エンジンをキックするだけ」の配線**であり、各層は root と activation タイミングを供給するだけ（→ ADR-0003）。
-`systemd.tmpfiles` / `home.file` へは翻訳しない。配置・stale 除去は全層で同一の engine + store マニフェスト。
+全モジュール（HM / NixOS / nix-darwin）と devShell は、root と activation タイミングを供給して
+エンジンを起動する薄い配線に徹する（→ ADR-0003）。ネイティブ機構へは翻訳しない。
 
-### standalone（CLI・→ ADR-0007）
-
-`nput apply <name>` をユーザーが明示的に実行する。CLI が entrypoint（CWD 既定 / `-f`）を発見し manifest をビルドしてエンジンを駆動する。
-`root = homeRoot` の home mode では nix profile による世代管理を行い、`rollback <name>` / `list-generations <name>` を提供する。
-
-### home-manager モジュール
-
-| method | `src` | 動作 |
-|---|---|---|
-| `"symlink"` | path / set | engine が store link をネイティブ symlink |
-| `"symlink"` | marker | engine が out-of-store symlink をネイティブ作成（HM の mkOutOfStoreSymlink には委譲しない）|
-| `"copy"` | path / set | engine が place-once ネイティブコピー |
-
-- `home.activation.nput`（`entryAfter ["writeBoundary"]`）から engine を起動する。配置ロジックは HM に依存しない。root は `homeRoot` を pin。
-- engine kick は **`nput apply --manifest <link-farm>`**（→ ADR-0026）。モジュール評価時に `nput.entries` から `mkManifest` で link-farm をビルドし、その store パスを activation script から渡す。activation は `nix eval` / `build` を行わない（entrypoint 経路ではない）。**blocking flock・配置レポート可視・engine error（conflict 等）は非 0 終了で switch を止める**（宣言的 switch・`home.file` の clobber エラーと同型）。pin 版 nput CLI（`packages.nput`）と `mkManifest` が同一 flake input 由来のため schemaVersion skew は構造的に起きない。
-- 世代は nput 自前 profile（内部機構・前世代マニフェスト + stale 追跡）に乗る。MVP は固定名 `default` の単一 profile（`<state>/nix/profiles/nput/default`・→ ADR-0024, ADR-0025）。ユーザー向け rollback は host（`home-manager --rollback`）に一本化（`nput rollback` 非公開）。
-
-### NixOS モジュール（将来拡張）
-
-- `system.activationScripts.nput` から engine を起動する**配線**に徹する。`systemd.tmpfiles` へは翻訳しない。
-- root は `config.users.users.${cfg.user}.home`（`homeRoot` 相当を host が供給）。nput は自前 profile を内部機構として持ち、ユーザー向け rollback は nixos 世代に一本化。
-- 配置・stale 除去は他環境と同一の engine + store マニフェスト。OS の機構（tmpfiles 等）は nput の関心外（→ ADR-0003）。
-
-### nix-darwin モジュール（将来拡張）
-
-- `system.activationScripts.nput` から engine を起動する。
-- root は `config.users.users.${cfg.user}.home`（明示設定が必須）。nput は自前 profile を内部機構として持ち、ユーザー向け rollback はホスト世代に一本化。
-
-### devShell（配線・→ ADR-0005, ADR-0007）
-
-`devShells.<name>` の `shellHook` から engine を起動する配線。HM モジュールと同型で、配置ロジックは持たず
-root（project mode の git toplevel）と activation タイミング（シェル入室）を供給するだけ。root は `projectRoot` を pin。
-
-```nix
-devShells.default = pkgs.mkShell {
-  shellHook = ''
-    nput apply skills --no-wait
-  '';
-};
-```
-
-- `nix develop` / direnv（`use flake`）でシェルに入った瞬間にキックされ、git toplevel を root にプロジェクト内へ配置する。
-- `shellHook` は高頻度で走るため、project mode の**世代スキップ短絡**（変更なしなら no-op）が前提（→「project mode の世代」）。
+- [REQ-fc1c7ce6](requirements/20260802-fc1c7ce6-module-common-options.md) — 全モジュールは共通オプションの同一集合を公開し、entries は configs 経由・root はモジュールが pin する
+- [REQ-c6891aeb](requirements/20260802-c6891aeb-hm-named-configs-profiles.md) — HM モジュール経由でも名前つき config ごとに役割分離した独立 profile を取れる
+- [REQ-e1e1114b](requirements/20260802-e1e1114b-backup-wiring-layer.md) — nput.backup は engine 起動の配線レイヤーのオプションで manifest には影響しない
+- [REQ-c2654ca5](requirements/20260802-c2654ca5-module-user-option.md) — NixOS / nix-darwin モジュールは配置先ユーザーを特定する user オプションを必須で取る
+- [REQ-c1b3ca5f](requirements/20260802-c1b3ca5f-modules-are-engine-wiring.md) — 全モジュールと devShell は engine をキックするだけの配線とし、ネイティブ機構へ翻訳しない
+- [REQ-8085f194](requirements/20260802-8085f194-hm-activation-contract.md) — home-manager モジュールの engine kick 1 回は activation からビルド済み link-farm を渡し、失敗で switch を止める
+- [REQ-a0bdf6db](requirements/20260802-a0bdf6db-devshell-wiring.md) — devShell は shellHook から engine を起動する配線で、シェル入室のたびに project mode で配置する
 
 ---
 
 ## エラー仕様
 
-評価時エラー（`root` 省略・不正な型・未知キー・copy+marker・systemRoot 未実装・絶対パス / `..` エスケープ）は `mkManifest` の `evalModules` / `lib.throwIf` が検出する（→ ADR-0010, ADR-0013, ADR-0019）。識別子の一意性は entries が attrset のため Nix のキー重複不可で担保され、重複 `name` という評価時エラーは存在しない（→ ADR-0014）。
+設定の誤りは評価時に、実体の不整合はエンジン実行時に検出する層分けを守る。要求された操作が
+成立しないときは暗黙のフォールバックを採らず、エラーで停止する。
 
-| 条件 | 動作 |
-|---|---|
-| `root` を省略（暗黙デフォルトなし）| Nix 評価時にエラー（`evalModules` の "option used but not defined"）|
-| `src` に素の文字列を渡す（store パス文字列含む）| Nix 評価時にエラー（`srcType` が文字列を拒否・out-of-store は marker で opt-in・→ ADR-0001）|
-| entry に未知キーがある（タイポ・旧名 `source` / `dir`）| Nix 評価時にエラー（submodule が strict・→ ADR-0008, ADR-0010）|
-| `target` / `subpath` が絶対パス（`/` 始まり）| Nix 評価時にエラー（target は root 相対・subpath は src 内相対・→ ADR-0019）|
-| `target` / `subpath` が `..` で root / src の外へ出る | Nix 評価時にエラー（`filepath.Clean` 相当で正規化し検出・→ ADR-0019）|
-| `entries = {}`（空 manifest）| 正当な全クリア。前世代の全 nput symlink を保守的 stale 除去し新世代は空（警告なし・→ ADR-0019）|
-| `src` が存在しないストアパス（path / set）| Nix 評価時にエラー |
-| `src` が marker でローカルパスが存在しない | engine 実行時にエラーで停止 |
-| `subpath` が `src` 内に存在しないパス | engine 実行時にエラーで停止 |
-| `target` に通常ファイルが既存（symlink モード）| conflict。全件を stderr へ列挙して停止（上書きしない・→ 後述「conflict の全件報告」）。`apply --backup` 有効時は `<target>.<suffix>` へ退避してから新規配置（→ ADR-0045）|
-| `target` が実 dir で既存（symlink モード）、配下（任意深さ）の全 leaf が recorded∧stale な symlink または空 sub dir（由来問わず）| dir 全体を配置前に除去（PreRemove: leaf は Unlink・dir は子から親へ Rmdir）し新規配置（silent・`-v` で可視・`--dryrun` は非 conflict の remove・→ ADR-0047）|
-| `target` が実 dir で既存（symlink モード）、配下に中身のある実 file/dir・foreign symlink・次世代にも残る自己矛盾 symlink が 1 つでもある | conflict。dir 全体を停止し全件を stderr へ列挙（部分除去はしない・`--dryrun` も conflict・→ ADR-0047, 後述「conflict の全件報告」）。`apply --backup` 有効時は dir 全体を `<target>.<suffix>` へ 1 回で退避してから新規配置（部分退避はしない・→ ADR-0045）|
-| `target` の祖先 component が foreign symlink（記録なし / 記録 dest と不一致 / 前世代なし）、または次世代にも祖先が残る自己矛盾 | conflict。engine 実行時に全件を stderr へ列挙して停止（lstat walk・`--dryrun` も conflict・→ ADR-0015 §4, ADR-0046, 後述「conflict の全件報告」）|
-| `target` の祖先 component が自己記録 stale symlink（前世代 manifest が記録・on-disk 一致・次世代に無い）| 祖先を配置前に除去（PreRemove）し配下子を新規配置してネスト移行（silent・`-v` で可視・`--dryrun` は非 conflict の remove・→ ADR-0046）|
-| `target` に foreign symlink が既存（自身の前世代 manifest に記録なし・別 config / 別ツール / 手動）| warning を出して後勝ちで置き換える（→ ADR-0015）|
-| 同一 `target` で method が symlink→copy に変更、前世代が記録した symlink で on-disk が記録通り | 配置前に除去（PreRemove）し copy を新規配置（silent・`-v` で可視・readlink drift 時は通常の foreign 判定へフォールバック・→ ADR-0047 D5）|
-| 同一 `target` で method が copy→symlink に変更 | 自動移行しない。エラーで停止（`target` に既存ファイルとして扱う・`--backup` が脱出ハッチ・→ ADR-0047 D5）|
-| PreRemove 対象（祖先 symlink / 実 dir 配下 leaf・dir / method 変更 symlink）が計画後に drift（記録不一致・ENOTEMPTY 等）| skip せずエラーで停止（冪等再実行で収束・→ ADR-0046 §3, ADR-0047 D3）|
-| `apply --backup` 有効時、退避先 `<target>.<suffix>` が既に存在（前回の退避物が残っている）| conflict。全件を stderr へ列挙して停止（黙って上書きしない・→ ADR-0045, 後述「conflict の全件報告」）|
-| `apply --backup` は祖先 symlink conflict（foreign / 自己矛盾）には適用されない | 従来通り conflict のまま（構造問題であり退避では解消しない・→ ADR-0015, ADR-0046, ADR-0045）|
-| apply / rollback が PreRemove・Backup（`--backup`）・配置・stale 除去のいずれかの段で途中失敗（`--set` 到達前）| この run が行った FS 変更を全てインメモリ undo ジャーナルで巻き戻し pre-apply 状態へ復元してから停止（exit 1・フラグなし常時有効・→ ADR-0044, 前述「途中失敗時の巻き戻し」）|
-| 巻き戻し（undo）自体が一部失敗（対象が既に他プロセスに変更された等）| 失敗項目はスキップして残りの巻き戻しを続行（best-effort）。元の apply エラー + 未復元項目一覧を stderr に全報告して停止（→ ADR-0044）|
-| `subpath` がディレクトリのとき `target` に通常ファイルが既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）。`apply --backup` 有効時は退避してから copy を新規配置（→ ADR-0045）|
-| `subpath` がファイルのとき `target` がディレクトリとして既存（copy モード）| conflict。全件を stderr へ列挙して停止（→ 後述「conflict の全件報告」）。`apply --backup` 有効時は退避してから copy を新規配置（→ ADR-0045）|
-| copy モードで `target` が既存（前世代 manifest に entry あり = nput 配置済み）| place-once により何もしない（上書きしない）。`apply --recopy` 時のみ無条件上書き（→ ADR-0020）|
-| copy モードで `target` に foreign 実ファイルが既存（前世代 manifest に entry なし）| place-once で skip しつつ **warning** で可視化（masking 防止・symlink の foreign 警告と対称・apply は止めない・→ ADR-0022）。`apply --backup` 有効時は skip の代わりに退避してから copy を新規配置（warning は出さない・→ ADR-0045）|
-| 世代スキップ時に copy `target` が不在（project mode）| lstat ドリフト修復で place-once 再マテリアライズ。内容が異なるだけ（編集済み）の場合は不可触（→ ADR-0022）|
-| stale 除去で copy entry が消えた | copy target は削除せず、orphan を警告で通知。明示撤去は `reset`（→ ADR-0020）|
-| `reset` で対象 entry の配置物が既に無い | no-op（既に無い状態・エラーにしない・→ ADR-0020）|
-| `reset` で target が foreign symlink（nput 非管理）| warning を出して残す（保守的・誤破壊しない・→ ADR-0020）|
-| `reset` で copy target を削除（ユーザー編集 / 事前存在の可能性）| 確認プロンプト（`--yes` でスキップ）後に削除しレポート表示（→ ADR-0020）|
-| `reset` を非 TTY（CI / パイプ）で `--yes` 無しで実行 | プロンプトを出さず即エラー停止（exit 1・ハングと誤削除を防ぐ・→ ADR-0025）|
-| `target` の親ディレクトリが存在しない | `mkdir -p` で自動作成 |
-| 同一 target（entries の同一キー）| Nix の attrset 仕様で表現不可（一意性を native 担保・→ ADR-0014）|
-| 別キーを `target` 明示上書きして同一 target に衝突（同一 manifest 内）| Nix 評価時にエラー（`normalizeManifest` の `lib.throwIf`・正規化後 target 重複・→ ADR-0024）|
-| 別 config（別 profile）が同一 target を狙う（cross-config）| engine 実行時の後勝ち + foreign symlink warning（eval では検出不可・→ ADR-0015）|
-| `method = "copy"` かつ `src` が out-of-store marker | Nix 評価時にエラー（`lib.throwIf`・意図矛盾・→ ADR-0013）|
-| `root = systemRoot`（system mode は未実装）| Nix 評価時にエラー（未実装・予定・→ ADR-0013）|
-| `rollback` で前世代が存在しない | エラーメッセージを出力して停止 |
-| `apply` で name 省略かつ `nput.default` が未定義 | CLI がエラーで停止（config 名を要求）|
-| `gitignore <name>` で `<name>` が非 project config（home / fixed）| CLI がエラーで停止（`gitignore` は project mode 限定・→ ADR-0023）|
-| `nput.<name>` が entrypoint に存在しない | CLI がエラーで停止 |
-| entrypoint が発見できない（CWD に flake.nix/shell.nix/default.nix なし・`-f` 未指定）| CLI がエラーで停止 |
-| `apply --manifest` と `-f`（または将来の `--all`）を併用 | CLI がエラーで停止（取得元の二重指定・→ ADR-0026）|
-| nix-darwin（将来）で `users.users.<user>.home` が未設定 | Nix 評価時にエラー |
-| project mode で git リポジトリ外かつ `--root` 未指定（git toplevel 解決失敗）| engine 実行時にエラーで停止 |
-| project mode で `git` が PATH に無い | engine 実行時にエラーで停止 |
-| `nix-command` / `flakes` experimental-features が未有効 | CLI が前提条件と有効化方法を案内して停止（`--extra-experimental-features` 自動付与はしない・→ ADR-0025）|
-
-### conflict の全件報告（→ grilling 2026-07-12 D6）
-
-`apply` / `rollback` が conflict で停止するとき、`planner.Compute` が収集した **`plan.Conflicts` の全件**を stderr へ列挙してから停止する（`--dryrun` の `Result.Conflicts` と同じ集合。HM の `checkLinkTargets` と対称）。1 件ずつ「修正 → 再実行 → 次の 1 件…」を強いられないよう、1 回の実行で全ての衝突箇所を可視化する。各行には conflict 種別に応じた 1 行の対処ガイダンスが付く：
-
-- foreign 実体（`target` に記録外の通常ファイル・ディレクトリ）→ 手動で退避・削除してから再実行（または `apply --backup` で自動退避・→ ADR-0045）
-- foreign 祖先 symlink（記録なし / 記録 dest と不一致 / 前世代なし）→ そのリンクを作った主体（別 config / 別ツール / 手動操作）を確認
-- 自己矛盾 manifest（次世代にも祖先 symlink が残ったまま配下 target を定義）→ entry 定義を見直す（祖先と配下のどちらかに一本化）
-- copy 構造不一致（`subpath` の dir/file 種別と既存 `target` の種別が食い違う）→ entry 定義を見直す（または `apply --backup` で自動退避）
-- backup 退避先が既存（`apply --backup` 有効時、`<target>.<suffix>` に前回の退避物が残っている）→ 手動で退避物を移動・削除してから再実行（→ ADR-0045）
-
-停止時の `error` は列挙の後に返す**件数付き集約メッセージ 1 本**（例: `nput: N conflict(s) detected; stopped without placing (see above)`）で、個別 conflict の詳細は本文ではなく直前の stderr 列挙が担う。終了コードは不変（`apply` 非 dryrun は `1`・`--dryrun` は `2`）。`--json`（epic #126）の `Conflicts` 配列も同じ全件集合と整合させる。
+- [REQ-c5dfcae6](requirements/20260802-c5dfcae6-error-detection-layering.md) — 設定の誤りは評価時に、実体の不整合は engine 実行時に検出する層分けを守る
+- [REQ-774cef80](requirements/20260802-774cef80-cli-stop-conditions.md) — 要求された操作が成立しないときは CLI がエラーで停止し、暗黙のフォールバックを採らない
+- [REQ-9dc7dac7](requirements/20260802-9dc7dac7-src-subpath-existence-checks.md) — 配置元の実在は判定できる層で検査し、いずれの層でも停止する
+- [REQ-6506bc82](requirements/20260802-6506bc82-project-mode-root-resolution-failure.md) — project mode で git から root を解決できないときは engine 実行時に停止する
+- [REQ-fc64de4c](requirements/20260802-fc64de4c-empty-entries-full-clear.md) — 空の entries は正当な全クリアとして扱い、エラーにも警告にもしない
+- [REQ-95e97d01](requirements/20260802-95e97d01-conflict-full-report.md) — conflict で停止するときは全件を対処ガイダンス付きで列挙してから 1 本の集約エラーを返す
 
 ---
 
 ## 依存関係
 
-| コンポーネント | 依存 |
-|---|---|
-| `lib/`（`mkManifest` / マーカー群）| nixpkgs.lib のみ（純データ生成。`rsync` 不要）。型検査に `lib.types` / `mkOption` / `evalModules`（nixpkgs.lib のコア）を使う（→ ADR-0010）|
-| `lib/types.nix`（entry submodule / `srcType` / `rootType` / marker custom type）| nixpkgs.lib のみ（`modules/common.nix` と共有・→ ADR-0010）|
-| `lib/out-of-store.nix`（`mkOutOfStoreSymlink` / `projectRoot` / `homeRoot` / `systemRoot` マーカー）| なし（`_nputMarker` タグ付きマーカー構築子・→ ADR-0010）|
-| `internal/`（配置エンジン = 内部層分離。公開モジュールではない・→ ADR-0011）| **stdlib-only 厳守**（第三者依存ゼロ）。`syscall.Flock`・`filepath.WalkDir`+`io.Copy`+`os.Chmod`・`encoding/json`・`fmt.Errorf`+`%w`。`manifest.json` を入力に取り runtime に `nix`（profile）/ `git`（toplevel）をサブプロセスで要求（→ ADR-0006, ADR-0011）|
-| `cmd/nput`（CLI = `packages.nput`）| 配置エンジンを import。最小依存を許可（**cobra** = サブコマンド / help）。entrypoint 発見と `nix`（build / eval）オーケストレーションを担う。`buildGoModule` + **vendorHash 文字列**でビルド。Go は nixpkgs の go に pin し `toolchain` ディレクティブ不使用（→ ADR-0007, ADR-0011）|
-| `modules/common.nix` | nixpkgs.lib のみ |
-| `modules/home-manager.nix` | home-manager の module system（起動配線のみ）|
-| `modules/nixos.nix`（将来）| NixOS の module system（起動配線のみ）|
-| `modules/nix-darwin.nix`（将来）| nix-darwin の module system（起動配線のみ）|
-
-lib 層は home-manager / NixOS / nix-darwin に依存しない。配置ロジックは Go エンジン（ライブラリ）が単一の源として所有する（→ ADR-0003, ADR-0006, ADR-0007）。
+- [REQ-b74a118a](requirements/20260802-b74a118a-engine-stdlib-only.md) — engine は第三者依存ゼロの stdlib-only とし内部層に閉じる
+- [REQ-637599dc](requirements/20260802-637599dc-cli-dependency-policy.md) — CLI が持ち込む依存は許可した第三者ライブラリと pin した Go に限り、いずれも固定する
 
 ---
 
-## E2E 検証範囲（非 NixOS・→ ADR-0012）
+## E2E 検証範囲（非 NixOS）
 
-「非 NixOS でも nix さえあれば動く」主張を実 nix で検証する E2E ハーネス（`tests/e2e/`・bash・詳細は `tests/e2e/README.md`）が、flake entrypoint からの `nix build` / `nix eval` / `nix-env --set` を含む実経路を一気通貫で回す。各シナリオは隔離した一時 `$HOME` / `$XDG_STATE_HOME` 下で動き、偽 src は fixture flake 内の相対パス（eval 時に store へコピー）か out-of-store の live ディレクトリで用意する。
-
-| シナリオ | 検証する仕様 |
-|---|---|
-| project mode | 一時 git repo で `nput apply <name>` → git toplevel 配下に store symlink 配置（「root の解決」project mode）・再 apply の冪等性 |
-| home mode | 仮 `$HOME` で apply → `$HOME` 配下配置 + profile 世代コミット、entry 入替で世代を進め `nput rollback` で前世代の配置へ復帰（「世代管理仕様」・「ロールバック」）|
-| stale 除去 | entry を config から削除 → 再 apply で旧 symlink が消える（「stale 除去の対象と安全不変条件」）|
-| copy place-once / out-of-store | copy が通常ファイル（書込可・mode に owner-write 付与）・place-once 冪等（ローカル編集を破棄しない）・out-of-store marker の live symlink（「copy モード」・「out-of-store symlink」）|
-| HM module | home-manager standalone configuration を非 NixOS で評価・activate し、activation が `nput apply --manifest` で engine を起動して配置する（「モジュール別動作仕様」home-manager モジュール）|
-
-- **NixOS VM テスト（`runNixOSTest`）は将来拡張**。NixOS / nix-darwin モジュール経路の実 activate は VM / sandbox を要し、本ハーネス（非 NixOS の単一ジョブ）のスコープ外。モジュール経路を本実装する段で別途追加する（→ docs/design.md「テスト戦略」）。
+- [REQ-6419e4b0](requirements/20260802-6419e4b0-e2e-harness-scope.md) — 非 NixOS で動く主張を実 nix の一気通貫 E2E で検証する
+- [REQ-690f2730](requirements/20260802-690f2730-nixos-vm-test-future.md) — NixOS / nix-darwin モジュール経路の実 activate は E2E ハーネスの対象外とする
 
 ---
 
-## 使用例（フル）
+## 関連文書
 
-```nix
-# flake.nix
-{
-  inputs = {
-    nixpkgs.url    = "github:NixOS/nixpkgs/nixos-unstable";
-    nput.url       = "github:yasunori0418/nput";
-
-    # 各ソースを独立して管理（flake = false でリポジトリをそのまま取得）
-    vim-plugin-foo.url        = "github:foo/vim-plugin-foo";
-    vim-plugin-foo.flake      = false;
-    zsh-autosuggestions.url   = "github:zsh-users/zsh-autosuggestions";
-    zsh-autosuggestions.flake = false;
-    claude-skills.url         = "github:someone/claude-skills";
-    claude-skills.flake       = false;
-  };
-
-  outputs = { self, nixpkgs, nput, home-manager, ... }@inputs:
-  let
-    system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.${system};
-  in
-  {
-    # パターン1: project mode（repo 内に配置・devShell キック）
-    nput.${system} = {
-      skills = nput.lib.mkManifest {
-        inherit pkgs;
-        root = nput.lib.projectRoot;
-        entries = {
-          ".claude/skills/nix" = { src = inputs.claude-skills; subpath = "skills/nix"; };
-        };
-      };
-    };
-
-    devShells.${system}.default = pkgs.mkShell {
-      packages  = [ nput.packages.${system}.nput ];   # pin 版 nput を PATH へ（project mode は同梱が canonical・→ ADR-0015）
-      shellHook = "nput apply skills --no-wait";
-    };
-
-    # パターン2: home mode（標準的な dotfiles 配置・別 profile）
-    # nput.${system}.vim-plugins = nput.lib.mkManifest {
-    #   inherit pkgs;
-    #   root = nput.lib.homeRoot;
-    #   entries = {
-    #     ".local/share/nvim/site/pack/foo/start/foo" = { src = inputs.vim-plugin-foo; };
-    #     ".zsh/plugins/autosuggestions" = { src = inputs.zsh-autosuggestions; };
-    #   };
-    # };
-
-    # パターン3: home-manager モジュール（root は homeRoot を pin・外部リポジトリ + ローカル dotfiles 混在）
-    homeConfigurations.<username> = home-manager.lib.homeManagerConfiguration {
-      inherit pkgs;
-      modules = [
-        nput.homeManagerModules.default
-        {
-          nput.enable = true;
-          nput.entries = {
-            ".claude/skills/nix" = { src = inputs.claude-skills; subpath = "skills/nix"; };
-            ".config/nvim" = { src = nput.lib.mkOutOfStoreSymlink "/home/me/dotfiles"; subpath = "home/.config/nvim"; };
-          };
-        }
-      ];
-    };
-  };
-}
-```
-
-```bash
-# standalone CLI（PATH 常駐）で役割ごとに独立して適用・ロールバック
-nput apply skills                 # project mode（git toplevel に配置）
-nput apply vim-plugins            # home mode（$HOME に配置）
-nput rollback vim-plugins         # home mode 限定
-nput list-generations vim-plugins
-nput gitignore skills             # .gitignore 向け target を stdout
-nput apply --all                  # entrypoint の nput.* を全適用
-
-# 環境セットアップ（テンプレート展開）
-nput init project                 # nix flake init -t <nput>#project のラッパー
-```
+- `docs/concept.md` — コンセプト（solution / use_case への索引）
+- `docs/design.md` — 設計（design item への索引）
+- `docs/adr/` — 意思決定の記録。requirement / design を `justifies` で裏づける
+- `docs/model.yaml` — sara の型定義（item の型・関係・ID 形式）
