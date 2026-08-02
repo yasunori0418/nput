@@ -36,9 +36,9 @@ specification_ja: |
   atomic 性を保つ（合成ヘルパは提供しない）
 - HM モジュール経由でも**役割分離ができる**。役割ごとに分けたいユーザーが standalone CLI 経路へ
   回る必要は無い
-- `<name>` 次元の導入は**非破壊**。profile dir は home mode の `<name>` 直キー
-  （`<state>/nix/profiles/nput/<name>`）にそのまま乗り、`default` 以外の `<name>` が増えるだけで
-  レイアウトの変更は無い
+- `<name>` 次元の導入は**非破壊**。`default` という名の config は従来と同じ profile へ解決され
+  続け、`default` 以外の `<name>` が増えるだけで profile dir のレイアウト変更は無い
+  （キーの体系そのものは REQ-d5a2e289 の担当）
 
 > **`docs/spec.md` 原文と異なる理由**: 原文の blockquote は「`nput.entries` は単一 attrset =
 > 単一 manifest = 1 profile（固定名 `default`）で `<name>` 次元を持たず、**HM モジュール経由では
