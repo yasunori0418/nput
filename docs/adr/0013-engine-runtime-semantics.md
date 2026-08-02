@@ -5,6 +5,9 @@ name: "engine 実行時セマンティクスの細目を確定する（manifest 
 status: 採用
 status_note: "2026-06-14 拡張: 配置セマンティクスに foreign symlink warning・祖先 symlink error を追加 → ADR-0015"
 origin: "ドキュメント計画段階のレビューで surfaced した「実装前に決めておくべき」細目の束"
+justifies:
+  - "REQ-16faf428-77f3-492f-b858-222c5274cbf7"
+  - "REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281"
 references:
   - "ADR-0002"
   - "ADR-0005"

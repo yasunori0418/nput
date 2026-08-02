@@ -4,6 +4,8 @@ type: adr
 name: "配置ロジックは全層 nput エンジンが所有し、モジュールは配線に徹する"
 status: 採用
 status_note: "2026-06-11 改訂: エンジンを Go バイナリ + ネイティブ FS に具体化 → ADR-0006"
+justifies:
+  - "REQ-eb363122-385a-499c-a074-c95efb949d07"
 references:
   - "ADR-0001"
   - "ADR-0002"

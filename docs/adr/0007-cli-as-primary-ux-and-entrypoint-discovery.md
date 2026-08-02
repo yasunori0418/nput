@@ -10,9 +10,12 @@ issues:
   - "#4"
 origin: "起点 Issue: #2（root デフォルト）, #3（CLI 化）, #4（flake.nix 以外の entrypoint）"
 justifies:
+  - "REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645"
   - "REQ-1767b250-b475-4276-a551-20dc79e75a30"
   - "REQ-4ec3accc-8bb6-461f-9024-dcf0027849e4"
   - "REQ-37b56673-6e40-4a1b-a2a7-5d3c084e3e66"
+  - "REQ-3f541d39-da41-4ef8-858b-707f54cf6a29"
+  - "REQ-97c1e088-a17e-46d9-a9a1-83d1757d0f7d"
 revises:
   - "ADR-0004"
   - "ADR-0005"
