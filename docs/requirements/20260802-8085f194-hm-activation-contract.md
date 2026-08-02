@@ -41,6 +41,8 @@ specification_ja: |
   （宣言的 switch・`home.file` の clobber エラーと同型）
 - pin 版 nput CLI（`packages.nput`）と `mkManifest` が同一 flake input 由来のため
   schemaVersion skew は構造的に起きない
+- 世代は nput 自前 profile（内部機構・前世代マニフェスト + stale 追跡）に乗る。ユーザー向け
+  rollback は host（`home-manager --rollback`）に一本化（`nput rollback` 非公開）
 
 > **上は原文の写しで、規範は frontmatter が正**。原文が参照する次の規範は本 item の担当では
 > ない。
@@ -58,6 +60,11 @@ specification_ja: |
 > - `manifest.json` が唯一の安定契約で `schemaVersion` が 1 に固定であること →
 >   REQ-79ce0a09 / REQ-250d936c。本 item はそれを前提に「module 経路では skew が構造的に
 >   起きない」ことだけを規定する
+>
+> 原文が世代の箇条書きに併記する「MVP は固定名 `default` の単一 profile
+> （`<state>/nix/profiles/nput/default`）」は、**ADR-0035 が `nput.configs.<name>` の実装を
+> 決定済み**で反転しているため写しから落とした（REQ-c6891aeb / REQ-d5a2e289 と同じ扱い）。
+> `docs/spec.md` の追従は本 item の担当範囲外。
 
 ## 出典
 
