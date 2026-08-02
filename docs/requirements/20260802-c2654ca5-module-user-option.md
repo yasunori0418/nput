@@ -28,6 +28,6 @@ home-manager と standalone は `$HOME` を参照するため `user` は不要�
 
 `docs/spec.md`「モジュールオプション仕様」→「NixOS / nix-darwin 追加オプション（将来拡張）」節。
 
-決定の実体は、NixOS / nix-darwin を将来拡張の配線層と位置づけ root を host が供給すると定めた
-ADR-0003「配置ロジックは全層 nput エンジンが所有し、モジュールは配線に徹する」と ADR-0004
-「root 一般化と「純粋関数プリミティブ」としての positioning」。
+決定の実体は ADR-0003「配置ロジックは全層 nput エンジンが所有し、モジュールは配線に徹する」で、
+各層が root（NixOS なら `config.users.users.<user>.home`）を供給する配線に徹すると定めている。
+配置先ユーザーを特定する `user` オプションは、その供給に host が `<user>` を要することから来る。
