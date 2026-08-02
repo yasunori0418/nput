@@ -21,11 +21,13 @@ specification_ja: |
   `homeRoot` / devShell → `projectRoot`）は自分の性質で root を pin するため、
   モジュール利用者は root を再指定しない（→ ADR-0007 §2）。
 
+> **原文「root の解決」節の導入文の残る規範の所在**: root が target を絶対パスへ変換する基準で
+> あることは target を root 相対と定める REQ-0b0cd1e3、配置の実体を全層で engine が実行する
+> ことは REQ-c1b3ca5f / REQ-6c4e174a の担当。
+
 ## 出典
 
 `docs/spec.md`「lib API」→「`lib.mkManifest`」→「`root` の値」および
 「`lib.projectRoot` / `lib.homeRoot` / `lib.systemRoot`」。「root の解決」節の導入文
 （root を `mkManifest` の `root` 引数で明示必須に選ぶ）も同じ規範を述べており、独立 item を
-立てず本 item に畳んだ。同導入文の残る 2 文のうち、root が target を絶対パスへ変換する基準で
-あることは target を root 相対と定める REQ-0b0cd1e3、配置の実体を全層で engine が実行する
-ことは REQ-c1b3ca5f / REQ-6c4e174a の担当。
+立てず本 item に畳んだ。

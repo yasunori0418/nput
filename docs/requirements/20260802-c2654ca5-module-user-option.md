@@ -4,12 +4,13 @@ type: requirement
 name: "NixOS / nix-darwin モジュールは配置先ユーザーを特定する user オプションを必須で取る"
 specification: |
   The NixOS and nix-darwin modules SHALL take, in addition to the common options, a
-  required `nput.user :: string` used to identify the user placement is for. The
-  home-manager module and standalone SHALL NOT require `user`, both referring to `$HOME`.
+  required `nput.user :: string` used to identify the user placement is for. In the
+  home-manager module and standalone, `user` SHALL NOT be required, both referring to
+  `$HOME`.
 specification_ja: |
   NixOS / nix-darwin モジュールは共通オプションに加えて `nput.user :: string` を必須で
   取らなければならない（配置先ユーザーの特定に使用する）。home-manager と standalone は
-  `$HOME` を参照するため `user` を要求してはならない。
+  `$HOME` を参照するため、`user` を必須としてはならない。
 ---
 # REQ-c2654ca5: NixOS / nix-darwin モジュールは配置先ユーザーを特定する user オプションを必須で取る
 

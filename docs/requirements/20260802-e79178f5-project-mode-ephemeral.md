@@ -27,4 +27,6 @@ git 状態に干渉しない。
 `docs/spec.md`「root の解決」→「project mode（`root = projectRoot`）」節の箇条書き最終項。
 
 決定の実体は ADR-0005「project mode（プロジェクト相対配置）と ephemeral 配置原則」。
-copy target まで ephemeral 扱いとする範囲は ADR-0019 が定めている。
+copy target まで ephemeral 扱いとする範囲は ADR-0019 が定めているが、本 item の規範に
+copy 固有の記述は無く、その範囲は REQ-60787ed2 の担当のため ADR-0019 からの `justifies` は
+張らない。
