@@ -62,7 +62,10 @@ specification_ja: |
 >   置き場所）と `<state>` の定義 → REQ-2aa3abbc
 > - `<roothash>`（解決後の絶対 root パスの sha256 短縮 hex）の定義と、project mode で
 >   解決済み root をキーにする理由 → REQ-46fccb80
-> - `--root` が全モードの解決 root を一律上書きすること自体 → REQ-61c05e09
+> - `--root` が全モードの解決 root を一律上書きすること自体 → REQ-61c05e09。ただし
+>   **`--root` 明示時のキーイングは本 item の担当**で、REQ-61c05e09 の規範からは落として
+>   ある（profileDir のキーは root の種別ごとに定まる一つの体系であり、`--root` の行だけを
+>   切り出すと ADR-0023 §3 の改訂時に片方だけ直る事故が起きるため一本化した）
 > - 孤児 profile の放置許容と backref による逆引き → REQ-d41b1d0a
 
 ## 出典
