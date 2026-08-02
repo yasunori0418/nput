@@ -27,12 +27,13 @@ item を新設し、概要文書にはリンクを 1 行足すに留める。
 | `docs/design/` | design | `DSG` | requirement |
 | `docs/infrastructure/` | infrastructure | `INF` | なし（根）|
 | `docs/adr/` | adr | `ADR` | なし（分離型）|
-| `docs/risks/`（未作成）| risk | `RISK` | requirement or design |
-| `docs/test/<対象>/`（未作成）| test_condition / test_case / defect | `TC` / `CASE` / `D` | 上位から順に |
 
-型・関係・フィールドの定義は `docs/model.yaml` が持つ。「未作成」の 2 つは model.yaml が
-定義済みで、テスト工程に着手する時点でこの配置に従って作る。risk を `requirement` と `design`
-のどちらに張るかの使い分けは `docs/agents/sara-graph.md`。
+型・関係・フィールドの定義は `docs/model.yaml` が持つ。
+
+**risk（`RISK`）とテスト系（`TC` / `CASE` / `D`）は model.yaml に定義済みだが、item も
+ディレクトリもまだ無い。** テスト工程に着手する段で `docs/risks/` と `docs/test/<対象>/` を
+作る。`<対象>` の粒度（機能単位か requirement 単位か）はその時点で決めて本節へ追記する。
+risk を `requirement` と `design` のどちらに張るかの使い分けは `docs/agents/sara-graph.md`。
 
 ### ID 規約（UUIDv4 二層構成）
 
@@ -42,10 +43,11 @@ item を新設し、概要文書にはリンクを 1 行足すに留める。
 | ファイル名 | `<YYYYMMDD>-<前方8文字>-<slug>.md` | `20260802-2b0c2bb8-mkmanifest-pure-function.md` |
 | 散文中の参照 | `<PREFIX>-<前方8文字>` | `REQ-2b0c2bb8` |
 
-- 採番は devShell 同梱の `sara-id` コマンドで行う（8 文字 prefix の重複チェック込み）。
-  連番を手で振らない（並列レーンでの採番衝突を構造的に避けるため）
-- **ADR のみ連番を維持する**（`ADR-0049`）。既存 48 本の相互参照・`docs/adr/README.md` の運用・
-  Issue 言及を壊さないため
+- 採番は **ADR を除き** devShell 同梱の `sara-id` コマンドで行う（8 文字 prefix の重複チェック
+  込み）。連番を手で振らない（並列レーンでの採番衝突を構造的に避けるため）
+- **ADR のみ連番を維持する**。既存 ADR の相互参照・`docs/adr/README.md` の運用・Issue 言及を
+  壊さないため。`sara-id ADR` は採番せず exit 2 で落ちる仕様なので、`docs/adr/` の最大値 + 1 を
+  手で採る
 - requirement の `specification` フィールドは **英語で書く**。sara が RFC2119 キーワード
   （MUST / SHALL / SHOULD …）の存在をハードコードで検証するため。対になる日本語の規範文は
   `specification_ja` に併記する
@@ -57,7 +59,7 @@ item を新設し、概要文書にはリンクを 1 行足すに留める。
 ```bash
 sara check                                 # グラフ全体の検証（broken reference / duplicate ID / cycles）
 sara query <フル ID> -u                    # 上流を辿る（requirement → use_case → solution）
-sara query <フル ID> -d                    # 下流を辿る（requirement → design → risk → test）
+sara query <フル ID> -d                    # 下流を辿る（requirement → design。risk 以降は未着手）
 sara report coverage                       # カバー率
 sara report matrix                         # トレーサビリティマトリクス
 ```
@@ -87,8 +89,8 @@ nix develop ./dev --command sara check   # ドキュメントグラフの検証
 - `lib/` は nixpkgs のみに依存する。home-manager / NixOS / nix-darwin への依存を持ち込まない
 - **ドキュメントの配置ルール・ID 規約はこのプロジェクトの規約が優先する**（→「ドキュメント」節）。
   要求は `docs/requirements/`、リスクは `docs/risks/`、テスト成果物は `docs/test/<対象>/` へ
-  1 ファイル 1 item で置き、ID は `sara-id` で採番する。スキル既定の出力先・採番方式（散文への
-  ID 直書き・連番）がこれと食い違う場合はプロジェクト規約に従う
+  1 ファイル 1 item で置き、ID は `sara-id` で採番する（ADR のみ連番を手で採る）。スキル既定の
+  出力先・採番方式（散文への ID 直書き・連番）がこれと食い違う場合はプロジェクト規約に従う
 - ユーザーに確認・質問する際は、テキストで質問を投げず **AskUserQuestion ツールを積極的に使う**。設計判断の確認・曖昧な依頼の解釈確認・代替案の選択などで使い、各質問は推奨オプションを先頭に置く
 
 ## Agent skills
