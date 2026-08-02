@@ -1,7 +1,7 @@
 ---
 id: "REQ-4ffda99a-7062-4c00-915f-70b525cb215b"
 type: requirement
-name: "CLI は内部実行する nix コマンドを開示しユーザーが手で実行できるようにする"
+name: "内部実行する nix コマンドを開示し世代の切替と GC は標準の nix コマンドへ委譲する"
 specification: |
   The CLI SHALL disclose the nix commands it runs internally, for instance through
   `nput --help`, so that the user can run them selectively by hand. Switching to an
@@ -14,7 +14,7 @@ specification_ja: |
   サブコマンドではなく、標準の `nix-env` / `nix-collect-garbage` を profile パスに対して
   使うものとする。
 ---
-# REQ-4ffda99a: CLI は内部実行する nix コマンドを開示しユーザーが手で実行できるようにする
+# REQ-4ffda99a: 内部実行する nix コマンドを開示し世代の切替と GC は標準の nix コマンドへ委譲する
 
 ## 仕様
 

@@ -170,6 +170,14 @@ specification_ja: |
 > REQ-059eb4d5 の担当。undo ジャーナルそのものの規範（→ ADR-0044）は
 > `docs/spec.md`「配置動作仕様」節の担当（#209-PR4）。
 
+> **items / changes / 部分失敗 / conflict / generation / warnings を 1 item に束ねる理由**:
+> これらは「同一の payload builder が engine 結果から生成する 1 つの DTO 契約」を成す
+> 規範で、個別に切ると (1) 原文の 1 サブ項目（「#131 変更系ペイロード」）と item の
+> 対応が崩れて出典の追跡性が落ち、(2) REQ-fa181aa6 が要求する dryRun パリティ
+> （「同一の変換を通すためスキーマの一致が構造的に保証される」）が参照先を失う。
+> 本 item は「変更系の 1 スキーマ契約」を満たすべきこと 1 つと見なす。同じ理由で
+> REQ-fa181aa6（読み取り系）・REQ-059eb4d5（`--all`）も原文のサブ項目単位で切っている。
+
 ## 出典
 
 `docs/spec.md`「CLI 仕様」→「出力ストリームと終了コード」→「niface 準拠の `--json`
