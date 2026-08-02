@@ -7,12 +7,71 @@ How the engineering skills should consume this repo's domain documentation when 
 - **`CONTEXT.md`** at the repo root, or
 - **`CONTEXT-MAP.md`** at the repo root if it exists — it points at one `CONTEXT.md` per context. Read each one relevant to the topic.
 - **`docs/adr/`** — read ADRs that touch the area you're about to work in. In multi-context repos, also check `src/<context>/docs/adr/` for context-scoped decisions.
+- **the item that owns the area** — in this repo the normative content lives in per-item files, not in prose documents. See "Item graph" below.
 
 If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The producer skill (`/grill-with-docs`) creates them lazily when terms or decisions actually get resolved.
 
+## Item graph
+
+`docs/` is a sara knowledge graph: one file per item, each carrying YAML frontmatter with an `id`
+and its relations. The normative statements live in the items; `docs/spec.md` / `docs/design.md` /
+`docs/concept.md` are **overviews that index them** and deliberately carry no detail.
+
+| Directory | Type | Prefix | Holds |
+|---|---|---|---|
+| `docs/solution/` | solution | `SOL` | What nput is and what it solves |
+| `docs/use-cases/` | use_case | `UC` | How it gets used |
+| `docs/requirements/` | requirement | `REQ` | What must hold (normative, RFC2119) |
+| `docs/design/` | design | `DSG` | How a requirement is realised |
+| `docs/infrastructure/` | infrastructure | `INF` | CI, release, docs site, merge gate |
+| `docs/adr/` | adr | `ADR` | Decisions, linked by `justifies` |
+
+Start from the overview that matches the topic (spec for behaviour, design for structure, concept
+for positioning), follow its link into the item, then traverse relations for the surrounding context.
+Full conventions — ID format, placement rules, which type owns what — are in `CLAUDE.md`.
+
+## Traverse with `sara query`
+
+`sara` lives in the dev shell, so prefix commands with `nix develop ./dev --command`.
+
+```bash
+sara query <full-id> -u      # upstream: requirement -> use_case -> solution
+sara query <full-id> -d      # downstream: requirement -> design -> risk -> test
+sara check                   # validate the whole graph (broken refs / duplicate IDs / cycles)
+sara report coverage         # coverage
+sara report matrix           # traceability matrix
+```
+
+**`sara query` only accepts the full ID.** Prose references use the 8-character short form
+(`REQ-2b0c2bb8`), which sara rejects with "Item not found". The short form is a prefix of the full
+ID, so grep for it to resolve both the declaring item and everything that references it:
+
+```bash
+rg -l 2b0c2bb8 docs/
+rg -o 'REQ-2b0c2bb8[0-9a-f-]*' docs/requirements/20260802-2b0c2bb8-*.md | head -1
+```
+
+Use this before claiming something isn't specified — a requirement you can't find in the overview
+may still exist as an item.
+
 ## File structure
 
-Single-context repo (most repos):
+This repo (single-context, with the item graph under `docs/`):
+
+```
+/
+├── CONTEXT.md
+├── CLAUDE.md                          ← placement rules and ID conventions
+└── docs/
+    ├── concept.md  design.md  spec.md ← overviews; index the items, hold no detail
+    ├── model.yaml  ../sara.toml       ← the graph's type definitions and config
+    ├── solution/  use-cases/          ← SOL / UC
+    ├── requirements/  design/         ← REQ / DSG
+    ├── infrastructure/                ← INF
+    └── adr/                           ← ADR (sequential IDs, unlike the rest)
+```
+
+Generic single-context repo (no item graph) — read `CONTEXT.md` and `docs/adr/` only:
 
 ```
 /
@@ -49,3 +108,6 @@ If the concept you need isn't in the glossary yet, that's a signal — either yo
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
 > _Contradicts ADR-0007 (event-sourced orders) — but worth reopening because…_
+
+The same applies to a `requirement` item: its `specification` is normative, so contradicting it is a
+spec change, not an implementation detail. Say which item you're contradicting by its short ID.
