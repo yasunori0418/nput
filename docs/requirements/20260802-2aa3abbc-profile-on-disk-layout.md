@@ -58,10 +58,10 @@ specification_ja: |
 - **backref `.root` は roothash 階層**（`<name>` dir の親）に置き、複数 `<name>` で共有する
   （孤児 profile 逆引き seam）
 
-> **上は原文の写しで、規範は frontmatter が正**。`profileDir` の**キー**（home は `<name>`・
-> project / fixed / `--root` 上書きは `<roothash>/<name>`）そのものは REQ-d5a2e289 の担当で、
-> project mode で解決済み root をキーにする理由と `<roothash>`（解決後の絶対 root パスの
-> sha256 短縮 hex）の定義は REQ-46fccb80、孤児 profile の扱いは REQ-d41b1d0a の担当。
+> **上は原文の写しで、規範は frontmatter が正**。`profileDir` の**キー**そのものは、home
+> （`<name>` 直キー）・fixed・`--root` 上書き（`<roothash>/<name>`）が REQ-d5a2e289、project mode
+> （解決済み root でキーすること）とその理由・`<roothash>`（解決後の絶対 root パスの sha256
+> 短縮 hex）の定義が REQ-46fccb80、孤児 profile の扱いが REQ-d41b1d0a の担当。
 > HM モジュール経由も home mode の `<name>` 直キーに乗る（原文が挙げる「固定名 `default`」の
 > MVP 限定は ADR-0035 が反転済み・REQ-c6891aeb）。本 item は「キーで指す先が
 > ディレクトリであり、その中に何をどう並べるか」という物理形を規定する。flock を blocking で

@@ -11,7 +11,9 @@ specification: |
   entries into a native mechanism of the platform, such as `systemd.tmpfiles` or
   `home.file`. Placement and stale removal SHALL be performed, in every layer, by the same
   engine and the same store manifest, so that the behaviour is not duplicated per layer.
-  The mechanisms of the operating system SHALL remain outside the concern of nput.
+  The mechanisms of the operating system SHALL remain outside the concern of nput. The
+  NixOS and nix-darwin modules SHALL kick the engine from `system.activationScripts.nput`;
+  the hook the home-manager module uses is stated by REQ-8085f194.
 specification_ja: |
   基本的な利用は project mode（プロジェクト内配置）と standalone CLI を中心に考えるものとし、
   モジュール対応は、他のモジュールシステムの switch と一括で動いてほしいユースケースを拾う
@@ -19,8 +21,9 @@ specification_ja: |
   一律、nput エンジンをキックするだけの配線でなければならず、各層は root と activation
   タイミングだけを供給する。`systemd.tmpfiles` / `home.file` などプラットフォームの
   ネイティブ機構へ翻訳してはならない。配置・stale 除去は全層で同一の engine + store
-  マニフェストが行うものとし、振る舞いを層ごとに二重化してはならない。OS の機構は nput の
-  関心外とする。
+  マニフェストが行うものとし、振る舞いが層ごとに二重化しないようにする。OS の機構は nput の
+  関心外とする。NixOS / nix-darwin モジュールは `system.activationScripts.nput` から engine を
+  起動しなければならない（home-manager モジュールが使うフックは REQ-8085f194 の担当）。
 ---
 # REQ-c1b3ca5f: 全モジュールと devShell は engine をキックするだけの配線とし、ネイティブ機構へ翻訳しない
 

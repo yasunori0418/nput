@@ -24,6 +24,11 @@ specification_ja: |
 > **原文「root の解決」節の導入文の残る規範の所在**: root が target を絶対パスへ変換する基準で
 > あることは target を root 相対と定める REQ-0b0cd1e3、配置の実体を全層で engine が実行する
 > ことは REQ-c1b3ca5f / REQ-6c4e174a の担当。
+>
+> 上の第 3 項が述べるモジュール側の root pin（HM → `homeRoot` / devShell → `projectRoot`・
+> モジュール利用者は root を再指定しない）は **REQ-fc1c7ce6 の担当**で、本 item の規範には
+> 含めない。本 item が規定するのは `mkManifest` / CLI entrypoint の層で root が明示必須で
+> あることに限る。
 
 ## 出典
 
