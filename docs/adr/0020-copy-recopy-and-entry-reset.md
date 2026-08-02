@@ -21,6 +21,13 @@ references:
 - 改訂対象: **ADR-0002**（copy = place-once・世代外）に「明示フラグでの上書き経路」を追加。**ADR-0006**（サブコマンド体系）に `reset` を追加
 - 起点: 「copy で配置した物を参照元更新に追従させたい」「entry の配置物を無い状態に戻したい（リセット）」という 2 つのユースケース未対応
 
+> **2026-06-14 改訂注記（ADR-0021）**: 本 ADR が追加した `nput reset` / `apply --recopy` という **decision 自体は不変**。
+> ただし本 ADR が定義しなかった二次的細目が ADR-0021 で確定した——**`reset` は `<name>` 名指し必須で `--all` を提供しない**
+> （一斉撤去は誤操作の被害が大きく、`rollback --all` 却下（ADR-0018）と一貫させる）、**`reset --dryrun` は副作用ゼロの
+> 読み取り専用プレビュー**（FS 削除・confirm・flock いずれも行わず、削除対象の有無に依らず exit 0）、**`reset` は解決後
+> `profileDir` 単位の blocking flock を取得**（`--dryrun` は取らない）、**`apply --all --recopy` は合成可**（`--recopy` は
+> apply の修飾で `--all` と直交）。本 ADR の `reset` / `--recopy` の意味論そのものに反転はない（→ ADR-0021）。
+
 ## 背景
 
 copy は place-once（初回マテリアライズ後は触らない・ADR-0002）で、参照元（`src`）の更新を反映する手段が
