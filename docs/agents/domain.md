@@ -108,7 +108,7 @@ Multi-context repo (presence of `CONTEXT-MAP.md` at the root):
 
 When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `CONTEXT.md`. Don't drift to synonyms the glossary explicitly avoids.
 
-In this repo the canonical **spelling** of each term is fixed separately in `docs/glossary.md` (and `docs/glossary.ja.md` for Japanese) — consult it for README text, code comments, and command output.
+In this repo two files cover the vocabulary and they are not interchangeable. `CONTEXT.md` is the domain glossary — Japanese, with the reasoning and ADR references behind each term; read it to understand what a term *means*. `docs/glossary.md` (`docs/glossary.ja.md` for Japanese) fixes the canonical **spelling** of each term in short entries; consult it when writing README text, code comments, or command output, so wording stays consistent.
 
 If the concept you need isn't in the glossary yet, that's a signal — either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/grill-with-docs`).
 
