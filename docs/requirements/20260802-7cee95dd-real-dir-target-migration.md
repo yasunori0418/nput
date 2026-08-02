@@ -10,19 +10,19 @@ specification: |
   removed before placement (PreRemove: leaves by unlink, directories by rmdir from child
   to parent) and the symlink newly placed; this removal SHALL NOT be reported as a warning,
   being an intended migration, and SHALL instead fall under the ordinary output discipline
-  of the placement report. If even one other leaf exists — a real file or
-  directory with content, a foreign symlink, or a self-contradictory entry that also
-  remains in the next generation — the command SHALL stop with an error for the target as
-  a whole and SHALL NOT remove it partially.
+  of the placement report. If even one other leaf exists — a real file or directory with
+  content, a foreign symlink, or a self-contradictory entry that also remains in the next
+  generation — the command SHALL stop with an error for the target as a whole and SHALL
+  NOT remove it partially.
 specification_ja: |
   target 自身が実 dir のとき、engine は配下（任意深さ）の全 leaf を判定しなければならない。
   全 leaf が「recorded かつ stale な symlink（当該 entry 自身の前世代が記録・on-disk 一致・
   次世代に無い）」または「空の sub dir（由来を問わない）」であるときに限り、target 全体を
   配置前に除去（PreRemove: leaf は unlink・dir は子から親へ rmdir）してから symlink を新規
   配置する。この除去は意図された移行であり warning にしてはならず、配置レポートの通常の出力
-  規律に従わせる。それ以外の leaf が 1 つでも
-  ある（中身のある実 file / dir・foreign symlink・次世代にも残る自己矛盾）ときは target 全体
-  をエラーで停止しなければならず、部分除去をしてはならない。
+  規律に従わせる。それ以外の leaf が 1 つでもある（中身のある実 file / dir・foreign symlink・
+  次世代にも残る自己矛盾）ときは target 全体をエラーで停止しなければならず、部分除去を
+  してはならない。
 ---
 # REQ-7cee95dd: 実 dir の target は全 leaf が除去可能なときだけ全体を配置前除去して symlink 化する
 

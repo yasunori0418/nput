@@ -27,8 +27,8 @@ specification_ja: |
   規定し、ここでは繰り返さない）。store 外の可変 JSON は持たず、`manifest.json` は不変とする。
   engine は実行時に、解決後 `profileDir` 単位の flock を取得し、前世代の store マニフェストと
   新世代を diff して消えた entry を判定し、symlink / out-of-store symlink / place-once copy を
-  配置し（新規・張替を先に、stale 除去を最後に）、
-  全て成功してから `nix-env --profile <profileDir>/profile --set <link-farm-drv>` で nput の nix
+  配置し（新規・張替を先に、stale 除去を最後に）、全て成功してから
+  `nix-env --profile <profileDir>/profile --set <link-farm-drv>` で nput の nix
   profile を更新しなければならない。この `--set` が全モード共通のコミット点であり、途中失敗は
   そこへ到達せず前世代を保つ。前世代は standalone / module を問わず全モード共通で nput 自身の
   profile の前世代から読み、ホストの `oldGenPath` に依存してはならない。nput は全モードで自前
