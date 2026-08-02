@@ -196,8 +196,7 @@ item_types:
   # ---- リスクとテストの系統（risk → test_condition → test_case → defect）----
 
   # 満たされない懸念。docs/risks/。requirement と design の両方を脅かせる。
-  # 使い分け規約: その設計を別案に置き換えれば消えるリスクのみ design 側。
-  # 要求が満たされないこと自体への懸念は常に requirement 側（→ #203）。
+  # どちらへ張るかの使い分け規約は docs/agents/sara-graph.md（→ #203・#210）。
   - id: risk
     display_name: Risk
     prefix: RISK
