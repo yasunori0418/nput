@@ -38,3 +38,8 @@ Default canonical labels (needs-triage / needs-info / ready-for-agent / ready-fo
 ### Domain docs
 
 Single-context — one `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.
+
+### Sara document graph
+
+`docs/` は sara のナレッジグラフ（`docs/model.yaml` + `sara check`）。risk を
+`requirement` と `design` のどちらに張るかの使い分け規約は `docs/agents/sara-graph.md`。
