@@ -1,0 +1,32 @@
+---
+id: "REQ-1f128917-4424-4e37-8a88-e0bb23a09da7"
+type: requirement
+name: "gitignore --all は projectRoot の全 config の target をソート + 重複除去して出力する"
+specification: |
+  `nput gitignore --all` SHALL output the targets of every projectRoot config, sorted and
+  deduplicated, because a repository has a single `.gitignore` and listing them together
+  is the natural form.
+specification_ja: |
+  `nput gitignore --all` は projectRoot の全 config の target をソート + 重複除去して
+  出力しなければならない。repo の `.gitignore` は 1 つなので一括列挙が自然であるため。
+---
+# REQ-1f128917: gitignore --all は projectRoot の全 config の target をソート + 重複除去して出力する
+
+## 仕様
+
+```bash
+nput gitignore --all           # projectRoot の全 config の target をソート + 重複除去して出力
+```
+
+`gitignore --all` は projectRoot の全 config の target を **ソート + 重複除去**して
+出力する（repo の `.gitignore` は 1 つなので一括列挙が自然）。
+
+出力の書式（アンカー形式）は REQ-a480c183、`--json` 時に cross-config dedup をしない
+非対称は REQ-059eb4d5 の担当。
+
+## 出典
+
+`docs/spec.md`「CLI 仕様」→「サブコマンド体系」の `list-generations --all` /
+`gitignore --all` の箇条書き（後段）。
+
+決定の実体は ADR-0018「`--all` のサブコマンド対応範囲」。
