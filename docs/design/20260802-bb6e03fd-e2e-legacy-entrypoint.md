@@ -43,4 +43,4 @@ REQ-da253cab が定める「legacy では相対 path の src が自動で store 
 
 ## 出典
 
-`docs/design.md`「テスト戦略」の E2E シナリオ列挙のうち legacy entrypoint の項（L464）。
+`docs/design.md`「テスト戦略」の E2E シナリオ列挙のうち legacy entrypoint の項。

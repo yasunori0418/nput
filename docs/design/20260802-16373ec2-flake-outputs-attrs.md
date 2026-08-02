@@ -58,4 +58,4 @@ nput 自身の outputs ではなく consumer 側の output である（規範は
 
 ## 出典
 
-`docs/design.md`「flake.nix outputs 設計」冒頭のコードブロック（L93-120）。
+`docs/design.md`「flake.nix outputs 設計」冒頭のコードブロック。
