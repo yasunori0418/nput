@@ -29,6 +29,8 @@ specification_ja: |
 | 絶対パス文字列 | 固定 root | 評価時に確定する絶対パス（任意固定 root の seam）|
 
 home mode と project mode は世代の扱いが異なる（→ `docs/spec.md`「世代管理仕様」）。
+この差異そのものは「世代管理仕様」節の要求であり、当該節を分割する後続 PR（#209-PR4）で
+item 化する。本 item は root の値と対応するモードまでを規定する。
 
 ## 出典
 

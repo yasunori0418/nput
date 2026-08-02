@@ -27,4 +27,5 @@ specification_ja: |
 
 ## 出典
 
-`docs/spec.md`「lib API」→「入力検査」節の「marker のタグ方式」注記。
+`docs/spec.md`「lib API」→「入力検査（`evalModules` + `normalizeManifest`）」節の
+「marker のタグ方式」注記。
