@@ -5,17 +5,17 @@ name: "entry submodule のフィールドは src / subpath / target / method の
 specification: |
   The value of each `entries` attribute SHALL be an entry submodule holding exactly four
   fields: `src` (`path | set | marker`, required), `subpath` (`string`, optional),
-  `target` (`string`, optional), and `method` (`"symlink" | "copy"`, optional). No fifth
-  field SHALL exist. `target` SHALL be a path relative to the `root` selected explicitly
-  in `mkManifest`. The concrete default of each optional field, and which component
-  validates and applies those defaults, are stated by REQ-b232ec98, REQ-cb77ea05 and
-  REQ-d1b5b3f5 and are NOT restated here.
+  `target` (`string`, optional), and `method` (`"symlink" | "copy"`, optional). `target`
+  SHALL be a path relative to the `root` selected explicitly in `mkManifest`. The
+  concrete default of each optional field, and which component validates and applies
+  those defaults, are stated by REQ-b232ec98, REQ-cb77ea05 and REQ-d1b5b3f5 and are NOT
+  restated here.
 specification_ja: |
   `entries` の各属性値は entry submodule とし、フィールドは `src`
   （`path | set | marker`・必須）・`subpath`（`string`・省略可）・`target`
   （`string`・省略可）・`method`（`"symlink" | "copy"`・省略可）の 4 つでなければ
-  ならない。5 つ目のフィールドを持ってはならない。`target` は `mkManifest` で明示選択
-  した `root` からの相対パスとする。各省略可フィールドの具体的なデフォルト値と、それを
+  ならない。`target` は `mkManifest` で明示選択した `root` からの相対パスとする。
+  各省略可フィールドの具体的なデフォルト値と、それを
   検査・適用する主体は REQ-b232ec98 / REQ-cb77ea05 / REQ-d1b5b3f5 が規定しており、
   本 item では重ねて規定しない。
 ---
@@ -51,7 +51,8 @@ REQ-d1b5b3f5（`mkManifest` が単一の検査ゲート）と REQ-b232ec98（`no
 各フィールドの値域・意味も個別 item が持つ（`src` は REQ-99ca5381、`subpath` は
 REQ-27b75fe6、`target` の識別子性とデフォルトは REQ-cb77ea05、`method` の動作は
 REQ-77689c68）。本 item はフィールドの構成そのもの（4 つで過不足なく、どれが必須で
-どれが省略可か）を規定する。
+どれが省略可か）を規定する。5 つ目のフィールドが評価時エラーになること（strict）は
+REQ-3e446ad9 の規範。
 
 > **デフォルト値を規範に含めない理由**: `subpath` → `"."` / `method` → `"symlink"` /
 > `target` → 属性キーの 3 つは、いずれも既存 item が規範として持つ（REQ-b232ec98 が
