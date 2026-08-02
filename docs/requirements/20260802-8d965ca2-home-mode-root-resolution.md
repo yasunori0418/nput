@@ -35,9 +35,12 @@ specification_ja: |
 > **上は原文の写しで、規範は frontmatter が正**。`homeRoot` が marker であり kind を運ぶこと
 > （実体パス解決は engine の実行時責務）は REQ-3f541d39 / REQ-37b56673、`--root` による全モード
 > 共通の上書きは REQ-61c05e09、`cfg.user` を持つ `nput.user` オプション自体は REQ-c2654ca5、
-> home mode の profileDir キーは REQ-d5a2e289 の担当。表の NixOS / nix-darwin 行が持つ
-> 「将来」の限定を規範に採らない理由（実装時期は満たすべきことではない）は REQ-c1b3ca5f の
-> 注記に集約している。
+> home mode の profileDir キーは REQ-d5a2e289 の担当。**モジュールが `homeRoot` を pin する
+> こと自体は REQ-fc1c7ce6 の担当**で、本 item の規範に現れる「モジュールが `homeRoot` を
+> pin する」は、HM の `$HOME` が standalone の `$HOME` と供給経路として異なる（HM が内部
+> 解決する）ことを説明する従属節であり、pin そのものを規範化するものではない。表の
+> NixOS / nix-darwin 行が持つ「将来」の限定を規範に採らない理由（実装時期は満たすべきことでは
+> ない）は REQ-c1b3ca5f の注記に集約している。
 
 ## 出典
 
