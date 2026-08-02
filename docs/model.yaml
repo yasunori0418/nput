@@ -129,7 +129,16 @@ item_types:
     prefix: INF
     id_format: '{prefix}-{uuid}'
     parent_types: []
-    fields: []
+    fields:
+      # `docs/dev/definition-of-done.md` の項目 ID（DOD-01 …）への対応。DoD は sara の
+      # item ではないため relation にはせず text フィールドへ逃がす（→ #212）。
+      # 対応する DoD 項目を持たない基盤（キャッシュ・リリース・docs サイト）もあるので
+      # required: false。
+      - name: dod
+        display_name: Definition of Done
+        field_type: text
+        required: false
+        placeholder: DOD-02
     allowed_targets:
       - relation: depends_on
         targets:
