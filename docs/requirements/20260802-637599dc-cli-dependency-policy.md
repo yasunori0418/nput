@@ -1,22 +1,24 @@
 ---
 id: "REQ-637599dc-a1ec-4af5-9e97-e882c7df56d0"
 type: requirement
-name: "CLI の第三者依存は最小限に許可し、ビルドは vendorHash と pin した Go で固定する"
+name: "CLI が持ち込む依存は許可した第三者ライブラリと pin した Go に限り、いずれも固定する"
 specification: |
-  The CLI SHALL be allowed a minimal set of third-party dependencies — cobra, for
-  subcommands and help — while importing the engine for placement, in contrast to the
-  engine's stdlib-only constraint. It SHALL be built with `buildGoModule` and a vendorHash
-  string, and the Go toolchain SHALL be pinned to the go of nixpkgs with the `toolchain`
-  directive left unused, so that the build does not fetch a toolchain of its own and stays
-  reproducible under Nix.
+  Everything the CLI brings in SHALL be confined to what has been explicitly allowed, and
+  each SHALL be pinned, in contrast to the engine's stdlib-only constraint. A minimal set
+  of third-party dependencies SHALL be allowed — cobra, for subcommands and help — while
+  placement itself SHALL be done by importing the engine. Those dependencies SHALL be
+  fixed by building with `buildGoModule` and a vendorHash string. The Go toolchain SHALL
+  be pinned to the go of nixpkgs, and the `toolchain` directive SHALL NOT be used, so that
+  the build does not fetch a toolchain of its own and stays reproducible under Nix.
 specification_ja: |
-  CLI には第三者依存を最小限だけ許可しなければならない（サブコマンド / help のための
-  cobra）。配置は engine を import して行う（engine の stdlib-only 制約とは対照的に扱う）。
-  ビルドは `buildGoModule` と vendorHash 文字列で行い、Go ツールチェーンは nixpkgs の go に
-  pin して `toolchain` ディレクティブを使ってはならない（ビルドが独自にツールチェーンを
-  取得せず Nix の下で再現可能に保つため）。
+  CLI が持ち込むものは明示的に許可したものだけに閉じ、いずれも固定しなければならない
+  （engine の stdlib-only 制約とは対照的に扱う）。第三者依存は最小限だけ許可する
+  （サブコマンド / help のための cobra）。配置そのものは engine を import して行う。
+  それらの依存は `buildGoModule` と vendorHash 文字列でビルドすることによって固定する。
+  Go ツールチェーンは nixpkgs の go に pin しなければならず、`toolchain` ディレクティブを
+  使ってはならない（ビルドが独自にツールチェーンを取得せず Nix の下で再現可能に保つため）。
 ---
-# REQ-637599dc: CLI の第三者依存は最小限に許可し、ビルドは vendorHash と pin した Go で固定する
+# REQ-637599dc: CLI が持ち込む依存は許可した第三者ライブラリと pin した Go に限り、いずれも固定する
 
 ## 仕様
 

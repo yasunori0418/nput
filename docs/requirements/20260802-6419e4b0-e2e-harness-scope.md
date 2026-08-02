@@ -8,19 +8,19 @@ specification: |
   `nix eval` and `nix-env --set` from the flake entrypoint, rather than by stubbing nix out.
   Each scenario SHALL run under an isolated temporary `$HOME` and `$XDG_STATE_HOME`, so that
   it does not touch the environment of the machine that runs it, and its source SHALL be
-  supplied either as a relative path inside a fixture flake, copied into the store at
-  evaluation time, or as a live out-of-store directory. The harness SHALL cover, at minimum,
-  placement and idempotency in project mode; placement, generation commit and rollback in
-  home mode; stale removal; copy place-once and out-of-store symlinks; and evaluating and
-  activating the home-manager module on a non-NixOS system. Each specification it verifies
-  is stated by the item responsible for it and SHALL NOT be restated here.
+  supplied either as a relative path inside a fixture flake, which is copied into the store
+  at evaluation time, or as a live out-of-store directory. The harness SHALL cover placement
+  and idempotency in project mode; placement, generation commit and rollback in home mode;
+  stale removal; copy place-once and out-of-store symlinks; and evaluating and activating
+  the home-manager module on a non-NixOS system. Each specification it verifies is stated by
+  the item responsible for it and SHALL NOT be restated here.
 specification_ja: |
   「非 NixOS でも nix さえあれば動く」という主張は、nix をスタブせず、flake entrypoint
   からの `nix build` / `nix eval` / `nix-env --set` を含む実経路を一気通貫で回す E2E
   ハーネスにより、実 nix で検証しなければならない。各シナリオは隔離した一時 `$HOME` /
   `$XDG_STATE_HOME` の下で動かし（実行マシンの環境に触れないようにするため）、配置元は
   fixture flake 内の相対パス（評価時に store へコピーされる）か out-of-store の live
-  ディレクトリで用意する。ハーネスは最低限、project mode の配置と冪等性、home mode の
+  ディレクトリで用意する。ハーネスは、project mode の配置と冪等性、home mode の
   配置・世代コミット・ロールバック、stale 除去、copy の place-once と out-of-store
   symlink、非 NixOS での home-manager モジュールの評価と activate を対象としなければ
   ならない。各シナリオが検証する仕様そのものは各担当 item の規範であり、ここでは
