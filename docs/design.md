@@ -26,9 +26,26 @@ symlink または copy で配置する Nix ライブラリ・モジュール群�
 動作しつつ、HM / NixOS / nix-darwin のモジュールとも統合できる。ただし統合層は配置ロジックを
 持たず、エンジンを起動する薄い配線に徹する（→ ADR-0003）。
 
-nput が何であるか・何のために作るかは solution / use_case の領分。
+nput が何であるか・何のために作るかは solution / use_case の領分。→ `docs/concept.md`。
 
-- [SOL-9fcd1d6e](solution/20260802-9fcd1d6e-nput-placement-primitive.md) — nput は nix store の物を任意パスへ置く配置プリミティブであり、設定を生成せずユーザーが配置を明示的に握る
+---
+
+## 設計目標
+
+設計判断を評価する軸。個々の目標がどう満たされるかは対応する requirement / design item が持つ。
+
+| 目標 | 説明 |
+|---|---|
+| 純粋性・テスト可能性 | 配置ロジックを純粋関数 + 単一エンジン（Go ライブラリ）として実装。モジュールに依存しない |
+| 独立性 | home-manager に依存せず単体で動作する |
+| 統合性 | HM / NixOS / nix-darwin モジュールから nput エンジンを起動できる |
+| 柔軟性 | モジュールシステムを介さず CLI + entrypoint ファイルで使える |
+| 取得手段非依存 | npins / flake inputs / fetchFromGitHub / fetchGit など問わない |
+| 粒度 | リポジトリ全体・サブディレクトリ・単一ファイルを配置できる |
+| 更新の独立性 | 配置単位（`nput.<name>`）ごとに個別 profile・個別更新・個別適用できる |
+| 非生成 | ファイル内容に関与しない。リポジトリの内容をそのまま置く |
+| 世代管理 | standalone（home mode）は nix profile に乗せてロールバック可能（→ ADR-0002）|
+| root 明示 | 配置先 root を明示マーカーで選ぶ。project / home / system / 固定パスに同じ関数で到達（→ ADR-0004, ADR-0007）|
 
 ---
 
@@ -95,16 +112,8 @@ nput 自身の flake outputs は packages / templates / 各モジュール / fla
 
 ## 使用パターン
 
-想定する使われ方は use_case が持つ。個々の設定の書き方はテンプレート（`nput init`）と
-`templates/` の実物を参照する。
-
-- [UC-19a90989](use-cases/20260802-19a90989-project-mode-in-repo-placement.md) — プロジェクト repo 内へ nix store の物を devShell 入室のたびに配置してチームで共有する
-- [UC-f2436d68](use-cases/20260802-f2436d68-home-mode-pinned-repo-placement.md) — home mode で外部リポジトリの中身をバージョン固定して $HOME 配下の任意パスへ配置する
-- [UC-1c280dce](use-cases/20260802-1c280dce-independent-update-cycles.md) — 役割ごとに config を分けて更新を独立させ、1 つの更新を他の役割へ波及させない
-- [UC-d39c1994](use-cases/20260802-d39c1994-module-integration.md) — 既に home-manager / NixOS / nix-darwin を使っている環境へ nput をモジュールとして組み込む
-- [UC-403fbe32](use-cases/20260802-403fbe32-copy-place-once-user-managed.md) — リポジトリの内容を copy で初回だけ配置し、その後はユーザーが手で編集して育てる
-- [UC-01b896b4](use-cases/20260802-01b896b4-out-of-store-live-editing.md) — 開発中の手元 dotfiles を out-of-store symlink で参照し、編集と同時に反映しながら育てる
-- [UC-0b6f60cb](use-cases/20260802-0b6f60cb-generation-rollback-standalone.md) — 配置に失敗・後悔したとき standalone で前の世代へロールバックして元の状態へ戻す
+想定する使われ方（use_case 7 件）は concept.md の領分。→ `docs/concept.md`「想定する使われ方」。
+個々の設定の書き方はテンプレート（`nput init`）と `templates/` の実物を参照する。
 
 ---
 
@@ -130,11 +139,12 @@ CI での実行基盤・キャッシュ・リリースは infrastructure item �
 
 ---
 
-## 設計上の判断
+## 設計判断の所在
 
-主要な設計判断の決定と根拠は **ADR が持つ**（`docs/adr/`）。ADR は `justifies` で requirement /
-design / infrastructure へ接続しており、ある item を裏づける決定は `sara query` で辿れる。
-理由の要約を本文書へ置くと ADR と二重管理になるため置かない。
+本節はリンク集ではなく、決定がどこにあるかの案内。主要な設計判断の決定と根拠は **ADR が持つ**
+（`docs/adr/`）。ADR は `justifies` で requirement / design / infrastructure へ接続しているため、
+ある item を裏づける決定は本文書の一覧ではなく `sara query <フル ID> -u` で辿る。全 ADR を
+ここへ並べても改訂のたびに古くなるだけなので置かない。
 
 ---
 
