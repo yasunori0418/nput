@@ -7,6 +7,10 @@ issues:
   - "#169"
   - "#172"
 origin: "旧 epic #167 から統合された epic #172 の grilling セッション（2026-07-11・2026-07-12）で確定"
+justifies:
+  - "REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b"
+  - "REQ-02a33511-0941-4813-b289-a05eb8e9aa57"
+  - "REQ-687e225f-5046-46db-88fb-f9e527a1e97a"
 references:
   - "ADR-0002"
   - "ADR-0006"

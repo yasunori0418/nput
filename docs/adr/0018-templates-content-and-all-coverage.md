@@ -4,6 +4,12 @@ type: adr
 name: "templates の具体内容と `--all` のサブコマンド対応範囲を確定する"
 status: 採用
 origin: "ADR-0017 に続く実装前レビューで「templates の具体内容」「`gitignore` / `rollback` / `list-generations` の `--all` 対応」が未定義だった"
+justifies:
+  - "REQ-196ddabf-6569-4303-942e-050872972501"
+  - "REQ-05abce3e-9797-432b-b93f-37c55d09afde"
+  - "REQ-89c7baf9-9be0-417b-bd2d-b2e4edabe796"
+  - "REQ-a8edc58f-4adc-4637-b888-ab8ccc7e73e4"
+  - "REQ-1f128917-4424-4e37-8a88-e0bb23a09da7"
 references:
   - "ADR-0005"
   - "ADR-0006"

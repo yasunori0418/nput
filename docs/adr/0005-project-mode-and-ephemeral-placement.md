@@ -4,6 +4,9 @@ type: adr
 name: "project mode（プロジェクト相対配置）と ephemeral 配置原則"
 status: 採用
 status_note: "2026-06-13 改訂: 「既定 `$HOME`（home mode）」前提を撤回し root 明示必須へ → ADR-0007"
+justifies:
+  - "REQ-05abce3e-9797-432b-b93f-37c55d09afde"
+  - "REQ-a480c183-40ce-4201-93b5-65a7a59c1b9e"
 references:
   - "ADR-0002"
   - "ADR-0003"
