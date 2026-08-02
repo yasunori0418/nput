@@ -34,3 +34,7 @@ lib へヘルパを置かない理由は、置いた場合に **IFD（import fro
 ## 出典
 
 `docs/design.md`「flake.nix outputs 設計」の `lib` 公開 API 一覧末尾のコメント行。
+
+> **本 item の根拠は ADR ではなく `docs/publication-roadmap.md` ①**: `listFilesInSrc` を
+> lib から除去し readDir idiom へ降格する決定は同ロードマップのブロッカー ①（完了済み）が
+> 持つ。`justifies` を受けていないのは張り漏れではなく、根拠が ADR 以外にあることによる。

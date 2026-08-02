@@ -47,5 +47,6 @@ switch と一括で動いてほしいユースケースを拾うために存在�
 
 なお `docs/design.md`「使用パターン」→「パターン 2」は standalone CLI を
 「standalone CLI（home mode）」と呼ぶが、本 item はこれを採らない。`CONTEXT.md` が
-「standalone は配置モードではなく起動形態であり、standalone = home mode と短絡しない
-（配置モードは `root` マーカーが決める）」と定めているため。
+曖昧さとして名指しで戒める項に「standalone は配置モードではなく起動形態であり、
+standalone = home mode と短絡しない（配置モードは `root` マーカーが決める）」が
+あるため。
