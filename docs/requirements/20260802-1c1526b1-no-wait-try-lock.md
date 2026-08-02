@@ -4,11 +4,15 @@ type: requirement
 name: "--no-wait は flock 競合時に待たずスキップする"
 specification: |
   The `--no-wait` flag SHALL make the command skip instead of waiting when the flock is
-  contended, for use from a shellHook. The default SHALL be that an explicit apply waits
-  for the lock (blocking wait).
+  contended, for use from a shellHook. It SHALL acquire the lock as a try-lock (LOCK_NB):
+  when the lock is held it SHALL skip and print a one-line notice to stderr, and SHALL NOT
+  block entry into the shell. The default, without the flag, SHALL be that an explicit
+  apply / rollback waits for the lock (LOCK_EX, blocking).
 specification_ja: |
   `--no-wait` は flock 競合時に待たずスキップさせるフラグでなければならない
-  （shellHook 用）。既定は明示 apply が待つ（blocking wait）ものとする。
+  （shellHook 用）。ロックは try-lock（`LOCK_NB`）で取得し、保持中ならスキップして
+  stderr に 1 行通知し、シェル入室をブロックしてはならない。フラグ無しの既定は
+  明示 apply / rollback がロックを待つ（`LOCK_EX`・blocking）ものとする。
 ---
 # REQ-1c1526b1: --no-wait は flock 競合時に待たずスキップする
 
@@ -18,9 +22,14 @@ specification_ja: |
 --no-wait           # flock 競合時に待たず skip（shellHook 用。既定は明示 apply=blocking wait）
 ```
 
-try-lock の具体的な挙動（`LOCK_NB` で保持中ならスキップし stderr に 1 行通知する）は
-実行フローの規範であり REQ-60c6b7ea の担当。skip 通知が既定沈黙の対象であることは
-REQ-8ef34101、skip が終了コード 0 になることは REQ-2c5a10d8 の担当。
+shellHook 経路（`--no-wait`）は try-lock（`LOCK_NB`）で保持中ならスキップし、stderr に
+1 行通知する（例: `nput: another apply in progress, skipped (run \`nput apply\` manually)`・
+シェル入室はブロックしない）。明示 apply / rollback は blocking（`LOCK_EX`・取得まで待ち
+「他の apply 完了待ち」を表示）。
+
+この try-lock / blocking の取得が実行フローのどの段（2a）で行われるかは REQ-60c6b7ea の
+担当。skip 通知が既定沈黙の対象であることは REQ-8ef34101、skip が終了コード 0 になることは
+REQ-2c5a10d8 の担当。
 
 ## 出典
 

@@ -6,11 +6,13 @@ specification: |
   When the name is omitted, `nput apply` SHALL apply `nput.default`, following the flake
   `default` convention, and SHALL fail with an error when `default` is not defined.
   Specifying `<name>` explicitly SHALL apply that config, and `--all` SHALL apply all of
-  `nput.*`. The profile SHALL be atomic per config.
+  `nput.*`. That a profile is atomic per config is stated by the generation management
+  specification and is not restated here.
 specification_ja: |
   `nput apply` は name 省略時に `nput.default` を適用しなければならない（flake の
   `default` 慣例に倣う）。`default` が未定義ならエラーとする。`<name>` を明示すれば
-  その config を、`--all` で `nput.*` 全てを適用する。profile は config 単位で atomic とする。
+  その config を、`--all` で `nput.*` 全てを適用する。profile が config 単位で atomic で
+  あることは世代管理仕様の担当で、本 item では規定しない。
 ---
 # REQ-c2d44626: apply の config 選択は name 省略で default・明示で単一・--all で全件
 

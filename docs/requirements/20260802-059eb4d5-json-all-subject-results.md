@@ -23,11 +23,9 @@ specification: |
   shape being identical for N=0 and the keys always present.
 
   A failure of a config that is independent of an item (build / eval / lock) SHALL go to
-  that `results[i].errors[]`, while an item-caused failure SHALL be embedded in
-  `item.error` and SHALL NOT be duplicated into `results[i].errors[]`. The top-level
-  `errors[]` SHALL carry only failures before any subject was enumerated. The aggregate
-  error of `--all` SHALL NOT be piled onto the top level, being a restatement of failures
-  the subjects already carry.
+  that `results[i].errors[]`, the layering rule itself being that of a single-config
+  execution and not restated here. Specific to `--all`: the aggregate error SHALL NOT be
+  piled onto the top level, being a restatement of failures the subjects already carry.
 
   The try-lock skip (another apply in progress) SHALL be treated as `status:"success"` for
   that subject, symmetrically with a named apply returning exit 0, a skip not being a
@@ -76,10 +74,10 @@ specification_ja: |
   部分失敗でも成功した config の `SubjectResult` は全て残さなければならない。対象 0 件は
   `results: []` + `status:"success"` とし、N=0 でも同一形状・キーは常に存在させる。
 
-  config 単位の item 非依存な失敗（build / eval / lock 等）は該当 `results[i].errors[]` へ、
-  item 起因の失敗は `item.error` に埋めて `results[i].errors[]` へ重複させてはならない。
-  トップ `errors[]` に載せてよいのは主体列挙前の失敗のみとする。`--all` の集約エラーは
-  既に各 subject が持つ失敗の言い換えなのでトップへ重ねてはならない。
+  config 単位の item 非依存な失敗（build / eval / lock 等）は該当 `results[i].errors[]` へ
+  載せる。層の振り分け規則そのものは単一 config 実行と同一で、本 item では規定しない。
+  `--all` 固有の規範として、集約エラーは既に各 subject が持つ失敗の言い換えなのでトップへ
+  重ねてはならない。
 
   try-lock skip（他の apply が進行中）は、名指し apply が exit 0 を返すのと対称に、その
   subject を `status:"success"` として扱う（skip は失敗ではない）。
@@ -164,8 +162,15 @@ warnings / info）の写像規則は単一 config と同一で、`--all` 固有�
   変更系は続行」という既存の実行方針の反映であり、消費側は **`results[]` の subject 集合が
   対象 config 集合と一致することを前提にしてはならない**（成功時は一致する）。
 
-`--all` のテキスト側の挙動（辞書順・部分失敗でも続行）は REQ-4cbd9a0d、終了コードの
-優先度は REQ-b7bb09d6、`gitignore --all` のテキスト集約は REQ-1f128917 の担当。
+> **上は原文の写しで、規範は frontmatter が正**。「エラーの層」項のうち、item 起因の
+> 失敗を `item.error` に埋めて `results[i].errors[]` へ重複させないこと・トップ
+> `errors[]` に載るのが主体列挙前の失敗のみであることは、単一 config 実行と共通の
+> 振り分け規則であり REQ-9341fa5d の規範。本 item が規範化するのは `--all` 固有の差分
+> （集約エラーをトップへ重ねない）に限る。
+
+`--all` のテキスト側の挙動（辞書順・部分失敗でも続行）は REQ-4cbd9a0d、エラー層の
+振り分け規則は REQ-9341fa5d、終了コードの優先度は REQ-b7bb09d6、`gitignore --all` の
+テキスト集約は REQ-1f128917 の担当。
 
 ## 出典
 
