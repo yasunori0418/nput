@@ -36,8 +36,9 @@ target 自身が実 dir のとき、配下（任意深さ）の全 leaf を判�
 ```
 
 > **上は原文の写しで、規範は frontmatter が正**。この migration が失敗して「エラーで停止」
-> と判定された実 dir は `--backup` の退避対象になる（REQ-5dd5a4e9）。退避が配置手順の
-> どの段に入るかは REQ-9b0046e0 の担当。
+> と判定された実 dir も `--backup` の退避対象に入る。退避対象を判定各段の結論
+> （エラー停止 / copy foreign スキップ）で括る規範と、退避が配置手順のどの段に入るかは
+> REQ-9b0046e0 の担当（退避そのものの契約は REQ-5dd5a4e9）。
 
 祖先 symlink の migration は REQ-c9ab91c1、method 変更 symlink→copy の migration は
 REQ-2b48620a の担当。

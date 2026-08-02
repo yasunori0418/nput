@@ -24,9 +24,9 @@ specification_ja: |
 ## 仕様
 
 ```
-`apply --backup` 有効時、判定各段（祖先 symlink・実 dir target・method 変更・copy 構造/foreign）が
-「エラーで停止」または「copy foreign スキップ」と判定した記録外実体を、配置前に
-<target>.<suffix> へ rename 退避（Backup。PreRemove の後・配置の前）してから新規配置する
+`apply --backup` 有効時、判定各段が「エラーで停止」または「copy foreign スキップ」と判定した
+記録外実体を、配置前に <target>.<suffix> へ rename 退避（Backup。PreRemove の後・配置の前）
+してから新規配置する。祖先 symlink conflict は対象外のまま
 ```
 
 世代スキップ経路の drift 修復（repairDrift）では **PreRemove は不変条件によりこの経路に
@@ -34,10 +34,17 @@ specification_ja: |
 manifest / derivation の変化を伴わず、shell 再入間でも起こり得るため）で、drift 修復の一環と
 して通常 apply と同じく退避 + 配置される。
 
-> **上は原文の写しで、規範は frontmatter が正**。退避そのものの契約（対象実体の種別・
-> suffix の既定と `=` 区切り・祖先 symlink conflict が対象外であること・退避先既存時の
-> conflict 停止・`reset` が復元しないこと）は REQ-5dd5a4e9 の担当で、本 item は退避が
-> 配置手順のどの段に入るかと、drift 修復経路でも実施されることだけを規定する。
+> **上は原文の写しで、規範は frontmatter が正**。退避そのものの契約（suffix の既定と
+> `=` 区切り・祖先 symlink conflict が対象外であること・退避先既存時の conflict 停止・
+> `reset` が復元しないこと）は REQ-5dd5a4e9 の担当で、本 item は退避が配置手順のどの段に
+> 入るか・退避対象をどう括るか・drift 修復経路でも実施されることを規定する。
+>
+> 退避対象の括り方について、原文は 2 箇所で非対称に書く。「CLI 仕様」節（REQ-5dd5a4e9 の
+> 出典）は種別を 4 つ（foreign な通常ファイル / ディレクトリ・copy 構造不一致・copy foreign
+> 実ファイル・method 変更 copy→symlink）並べるのに対し、「配置動作仕様」§0.7 はそこへ
+> 「実 dir migration 失敗」を加えた 5 つを並べる。本 item は種別の列挙ではなく判定各段の
+> 結論（「エラーで停止」または「copy foreign スキップ」）で括ることにより、後者の広い方を
+> 規範とした。実 dir migration 失敗（REQ-7cee95dd）はこの括りに含まれる。
 > 世代スキップとドリフト修復そのものは REQ-46fccb80、undo ジャーナルは REQ-5e75aabc の担当。
 
 ## 出典
