@@ -3,8 +3,8 @@ id: "REQ-62eda895-efd4-4eaf-a58b-600e8637da75"
 type: requirement
 name: "symlink farm の GC アンカー名は target のハッシュとする"
 specification: |
-  The GC anchor name in the symlink farm SHALL be a hash of `target` (a shortened
-  lowercase hex of SHA-256; fixed length and filesystem safe). Sanitizing `target` (for
+  The GC anchor name in the symlink farm SHALL be a hash of `target` (a shortened hex of
+  SHA-256; fixed length and filesystem safe). Sanitizing `target` (for
   example by stripping `/`) MUST NOT be used, because two distinct targets could collapse
   into the same name and violate the key uniqueness constraint of `linkFarm`. The anchor
   name is not required to be human readable, since the farm exists solely as a GC anchor
