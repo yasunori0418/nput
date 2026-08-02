@@ -42,4 +42,4 @@ lib/
 
 ## 出典
 
-`docs/design.md`「プロジェクト構成」の `lib/` 内訳（L45-49）。
+`docs/design.md`「プロジェクト構成」の `lib/` 内訳。

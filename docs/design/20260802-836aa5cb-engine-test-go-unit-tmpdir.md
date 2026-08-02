@@ -41,4 +41,4 @@ REQ-d2277c7a の copy place-once（target 不在時のみマテリアライズ�
 
 ## 出典
 
-`docs/design.md`「テスト戦略」のテーブル 2 行目（L454）。
+`docs/design.md`「テスト戦略」のテーブル 2 行目。

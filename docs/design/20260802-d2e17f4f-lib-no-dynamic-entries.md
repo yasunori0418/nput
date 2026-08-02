@@ -33,4 +33,4 @@ lib へヘルパを置かない理由は、置いた場合に **IFD（import fro
 
 ## 出典
 
-`docs/design.md`「flake.nix outputs 設計」の `lib` 公開 API 一覧末尾のコメント行（L119）。
+`docs/design.md`「flake.nix outputs 設計」の `lib` 公開 API 一覧末尾のコメント行。

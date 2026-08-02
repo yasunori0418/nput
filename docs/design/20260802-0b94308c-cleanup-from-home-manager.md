@@ -39,4 +39,4 @@ home-manager へ依存することになり、独立性が崩れる。
 
 ## 出典
 
-`docs/design.md`「コアロジック設計」→「世代管理と state」節の箇条書き（L216）。
+`docs/design.md`「コアロジック設計」→「世代管理と state」節の箇条書き。

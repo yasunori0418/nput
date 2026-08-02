@@ -32,4 +32,4 @@ VM テストがその唯一の現実的な手段だからである。REQ-c2654ca
 
 ## 出典
 
-`docs/design.md`「テスト戦略」の NixOS VM テストの段落（L466）。
+`docs/design.md`「テスト戦略」の NixOS VM テストの段落。
