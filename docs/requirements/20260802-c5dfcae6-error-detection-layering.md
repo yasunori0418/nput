@@ -55,9 +55,9 @@ attrset のため Nix のキー重複不可で担保され、**重複 `name` と
 `docs/spec.md`「エラー仕様」節の導入文と、同節の表のうち評価時エラー行・engine 実行時
 エラー行の別。
 
-決定の実体は ADR-0010「manifest の型検査を `evalModules` + marker タグ方式で行う」
-（設定の誤りを `mkManifest` の評価時に閉じる）と、native に担保される性質へ検査を置かない
-根拠となる ADR-0014「entries を target キーの attrset にし、手動 name と手動一意性チェックを
-廃する」。実体依存の判定を engine 実行時へ回すことは、ADR-0013「engine 実行時セマンティクス」が
+決定の実体は ADR-0010「manifest の型検査を `evalModules` で行う」（設定の誤りを
+`mkManifest` の評価時に閉じる）と、native に担保される性質へ検査を置かない根拠となる
+ADR-0014「entries は target キーの attrset」。実体依存の判定を engine 実行時へ回すことは、ADR-0013「engine 実行時セマンティクス」が
 個別の決定（copy + marker の eval エラー等）で示す層の分かれ方を、節の導入文が一般則として
-まとめたものであり、この一般則そのものを表明した ADR は無い。
+まとめたものである。この一般則そのものを表明した ADR は無いため、ADR-0013 からは側面の
+根拠として `justifies` を張らない（個別の決定の帰属は REQ-16faf428 が担当する）。

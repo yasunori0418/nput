@@ -65,4 +65,6 @@ specification_ja: |
 とおり、ADR 化されていない）。`--backup` を脱出ハッチとするガイダンスと、退避先が既存の
 ときを conflict 種別に加えることは ADR-0045「`apply --backup[=suffix]` — 配置を塞ぐ記録外
 実体の rename 退避」による。報告を stderr に置き失敗経路を沈黙の対象にしない出力規律は
-ADR-0031 が定めるが、その規範自体は REQ-fea038de / REQ-8ef34101 の担当。
+ADR-0031「成功時沈黙の出力規律」が定めるが、同 ADR は conflict に一切言及せず全件列挙を
+決めていないため、側面の根拠として `justifies` は張らない（出力規律そのものの帰属は
+REQ-fea038de / REQ-8ef34101 が担当する）。

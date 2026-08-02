@@ -35,4 +35,6 @@ specification_ja: |
 
 決定の実体は ADR-0011「engine / CLI の技術スタック」で、engine を stdlib-only の内部層と
 することを定めている。runtime に `nix` / `git` をサブプロセスで要求する形は ADR-0006
-「engine を Go バイナリとし lib はデータを生む」による。
+「engine を Go バイナリとし lib はデータを生む」が定めるが、同 ADR は stdlib-only 自体を
+決めていないため、側面の根拠として `justifies` は張らない（外部コマンドの限定そのものの
+帰属は REQ-6c4e174a が担当する）。

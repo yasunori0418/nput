@@ -42,6 +42,11 @@ specification_ja: |
 
 `docs/spec.md`「エラー仕様」節の表のうち、要求された操作が成立しないことによる CLI 停止の
 3 行（`rollback` で前世代なし・`nput.<name>` が entrypoint に不在・entrypoint が発見できない）。
+同じ述語を満たす他の行（`nput.default` 未定義・`gitignore` の非 project config・`--manifest`
+の併用・experimental-features 未有効）は、下記のとおり各担当 item が規範を持つため除く。
 
-決定の実体は ADR-0007「CLI を一次 UX とし entrypoint を発見する」で、CLI が entrypoint と
-named manifest を解決する責務を負うことを定めている。
+この 3 行が挙げる停止そのものに対応する決定を持つ ADR は無く、`docs/spec.md` が一次記述に
+あたる。前提となる「CLI が entrypoint と named manifest を解決する」ことは ADR-0007
+「CLI を一次 UX とし entrypoint を発見する」が定めるが、同 ADR は解決できなかったときの
+扱いを決めていないため、側面の根拠として `justifies` は張らない（前提そのものの帰属は
+REQ-1cc080f6 / REQ-496b1a07 が担当する）。
