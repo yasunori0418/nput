@@ -17,8 +17,16 @@ depends_on:
 |---|---|
 | `docs/model.yaml` | カスタムスキーマ。10 型と relation を定義し、sara の組み込みモデルを全面置換する |
 | `sara.toml` | リポジトリ設定 |
-| `sara check` の CI ジョブ | broken reference / duplicate ID / cycles を検出する |
+| `sara` ジョブ | `test.yml` 内の 1 ジョブ。`sara check` で broken reference / duplicate ID / cycles を検出し、同じジョブで `dev/tests/sara-id.sh` も実行する |
 | `sara-id` | devShell 同梱の採番コマンド。UUIDv4 を引き、8 文字 prefix の重複を確認して再生成する |
+
+採番契約のテストを同じジョブへ載せるのは、テストが「人が思い出したときだけ動く」状態を避ける
+ため。CI の明示ステップとして固定する。
+
+`sara` ジョブは `test.yml` に同居するが、CI パイプライン（INF-d1230e1f）の変更検出ジョブは
+**再利用しない**。あちらの filter は nix / Go のソースを対象にするのに対し、この検査が最も効くのは
+docs のみの PR だからで、job ローカルの filter（`docs/**` / `sara.toml` / `dev/**` /
+`.github/workflows/test.yml`）を別に置く。CI 用の devShell も sara 専用のものへ分ける。
 
 先行して試作された grep / awk による ID 突合は、参照先 ID の実在を検証しないという穴を抱えていた
 （存在しない `TC-999` を書いても検出されずカバー率に計上される）。sara の broken reference 検出が

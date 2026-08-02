@@ -33,6 +33,14 @@ main push でのみ投入し、docs だけの変更では走らせない。
 なお required status check を持つ CI パイプライン（INF-d1230e1f）と異なり、この workflow は
 main への push 後に走るため、トリガ段の `paths` フィルタをそのまま使える。
 
+## CI パイプラインへの依存
+
+投入の実行契機は独立（PR 対 main push）だが、**実行基盤は CI パイプライン（INF-d1230e1f）に
+乗っている**。この workflow は自前の nix セットアップを持たず、`.github/actions/setup-nix`
+（`install-nix-action` + cachix 認証込みの `cachix-action`）へ丸ごと委ねる。投入経路そのものが
+その composite action の中にあるため、`setup-nix` の構成が変われば投入も直接影響を受ける。
+os×system マトリクスの定義も CI パイプラインと同一のものを踏襲する。
+
 ## 出典
 
 ADR-0028（cachix push を main push の os マトリクスで実装する）。
