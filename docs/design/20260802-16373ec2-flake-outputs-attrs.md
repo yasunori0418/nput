@@ -39,12 +39,13 @@ outputs = { ... }: {
 
 - **`packages.<system>.nput`**: REQ-14f0aec9 が求める PATH 常駐の CLI の配布口。
   `buildGoModule` で `cmd/nput` + `internal` をまとめてビルドする形にすることで、
-  REQ-637599dc が求める依存の固定（nixpkgs の go への pin と vendorHash）が
-  output の作り方として表れる。project mode で devShell へ同梱するときも
-  この attr を参照する
+  REQ-637599dc が求める vendorHash による依存の固定が output の作り方として表れる
+  （Go を nixpkgs の go に pin することと `toolchain` ディレクティブ不使用は
+  同 REQ の規範で、output の形では表れない）。project mode で devShell へ同梱する
+  ときもこの attr を参照する
 - **`templates.<name>`**: REQ-6be1cbf1 の `nput init` が `nix flake init -t` の
   透明なラッパーである以上、テンプレート実体は nix 標準の `templates` output に
-  置く必要がある。`standalone` / `project` の 2 本を置くことも同 REQ が定める
+  置く必要がある。`standalone` / `project` の 2 本を置くことも REQ-6be1cbf1 が定める
   （各テンプレートの中身は REQ-196ddabf の担当で、本 item は attr 名とパスの公開のみ）
 - **`homeManagerModules` / `nixosModules` / `darwinModules`**: 各モジュールシステムの
   慣例 attr 名に合わせる。中身は `modules/` の各ファイルを指すだけ
