@@ -25,8 +25,8 @@ specification_ja: |
   「配置したもの」のマニフェストは、純粋関数 `lib.mkManifest` が生成する link farm derivation の
   一部として store 内に埋め込まなければならない（当該 derivation が何を含むかは REQ-60e6b49c が
   規定し、ここでは繰り返さない）。store 外の可変 JSON は持たず、`manifest.json` は不変とする。
-  engine は実行時に、解決後 `profileDir` 単位の flock を
-  取得し、前世代の store マニフェストと新世代を diff して消えた entry を判定し、symlink /
+  engine は実行時に、解決後 `profileDir` 単位の flock を取得し、前世代の store マニフェストと
+  新世代を diff して消えた entry を判定し、symlink /
   out-of-store symlink / place-once copy を配置し（新規・張替を先に、stale 除去を最後に）、
   全て成功してから `nix-env --profile <profileDir>/profile --set <link-farm-drv>` で nput の nix
   profile を更新しなければならない。この `--set` が全モード共通のコミット点であり、途中失敗は
@@ -80,9 +80,10 @@ specification_ja: |
 
 逆に、上の写しには現れないが規範文が持つものが 1 つある。**1 profile = 1 config の atomic
 性**で、原文はこれを本節ではなく「CLI 仕様」→「サブコマンド体系」の `apply` の箇条書き
-（「profile は config 単位で atomic」）で述べる。当該箇所を分割した REQ-c2d44626 と、
-これを論拠として引く REQ-c890ce4a がいずれも規範の所在を本 item に置いているため、profile の
-機構を持つ本 item が引き受けて規範化した。
+（「profile は config 単位で atomic」）で述べる。atomic 性は「1 config が 1 profile を持ち、
+その世代がコミット点で丸ごと切り替わる」という profile の機構そのものの性質であり、機構を
+規定する本 item が引き受けるのが所在として自然なため、ここで規範化した（当該箇所を分割した
+REQ-c2d44626 と、これを論拠として引く REQ-c890ce4a も規範の所在を本 item に置いている）。
 
 ## 出典
 
