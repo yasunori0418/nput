@@ -3,14 +3,20 @@ id: "REQ-97c1e088-a17e-46d9-a9a1-83d1757d0f7d"
 type: requirement
 name: "mkManifest の引数は pkgs / entries / root の 3 つとする"
 specification: |
-  `lib.mkManifest` SHALL take three arguments: `pkgs` (an nixpkgs attrset, REQUIRED, used
-  for derivation building such as `runCommandLocal` and to obtain `pkgs.lib`), `entries`
-  (an attrset of placement definitions whose attribute keys are target paths), and `root`
-  (`string | marker`, REQUIRED, the base of the placement destination).
+  `lib.mkManifest` SHALL accept exactly three arguments: `pkgs`, `entries` and `root`.
+  `pkgs` SHALL be an nixpkgs attrset used for derivation building (such as
+  `runCommandLocal`) and to obtain `pkgs.lib`, and it SHALL be REQUIRED with no default.
+  `entries` SHALL be an attrset of placement definitions. `root` SHALL be the base of the
+  placement destination. The obligations specific to `root` — that it is REQUIRED and that
+  its type is `string | marker` — are stated by REQ-4ec3accc and REQ-37b56673 and are NOT
+  restated here.
 specification_ja: |
-  `lib.mkManifest` は引数として `pkgs`（attrset・必須。derivation ビルドと `pkgs.lib` の
-  取得に使う）、`entries`（配置定義の attrset。属性キーが target パス）、`root`
-  （`string | marker`・必須。配置先の基準）を取らなければならない。
+  `lib.mkManifest` は引数として `pkgs` / `entries` / `root` の 3 つを取らなければ
+  ならない。`pkgs` は derivation ビルド（`runCommandLocal` 等）と `pkgs.lib` の取得に
+  使う nixpkgs の attrset で、デフォルトを持たない必須引数とする。`entries` は配置定義の
+  attrset とする。`root` は配置先の基準とする。`root` 固有の規範（明示必須であること・
+  型が `string | marker` であること）は REQ-4ec3accc と REQ-37b56673 が規定しており、
+  本 item では重ねて規定しない。
 ---
 # REQ-97c1e088: mkManifest の引数は pkgs / entries / root の 3 つとする
 
@@ -24,6 +30,11 @@ specification_ja: |
 
 `pkgs` を引数で受け取るのは lib 層が unparameterized（`lib` / `pkgs` を自身で保持しない）
 であるため。各関数が呼び出し時に必要なものを明示引数として要求する。
+
+`root` の必須性と型の内訳は REQ-4ec3accc（明示必須・暗黙デフォルトなし）と
+REQ-37b56673（`string | marker` の union と各マーカーの対応）が正とする。上の表は
+原文の引数表をそのまま写したもので、規範の重複を避けるため本 item の規範文では
+`root` 固有の規定を持たない。
 
 ## 出典
 

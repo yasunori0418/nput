@@ -16,8 +16,10 @@ specification_ja: |
 `root` は**明示必須**で、暗黙デフォルトを持たない。
 
 - `root` を省略すると Nix 評価時にエラーになる。
-- 「省略したら `$HOME`」のような暗黙の既定値は置かない。配置先という破壊的操作の
-  基準点を、書き手が意識せず決めてしまう状態を作らないため。
+- 「省略したら `$HOME`」のような暗黙の既定値は置かない。
+- 明示必須は `mkManifest` / CLI entrypoint の層に課す。モジュール（home-manager →
+  `homeRoot` / devShell → `projectRoot`）は自分の性質で root を pin するため、
+  モジュール利用者は root を再指定しない（→ ADR-0007 §2）。
 
 ## 出典
 

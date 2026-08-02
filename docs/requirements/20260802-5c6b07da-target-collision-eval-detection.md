@@ -1,7 +1,7 @@
 ---
 id: "REQ-5c6b07da-3d06-414d-8770-4f438234b322"
 type: requirement
-name: "同一 manifest 内の target 衝突は評価時に検出して停止する"
+name: "target 衝突の検出経路を同一 manifest 内と cross-config で分ける"
 specification: |
   A collision in which two distinct keys A and B explicitly override the `target` field to
   the same value SHALL be detected as a duplicate of the normalized target string and
@@ -16,7 +16,7 @@ specification_ja: |
   eval では検出できず、engine 実行時の後勝ち + foreign symlink warning として扱う。
   両者は別経路とする。
 ---
-# REQ-5c6b07da: 同一 manifest 内の target 衝突は評価時に検出して停止する
+# REQ-5c6b07da: target 衝突の検出経路を同一 manifest 内と cross-config で分ける
 
 ## 仕様
 
