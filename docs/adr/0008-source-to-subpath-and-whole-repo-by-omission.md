@@ -4,6 +4,9 @@ type: adr
 name: "entries の `source` を `subpath` に改名し、リポジトリ全体は subpath 省略で表す"
 status: 採用
 origin: "「リポジトリ全体を示す文字列として `\".\"` 以外の表現は無いか」という問いの設計検討"
+justifies:
+  - "REQ-27b75fe6-6c36-44a8-8cd3-5cc98043022a"
+  - "REQ-3e446ad9-a6f4-4229-b5c5-184754b0ef51"
 references:
   - "ADR-0001"
   - "ADR-0004"

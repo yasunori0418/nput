@@ -5,6 +5,7 @@ name: "out-of-store symlink を明示関数に降格し store link に統一す�
 status: 採用
 justifies:
   - "REQ-eb363122-385a-499c-a074-c95efb949d07"
+  - "REQ-99ca5381-6c53-426c-b145-7b4297c53868"
 ---
 # ADR-0001: out-of-store symlink を明示関数に降格し store link に統一する
 

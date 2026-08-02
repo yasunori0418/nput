@@ -13,6 +13,11 @@ justifies:
   - "REQ-a8edc58f-4adc-4637-b888-ab8ccc7e73e4"
   - "REQ-a480c183-40ce-4201-93b5-65a7a59c1b9e"
   - "REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9"
+  - "REQ-79ce0a09-f9bd-4e61-ba7f-45fb5643137b"
+  - "REQ-dedd2c28-bba3-4ecf-80c9-8c77347e8e1f"
+  - "REQ-dd10d820-e453-4099-a47a-ffb9a7de02fb"
+  - "REQ-0b0cd1e3-bfeb-45c1-978d-e2e11c568336"
+  - "REQ-b12fc3c0-d7fe-4003-922c-f3ac0d969b66"
 references:
   - "ADR-0002"
   - "ADR-0005"
