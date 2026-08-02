@@ -1,9 +1,9 @@
 ---
 id: "REQ-fc1118b1-b0e8-4ddf-80f6-c70956651693"
 type: requirement
+name: "同一 target を複数 config で狙うことによる振動はユーザー責任とし warning で可視化するに留める"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "同一 target を複数 config で狙うことによる振動はユーザー責任とし warning で可視化するに留める"
 specification: |
   Where two different configs aim at the same target, the drift repair may oscillate on
   every re-entry of the `shellHook` — A places it, B detects it as foreign and takes it,

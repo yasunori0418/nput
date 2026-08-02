@@ -1,10 +1,10 @@
 ---
 id: "REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a"
 type: requirement
+name: "HM モジュール経由でも名前つき config ごとに役割分離した独立 profile を取れる"
 derives_from:
   - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "HM モジュール経由でも名前つき config ごとに役割分離した独立 profile を取れる"
 specification: |
   A user of the home-manager module SHALL also be able to hold several independent
   profiles separated by role, each with its own generations, and role separation SHALL NOT

@@ -1,10 +1,10 @@
 ---
 id: "REQ-e1e1114b-ba07-4d57-8e04-6e30e39a5da3"
 type: requirement
+name: "nput.backup は engine 起動の配線レイヤーのオプションで manifest には影響しない"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "nput.backup は engine 起動の配線レイヤーのオプションで manifest には影響しない"
 specification: |
   The `nput.backup` submodule, common to every module, SHALL wire `--backup=<suffix>` onto
   the `nput apply --manifest` invocation performed at activation only where

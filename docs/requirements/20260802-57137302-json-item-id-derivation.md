@@ -1,10 +1,10 @@
 ---
 id: "REQ-57137302-de29-4f71-a565-034cd5de080b"
 type: requirement
+name: "item id は identity の JCS を SHA-256 した小文字 hex とする"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "item id は identity の JCS を SHA-256 した小文字 hex とする"
 specification: |
   The item id SHALL be derived as `id = lowercase-hex(sha256(JCS(identity)))`, where the
   identity is `kind="entry"` and `key={target}`. The key SHALL contain only the

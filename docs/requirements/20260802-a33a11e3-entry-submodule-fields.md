@@ -1,10 +1,10 @@
 ---
 id: "REQ-a33a11e3-830d-4142-88ed-4c1fc35e7f74"
 type: requirement
+name: "entry submodule のフィールドは src / subpath / target / method の 4 つとする"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "entry submodule のフィールドは src / subpath / target / method の 4 つとする"
 specification: |
   The value of each `entries` attribute SHALL be an entry submodule holding exactly four
   fields: `src` (`path | set | marker`, required), `subpath` (`string`, optional),

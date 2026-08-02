@@ -1,9 +1,9 @@
 ---
 id: "REQ-fc64de4c-c82b-419c-8706-07d8d97daa37"
 type: requirement
+name: "空の entries は正当な全クリアとして扱い、エラーにも警告にもしない"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "空の entries は正当な全クリアとして扱い、エラーにも警告にもしない"
 specification: |
   `entries = {}` SHALL be treated as a legitimate full clear, and SHALL NOT be an error or
   a warning. Every nput symlink of the previous generation SHALL be removed by conservative

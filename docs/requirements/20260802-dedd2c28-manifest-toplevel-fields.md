@@ -1,10 +1,10 @@
 ---
 id: "REQ-dedd2c28-bba3-4ecf-80c9-8c77347e8e1f"
 type: requirement
+name: "manifest.json のトップレベルは schemaVersion / root / entries の 3 フィールドとする"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "manifest.json のトップレベルは schemaVersion / root / entries の 3 フィールドとする"
 specification: |
   The top level of `manifest.json` SHALL consist of exactly three fields: `schemaVersion`
   (int, the contract version), `root` (object, the kind of the placement base), and

@@ -1,10 +1,10 @@
 ---
 id: "REQ-0b0cd1e3-bfeb-45c1-978d-e2e11c568336"
 type: requirement
+name: "manifest.json の entries は attrset を配列へ正規化し 5 フィールドを記録する"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "manifest.json の entries は attrset を配列へ正規化し 5 フィールドを記録する"
 specification: |
   The `entries` of `manifest.json` SHALL be the Nix attrset normalized into an array, so
   that the engine reads an array. Each element SHALL record five fields: `srcKind`

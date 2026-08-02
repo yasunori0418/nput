@@ -1,9 +1,9 @@
 ---
 id: "REQ-0e341430-17f0-498b-9439-65491652163a"
 type: requirement
+name: "rollback は FS を先に収束させてから profile ポインタを最後に移す"
 derives_from:
   - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
-name: "rollback は FS を先に収束させてから profile ポインタを最後に移す"
 specification: |
   `nput rollback <name>` SHALL return the placement to the previous generation. Because
   nput places into an arbitrary root rather than into the profile directory itself, moving

@@ -1,9 +1,9 @@
 ---
 id: "REQ-89c7baf9-9be0-417b-bd2d-b2e4edabe796"
 type: requirement
+name: "rollback は名指し必須で --all に対応しない"
 derives_from:
   - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
-name: "rollback は名指し必須で --all に対応しない"
 specification: |
   `nput rollback` SHALL require an explicitly named config and SHALL NOT support `--all`,
   because rolling every config back at once is destructive and a footgun, and a failure

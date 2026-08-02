@@ -1,10 +1,10 @@
 ---
 id: "REQ-c9ab91c1-f778-4f87-a2ea-c66d6b3c2575"
 type: requirement
+name: "祖先 symlink は自己記録 stale のみ配置前除去し、それ以外はエラーで停止する"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "祖先 symlink は自己記録 stale のみ配置前除去し、それ以外はエラーで停止する"
 specification: |
   Before placing a symlink, the engine SHALL walk every ancestor component of the target
   with `lstat` and SHALL treat an ancestor symlink asymmetrically. An ancestor that is

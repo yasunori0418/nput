@@ -1,10 +1,10 @@
 ---
 id: "REQ-dd10d820-e453-4099-a47a-ffb9a7de02fb"
 type: requirement
+name: "manifest.json の root は rootKind を持ち fixed のときだけ絶対パスを併記する"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "manifest.json の root は rootKind を持ち fixed のときだけ絶対パスを併記する"
 specification: |
   The `root` object of `manifest.json` SHALL carry `rootKind`, one of `"project"`,
   `"home"`, `"system"` or `"fixed"`. `project`, `home` and `system` are resolved by the

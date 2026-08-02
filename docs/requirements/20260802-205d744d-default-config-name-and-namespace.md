@@ -1,9 +1,9 @@
 ---
 id: "REQ-205d744d-5a53-4511-bc09-892ba01d4e6f"
 type: requirement
+name: "config 名 default を慣例の解決先とし専用 nput 名前空間で packages を汚さない"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "config 名 default を慣例の解決先とし専用 nput 名前空間で packages を汚さない"
 specification: |
   The config name `default` SHALL be a special name following the flake `default`
   convention, and SHALL be the resolution target used by `nput apply` when the name is

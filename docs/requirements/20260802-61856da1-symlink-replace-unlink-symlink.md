@@ -1,10 +1,10 @@
 ---
 id: "REQ-61856da1-8883-401e-ad57-9f326b96d400"
 type: requirement
+name: "既存 symlink の張替えは unlink + symlink の 2 操作で行い冪等な再実行で収束させる"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "既存 symlink の張替えは unlink + symlink の 2 操作で行い冪等な再実行で収束させる"
 specification: |
   Replacing an existing symlink SHALL be carried out as two operations, an unlink followed
   by a symlink, and an atomic swap based on rename SHALL NOT be adopted. A crash between

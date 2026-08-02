@@ -1,9 +1,9 @@
 ---
 id: "REQ-e79178f5-5865-4444-a05d-3ab06f33cd6d"
 type: requirement
+name: "project mode の配置物は ephemeral とし、activation は git 状態に干渉しない"
 derives_from:
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "project mode の配置物は ephemeral とし、activation は git 状態に干渉しない"
 specification: |
   What is placed in project mode SHALL be ephemeral, outside the subject of a commit.
   Activation MUST NOT touch `.gitignore` and MUST NOT interfere with the state of git.

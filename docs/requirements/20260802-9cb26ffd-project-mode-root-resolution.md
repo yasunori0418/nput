@@ -1,9 +1,9 @@
 ---
 id: "REQ-9cb26ffd-071e-4c68-a6fc-faac6373b75e"
 type: requirement
+name: "project mode の root は git toplevel から解決し、config 相対も CWD 相対も採らない"
 derives_from:
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "project mode の root は git toplevel から解決し、config 相対も CWD 相対も採らない"
 specification: |
   In project mode (`root = projectRoot`) the root SHALL be resolved by default from
   `git rev-parse --show-toplevel`, so that running from any subdirectory resolves to the

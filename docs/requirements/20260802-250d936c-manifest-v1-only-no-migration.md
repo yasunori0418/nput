@@ -1,10 +1,10 @@
 ---
 id: "REQ-250d936c-1df0-491d-a7af-708f38b61f33"
 type: requirement
+name: "MVP は manifest v1 のみを発行・受理しマイグレーション機構を持たない"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "MVP は manifest v1 のみを発行・受理しマイグレーション機構を持たない"
 specification: |
   The MVP SHALL emit and accept `schemaVersion = 1` only, and a migration mechanism for
   reading older schema versions MUST NOT be built up front. A backward-compatibility

@@ -1,9 +1,9 @@
 ---
 id: "REQ-687e225f-5046-46db-88fb-f9e527a1e97a"
 type: requirement
+name: "apply 修飾フラグは --all と合成できる"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "apply 修飾フラグは --all と合成できる"
 specification: |
   `apply --all --recopy` SHALL be composable: `--recopy` SHALL be applied to each config
   selected by `--all` (with a filter such as `--project-root` when given), since

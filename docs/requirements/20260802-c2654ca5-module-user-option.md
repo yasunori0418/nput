@@ -1,9 +1,9 @@
 ---
 id: "REQ-c2654ca5-62c2-4e4b-ad67-ffc5468f429b"
 type: requirement
+name: "NixOS / nix-darwin モジュールは配置先ユーザーを特定する user オプションを必須で取る"
 derives_from:
   - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
-name: "NixOS / nix-darwin モジュールは配置先ユーザーを特定する user オプションを必須で取る"
 specification: |
   The NixOS and nix-darwin modules SHALL take, in addition to the common options, a
   required `nput.user :: string` used to identify the user placement is for. In the

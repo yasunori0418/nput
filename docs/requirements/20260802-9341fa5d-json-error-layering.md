@@ -1,10 +1,10 @@
 ---
 id: "REQ-9341fa5d-836e-4023-af53-cc7d273438d1"
 type: requirement
+name: "エンベロープのエラーは主体の有無で層を分けコードを分類する"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "エンベロープのエラーは主体の有無で層を分けコードを分類する"
 specification: |
   For a single-config command the subject is fixed at the start of RunE, at the point of
   the name argument, so every failure of that execution (entrypoint discovery, eval /

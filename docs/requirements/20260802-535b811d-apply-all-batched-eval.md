@@ -1,9 +1,9 @@
 ---
 id: "REQ-535b811d-dfc5-4eac-92db-737e70eb5415"
 type: requirement
+name: "apply --all は rootKind を 1 回の一括 eval で取る"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "apply --all は rootKind を 1 回の一括 eval で取る"
 specification: |
   `apply --all` SHALL obtain the rootKinds in a single batched eval: a map from config
   name to rootKind SHALL be obtained at once with

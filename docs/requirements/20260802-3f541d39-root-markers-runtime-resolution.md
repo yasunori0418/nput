@@ -1,10 +1,10 @@
 ---
 id: "REQ-3f541d39-da41-4ef8-858b-707f54cf6a29"
 type: requirement
+name: "root マーカーは kind を運ぶ入れ物でパス解決は engine が行う"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "root マーカーは kind を運ぶ入れ物でパス解決は engine が行う"
 specification: |
   `lib.projectRoot` / `lib.homeRoot` / `lib.systemRoot` SHALL be pure functions returning
   a marker attrset that carries the kind of runtime resolution. They MUST NOT be sugar

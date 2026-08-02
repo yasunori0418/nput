@@ -1,11 +1,11 @@
 ---
 id: "REQ-d85f0cef-0f1e-4897-a841-41b61a8dae51"
 type: requirement
+name: "lib は nixpkgs.lib のみに依存する純データ生成器である"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
   - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
-name: "lib は nixpkgs.lib のみに依存する純データ生成器である"
 specification: |
   `lib` (`mkManifest` and the marker functions) SHALL be a pure data generator that
   depends only on nixpkgs.lib. It MUST NOT carry placement logic (filesystem operations,

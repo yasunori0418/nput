@@ -1,9 +1,9 @@
 ---
 id: "REQ-dec58330-6dad-47f7-8f56-2402764a89c7"
 type: requirement
+name: "apply --manifest はビルド済み link-farm を engine へ直接適用する"
 derives_from:
   - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
-name: "apply --manifest はビルド済み link-farm を engine へ直接適用する"
 specification: |
   `nput apply --manifest <link-farm>` SHALL apply a pre-built link-farm directly to the
   engine, as the seam used by host / module activation. It SHALL NOT perform entrypoint

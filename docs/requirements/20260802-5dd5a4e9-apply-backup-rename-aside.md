@@ -1,10 +1,10 @@
 ---
 id: "REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b"
 type: requirement
+name: "apply --backup は配置を塞ぐ記録外実体を rename 退避してから配置する"
 derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
-name: "apply --backup は配置を塞ぐ記録外実体を rename 退避してから配置する"
 specification: |
   `nput apply <name> --backup[=<suffix>]` SHALL rename an existing *unrecorded* entity
   that blocks placement — such as a foreign regular file / directory, a copy structure

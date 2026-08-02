@@ -1,9 +1,9 @@
 ---
 id: "REQ-496b1a07-5b74-416b-9e5f-3952b4c03737"
 type: requirement
+name: "entrypoint は nput.<name> に named manifest を公開し CLI は形ごとの attr path で build する"
 derives_from:
   - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
-name: "entrypoint は nput.<name> に named manifest を公開し CLI は形ごとの attr path で build する"
 specification: |
   An entrypoint SHALL expose a named manifest (the result of `mkManifest`) at
   `nput.<name>`, so that a single project can hold multiple configurations, each with its
