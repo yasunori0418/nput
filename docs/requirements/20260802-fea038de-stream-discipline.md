@@ -1,6 +1,9 @@
 ---
 id: "REQ-fea038de-55eb-45ac-87fc-ec3a7287592a"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "stdout は機械可読出力を専有しレポートと warning は stderr へ出す"
 specification: |
   stdout SHALL be exclusively occupied by machine-readable output (the enumeration of

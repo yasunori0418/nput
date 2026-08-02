@@ -1,6 +1,8 @@
 ---
 id: "REQ-b4e4b65d-6e35-40c3-a00e-20c14043df6f"
 type: requirement
+derives_from:
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 name: "recopy の上書きは削除ではなく同一親内への rename 退避で行う"
 specification: |
   When `apply --recopy` overwrites an existing copy target, it SHALL do so not by deleting

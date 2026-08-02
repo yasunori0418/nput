@@ -1,6 +1,8 @@
 ---
 id: "REQ-059eb4d5-63fb-4f8e-b705-11b5e2ed4ae5"
 type: requirement
+derives_from:
+  - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
 name: "--all は config ごとの SubjectResult を単一実行と同一形状で積む"
 specification: |
   For `apply --all` / `list-generations --all` / `gitignore --all`, one `SubjectResult`

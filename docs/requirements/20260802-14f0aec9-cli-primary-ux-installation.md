@@ -1,6 +1,9 @@
 ---
 id: "REQ-14f0aec9-abae-4621-82f3-40536a1ad904"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "nput CLI は PATH 常駐の一次 UX で、project mode は devShell 同梱を canonical とする"
 specification: |
   The `nput` CLI (`packages.nput`) SHALL be the primary UX, installed on PATH. Two

@@ -1,6 +1,9 @@
 ---
 id: "REQ-61c05e09-0bde-4f74-9a96-03185f9df606"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "--root は全モード共通で解決 root を明示上書きする"
 specification: |
   The `--root <path>` flag SHALL explicitly override the resolved root, in every mode

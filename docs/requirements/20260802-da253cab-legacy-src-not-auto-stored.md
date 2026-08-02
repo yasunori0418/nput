@@ -1,6 +1,9 @@
 ---
 id: "REQ-da253cab-34d4-4d6e-96f0-de99e012b376"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "legacy entrypoint では相対 path の src が自動で store 化されない"
 specification: |
   For a flake entrypoint the whole directory is copied into the store before evaluation,

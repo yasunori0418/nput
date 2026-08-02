@@ -56,3 +56,9 @@ bash・詳細は `tests/e2e/README.md`）が、flake entrypoint からの `nix b
 
 決定の実体は ADR-0012「CI・テスト実行基盤を cryoflow 構成踏襲で確定する」で、非 NixOS の
 実 nix 上で E2E を回す検証範囲を定めている。
+
+> **`derives_from` を持たないのは意図的**（→ Issue #211）。この要求は「非 NixOS で動く」
+> 主張を検証するための要求であり、ユーザーの使われ方（use_case）から導かれるものではない。
+> 表の右列が指す仕様は個々に use_case へ紐づいているが、それを E2E で検証すること自体の
+> 動機は品質保証にある。REQ-2381d93a・REQ-690f2730・REQ-901993e9 と同類で、いずれも
+> use_case を持たない orphan として残す。

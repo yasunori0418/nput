@@ -1,6 +1,9 @@
 ---
 id: "REQ-b74a118a-1272-44eb-944c-7725163211c6"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "engine は第三者依存ゼロの stdlib-only とし内部層に閉じる"
 specification: |
   The engine SHALL be stdlib-only with zero third-party dependencies, and SHALL be an

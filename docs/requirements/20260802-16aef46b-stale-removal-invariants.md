@@ -1,6 +1,8 @@
 ---
 id: "REQ-16aef46b-7bb8-4ca1-b962-e9f3ed1fd1d2"
 type: requirement
+derives_from:
+  - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
 name: "stale 除去は前世代の記録通りを指す symlink のみに限り、copy は消さず orphan を警告する"
 specification: |
   Removal SHALL be conservative. Only a symlink that the previous-generation manifest

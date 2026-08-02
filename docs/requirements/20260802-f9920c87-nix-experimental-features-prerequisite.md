@@ -1,6 +1,9 @@
 ---
 id: "REQ-f9920c87-8551-4aa3-bf03-26fdf4191ed6"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "nix experimental-features は前提条件とし、CLI は自動付与せず案内エラーで停止する"
 specification: |
   The CLI uses `nix eval` / `nix build` (the new CLI) internally, and therefore SHALL

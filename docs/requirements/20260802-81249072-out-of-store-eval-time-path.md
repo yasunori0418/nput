@@ -1,6 +1,8 @@
 ---
 id: "REQ-81249072-56b8-42f5-807b-ea623c1efe99"
 type: requirement
+derives_from:
+  - "UC-01b896b4-04b9-40d0-bf9e-966eaf64c3d4"
 name: "out-of-store のローカルパスは評価時に確定し、target の root 解決には影響しない"
 specification: |
   The local path of an out-of-store entry, settled at Nix evaluation time (REQ-eb363122),

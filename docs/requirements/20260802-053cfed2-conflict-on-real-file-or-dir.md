@@ -1,6 +1,9 @@
 ---
 id: "REQ-053cfed2-265a-4997-a27b-97b0bed10d8a"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "target に通常ファイル・ディレクトリが在れば上書きせずエラーで停止する"
 specification: |
   When a regular file or a directory exists at the target of a symlink entry, the engine

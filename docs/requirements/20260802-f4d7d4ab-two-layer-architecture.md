@@ -1,6 +1,9 @@
 ---
 id: "REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "nput は CLI とエンジンの 2 層で構成する"
 specification: |
   nput SHALL be composed of two layers: the nput CLI (`packages.nput`, the primary UX

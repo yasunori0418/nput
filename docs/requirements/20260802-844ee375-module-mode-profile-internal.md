@@ -1,6 +1,8 @@
 ---
 id: "REQ-844ee375-919f-4341-81e1-a5f89fd32840"
 type: requirement
+derives_from:
+  - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
 name: "module 時は rollback を host へ一本化し、nput profile は前進のみで追従する"
 specification: |
   Under a module, `nput rollback` SHALL NOT be exposed and user-facing rollback SHALL be

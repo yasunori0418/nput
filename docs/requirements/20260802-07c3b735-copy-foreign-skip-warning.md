@@ -1,6 +1,8 @@
 ---
 id: "REQ-07c3b735-3744-4778-a640-8c6fb66f4aa7"
 type: requirement
+derives_from:
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 name: "copy が foreign 実ファイルを skip したときは warning で可視化する"
 specification: |
   When the target of a copy entry exists and the previous-generation manifest does not

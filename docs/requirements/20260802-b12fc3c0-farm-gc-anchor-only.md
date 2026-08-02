@@ -1,6 +1,8 @@
 ---
 id: "REQ-b12fc3c0-d7fe-4003-922c-f3ac0d969b66"
 type: requirement
+derives_from:
+  - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
 name: "symlink farm は GC アンカー専用でアンカーは store-backed な symlink entry に限る"
 specification: |
   The symlink farm contained in the derivation returned by `mkManifest` SHALL exist

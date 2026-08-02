@@ -1,6 +1,8 @@
 ---
 id: "REQ-d2277c7a-7992-49af-a9dc-4cc73843a6f9"
 type: requirement
+derives_from:
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 name: "copy は target 不在のときだけマテリアライズする place-once で世代管理の対象外とする"
 specification: |
   A copy entry SHALL be materialized only while the target is absent. When the subpath

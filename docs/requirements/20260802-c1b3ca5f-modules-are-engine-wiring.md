@@ -1,6 +1,8 @@
 ---
 id: "REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9"
 type: requirement
+derives_from:
+  - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
 name: "全モジュールと devShell は engine をキックするだけの配線とし、ネイティブ機構へ翻訳しない"
 specification: |
   Basic use SHALL be conceived around project mode and the standalone CLI, support for

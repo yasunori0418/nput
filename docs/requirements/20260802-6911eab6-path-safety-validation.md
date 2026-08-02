@@ -1,6 +1,9 @@
 ---
 id: "REQ-6911eab6-12b4-457c-9db4-d7430a9e9b3f"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "target / subpath のパス安全性を評価時に検査する"
 specification: |
   `normalizeManifest` SHALL validate the path safety of `target` and `subpath`. An

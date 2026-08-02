@@ -1,6 +1,9 @@
 ---
 id: "REQ-d1b5b3f5-10a0-400d-9f03-ba00c63d1c34"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "mkManifest 自身が evalModules で入力を検査する単一ゲートになる"
 specification: |
   `lib.mkManifest` SHALL itself run `lib.evalModules` internally to validate and normalize

@@ -1,6 +1,9 @@
 ---
 id: "REQ-622787dc-4512-4ce9-9c7d-7b32bbb70557"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "symlink 配置は親 dir を作り配置元/subpath を指すリンクを張り、foreign symlink は警告して後勝ちする"
 specification: |
   To place a symlink the engine SHALL first create the parent directory of the target

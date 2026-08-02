@@ -1,6 +1,8 @@
 ---
 id: "REQ-31dae599-f3a3-4bbe-b367-c955535265da"
 type: requirement
+derives_from:
+  - "UC-403fbe32-b146-401b-8b53-fe67c1e169c5"
 name: "reset の確認プロンプトは stdin が TTY のときだけ出し、非 TTY で同意が無ければ即エラー停止する"
 specification: |
   The confirmation prompt of `nput reset` SHALL be shown only while stdin is a TTY. When

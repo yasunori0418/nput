@@ -1,6 +1,8 @@
 ---
 id: "REQ-62eda895-efd4-4eaf-a58b-600e8637da75"
 type: requirement
+derives_from:
+  - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
 name: "symlink farm の GC アンカー名は target のハッシュとする"
 specification: |
   The GC anchor name in the symlink farm SHALL be a hash of `target` (a shortened hex of

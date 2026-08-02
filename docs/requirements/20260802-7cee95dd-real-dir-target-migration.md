@@ -1,6 +1,9 @@
 ---
 id: "REQ-7cee95dd-bc5a-4e86-bebc-6080ef78fe26"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "実 dir の target は全 leaf が除去可能なときだけ全体を配置前除去して symlink 化する"
 specification: |
   When the target itself is a real directory, the engine SHALL classify every leaf below

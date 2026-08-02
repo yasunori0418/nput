@@ -1,6 +1,9 @@
 ---
 id: "REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "実行フローの順序は eval 先行 → flock → build とし build をロック内に閉じる"
 specification: |
   The order of the execution flow SHALL be eval first, then flock, then build. Because

@@ -1,6 +1,8 @@
 ---
 id: "REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0"
 type: requirement
+derives_from:
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "project mode は世代を非公開にし、derivation 同一なら世代を積まず lstat ドリフト修復だけ行う"
 specification: |
   In project mode the profile SHALL be keyed on the resolved root, so that cloning the

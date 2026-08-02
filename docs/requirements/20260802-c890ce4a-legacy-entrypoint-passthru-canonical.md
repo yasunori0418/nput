@@ -1,6 +1,9 @@
 ---
 id: "REQ-c890ce4a-6528-4ab3-ac86-23d7aebff7da"
 type: requirement
+derives_from:
+  - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
+  - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 name: "legacy entrypoint は mkShell passthru 形を canonical とし CLI の attr path を分岐させない"
 specification: |
   For `shell.nix` / `default.nix`, the canonical form SHALL be a passthru form that
