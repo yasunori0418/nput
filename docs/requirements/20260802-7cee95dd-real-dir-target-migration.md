@@ -8,8 +8,9 @@ specification: |
   by the entry's own previous generation, matching that record on disk, and absent from
   the next generation — or an empty sub-directory of any origin, SHALL the whole target be
   removed before placement (PreRemove: leaves by unlink, directories by rmdir from child
-  to parent) and the symlink newly placed; this removal SHALL be silent by default and
-  SHALL be made visible under `-v`. If even one other leaf exists — a real file or
+  to parent) and the symlink newly placed; this removal SHALL NOT be reported as a warning,
+  being an intended migration, and SHALL instead fall under the ordinary output discipline
+  of the placement report. If even one other leaf exists — a real file or
   directory with content, a foreign symlink, or a self-contradictory entry that also
   remains in the next generation — the command SHALL stop with an error for the target as
   a whole and SHALL NOT remove it partially.
@@ -18,7 +19,8 @@ specification_ja: |
   全 leaf が「recorded かつ stale な symlink（当該 entry 自身の前世代が記録・on-disk 一致・
   次世代に無い）」または「空の sub dir（由来を問わない）」であるときに限り、target 全体を
   配置前に除去（PreRemove: leaf は unlink・dir は子から親へ rmdir）してから symlink を新規
-  配置する。この除去は既定で silent とし、`-v` で可視化する。それ以外の leaf が 1 つでも
+  配置する。この除去は意図された移行であり warning にしてはならず、配置レポートの通常の出力
+  規律に従わせる。それ以外の leaf が 1 つでも
   ある（中身のある実 file / dir・foreign symlink・次世代にも残る自己矛盾）ときは target 全体
   をエラーで停止しなければならず、部分除去をしてはならない。
 ---
@@ -41,7 +43,9 @@ target 自身が実 dir のとき、配下（任意深さ）の全 leaf を判�
 > REQ-9b0046e0 の担当（退避そのものの契約は REQ-5dd5a4e9）。
 
 祖先 symlink の migration は REQ-c9ab91c1、method 変更 symlink→copy の migration は
-REQ-2b48620a の担当。
+REQ-2b48620a の担当。除去を既定 silent とし `-v` で可視化するという出力規律そのもの
+（→ ADR-0031）は REQ-8ef34101 / REQ-0a123b89 の担当で、本 item は「この除去を warning に
+せず配置レポート側で扱う」ことだけを規範とする。
 
 ## 出典
 

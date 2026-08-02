@@ -75,7 +75,9 @@ target を除去した後、その親ディレクトリチェーンを root 方�
 > による探索的な追加除去を必要としない」は実装構造の説明で規範ではない（実 dir migration
 > そのものは REQ-7cee95dd）。空 dir の残置が cosmetic な取りこぼしに過ぎないことも同様の注記。
 > 既定 silent と `-v` の出力規律そのものは REQ-8ef34101 / REQ-0a123b89、stale 除去の不変条件は
-> REQ-16aef46b、`reset` の除去は REQ-31f2882e の担当。
+> REQ-16aef46b、`reset` の除去は REQ-31f2882e の担当。配置レポートの基本行種別
+> （`placed` / `replaced` / `removed` / `skipped`）とストリーム規律は REQ-fea038de の担当で、
+> 本 item はそこへ剪定固有の `pruned` 行を足すことを規範とする。
 
 ## 出典
 
