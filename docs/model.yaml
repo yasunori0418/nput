@@ -71,11 +71,31 @@ item_types:
     parent_types:
       - use_case
     fields:
+      # 規範文。sara は requirement の `specification` に RFC2119 キーワード
+      # （MUST / SHALL / SHOULD …）が含まれることをハードコードで検証するため
+      # （sara-core/src/validation/rules/metadata.rs・strict_mode = false でも
+      # model.yaml でも無効化できない）、このフィールドは英語で書く。
       - name: specification
         display_name: Specification
         field_type: text
         required: true
         placeholder: The system SHALL <describe the requirement>.
+      # 上の specification と対になる日本語の規範文。本リポジトリの一次情報は
+      # 日本語なので、英語版だけが規範文として残る状態を避けるために併記する。
+      #
+      # RFC2119 検証は `FIELD_SPECIFICATION`（literal "specification"）の完全一致で
+      # attributes を引くだけで、前方一致も部分一致もしない（metadata.rs:10,74・
+      # 実地でも本フィールドに日本語のみを入れて sara check が通ることを確認済み）。
+      # よってこのフィールドは英語キーワードの制約を受けない。
+      #
+      # required: false は移行中の措置。#209 の PR1 で新設したため既存 item に
+      # 併記が揃っておらず、必須にすると未記入の item が全て error になる。
+      # 分割の完了後に必須化を判断する（→ #203「保留」）。
+      - name: specification_ja
+        display_name: Specification (ja)
+        field_type: text
+        required: false
+        placeholder: nput は <要求> を満たさなければならない。
     allowed_targets:
       - relation: derives_from
         targets:

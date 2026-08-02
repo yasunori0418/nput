@@ -9,6 +9,12 @@ specification: |
   (resolving the concrete path remains the engine's runtime work), so that the CLI can
   determine profileDir *before* building via
   `nix eval <ep>#nput.<system>.<name>.rootKind` and proceed in flock-then-build order.
+specification_ja: |
+  `lib.mkManifest` の返り値 derivation は `passthru.rootKind`（`"project"` / `"home"` /
+  `"system"` / `"fixed"`）を持たなければならない。`fixed` のときは `passthru.root` に
+  絶対パス文字列を持つ。`rootKind` は eval 時に確定し（実体パス解決は engine 実行時）、
+  CLI がビルド前に `nix eval <ep>#nput.<system>.<name>.rootKind` で profileDir を確定して
+  flock → build の順に進めるようにする。
 ---
 # REQ-2f9205ee: mkManifest の返り値は passthru で root kind を露出する
 
