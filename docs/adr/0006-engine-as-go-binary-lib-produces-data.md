@@ -11,6 +11,7 @@ justifies:
   - "REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4"
   - "REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281"
   - "REQ-02a33511-0941-4813-b289-a05eb8e9aa57"
+  - "REQ-79ce0a09-f9bd-4e61-ba7f-45fb5643137b"
 references:
   - "ADR-0002"
   - "ADR-0003"

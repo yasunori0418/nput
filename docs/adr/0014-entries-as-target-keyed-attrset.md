@@ -8,6 +8,9 @@ origin: "参照: home-manager `modules/lib/file-type.nix`（`home.file` の識�
 justifies:
   - "REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7"
   - "REQ-97c1e088-a17e-46d9-a9a1-83d1757d0f7d"
+  - "REQ-a33a11e3-830d-4142-88ed-4c1fc35e7f74"
+  - "REQ-3e446ad9-a6f4-4229-b5c5-184754b0ef51"
+  - "REQ-0b0cd1e3-bfeb-45c1-978d-e2e11c568336"
 revises:
   - "ADR-0010"
 references:
