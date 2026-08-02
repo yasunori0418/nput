@@ -38,10 +38,10 @@ specification: |
   commit point; and (g) delete `<profileDir>/.pending` after `--set` succeeds, the
   generation link taking over the gcroot.
 
-  `apply --manifest <link-farm>` SHALL skip stages 0 to 1 and stage 2b, passing the
-  pre-built link-farm directly to the engine and having the engine read `rootKind` from
-  the `manifest.json` inside it. Stage 2a onwards through 2g SHALL be identical to an
-  ordinary apply, and no pending out-link SHALL be established since nothing is built.
+  Mapped onto this flow, `apply --manifest <link-farm>` SHALL enter at stage 2a and run
+  through 2g, skipping stages 0 to 1 and stage 2b; no pending out-link SHALL be
+  established there, since nothing is built. What that mode does instead of the skipped
+  stages is stated by the `apply --manifest` specification and is not restated here.
 specification_ja: |
   実行フローの順序は「eval 先行 → flock → build」でなければならない。profileDir は
   root 解決後にしか確定せず、root 解決には `manifest.json` の `rootKind` が要るため、
@@ -69,9 +69,10 @@ specification_ja: |
   `nix-env --profile <profileDir>/profile --set <link-farm>`（サブプロセス・コミット点）。
   (g) `--set` 成功後に `<profileDir>/.pending` を削除する（世代リンクが gcroot を引き継ぐ）。
 
-  `apply --manifest <link-farm>` は 0〜1 と 2b を skip しなければならない。ビルド済み
-  link-farm を engine へ直接渡し、rootKind は link-farm 内 `manifest.json` から engine が
-  読む。2a 以降〜2g は通常 apply と同一とし、pending out-link は build しないため張らない。
+  このフロー上で `apply --manifest <link-farm>` は 2a から入って 2g までを通り、0〜1 と
+  2b を skip しなければならない。build しないため pending out-link はそこで張らない。
+  skip した段の代わりに何を行うかは `apply --manifest` の仕様の担当で、本 item では
+  規定しない。
 ---
 # REQ-60c6b7ea: 実行フローの順序は eval 先行 → flock → build とし build をロック内に閉じる
 
@@ -127,7 +128,9 @@ rootKind は link-farm 内 `manifest.json` から engine が読む。2a（flock 
 > - 配置前除去（PreRemove）・保守的 stale 除去・undo ジャーナルの規範 →
 >   「配置動作仕様」節の担当（#209-PR4）
 > - root 解決の各モードの規範 → 「root の解決」節の担当（#209-PR5）
-> - `apply --manifest` そのものの契約（引数・併用エラー）→ REQ-dec58330
+> - `apply --manifest` の契約（引数・併用エラー・entrypoint 発見と eval / build を
+>   行わないこと・rootKind を link-farm 内 `manifest.json` から読むこと）→ REQ-dec58330。
+>   本 item はそれがフロー上のどの段に入り・どの段を skip するかだけを規定する
 > - 2a の flock を blocking で取るか try-lock で取るか（`LOCK_EX` / `LOCK_NB`・
 >   skip 時の stderr 通知）→ REQ-1c1526b1。本 item はフロー上の位置（2a）だけを規定する
 

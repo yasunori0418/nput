@@ -35,16 +35,16 @@ specification: |
   structural parity is that of the single `--dryrun`. A config with a conflict has the
   entry as `item.status:"failed"` with `error.code:"E_NPUT_COLLISION"`, so that subject
   SHALL be `status:"error"` and therefore the aggregate SHALL also be `status:"error"`.
-  The exit code SHALL keep the priority error(1) > conflict(2) > 0, and `status` SHALL
-  strictly observe only "non-zero iff error".
+  `status` SHALL strictly observe only "non-zero iff error", the priority among the exit
+  codes themselves being stated elsewhere and not restated here.
 
   `gitignore --all` SHALL NOT deduplicate across configs in JSON: each
   `results[i].result.info.paths` SHALL hold only the targets of that config itself, and a
   path shared by several configs SHALL appear in both `SubjectResult`s, since attributing
   it to one of them would misstate which config declares it. A consumer that needs the
-  union SHALL union and deduplicate across `results`. The default text output SHALL remain
-  deduplicated and sorted, keeping the asymmetry between text aggregation and per-config
-  JSON intentionally.
+  union SHALL union and deduplicate across `results`. The asymmetry against the default
+  text output, which aggregates across configs, SHALL be kept intentionally; what that
+  text output does is stated elsewhere and not restated here.
 
   `list-generations --all` SHALL hold `result.info.generations` per home mode config found
   by scanning the profile directories, with `items: []`, identically to a single
@@ -85,15 +85,16 @@ specification_ja: |
   `apply --all --dryrun` は本 apply と同一の payload builder を通すため、構造 parity は
   単一 `--dryrun` と同じとする。conflict のある config は該当 entry が
   `item.status:"failed"` + `error.code:"E_NPUT_COLLISION"` となり、その subject は
-  `status:"error"`、したがって集約も `status:"error"` としなければならない。終了コードは
-  error(1) > conflict(2) > 0 の優先度のままとし、`status` は「非 0 ⇔ error」だけを厳守する。
+  `status:"error"`、したがって集約も `status:"error"` としなければならない。`status` は
+  「非 0 ⇔ error」だけを厳守する。終了コード同士の優先度は別 item の担当で、本 item では
+  規定しない。
 
   `gitignore --all` は JSON で cross-config dedup をしてはならない。各
   `results[i].result.info.paths` はその config 自身の target のみを持ち、複数 config が
   共有する path は双方の `SubjectResult` に現れる（どちらか一方へ帰属させるのは
   「どの config が宣言しているか」の偽りであるため）。union が必要な消費側が `results` を
-  跨いで union + dedup する。テキスト既定出力は従来どおり dedup + sort とし、テキスト集約 /
-  JSON per-config の非対称を意図的に保つ。
+  跨いで union + dedup する。config 横断で集約するテキスト既定出力との非対称は意図的に
+  保つ。そのテキスト出力が何をするかは別 item の担当で、本 item では規定しない。
 
   `list-generations --all` は profile ディレクトリ走査で見つかった home mode config ごとに
   `result.info.generations` を持つ（`items: []`・単一実行と同一）。列挙途中の読み取り失敗は
@@ -167,6 +168,13 @@ warnings / info）の写像規則は単一 config と同一で、`--all` 固有�
 > `errors[]` に載るのが主体列挙前の失敗のみであることは、単一 config 実行と共通の
 > 振り分け規則であり REQ-9341fa5d の規範。本 item が規範化するのは `--all` 固有の差分
 > （集約エラーをトップへ重ねない）に限る。
+>
+> 同様に、次の 2 点も本 item の規範ではない。本 item が規範化するのは、それらを前提と
+> した `--all` の JSON 側の帰結（`status` が「非 0 ⇔ error」だけを厳守すること・
+> JSON では cross-config dedup をしないこと）に限る。
+>
+> - 終了コード同士の優先度（error(1) > conflict(2) > 0）→ REQ-b7bb09d6
+> - `gitignore --all` のテキスト既定出力が dedup + sort すること → REQ-1f128917
 
 `--all` のテキスト側の挙動（辞書順・部分失敗でも続行）は REQ-4cbd9a0d、エラー層の
 振り分け規則は REQ-9341fa5d、終了コードの優先度は REQ-b7bb09d6、`gitignore --all` の
