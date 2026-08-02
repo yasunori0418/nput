@@ -18,7 +18,8 @@ specification: |
   perform the re-link, it does not observe the on-disk destination just before it, so a
   planned re-link to the recorded destination SHALL remain a `modify`. The overwrite of
   `--recopy` SHALL NOT appear in the dryrun plan, the planner classifying only place-once
-  while recopy is on the materialize path of the engine. Empty-parent-directory pruning
+  while recopy is on the materialize path of the engine. Every change appearing in a
+  dryrun SHALL be `reversible: true`. Empty-parent-directory pruning
   and the rename aside of `--backup` have no entry identity and SHALL produce neither an
   item nor a change. `generation` SHALL be an observation record with before == after,
   since no switch occurs; when the profile has not been created yet, both `before` and
@@ -56,7 +57,8 @@ specification_ja: |
   合体）。dryrun は re-link を実行しないため re-link 直前の on-disk dest を観測せず、
   記録どおりの dest への予定 re-link も `modify` として残す。`--recopy` の上書きは dryrun の
   plan に現れない（planner は place-once 分類のみで recopy は engine の materialize 側経路の
-  ため）。空親ディレクトリ剪定と `--backup` の rename 退避は entry 識別を持たず item /
+  ため）。dryrun に現れる change は全て `reversible: true` とする。
+  空親ディレクトリ剪定と `--backup` の rename 退避は entry 識別を持たず item /
   change を生まない。`generation` は観測記録とし、切替が起きないため before = after、
   profile 未作成の初回 plan では `before` / `after` を両省略し `profile` のみとする。
   warnings の写像・振り分けは apply と共通とする。
