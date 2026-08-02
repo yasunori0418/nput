@@ -4,16 +4,16 @@ type: requirement
 name: "nput.backup は engine 起動の配線レイヤーのオプションで manifest には影響しない"
 specification: |
   The `nput.backup` submodule, common to every module, SHALL wire `--backup=<suffix>` onto
-  the `nput apply --manifest` invocation performed at activation. Setting
-  `enable = true` while omitting `suffix` SHALL use the default suffix `nput-backup`.
-  `nput.backup` SHALL be an option of the invocation-wiring layer, independent of
-  `entries` (the manifest v1 contract), and SHALL NOT affect the manifest itself.
+  the `nput apply --manifest` invocation performed at activation, the suffix being the
+  value of `nput.backup.suffix`, whose default REQ-fc1c7ce6 states. `nput.backup` SHALL be
+  an option of the invocation-wiring layer, independent of `entries` (the manifest v1
+  contract), and SHALL NOT affect the manifest itself.
 specification_ja: |
   全モジュール共通の `nput.backup` submodule は、activation で行う
-  `nput apply --manifest` 起動へ `--backup=<suffix>` を配線しなければならない。
-  `enable = true` かつ `suffix` 省略のときは既定 suffix `nput-backup` を使う。
-  `nput.backup` は `entries`（manifest v1 契約）とは独立な起動配線レイヤーの
-  オプションであり、manifest 自体に影響してはならない。
+  `nput apply --manifest` 起動へ `--backup=<suffix>` を配線しなければならない。suffix は
+  `nput.backup.suffix` の値とし、そのデフォルトは REQ-fc1c7ce6 が定める。`nput.backup` は
+  `entries`（manifest v1 契約）とは独立な起動配線レイヤーのオプションであり、manifest 自体に
+  影響してはならない。
 ---
 # REQ-e1e1114b: nput.backup は engine 起動の配線レイヤーのオプションで manifest には影響しない
 
