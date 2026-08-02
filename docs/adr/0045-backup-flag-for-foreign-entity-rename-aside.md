@@ -14,6 +14,8 @@ references:
   - "ADR-0017"
   - "ADR-0020"
   - "ADR-0044"
+  - "ADR-0046"
+  - "ADR-0047"
 ---
 # ADR-0045: `apply --backup[=suffix]` — 配置を塞ぐ記録外実体の rename 退避
 
