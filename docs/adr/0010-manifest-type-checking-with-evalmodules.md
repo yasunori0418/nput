@@ -4,6 +4,11 @@ type: adr
 name: "manifest の型検査を `evalModules` + marker タグ方式で行う"
 status: 採用
 origin: "「manifest 内にセットする各 attrset（entries / root）の型検査に、NixOS モジュールシステムの `lib.types` / `mkOption` を再利用できるか」という確認"
+justifies:
+  - "REQ-d1b5b3f5-10a0-400d-9f03-ba00c63d1c34"
+  - "REQ-b232ec98-af3b-41f3-a050-29d417322002"
+  - "REQ-16faf428-77f3-492f-b858-222c5274cbf7"
+  - "REQ-1dcc9a33-b0f2-43e0-8310-fc4b19e68fe7"
 references:
   - "ADR-0001"
   - "ADR-0003"

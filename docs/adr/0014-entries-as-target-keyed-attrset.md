@@ -5,6 +5,8 @@ name: "entries を target キーの attrset にし、手動 name と手動一意
 status: 採用
 status_note: "2026-06-14 改訂: entry フィールド `mode` を `method` に改名 → ADR-0015"
 origin: "参照: home-manager `modules/lib/file-type.nix`（`home.file` の識別子モデル）"
+justifies:
+  - "REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7"
 revises:
   - "ADR-0010"
 references:

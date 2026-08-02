@@ -4,6 +4,8 @@ type: adr
 name: "実装前残セマンティクス第6巡（fixed root キーイング・HM profile 粒度・非 build コマンドの eval 先行・listFilesInSrc 型ガード・target 衝突 eval 検出・既存 flake 組込・終了コード優先・--all 一括 eval・--quiet 規律・振動 warning・cleanup seam）"
 status: 採用
 origin: "ADR-0023 までの第5巡で潰し切れていない11点を、垂直トレーサー弾（ADR-0023 §4）着手の直前に再度の横断検査で洗い出した（実装前残セマンティクス確定の第6巡）"
+justifies:
+  - "REQ-5c6b07da-3d06-414d-8770-4f438234b322"
 revises:
   - "ADR-0010"
   - "ADR-0023"
