@@ -4,16 +4,17 @@ type: requirement
 name: "nput.backup は engine 起動の配線レイヤーのオプションで manifest には影響しない"
 specification: |
   The `nput.backup` submodule, common to every module, SHALL wire `--backup=<suffix>` onto
-  the `nput apply --manifest` invocation performed at activation, the suffix being the
-  value of `nput.backup.suffix`, whose default REQ-fc1c7ce6 states. `nput.backup` SHALL be
-  an option of the invocation-wiring layer, independent of `entries` (the manifest v1
-  contract), and SHALL NOT affect the manifest itself.
+  the `nput apply --manifest` invocation performed at activation only where
+  `nput.backup.enable` is true, setting it aside being an explicit opt-in by the user; the
+  suffix SHALL be the value of `nput.backup.suffix`, whose default REQ-fc1c7ce6 states.
+  `nput.backup` SHALL be an option of the invocation-wiring layer, independent of `entries`
+  (the manifest v1 contract), and SHALL NOT affect the manifest itself.
 specification_ja: |
-  全モジュール共通の `nput.backup` submodule は、activation で行う
-  `nput apply --manifest` 起動へ `--backup=<suffix>` を配線しなければならない。suffix は
-  `nput.backup.suffix` の値とし、そのデフォルトは REQ-fc1c7ce6 が定める。`nput.backup` は
-  `entries`（manifest v1 契約）とは独立な起動配線レイヤーのオプションであり、manifest 自体に
-  影響してはならない。
+  全モジュール共通の `nput.backup` submodule は、`nput.backup.enable` が true のときに限り、
+  activation で行う `nput apply --manifest` 起動へ `--backup=<suffix>` を配線しなければ
+  ならない（退避はユーザーの明示 opt-in であるため）。suffix は `nput.backup.suffix` の値と
+  し、そのデフォルトは REQ-fc1c7ce6 が定める。`nput.backup` は `entries`（manifest v1 契約）
+  とは独立な起動配線レイヤーのオプションであり、manifest 自体に影響してはならない。
 ---
 # REQ-e1e1114b: nput.backup は engine 起動の配線レイヤーのオプションで manifest には影響しない
 
@@ -28,7 +29,10 @@ specification_ja: |
 > REQ-fc1c7ce6、`--backup[=<suffix>]` が何を退避しどう振る舞うかは REQ-5dd5a4e9、
 > module activation が `apply --manifest` で engine を kick すること自体は REQ-dec58330 /
 > REQ-8085f194 の担当。本 item は `nput.backup` が manifest ではなく起動側に効くという
-> レイヤーの所属を規定する。
+> レイヤーの所属と、その**配線の発動条件**（`enable` が true のときに限る）を規定する。
+> 発動条件は REQ-fc1c7ce6 が定めるオプションの型・デフォルト値とは別の規範で、退避が
+> ユーザーの明示 opt-in であるという ADR-0045 の設計意図（既定 false・記録外実体を勝手に
+> 動かさない）を担保する。
 
 ## 出典
 
