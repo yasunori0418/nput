@@ -27,11 +27,15 @@ specification_ja: |
 root 解決**を build しないコマンドでも先行する（apply と共通の前段・`--root` 時は同じ
 roothash キー）。`reset` はさらに entries 読みのため entrypoint eval も行う。
 
-> **上は原文の写しで、規範は frontmatter が正**。このうち非 build コマンド一般の
-> eval 先行（rootKind 先取り eval → root 解決・`--root` 時の roothash キー）は
-> REQ-9c111c32 の規範であり、本 item では規範化しない。本 item が規定するのは
-> `reset` 固有の 3 点（名指し必須・profileDir 単位の blocking flock・共通前段に加えて
-> 行う entrypoint eval）に限る。
+> **上は原文の写しで、規範は frontmatter が正**。このうち次の 2 点は本 item では
+> 規範化しない。
+>
+> - 非 build コマンド一般の eval 先行（build しないコマンドでも rootKind 先取り eval →
+>   root 解決を先行する）→ REQ-9c111c32
+> - `--root` 時に profileDir を roothash でキーすること → REQ-61c05e09
+>
+> 本 item が規定するのは `reset` 固有の 3 点（名指し必須・profileDir 単位の blocking
+> flock・共通前段に加えて行う entrypoint eval）に限る。
 
 ## 出典
 
@@ -39,4 +43,4 @@ roothash キー）。`reset` はさらに entries 読みのため entrypoint eva
 
 決定の実体は ADR-0021「reset の `--all` 非対応・`--dryrun` 対応・flock / recopy 合成を
 確定する」と、`--all` 非対応の一貫性を与える ADR-0018。flock の直列化は ADR-0013、
-非 build コマンドの eval 先行と `--root` の roothash キーは ADR-0024。
+非 build コマンドの eval 先行は ADR-0024。
