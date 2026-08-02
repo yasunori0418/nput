@@ -36,6 +36,10 @@ oldGenPath 配管は不要。
 ## 出典
 
 `docs/spec.md`「世代管理仕様」→「モジュール時」節と、「ロールバック」節の module の箇条書き。
+「モジュール別動作仕様」→「home-manager モジュール」「NixOS モジュール（将来拡張）」
+「nix-darwin モジュール（将来拡張）」各節が述べる同趣旨（nput は自前 profile を内部機構として
+持ち、ユーザー向け rollback は host 世代へ一本化する）も本 item の担当で、独立 item を立てず
+本 item に畳んだ。
 
 決定の実体は ADR-0002「世代管理を nix profile に乗せる（全モード自前 profile / rollback は
 standalone 中心）」。
