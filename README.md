@@ -549,9 +549,36 @@ package layers would be delegated to or combined with system-manager, while nput
 
 ## Documentation
 
-The full design and specification documents are currently maintained in Japanese:
+`docs/` is a three-layer structure: **README → overview document → item**. The normative
+content lives in the items (one claim per Markdown file, with YAML frontmatter); the overview
+documents are the entry point for reading through, giving the big picture and an index into the
+items. The overview documents are maintained in Japanese.
 
-- `docs/concept.md` — concept, design philosophy, comparison with existing tools
-- `docs/design.md` — design (layers, flake outputs, module design, usage patterns)
-- `docs/spec.md` — specification (lib API, entries schema, placement behavior, error spec)
+Overview documents (big picture + index):
+
+- `docs/concept.md` — concept (index into solution / use case items), design philosophy,
+  comparison with existing tools, usage patterns
+- `docs/design.md` — design (index into design items)
+- `docs/spec.md` — specification (index into requirement items)
 - `docs/glossary.md` — canonical English terminology
+
+Items (where the normative content lives):
+
+| Directory | Type | Prefix |
+|---|---|---|
+| `docs/solution/` | solution | `SOL` |
+| `docs/use-cases/` | use case | `UC` |
+| `docs/requirements/` | requirement | `REQ` |
+| `docs/design/` | design | `DSG` |
+| `docs/infrastructure/` | infrastructure | `INF` |
+| `docs/adr/` | ADR | `ADR` |
+
+Items form a graph (`docs/model.yaml` defines the types and relations). To traverse it, use
+`sara` from the devShell — it takes a full ID, so grep the 8-character short form used in prose
+(`REQ-2b0c2bb8`) to find it:
+
+```bash
+nix develop ./dev --command sara check                    # validate the whole graph
+nix develop ./dev --command sara query <full-id> -u       # walk upstream (requirement → use case → solution)
+nix develop ./dev --command sara query <full-id> -d       # walk downstream (requirement → design)
+```
