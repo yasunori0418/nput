@@ -48,9 +48,11 @@ transpose を担う。
 
 ## 出典
 
-`docs/design.md`「プロジェクト構成」の `modules/` 内訳と
+以下の `docs/design.md` は分割時点の原文（縮退前）を指す。
+
+「プロジェクト構成」の `modules/` 内訳と
 「モジュール統合設計」→「共通オプション」節。
 
-なお `docs/design.md` の当該節は `options.nput.entries` を直下に置く旧形で書かれているが、
+なお同原文の当該節は `options.nput.entries` を直下に置く旧形で書かれているが、
 本 item は ADR-0035 が導入した `nput.configs.<name>` を反映した REQ-fc1c7ce6 /
 REQ-c6891aeb の現行規範に合わせている。
