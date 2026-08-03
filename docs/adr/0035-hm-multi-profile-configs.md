@@ -9,6 +9,7 @@ justifies:
   - "REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10"
   - "REQ-5c6b07da-3d06-414d-8770-4f438234b322"
   - "REQ-fc1118b1-b0e8-4ddf-80f6-c70956651693"
+  - "REQ-c847d1af-a437-46bb-bd64-42083810d034"
 revises:
   - "ADR-0024"
   - "ADR-0025"
