@@ -556,8 +556,8 @@ items. The overview documents are maintained in Japanese.
 
 Overview documents (big picture + index):
 
-- `docs/concept.md` — concept (index into solution / use case items), design philosophy,
-  comparison with existing tools, usage patterns
+- `docs/concept.md` — concept (index into solution / use_case items), design philosophy,
+  north-star, comparison with existing tools, how the design evolved
 - `docs/design.md` — design (index into design items)
 - `docs/spec.md` — specification (index into requirement items)
 - `docs/glossary.md` — canonical English terminology
@@ -567,18 +567,17 @@ Items (where the normative content lives):
 | Directory | Type | Prefix |
 |---|---|---|
 | `docs/solution/` | solution | `SOL` |
-| `docs/use-cases/` | use case | `UC` |
+| `docs/use-cases/` | use_case | `UC` |
 | `docs/requirements/` | requirement | `REQ` |
 | `docs/design/` | design | `DSG` |
 | `docs/infrastructure/` | infrastructure | `INF` |
-| `docs/adr/` | ADR | `ADR` |
+| `docs/adr/` | adr (kept out of the tree) | `ADR` |
 
-Items form a graph (`docs/model.yaml` defines the types and relations). To traverse it, use
-`sara` from the devShell — it takes a full ID, so grep the 8-character short form used in prose
-(`REQ-2b0c2bb8`) to find it:
+Items form a graph (`docs/model.yaml` defines the types and relations), traversed with `sara`
+from the devShell:
 
 ```bash
-nix develop ./dev --command sara check                    # validate the whole graph
-nix develop ./dev --command sara query <full-id> -u       # walk upstream (requirement → use case → solution)
-nix develop ./dev --command sara query <full-id> -d       # walk downstream (requirement → design)
+nix develop ./dev --command sara check    # validate the whole graph
 ```
+
+For querying the graph (`sara query`, which takes a full ID) see `docs/agents/domain.md`.
