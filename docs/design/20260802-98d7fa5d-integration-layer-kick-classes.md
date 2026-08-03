@@ -51,10 +51,12 @@ rollback を公開する層は REQ-05abce3e / REQ-844ee375 が定める。どち
 
 ## 出典
 
-`docs/design.md`「モジュール統合設計」→「各統合層の動作」の統合層テーブルと
+以下の `docs/design.md` は分割時点の原文（縮退前）を指す。
+
+「モジュール統合設計」→「各統合層の動作」の統合層テーブルと
 engine kick 2 クラスの説明、および「実行タイミング」節。
 
-なお `docs/design.md` の統合層テーブルは home-manager 行に「MVP は profile `<name>` =
+なお同原文の統合層テーブルは home-manager 行に「MVP は profile `<name>` =
 `default` 固定の 1 profile・役割分離は不可」と書いているが、本 item はこれを採らない。
 ADR-0035 が `nput.configs.<name>` を導入し、REQ-c6891aeb が HM 経由でも役割分離した
 独立 profile を取れることを規範化しているため。
