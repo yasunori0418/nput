@@ -72,9 +72,13 @@ item_types:
       - use_case
     fields:
       # 規範文。sara は requirement の `specification` に RFC2119 キーワード
-      # （MUST / SHALL / SHOULD …）が含まれることをハードコードで検証するため
+      # （SHALL / MUST / SHOULD …）が含まれることをハードコードで検証するため
       # （sara-core/src/validation/rules/metadata.rs・strict_mode = false でも
       # model.yaml でも無効化できない）、このフィールドは英語で書く。
+      #
+      # 本リポジトリは RFC2119 同義語のうち SHALL 系のみを使う（MUST / MUST NOT は
+      # 書かない）。強度ごとの綴りを 1 つに固定して item 群の読み味を揃えるためで、
+      # 規約と写像表は docs/agents/sara-graph.md、機械検査は dev/tests/spec-style.sh。
       - name: specification
         display_name: Specification
         field_type: text
@@ -88,13 +92,15 @@ item_types:
       # 実地でも本フィールドに日本語のみを入れて sara check が通ることを確認済み）。
       # よってこのフィールドは英語キーワードの制約を受けない。
       #
-      # required: false は移行中の措置。#209 の PR1 で新設したため既存 item に
-      # 併記が揃っておらず、必須にすると未記入の item が全て error になる。
-      # 分割の完了後に必須化を判断する（→ #203「保留」）。
+      # 全 item への併記が揃ったため required: true とした（→ #229。#209 の PR1 で
+      # 新設した当初は移行中で未記入の item があり required: false としていた）。
+      #
+      # 規範を述べる文は平叙形ではなく規範助動詞で終える（英語側の強度との写像表は
+      # docs/agents/sara-graph.md）。機械検査は dev/tests/spec-style.sh。
       - name: specification_ja
         display_name: Specification (ja)
         field_type: text
-        required: false
+        required: true
         placeholder: nput は <要求> を満たさなければならない。
     allowed_targets:
       - relation: derives_from
