@@ -46,6 +46,11 @@ fi
 
 # frontmatter の block scalar から 1 フィールドの本文を取り出す。
 # 次のトップレベルキー（`^[a-z_]+:`）か frontmatter 終端（`---`）で打ち切る。
+#
+# 終端判定が行頭アンカーなのは「block scalar の中身は必ずインデントされている」
+# という前提に立っている（YAML がそう要求する）。本文中に `alike:` のような
+# コロンを含む行があってもインデント済みなので終端と誤認しない。逆にこの前提が
+# 崩れると、そこから後ろが見えなくなり違反を見逃す方向へ倒れる。
 extract_field() { # $1=file $2=field
   awk -v field="$2" '
     !inblock && $0 == field ": |" { inblock = 1; next }
@@ -75,20 +80,39 @@ for f in "$req_dir"/*.md; do
   #
   # MUST / MUST NOT は RFC2119 上 SHALL / SHALL NOT と同義だが、1 つの強度に
   # 綴りが 2 つあると item 群が「両者は違う」と読めてしまう。綴りを寄せる。
-  # 語境界を見るのは MUSTARD のような語中一致を拾わないため。
   #
-  # 検査対象は単語 MUST なので折り返しで分断されても各行で拾えるが、
-  # specification_ja 側と同じ前処理を通して両検査の見ているものを揃える。
+  # 語境界（前後が英字でない）を要求するので、拾うのは助動詞として立つ MUST だけで、
+  # 英字が続く MUSTARD / MUSTs は当たらない。これは意図した挙動で、REQ-2381d93a の
+  # specification が niface 由来の名詞「the out-of-schema lint MUSTs」（= MUST 群と
+  # いうドメイン用語）を含む。助動詞ではないので弾いてはいけない。
+  #
+  # 折り返しを畳んでから見る。連結の仕方は日本語側（下）と意図的に違えてある:
+  # 英語は単語の切れ目が空白なので改行を空白へ置き換えないと語が繋がってしまう。
+  # 日本語は折り返し位置に空白が入らないので、逆に改行を落として詰める必要がある。
   spec_joined="$(printf '%s' "$spec" | sed 's/^[[:space:]]*//' | tr '\n' ' ')"
 
-  if printf '%s' "$spec_joined" | grep -qE '(^|[^A-Za-z])MUST([^A-Za-z]|$)'; then
+  # 抽出が空になるのは specification が block scalar（`specification: |`）で
+  # 書かれていないとき。その場合 grep は当然何にも当たらないので、ガードが無いと
+  # MUST を含む item を「違反なし」として通してしまう（検査が黙って外れる方が、
+  # 弾かれるより危ない）。specification は required: true なので未記入も同じく違反。
+  if [ -z "$(printf '%s' "$spec_joined" | tr -d '[:space:]')" ]; then
+    report "$f" 'specification が空、または block scalar（`specification: |`）ではない'
+  elif printf '%s' "$spec_joined" | grep -qE '(^|[^A-Za-z])MUST([^A-Za-z]|$)'; then
     report "$f" 'specification に MUST / MUST NOT がある（SHALL / SHALL NOT を使う）'
   fi
 
   # --- 2. specification_ja は規範助動詞を持つ ------------------------------
   #
-  # 写像表の 4 強度の語尾。活用（「〜してはならず、」で後続節へ繋ぐ等）を許すため、
-  # 「しなければ」「しては」の部分は見ずに語尾だけを見る。
+  # 語尾のリストは docs/agents/sara-graph.md の写像表が出典で、その 4 強度
+  # （〜しなければならない / 〜してはならない / 〜すべきである・すべきでない /
+  # 〜してもよい）と、実データに現れる活用形（「〜してはならず、」で後続節へ繋ぐ・
+  # 「〜止めてもならない」）だけを載せる。「しなければ」「しては」の部分は活用で
+  # 変わるので見ず、語尾だけを見る。写像表を増やすときはここも合わせて増やす。
+  #
+  # 「〜ものとする」は意図的に載せない。規範の強度を担う語ではなく、英語側が
+  # 分詞句などで規範を述べていない文に付くことが多い（例: REQ-c1b3ca5f の
+  # 「モジュール対応は〜拾うためだけに存在するものとする」は英語が
+  # `modules existing only to pick up ...` の分詞句で SHALL を持たない）。
   #
   # 検査の前に改行とインデントを畳んで 1 行にする。block scalar は 90 文字前後で
   # 折り返してあるので、畳まないと「〜しなけれ / ば ならない」のように助動詞が
@@ -100,7 +124,7 @@ for f in "$req_dir"/*.md; do
   spec_ja_joined="$(printf '%s' "$spec_ja" | sed 's/^[[:space:]]*//' | tr -d '\n')"
 
   if [ -z "$(printf '%s' "$spec_ja_joined" | tr -d '[:space:]')" ]; then
-    report "$f" 'specification_ja が空'
+    report "$f" 'specification_ja が空、または block scalar（`specification_ja: |`）ではない'
   elif ! printf '%s' "$spec_ja_joined" |
     grep -qE 'なければならない|てはならない|てもならない|ならず|べきである|べきでない|べきではない|てもよい'; then
     report "$f" 'specification_ja に規範助動詞が無い（平叙形のみ）'
@@ -117,6 +141,116 @@ if [ "$fail" -eq 0 ]; then
 else
   printf '\n%d 件の違反（requirement %d 件を検査）。規約は docs/agents/sara-graph.md\n' \
     "$violations" "$checked"
+fi
+
+# --- 3. 判定器そのものの自己テスト -------------------------------------------
+#
+# ここまでは実 docs/ を読むだけなので、判定ロジックが壊れて「何も検出しなくなった」
+# 退行を検知できない（実 item が全件準拠していれば緑のままになる）。合成 item を
+# 置いた一時 docs/ を SPEC_STYLE_DOCS_DIR で食わせ、検出すべきものを検出し、
+# 通すべきものを通すことを固定する。
+#
+# SPEC_STYLE_SELFTEST=1 の再帰呼び出しではこの節を実行しない（無限再帰の停止条件）。
+
+if [ -n "${SPEC_STYLE_SELFTEST:-}" ]; then
+  exit "$fail"
+fi
+
+selftest_dir="$(mktemp -d)"
+trap 'rm -rf "$selftest_dir"' EXIT
+mkdir -p "$selftest_dir/requirements"
+
+# 自身を fixture に対して走らせ、stdout を出力・終了コードを status に入れる。
+self_out=""
+self_status=0
+run_self() {
+  self_out="$(SPEC_STYLE_SELFTEST=1 SPEC_STYLE_DOCS_DIR="$selftest_dir" bash "$0" 2>&1)" &&
+    self_status=0 || self_status=$?
+}
+
+write_item() { # $1=filename $2=specification本文 $3=specification_ja本文
+  cat >"$selftest_dir/requirements/$1" <<EOF
+---
+id: "REQ-00000000-0000-4000-8000-000000000000"
+type: requirement
+name: "selftest"
+specification: |
+$2
+specification_ja: |
+$3
+---
+# selftest
+EOF
+}
+
+self_fail=0
+expect() { # $1=説明 $2=条件が真なら pass
+  if [ "$2" -eq 1 ]; then
+    printf 'ok   - [selftest] %s\n' "$1"
+  else
+    printf 'FAIL - [selftest] %s\n' "$1"
+    self_fail=1
+  fi
+}
+
+# (a) 規約準拠の item は通る。
+rm -f "$selftest_dir"/requirements/*.md
+write_item ok.md '  The engine SHALL do it.' '  engine はそれをしなければならない。'
+run_self
+expect '準拠 item は exit 0 で通る' "$([ "$self_status" -eq 0 ] && echo 1 || echo 0)"
+
+# (b) specification の MUST を検出する。
+rm -f "$selftest_dir"/requirements/*.md
+write_item must.md '  The engine MUST NOT do it.' '  engine はそれをしてはならない。'
+run_self
+expect 'specification の MUST を検出する' \
+  "$(printf '%s' "$self_out" | grep -q 'MUST / MUST NOT がある' && echo 1 || echo 0)"
+
+# (c) MUSTs（英字が続く語）は助動詞ではないので通す。
+rm -f "$selftest_dir"/requirements/*.md
+write_item musts.md '  The engine SHALL honour the lint MUSTs.' '  engine は lint MUSTs に従わなければならない。'
+run_self
+expect 'MUSTs は助動詞ではないので通す' "$([ "$self_status" -eq 0 ] && echo 1 || echo 0)"
+
+# (d) specification_ja が平叙のみなら検出する。
+rm -f "$selftest_dir"/requirements/*.md
+write_item plain.md '  The engine SHALL do it.' '  engine はそれをする。'
+run_self
+expect 'specification_ja の平叙のみを検出する' \
+  "$(printf '%s' "$self_out" | grep -q '規範助動詞が無い' && echo 1 || echo 0)"
+
+# (e) 行またぎで折り返された助動詞を分断せず通す（連結処理の退行検知）。
+#     実データでも REQ-a33a11e3 / REQ-b74a118a がこの経路に依存している。
+rm -f "$selftest_dir"/requirements/*.md
+write_item wrapped.md '  The engine SHALL do it.' '  engine はそれをしなけれ
+  ばならない。'
+run_self
+expect '折り返しで分断された助動詞を通す' "$([ "$self_status" -eq 0 ] && echo 1 || echo 0)"
+
+# (f) block scalar でない specification を素通りさせない（空ガード）。
+rm -f "$selftest_dir"/requirements/*.md
+cat >"$selftest_dir/requirements/inline.md" <<'EOF'
+---
+id: "REQ-00000000-0000-4000-8000-000000000000"
+type: requirement
+name: "selftest"
+specification: "The engine MUST NOT do it."
+specification_ja: |
+  engine はそれをしてはならない。
+---
+# selftest
+EOF
+run_self
+expect 'block scalar でない specification を違反として報告する' \
+  "$(printf '%s' "$self_out" | grep -q 'block scalar' && echo 1 || echo 0)"
+
+# (g) item が 1 件も無ければ失敗する（走査先を取り違えたまま緑になるのを防ぐ）。
+rm -f "$selftest_dir"/requirements/*.md
+run_self
+expect 'item が 1 件も無ければ exit 1' "$([ "$self_status" -eq 1 ] && echo 1 || echo 0)"
+
+if [ "$self_fail" -ne 0 ]; then
+  fail=1
 fi
 
 exit "$fail"

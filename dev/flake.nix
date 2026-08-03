@@ -252,9 +252,15 @@
               '';
 
           # requirement item の specification / specification_ja の様式を固定する
-          # テスト（dev/tests/spec-style.sh・→ Issue #229）。checks.sara-id と同じ
-          # 二重化の意図で、ローカルの `nix flake check ./dev` と CI の sara job
-          # （devShells.sara 経由）の両方から走らせる。
+          # テスト（dev/tests/spec-style.sh・→ Issue #229）。
+          #
+          # 現状この派生を走らせるのはローカルの `nix flake check ./dev` だけで、
+          # **CI では実行されない**。CI の flake-check job はルート flake を対象に
+          # するため dev の checks は回らず（checks.sara-id と同じ事情）、sara job は
+          # sara check と sara-id.sh の 2 ステップしか持たない。sara job へ
+          # `nix develop '.?dir=dev#sara' -c dev/tests/spec-style.sh` を足すのが
+          # 本来の姿だが、.github/ は Issue #229 の作業境界外なので別 PR で行う。
+          # それまで PR での退行検知は無く、規約違反はレビューで見ることになる。
           #
           # sara-id のテストと違い docs/ を実際に読むため、サンドボックスへ
           # docs/requirements を持ち込む必要がある。git 解決に頼らず
@@ -281,8 +287,9 @@
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
           # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
           # yasunori0418.cachix.org から引くだけで済む。
-          # CI からは sara check・dev/tests/sara-id.sh・dev/tests/spec-style.sh を
-          # このシェルで実行する。
+          # CI からは sara check と dev/tests/sara-id.sh をこのシェルで実行する。
+          # dev/tests/spec-style.sh もこのシェルで走らせられる（依存を載せてある）が、
+          # CI のステップはまだ無い（→ checks.spec-style のコメント）。
           devShells.sara = pkgs.mkShell {
             packages = [
               inputs'.nur.packages.sara
