@@ -440,7 +440,7 @@ Markdown + YAML frontmatter)が持ち、概要文書は通読の入口として�
 
 概要文書(全体像 + 索引):
 
-- `docs/concept.md` — コンセプト(solution / use_case item への索引)、設計哲学、既存ツールとの比較、使用パターン
+- `docs/concept.md` — コンセプト(solution / use_case item への索引)、設計の哲学、north-star、既存ツールとの比較、設計の変遷
 - `docs/design.md` — 設計(design item への索引)
 - `docs/spec.md` — 仕様(requirement item への索引)
 - `docs/glossary.md` — 正準な英語用語(日本語対訳は `docs/glossary.ja.md`)
@@ -454,14 +454,12 @@ item 群(規範的な内容の所在):
 | `docs/requirements/` | requirement | `REQ` |
 | `docs/design/` | design | `DSG` |
 | `docs/infrastructure/` | infrastructure | `INF` |
-| `docs/adr/` | ADR | `ADR` |
+| `docs/adr/` | adr(ツリーから分離) | `ADR` |
 
 item はグラフを成す(型と関係の定義は `docs/model.yaml`)。辿るには devShell の `sara` を使う。
-`sara query` はフル ID しか受け付けないため、散文中の 8 文字の省略形(`REQ-2b0c2bb8`)から
-grep でフル ID を得る。
 
 ```bash
-nix develop ./dev --command sara check                    # グラフ全体の検証
-nix develop ./dev --command sara query <フル ID> -u       # 上流を辿る(requirement → use_case → solution)
-nix develop ./dev --command sara query <フル ID> -d       # 下流を辿る(requirement → design)
+nix develop ./dev --command sara check    # グラフ全体の検証
 ```
+
+グラフの検索(フル ID を取る `sara query`)は `docs/agents/domain.md` を参照。
