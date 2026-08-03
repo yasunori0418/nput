@@ -21,9 +21,10 @@ specification: |
   `<roothash>` and the backref `.root` SHALL be the same mechanism as project mode.
 specification_ja: |
   `profileDir` のキーは root によって定めなければならない。`<name>` 直キーは「1 ユーザー
-  1 profile」が成立する home（`--root` なし）に限る。`--root` 明示時は home / fixed を含む
-  全モードで、上書き後 root の `<roothash>` でキーしなければならない。fixed root mode
-  （`root` に絶対パス文字列・`--root` なし）も常に `<roothash>` でキーしなければならない。fixed root は
+  1 profile」が成立する home（`--root` なし）に限らなければならない。`--root` 明示時は
+  home / fixed を含む全モードで、上書き後 root の `<roothash>` でキーしなければならない。
+  fixed root mode（`root` に絶対パス文字列・`--root` なし）も常に `<roothash>` でキーしな
+  ければならない。fixed root は
   評価時確定の任意絶対パスであり、project / `--root` 上書きと同じく root ごとに独立系列へ
   分離することで、別 root の同名 config が世代系列を共有する silent orphan を構造的に
   防ぐためである。このキーイングは `apply` / `reset` / `rollback` / `list-generations` で

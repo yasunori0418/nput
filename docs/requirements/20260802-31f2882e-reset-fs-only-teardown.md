@@ -28,8 +28,8 @@ specification_ja: |
   除去後も空親ディレクトリ剪定を適用しなければならない。データ損失リスクのため確認プロンプトを
   出すか `-y` / `--yes`（スクリプト / CI 用）で同意を要求し、削除 target をレポート表示
   しなければならない。`reset` は profile / 世代を触らない FS-only teardown でなければならず、
-  config が entry を残す限り次の apply で
-  再配置しなければならない。home / project の両モードで使用できなければならない。
+  config が entry を残す限り次の apply がこれを再配置しなければならない。home / project の
+  両モードで使用できなければならない。
 ---
 # REQ-31f2882e: reset は profile を触らない FS-only teardown で配置物を無い状態へ戻す
 
