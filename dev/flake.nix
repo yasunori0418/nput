@@ -276,7 +276,7 @@
               pkgs.gnugrep
               pkgs.gawk
               pkgs.coreutils
-              # 折り返しを畳む前処理と自己テストの fixture 生成が sed を使う。
+              # 折り返しを畳む前処理（インデント除去）が sed を使う。
               # checks.sara-id と同じ理由で明示する（暗黙依存にすると実行条件の
               # 違うサンドボックスで踏み抜く → 0a18d87 の exit 126）。
               pkgs.gnused
