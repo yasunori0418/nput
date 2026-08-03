@@ -109,10 +109,12 @@ for f in "$req_dir"/*.md; do
   # 「〜止めてもならない」）だけを載せる。「しなければ」「しては」の部分は活用で
   # 変わるので見ず、語尾だけを見る。写像表を増やすときはここも合わせて増やす。
   #
-  # 「〜ものとする」は意図的に載せない。規範の強度を担う語ではなく、英語側が
-  # 分詞句などで規範を述べていない文に付くことが多い（例: REQ-c1b3ca5f の
-  # 「モジュール対応は〜拾うためだけに存在するものとする」は英語が
-  # `modules existing only to pick up ...` の分詞句で SHALL を持たない）。
+  # 「〜ものとする」は意図的に載せない。写像表の 4 強度のどれでもなく、どの強度を
+  # 課しているのかが読み手に決まらないため。ただし実データには英語の SHALL を
+  # 「〜ものとし」で受けている用例が残っている（REQ-8409db86 の
+  # `SHALL follow the existing policy of the caller`、REQ-c1b3ca5f の
+  # `Basic use SHALL be conceived around project mode ...` など）。これらは
+  # リストへ足して追認するのではなく、写像表どおりの語尾へ個別に直す対象。
   #
   # 検査の前に改行とインデントを畳んで 1 行にする。block scalar は 90 文字前後で
   # 折り返してあるので、畳まないと「〜しなけれ / ば ならない」のように助動詞が
@@ -241,13 +243,38 @@ specification_ja: |
 # selftest
 EOF
 run_self
+# メッセージは系統ごとに前半で見分ける。単に 'block scalar' で引くと
+# specification_ja 側のガードが出した行にも当たり、specification 側の検査が
+# 全く効いていなくても合格してしまう。
 expect 'block scalar でない specification を違反として報告する' \
-  "$(printf '%s' "$self_out" | grep -q 'block scalar' && echo 1 || echo 0)"
+  "$(printf '%s' "$self_out" | grep -q 'specification が空、または' && echo 1 || echo 0)"
+
+# (f2) specification_ja 側も同じく block scalar でなければ報告する。
+#      2 系統のガードがそれぞれ独立に効いていることを、上の (f) と対で固定する。
+rm -f "$selftest_dir"/requirements/*.md
+cat >"$selftest_dir/requirements/inline-ja.md" <<'EOF'
+---
+id: "REQ-00000000-0000-4000-8000-000000000000"
+type: requirement
+name: "selftest"
+specification: |
+  The engine SHALL do it.
+specification_ja: "engine はそれをしなければならない。"
+---
+# selftest
+EOF
+run_self
+expect 'block scalar でない specification_ja を違反として報告する' \
+  "$(printf '%s' "$self_out" | grep -q 'specification_ja が空、または' && echo 1 || echo 0)"
 
 # (g) item が 1 件も無ければ失敗する（走査先を取り違えたまま緑になるのを防ぐ）。
+#     exit code だけでは違反検出時の 1 と区別が付かないので、専用のメッセージで見る。
 rm -f "$selftest_dir"/requirements/*.md
 run_self
-expect 'item が 1 件も無ければ exit 1' "$([ "$self_status" -eq 1 ] && echo 1 || echo 0)"
+expect 'item が 1 件も無ければ専用メッセージで失敗する' \
+  "$([ "$self_status" -eq 1 ] &&
+    printf '%s' "$self_out" | grep -q 'requirement item が 1 件も見つからない' &&
+    echo 1 || echo 0)"
 
 if [ "$self_fail" -ne 0 ]; then
   fail=1
