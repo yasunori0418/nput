@@ -39,8 +39,9 @@ devShells.${system}.default = pkgs.mkShell {
 };
 ```
 
-> **上は分割時点の `docs/concept.md`（原文）からの写し**（コメントの出典注記は省いた）。use_case は使われ方を
-> 述べる層で規範を持たないため、この例が示す各要素の規範は requirement 側にある
+> **上は分割時点の `docs/concept.md`（原文）からの写し**（コメントの出典注記は省いた）。
+> use_case は使われ方を述べる層で規範を持たないため、この例が示す各要素の規範は
+> requirement 側にある
 > （devShell 同梱 → REQ-14f0aec9、`nput.<name>` のアドレッシング → REQ-496b1a07、
 > devShell からの engine 起動 → REQ-a0bdf6db）。
 
