@@ -33,3 +33,43 @@ from every other design that has the same exposure.
 Risks are where test conditions hang from (`test_condition --mitigates--> risk`), so
 misplacing a risk misplaces the tests that cover it. A requirement-level risk parked under
 one design leaves the other designs looking untested for a concern they share.
+
+## How a requirement states its norm: `specification` / `specification_ja`
+
+A `requirement` carries its norm twice — `specification` in English (which sara validates
+for the presence of an RFC2119 keyword) and `specification_ja` in Japanese (which sara does
+not inspect at all). Both are normative; neither is a translation gloss of the other. The
+rules below keep the two readable as one norm, and are enforced item-by-item by the lints
+in `dev/tests/spec-style.sh` (`nix flake check ./dev`).
+
+### `specification` uses the SHALL family only
+
+Write `SHALL` / `SHALL NOT`. Do not write `MUST` / `MUST NOT`, even though RFC2119 makes
+them synonyms — mixing both spellings for one strength makes the corpus read as if the two
+differ. `SHOULD` / `SHOULD NOT` / `MAY` stay as they are; they carry strengths of their own.
+The `placeholder` in `docs/model.yaml` uses SHALL for the same reason.
+
+### `specification_ja` uses normative auxiliaries, not the plain declarative
+
+A sentence that states the norm must end in a normative auxiliary. The plain declarative
+("〜する", "〜となる") reads as a description of the current implementation rather than as a
+demand on it, which is exactly the distinction the requirement exists to record.
+
+This applies per sentence, not per item: within one `specification_ja`, the sentences that
+state the norm take an auxiliary, while sentences that supply background, rationale, or a
+worked example stay in the declarative. Do not force an auxiliary onto a sentence that is
+not itself normative.
+
+### The strength mapping is fixed
+
+| `specification` | `specification_ja` |
+|---|---|
+| SHALL (= MUST) | 〜しなければならない |
+| SHALL NOT (= MUST NOT) | 〜してはならない |
+| SHOULD / SHOULD NOT | 〜すべきである / 〜すべきでない |
+| MAY | 〜してもよい |
+
+Inflected forms of these are fine where the sentence needs them (e.g. 「〜してはならず、」 to
+join a following clause), as long as the strength is unchanged. What must not happen is a
+strength drifting across the two fields — a `SHALL` rendered as 「〜すべきである」 weakens the
+requirement in the field most readers of this repo actually read.
