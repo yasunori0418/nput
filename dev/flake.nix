@@ -91,7 +91,9 @@
 
               例:
                 sara-id requirement lock-ordering
-                sara-id adr
+                sara-id design
+
+              注: ADR は連番を維持するため採番しない（docs/adr/ の最大値 + 1 を手で採る）
               EOF
               }
 
