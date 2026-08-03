@@ -17,9 +17,9 @@ specification: |
   NixOS and nix-darwin modules SHALL kick the engine from `system.activationScripts.nput`;
   the hook the home-manager module uses is stated by REQ-8085f194.
 specification_ja: |
-  基本的な利用は project mode（プロジェクト内配置）と standalone CLI を中心に考えるものとし、
-  モジュール対応は、他のモジュールシステムの switch と一括で動いてほしいユースケースを拾う
-  ためだけに存在するものとする。全モジュール（home-manager / NixOS / nix-darwin）と devShell は
+  基本的な利用は project mode（プロジェクト内配置）と standalone CLI を中心に考えなければ
+  ならず、モジュール対応は、他のモジュールシステムの switch と一括で動いてほしいユースケースを
+  拾うためだけに存在する。全モジュール（home-manager / NixOS / nix-darwin）と devShell は
   一律、nput エンジンをキックするだけの配線でなければならず、各層は root と activation
   タイミングだけを供給する。`systemd.tmpfiles` / `home.file` などプラットフォームの
   ネイティブ機構へ翻訳してはならない。配置・stale 除去は全層で同一の engine + store

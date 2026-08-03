@@ -22,9 +22,8 @@ specification_ja: |
   ならず、各段が「エラーで停止」または「copy foreign スキップ」と判定した記録外実体で
   なければならない（REQ-5dd5a4e9 が定める除外を除く）。ドリフト修復を行う世代スキップ経路
   では、PreRemove はその不変条件により到達しないが、Backup 段は対象であり続け、通常 apply と
-  同じく退避 + 配置を行わなければ
-  ならない（target への記録外実体の出現は manifest / derivation の変化を伴わず、shell 再入間
-  でも起こり得るため）。
+  同じく退避 + 配置を行わなければならない（target への記録外実体の出現は manifest /
+  derivation の変化を伴わず、shell 再入間でも起こり得るため）。
 ---
 # REQ-9b0046e0: backup 退避は配置前除去の後・配置の前に置き、drift 修復経路でも同じく実施する
 

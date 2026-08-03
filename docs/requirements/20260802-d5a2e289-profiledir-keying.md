@@ -24,8 +24,8 @@ specification_ja: |
   1 profile」が成立する home（`--root` なし）に限らなければならない。`--root` 明示時は
   home / fixed を含む全モードで、上書き後 root の `<roothash>` でキーしなければならない。
   fixed root mode（`root` に絶対パス文字列・`--root` なし）も常に `<roothash>` でキーしな
-  ければならない。fixed root は
-  評価時確定の任意絶対パスであり、project / `--root` 上書きと同じく root ごとに独立系列へ
+  ければならない。fixed root は評価時確定の任意絶対パスであり、project / `--root` 上書きと
+  同じく root ごとに独立系列へ
   分離することで、別 root の同名 config が世代系列を共有する silent orphan を構造的に
   防ぐためである。このキーイングは `apply` / `reset` / `rollback` / `list-generations` で
   一貫させなければならず、`--root` を付けた世代を操作するには再び同じ `--root` を要する。
