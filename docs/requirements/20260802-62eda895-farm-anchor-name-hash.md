@@ -7,7 +7,7 @@ derives_from:
 specification: |
   The GC anchor name in the symlink farm SHALL be a hash of `target` (a shortened hex of
   SHA-256; fixed length and filesystem safe). Sanitizing `target` (for
-  example by stripping `/`) MUST NOT be used, because two distinct targets could collapse
+  example by stripping `/`) SHALL NOT be used, because two distinct targets could collapse
   into the same name and violate the key uniqueness constraint of `linkFarm`. The anchor
   name is not required to be human readable, since the farm exists solely as a GC anchor
   and the values the engine uses for placement are the resolved `src` strings in

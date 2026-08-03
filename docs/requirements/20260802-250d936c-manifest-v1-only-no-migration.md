@@ -8,7 +8,7 @@ derives_from:
   - "UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6"
 specification: |
   The MVP SHALL emit and accept `schemaVersion = 1` only, and a migration mechanism for
-  reading older schema versions MUST NOT be built up front. A backward-compatibility
+  reading older schema versions SHALL NOT be built up front. A backward-compatibility
   policy — namely that the engine must be able to read a manifest of an older version for
   stale removal and rollback, since stale removal right after an upgrade reads the
   previous generation's manifest — SHALL be revisited once a field addition makes v2

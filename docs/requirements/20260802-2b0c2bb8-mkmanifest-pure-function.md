@@ -7,7 +7,7 @@ derives_from:
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
   `lib.mkManifest` SHALL be a pure function with the signature
-  `mkManifest :: { pkgs, entries, root } -> derivation`. It MUST NOT have side effects;
+  `mkManifest :: { pkgs, entries, root } -> derivation`. It SHALL NOT have side effects;
   profile swap and filesystem placement SHALL be the engine's runtime responsibility.
   The entrypoint SHALL expose it at `nput.<name>`, which the nput CLI builds with
   `nix build` and hands to the engine. `mkManifest` SHALL also be a unit-test target for

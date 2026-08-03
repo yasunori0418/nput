@@ -9,7 +9,7 @@ specification: |
   modules existing only to pick up the use case of wanting placement to run together with
   the switch of another module system. Every module (home-manager / NixOS / nix-darwin)
   and the devShell SHALL alike be wiring that does no more than kick the nput engine, each
-  layer supplying only the root and the timing of activation. They MUST NOT translate
+  layer supplying only the root and the timing of activation. They SHALL NOT translate
   entries into a native mechanism of the platform, such as `systemd.tmpfiles` or
   `home.file`. Placement and stale removal SHALL be performed, in every layer, by the same
   engine and the same store manifest, so that the behaviour is not duplicated per layer.

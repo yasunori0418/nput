@@ -8,8 +8,8 @@ derives_from:
   - "UC-d39c1994-f9a5-4860-80ba-f6e584adaf14"
 specification: |
   `lib` (`mkManifest` and the marker functions) SHALL be a pure data generator that
-  depends only on nixpkgs.lib. It MUST NOT carry placement logic (filesystem operations,
-  profile swap, stale removal), and MUST NOT introduce a dependency on home-manager,
+  depends only on nixpkgs.lib. It SHALL NOT carry placement logic (filesystem operations,
+  profile swap, stale removal), and SHALL NOT introduce a dependency on home-manager,
   NixOS or nix-darwin.
 specification_ja: |
   `lib`（`mkManifest` / マーカー群）は nixpkgs.lib のみに依存する純データ生成器で

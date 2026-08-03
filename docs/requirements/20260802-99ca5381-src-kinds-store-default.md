@@ -10,7 +10,7 @@ specification: |
   a `marker`. For `path` and `set` the placement source SHALL be a Nix store path, which
   is the default behaviour. Only a marker returned by `mkOutOfStoreSymlink` SHALL select
   an out-of-store placement source pointing at a live local filesystem path, so
-  out-of-store SHALL be opt-in and explicit. Passing a bare `string` as `src` MUST NOT be
+  out-of-store SHALL be opt-in and explicit. Passing a bare `string` as `src` SHALL NOT be
   supported as an implicit way to select out-of-store.
 specification_ja: |
   `src` フィールドは `path` / `set`（derivation）/ `marker` の 3 種の値を受け付け

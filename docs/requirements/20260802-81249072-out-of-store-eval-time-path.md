@@ -7,7 +7,7 @@ derives_from:
 specification: |
   The local path of an out-of-store entry, settled at Nix evaluation time (REQ-eb363122),
   SHALL be hard-coded into the manifest as it stands. Because the root of a `target` is
-  resolved at run time by the engine, that local path MUST NOT affect the resolution on
+  resolved at run time by the engine, that local path SHALL NOT affect the resolution on
   the `target` side; the two SHALL belong to separate points in time and SHALL be
   independent. Since the convention for the home directory differs between macOS and
   Linux, a local path SHOULD be resolved by discriminating the operating system within the

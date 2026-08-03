@@ -13,7 +13,7 @@ specification: |
   discovered entrypoint does not expose the requested `nput.<name>`, and, for `rollback`,
   when no previous generation exists, in which case it SHALL print an error message before
   stopping. Guessing another config, treating the situation as a no-op, or continuing with
-  an empty manifest MUST NOT be adopted in any of these cases, since each would silently
+  an empty manifest SHALL NOT be adopted in any of these cases, since each would silently
   produce a placement the user did not request.
 specification_ja: |
   ユーザーが要求した操作が成立しないとき、CLI はエラーで停止しなければならず、暗黙の
