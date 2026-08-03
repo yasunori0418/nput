@@ -39,8 +39,11 @@ one design leaves the other designs looking untested for a concern they share.
 A `requirement` carries its norm twice — `specification` in English (which sara validates
 for the presence of an RFC2119 keyword) and `specification_ja` in Japanese (which sara does
 not inspect at all). Both are normative; neither is a translation gloss of the other. The
-rules below keep the two readable as one norm, and are enforced item-by-item by the lints
-in `dev/tests/spec-style.sh` (`nix flake check ./dev`).
+rules below keep the two readable as one norm. The lints in `dev/tests/spec-style.sh`
+(`nix flake check ./dev`) check them **per item, not per sentence**: they confirm that a
+`specification` is free of MUST and that a `specification_ja` carries at least one
+normative auxiliary somewhere. A single declarative sentence left among normative ones
+therefore passes the lint — sentence-level mixing is caught in review, not by the machine.
 
 ### `specification` uses the SHALL family only
 
