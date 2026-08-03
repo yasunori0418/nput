@@ -45,8 +45,8 @@ switch と一括で動いてほしいユースケースを拾うために存在�
 `docs/design.md`「プロジェクト構成」末尾の実装スコープ段落と、
 「モジュール統合設計」→「各統合層の動作」末尾のモジュール対応の位置づけ。
 
-なお `docs/design.md`「使用パターン」→「パターン 2」は standalone CLI を
-「standalone CLI（home mode）」と呼ぶが、本 item はこれを採らない。`CONTEXT.md` が
+なお分割前の `docs/design.md`（原文）「使用パターン」→「パターン 2」は standalone CLI を
+「standalone CLI（home mode）」と呼んでいたが、本 item はこれを採らない。`CONTEXT.md` が
 曖昧さとして名指しで戒める項に「standalone は配置モードではなく起動形態であり、
 standalone = home mode と短絡しない（配置モードは `root` マーカーが決める）」が
 あるため。

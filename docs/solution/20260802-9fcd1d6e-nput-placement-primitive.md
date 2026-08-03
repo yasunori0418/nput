@@ -61,7 +61,7 @@ nput モデル:
   [claude-skills]  → 任意のタイミングで独立更新
 ```
 
-> **上の 2 つの図は `docs/concept.md` からの写し**。solution は解決策の位置づけを述べる層で
+> **上の 2 つの図は分割時点の `docs/concept.md`（原文）からの写し**。solution は解決策の位置づけを述べる層で
 > 規範を持たないため、独立更新の粒度が config 単位（1 profile = 1 config）であることの規範は
 > REQ-1be4d678 にあり、その config をどう選ぶかは REQ-c2d44626 / REQ-496b1a07 が担う。
 > 使われ方としての整理は UC-1c280dce が担う。
