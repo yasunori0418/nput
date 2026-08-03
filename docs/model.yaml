@@ -78,7 +78,7 @@ item_types:
       #
       # 本リポジトリは RFC2119 同義語のうち SHALL 系のみを使う（MUST / MUST NOT は
       # 書かない）。強度ごとの綴りを 1 つに固定して item 群の読み味を揃えるためで、
-      # 規約と写像表は docs/agents/sara-graph.md、機械検査は dev/tests/spec-style.sh。
+      # 規約と写像表は docs/agents/sara-graph.md が持つ（sara はどの綴りかを見ない）。
       - name: specification
         display_name: Specification
         field_type: text
@@ -95,8 +95,9 @@ item_types:
       # 全 item への併記が揃ったため required: true とした（→ #229。#209 の PR1 で
       # 新設した当初は移行中で未記入の item があり required: false としていた）。
       #
-      # 規範を述べる文は平叙形ではなく規範助動詞で終える（英語側の強度との写像表は
-      # docs/agents/sara-graph.md）。機械検査は dev/tests/spec-style.sh。
+      # 規範を述べる文は平叙形ではなく規範助動詞で終える。英語側の強度との写像表は
+      # docs/agents/sara-graph.md が持つ。sara はこのフィールドを検査しないので、
+      # 様式はレビューで守る。
       - name: specification_ja
         display_name: Specification (ja)
         field_type: text

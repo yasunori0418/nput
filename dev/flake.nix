@@ -251,49 +251,11 @@
                 touch "$out"
               '';
 
-          # requirement item の specification / specification_ja の様式を固定する
-          # テスト（dev/tests/spec-style.sh・→ Issue #229）。
-          #
-          # 現状この派生を走らせるのはローカルの `nix flake check ./dev` だけで、
-          # **CI では実行されない**。CI の flake-check job はルート flake を対象に
-          # するため dev の checks は回らず（checks.sara-id と同じ事情）、sara job は
-          # sara check と sara-id.sh の 2 ステップしか持たない。sara job へ
-          # `nix develop '.?dir=dev#sara' -c dev/tests/spec-style.sh` を足すのが
-          # 本来の姿だが、.github/ は Issue #229 の作業境界外なので別 PR で行う。
-          # それまで PR での退行検知は無く、規約違反はレビューで見ることになる。
-          #
-          # sara-id のテストと違い docs/ を実際に読むため、サンドボックスへ
-          # docs/requirements を持ち込む必要がある。git 解決に頼らず
-          # SPEC_STYLE_DOCS_DIR で走査先を明示的に渡す（サンドボックスには
-          # .git が無く `git rev-parse` が使えない）。
-          #
-          # 走査先は root flake の source（= git 追跡済みのツリー）なので、
-          # この経路が見るのは **コミット済み（少なくとも git add 済み）の docs** に限る。
-          # 編集中の item を手元で確かめるときは devShell から直接叩く:
-          #   nix develop ./dev -c dev/tests/spec-style.sh
-          checks.spec-style = pkgs.runCommandLocal "spec-style-test" {
-            nativeBuildInputs = [
-              pkgs.gnugrep
-              pkgs.gawk
-              pkgs.coreutils
-              # 折り返しを畳む前処理（インデント除去）が sed を使う。
-              # checks.sara-id と同じ理由で明示する（暗黙依存にすると実行条件の
-              # 違うサンドボックスで踏み抜く → 0a18d87 の exit 126）。
-              pkgs.gnused
-            ];
-            env.SPEC_STYLE_DOCS_DIR = "${inputs.root}/docs";
-          } ''
-            bash ${./tests/spec-style.sh}
-            touch "$out"
-          '';
-
           # CI の sara check 専用シェル。default devShell は nput のビルドと
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
           # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
           # yasunori0418.cachix.org から引くだけで済む。
-          # CI からは sara check と dev/tests/sara-id.sh をこのシェルで実行する。
-          # dev/tests/spec-style.sh もこのシェルで走らせられる（依存を載せてある）が、
-          # CI のステップはまだ無い（→ checks.spec-style のコメント）。
+          # CI からは sara check と dev/tests/sara-id.sh の両方をこのシェルで実行する。
           devShells.sara = pkgs.mkShell {
             packages = [
               inputs'.nur.packages.sara
@@ -304,9 +266,6 @@
               pkgs.git
               pkgs.gnused
               pkgs.coreutils
-              # dev/tests/spec-style.sh が使う（checks.spec-style と揃えて明示する）。
-              pkgs.gnugrep
-              pkgs.gawk
             ];
             env.TERM = "dumb";
           };
