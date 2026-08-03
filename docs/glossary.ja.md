@@ -2,7 +2,7 @@
 
 nput の正準（canonical）英語用語を日本語で対訳したもの。README・コードコメント・コマンド出力で概念に言及するときは、ここで定義した **canonical 用語**（見出しの英語表記）を使い、列挙した別名を避けて、プロジェクト全体で表記をそろえる。正準の綴り自体は英語版 `docs/glossary.md` が一次（authoritative）の参照先。
 
-各エントリは canonical な綴りを 1 つ固定する。定義は意図的に短い。詳細な根拠は `docs/spec.md`（仕様書）と `docs/adr/`（設計判断）を参照する。英語版（一次）は `docs/glossary.md` にある。
+各エントリは canonical な綴りを 1 つ固定する。定義は意図的に短い。詳細な根拠は `docs/requirements/` の requirement item（索引は `docs/spec.md`）と `docs/adr/`（設計判断）を参照する。英語版（一次）は `docs/glossary.md` にある。
 
 ## 配置の中心抽象
 
