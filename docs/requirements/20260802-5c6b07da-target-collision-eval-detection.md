@@ -13,7 +13,8 @@ specification: |
   instead be handled at engine runtime as last-writer-wins plus a foreign symlink warning.
   The two SHALL remain separate paths. Where several configs do ride on a single
   evaluation, as the `nput.configs` of one module configuration do, static detection is
-  possible and SHALL NOT be precluded by this.
+  possible and SHALL NOT be precluded by this; that case is stated by REQ-5923ac79 and is
+  not restated here.
 specification_ja: |
   別キー A / B が `target` フィールドを同値に明示上書きした衝突は、正規化後 target
   文字列の重複として eval 時に `lib.throwIf` で検出し停止しなければならない
@@ -21,7 +22,8 @@ specification_ja: |
   別ツールに跨る場合）の同一 target 衝突は eval では検出できず、engine 実行時の後勝ち +
   foreign symlink warning として扱う。両者は別経路とする。単一の eval に載る複数 config
   （1 つのモジュール config の `nput.configs` など）については静的検出が可能であり、
-  本 item はそれを妨げない。
+  本 item はそれを妨げない。その場合の規範は REQ-5923ac79 の担当で、本 item では
+  規定しない。
 ---
 # REQ-5c6b07da: target 衝突の検出経路を同一 manifest 内と cross-config で分ける
 
@@ -41,9 +43,8 @@ cross-config（別 profile・別 manifest）の同一 target 衝突は eval で�
 > eval 時 assertion で停止すると決定済み**で、原文の無条件な言い切りはこれを否定してしまう
 > （原文が ADR-0035 に未追従・REQ-37b56673 / REQ-16faf428 で ADR-0036 由来の未追従を扱ったのと
 > 同じ扱い）。本 item は静的検出が可能な場合を妨げないことまでを規範とし、その場合に実際に
-> eval 停止する規範（ADR-0035 §4）そのものは持たない。同 §4 の item 化は `docs/spec.md` の
-> 追従（epic #203 の段階 7）とあわせて別途扱う（→ REQ-c6891aeb の注記）。`docs/spec.md` の
-> 追従は本 item の担当範囲外。
+> eval 停止する規範（ADR-0035 §4）そのものは持たない。**同 §4 の規範は REQ-5923ac79 が
+> 持つ**。`docs/spec.md` の追従は本 item の担当範囲外。
 
 ## 出典
 

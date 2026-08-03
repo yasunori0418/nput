@@ -65,11 +65,11 @@ specification_ja: |
 > 最後に集約）、§4 で単一 HM config 内の `configs` 間の正規化後 target 衝突を eval 時
 > assertion で停止することも決めているが、いずれも `docs/spec.md` に対応記述が無い
 > （原文が ADR-0035 未追従のため）。本 item は原文 blockquote の担当範囲＝profile 粒度に
-> 留め、§3〜§4 の item 化は原文の追従（段階 7）とあわせて別途扱う。なお §4 の eval 停止は、
-> 別 entrypoint・別 manifest の cross-config を「eval では検出不可・実行時の後勝ち + foreign
-> warning」とする REQ-5c6b07da / REQ-fc1118b1 に対する**例外**（HM の `configs` は全 config が
-> 単一のモジュール eval に載るため静的検出が可能）であり、item 化の際はこの関係を明示する
-> 必要がある。
+> 留め、**§3 の規範は REQ-c847d1af、§4 の規範は REQ-5923ac79 が持つ**。なお §4 の eval
+> 停止は、別 entrypoint・別 manifest の cross-config を「eval では検出不可・実行時の
+> 後勝ち + foreign warning」とする REQ-5c6b07da / REQ-fc1118b1 に対する**例外**（HM の
+> `configs` は全 config が単一のモジュール eval に載るため静的検出が可能）であり、この
+> 関係は REQ-5923ac79 の注記が明示している。
 
 ## 出典
 
