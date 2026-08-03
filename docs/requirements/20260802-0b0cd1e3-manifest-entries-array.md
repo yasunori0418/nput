@@ -12,7 +12,7 @@ specification: |
   marker's absolute path for `outOfStore`), `subpath` (string, recorded after defaulting,
   so an omitted one is recorded as `"."`), `target` (string, the placement target
   relative to root and the entry's identity), and `method` (`"symlink"` or `"copy"`,
-  recorded after defaulting). An entry `name` field MUST NOT exist.
+  recorded after defaulting). An entry `name` field SHALL NOT exist.
 specification_ja: |
   `manifest.json` の `entries` は Nix の attrset を配列へ正規化したものでなければ
   ならない（Go は配列を読む）。各要素は次の 5 フィールドを記録する: `srcKind`

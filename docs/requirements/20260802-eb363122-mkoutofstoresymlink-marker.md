@@ -8,9 +8,9 @@ specification: |
   `lib.mkOutOfStoreSymlink` SHALL be a pure function
   (`mkOutOfStoreSymlink :: string -> marker`) returning a marker that denotes an
   out-of-store symlink to a local path. Its argument SHALL be an absolute path string
-  fixed at Nix evaluation time; a shell `$HOME` MUST NOT be usable. In the core lib it
+  fixed at Nix evaluation time; a shell `$HOME` SHALL NOT be usable. In the core lib it
   SHALL do nothing but wrap the path in a marker attrset, and creating the actual link
-  SHALL be done by the engine. It MUST NOT delegate to a platform-native mechanism such
+  SHALL be done by the engine. It SHALL NOT delegate to a platform-native mechanism such
   as home-manager's `config.lib.file.mkOutOfStoreSymlink`.
 specification_ja: |
   `lib.mkOutOfStoreSymlink` は、ローカルパスへの out-of-store symlink を表すマーカーを

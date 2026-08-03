@@ -5,7 +5,7 @@ name: "lib.__internal は private helper のテスト seam として公開する
 specification: |
   `lib.__internal` SHALL expose the private helpers (`escapesBase` / `pathChecks` /
   `anchorName` / `resolveEntry` / `farmEntries`) as a test seam for nix-unit and namaka.
-  It SHALL NOT be a stable API and MUST NOT be covered by backward-compatibility
+  It SHALL NOT be a stable API and SHALL NOT be covered by backward-compatibility
   guarantees.
 specification_ja: |
   `lib.__internal` は private helper（`escapesBase` / `pathChecks` / `anchorName` /

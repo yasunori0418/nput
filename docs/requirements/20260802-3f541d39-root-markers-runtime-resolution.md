@@ -7,7 +7,7 @@ derives_from:
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
   `lib.projectRoot` / `lib.homeRoot` / `lib.systemRoot` SHALL be pure functions returning
-  a marker attrset that carries the kind of runtime resolution. They MUST NOT be sugar
+  a marker attrset that carries the kind of runtime resolution. They SHALL NOT be sugar
   that returns a path string. `mkManifest` SHALL record the kind in `manifest.json`, and
   resolving the concrete path SHALL be the engine's runtime responsibility.
 specification_ja: |

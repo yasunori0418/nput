@@ -8,9 +8,9 @@ specification: |
   In project mode (`root = projectRoot`) the root SHALL be resolved by default from
   `git rev-parse --show-toplevel`, so that running from any subdirectory resolves to the
   same root; `--root <path>` SHALL state it explicitly for use outside git or to point at
-  another root. Resolution relative to the config file MUST NOT be adopted, since a flake
+  another root. Resolution relative to the config file SHALL NOT be adopted, since a flake
   source is copied into the store by Nix and becomes a store path, so that it does not
-  hold. Resolution relative to the current working directory (`$PWD`) MUST NOT be adopted
+  hold. Resolution relative to the current working directory (`$PWD`) SHALL NOT be adopted
   either, since the placement destination would shift with the place of execution and
   break idempotency.
 specification_ja: |

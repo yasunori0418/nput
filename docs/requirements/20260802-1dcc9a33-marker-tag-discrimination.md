@@ -9,7 +9,7 @@ derives_from:
 specification: |
   Markers (`mkOutOfStoreSymlink` and the root markers) SHALL carry a `_nputMarker`
   discriminator tag so that a custom optionType `check` can distinguish them from a
-  derivation. `_nputMarker` SHALL stay entirely inside Nix evaluation and MUST NOT leak
+  derivation. `_nputMarker` SHALL stay entirely inside Nix evaluation and SHALL NOT leak
   into `manifest.json`; what crosses into the Go contract SHALL be the clean enums
   `srcKind` and `rootKind`.
 specification_ja: |

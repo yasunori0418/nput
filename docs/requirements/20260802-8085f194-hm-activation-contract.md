@@ -8,7 +8,7 @@ specification: |
   The home-manager module SHALL kick the engine from `home.activation.nput`
   (`entryAfter ["writeBoundary"]`) with `nput apply --manifest <link-farm>`, the link-farm
   being built by `mkManifest` from the entries of a config at module evaluation time and
-  its store path passed from the activation script. The activation MUST NOT perform
+  its store path passed from the activation script. The activation SHALL NOT perform
   `nix eval` or `nix build`, not being on the entrypoint path. The flock SHALL be taken
   blocking, the placement report SHALL be visible, and an engine error such as a conflict
   SHALL stop the switch by exiting non-zero, matching the clobber error of `home.file`

@@ -9,7 +9,7 @@ specification: |
   `entries` SHALL be an attrset whose attribute key is the target path, which SHALL serve
   as the entry's identifier. Uniqueness of identifiers SHALL be guaranteed natively by
   the fact that Nix attrsets cannot hold duplicate keys, and a `lib.throwIf` detecting a
-  duplicate `name` MUST NOT exist. When the `target` field is omitted, the attribute key
+  duplicate `name` SHALL NOT exist. When the `target` field is omitted, the attribute key
   SHALL be used as its default.
 specification_ja: |
   `entries` は attrset とし、属性キーが target パス（= entry の識別子）でなければ

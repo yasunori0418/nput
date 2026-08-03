@@ -6,7 +6,7 @@ derives_from:
   - "UC-f2436d68-91ff-4c48-b1df-47acefe4f464"
   - "UC-19a90989-0ae3-438f-8a75-4e1e2637f81c"
 specification: |
-  `root` SHALL be REQUIRED and stated explicitly, and MUST NOT have an implicit default
+  `root` SHALL be REQUIRED and stated explicitly, and SHALL NOT have an implicit default
   such as `$HOME`. Omitting `root` SHALL be an error at Nix evaluation time.
 specification_ja: |
   `root` は明示必須でなければならず、暗黙デフォルト（`$HOME` 等）を持ってはならない。
