@@ -70,8 +70,8 @@ specification_ja: |
   単一 config と同一でなければならず、`--all` 固有の写像を持ってはならない。
 
   `results[]` はコマンドごとの選択規則を適用したあとの辞書順で並べなければならない。各
-  config は独立 atomic なので順序は結果に影響せず、消費側は `subject.name` で引くものとし、
-  `changes[].itemId` の解決は同一 `SubjectResult` 内に閉じなければならない。
+  config は独立 atomic なので順序は結果に影響せず、消費側は `subject.name` で引かなければ
+  ならず、`changes[].itemId` の解決は同一 `SubjectResult` 内に閉じなければならない。
 
   集約 `status` は 1 主体でも `error` なら `error`、全て成功なら `success` としなければ
   ならない。部分失敗でも成功した config の `SubjectResult` は全て残さなければならない。
