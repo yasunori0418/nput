@@ -73,7 +73,6 @@ manifest をエンジンへ渡す。エンジンは `manifest.json` を唯一の
 - [REQ-b232ec98](requirements/20260802-b232ec98-normalize-manifest-defaults.md) — normalizeManifest が検査・デフォルト適用・marker 変換を行い mkManifest が derivation を組む
 - [REQ-6911eab6](requirements/20260802-6911eab6-path-safety-validation.md) — target / subpath のパス安全性を評価時に検査する
 - [REQ-5c6b07da](requirements/20260802-5c6b07da-target-collision-eval-detection.md) — target 衝突の検出経路を同一 manifest 内と cross-config で分ける
-- [REQ-5923ac79](requirements/20260803-5923ac79-hm-configs-target-collision-assertion.md) — 単一 HM config 内の configs 間 target 衝突は eval 時 assertion で停止する
 - [REQ-16faf428](requirements/20260802-16faf428-normalize-manifest-cross-field-checks.md) — 意図が矛盾する組み合わせをクロスフィールドチェックで評価時に拒否する
 - [REQ-1dcc9a33](requirements/20260802-1dcc9a33-marker-tag-discrimination.md) — marker は判別タグで識別し manifest.json には漏らさない
 
@@ -261,6 +260,7 @@ root は評価時にパスへ展開せず、マーカーが運ぶ kind をエン
 - [REQ-c1b3ca5f](requirements/20260802-c1b3ca5f-modules-are-engine-wiring.md) — 全モジュールと devShell は engine をキックするだけの配線とし、ネイティブ機構へ翻訳しない
 - [REQ-8085f194](requirements/20260802-8085f194-hm-activation-contract.md) — home-manager モジュールの engine kick 1 回は activation からビルド済み link-farm を渡し、失敗で switch を止める
 - [REQ-c847d1af](requirements/20260803-c847d1af-hm-activation-per-config-kick.md) — HM の activation は configs を辞書順に走査して profile ごとに engine を起動し、部分失敗を最後に集約する
+- [REQ-5923ac79](requirements/20260803-5923ac79-hm-configs-target-collision-assertion.md) — 単一 HM config 内の configs 間 target 衝突は eval 時 assertion で停止する
 - [REQ-a0bdf6db](requirements/20260802-a0bdf6db-devshell-wiring.md) — devShell は shellHook から engine を起動する配線で、シェル入室のたびに project mode で配置する
 
 ---

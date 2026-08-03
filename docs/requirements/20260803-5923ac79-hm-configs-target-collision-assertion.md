@@ -48,16 +48,12 @@ specification_ja: |
 > ADR-0035 に未追従のため #209 の分割では item 化されず、REQ-c6891aeb / REQ-5c6b07da /
 > REQ-fc1118b1 の注記に申し送りとして残っていた（epic #203 / issue #228 で回収）。
 >
-> **REQ-5c6b07da / REQ-fc1118b1 との整合**: 両 item は原文の「cross-config は eval では
-> 検出不可」という無条件の言い切りを**単一の eval に載らない場合**へ限定し、単一の eval に
-> 載る複数 config について「静的検出が可能であり本 item はそれを妨げない」までを規範と
-> して、実際に eval 停止する規範そのものは持たないと明記していた。本 item がその欠けて
-> いた規範を担う。したがって三者の関係は、REQ-5c6b07da が同一 manifest 内の衝突を eval で
-> 止めること・単一の eval に載らない cross-config を engine 実行時へ回すこと、
-> REQ-fc1118b1 が engine 実行時に検知して止める機構を持たないこと、本 item が単一の
-> eval に載る `configs` 間について eval 停止することを、それぞれ規定する形になる。
-> 検出層を「設定の誤りは評価時・実体の不整合は engine 実行時」に分ける原則そのものは
-> REQ-c5dfcae6 の担当。
+> **REQ-5c6b07da / REQ-fc1118b1 との整合**: 両 item は規範文を「単一の eval に載らない
+> 場合」へ限定したうえで、単一の eval に載る複数 config については「静的検出を妨げない」
+> までを述べ、実際に eval 停止する規範そのものは持たないと明記している。本 item がその
+> 欠けていた規範を担う。両 item が何を規定するかはそれぞれの specification が正で、
+> ここでは再掲しない。検出層を「設定の誤りは評価時・実体の不整合は engine 実行時」に
+> 分ける原則そのものは REQ-c5dfcae6 の担当。
 >
 > **他 item との担当分界**: 正規化後 target 文字列の同値判定と属性キー = target という
 > 識別の体系は REQ-cb77ea05 / REQ-b232ec98、`nput.configs` オプションの定義は
