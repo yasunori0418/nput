@@ -14,7 +14,7 @@ specification: |
 specification_ja: |
   `nput reset <name> --dryrun` は副作用ゼロで削除対象（symlink / copy target）を表示して
   終了しなければならない（FS 削除・confirm・flock のいずれも行わない・`apply --dryrun` と
-  対称）。終了コードは削除対象の有無に依らず 0 とする。
+  対称）。終了コードは削除対象の有無に依らず 0 でなければならない。
 ---
 # REQ-6a950d6d: reset --dryrun は副作用ゼロで削除対象を表示して終了する
 

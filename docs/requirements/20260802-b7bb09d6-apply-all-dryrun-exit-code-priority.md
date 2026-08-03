@@ -14,7 +14,8 @@ specification_ja: |
   `apply --all --dryrun` の終了コードは、いずれかが error なら 1、error が無く conflict が
   あれば 2、どちらも無ければ 0 でなければならない（error(1) を conflict(2) より優先する）。
   単純な最大値（2 > 1 で conflict 優先）を採ってはならない。より深刻な eval / engine
-  エラーを CI で隠すため。非 dryrun の `--all` は conflict 概念が無く 0 / 1 のみとする。
+  エラーを CI で隠すため。非 dryrun の `--all` は conflict 概念が無く 0 / 1 のみでなければ
+  ならない。
 ---
 # REQ-b7bb09d6: apply --all --dryrun の終了コードは error を conflict より優先する
 

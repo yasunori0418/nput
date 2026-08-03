@@ -18,9 +18,9 @@ specification_ja: |
   「非 NixOS でも nix さえあれば動く」という主張は、nix をスタブせず、flake entrypoint
   からの `nix build` / `nix eval` / `nix-env --set` を含む実経路を一気通貫で回す E2E
   ハーネスにより、実 nix で検証しなければならない。各シナリオは隔離した一時 `$HOME` /
-  `$XDG_STATE_HOME` の下で動かし（実行マシンの環境に触れないようにするため）、配置元は
-  fixture flake 内の相対パス（評価時に store へコピーされる）か out-of-store の live
-  ディレクトリで用意する。ハーネスは、project mode の配置と冪等性、home mode の
+  `$XDG_STATE_HOME` の下で動かさなければならず（実行マシンの環境に触れないようにするため）、
+  配置元は fixture flake 内の相対パス（評価時に store へコピーされる）か out-of-store の
+  live ディレクトリで用意しなければならない。ハーネスは、project mode の配置と冪等性、home mode の
   配置・世代コミット・ロールバック、stale 除去、copy の place-once と out-of-store
   symlink、非 NixOS での home-manager モジュールの評価と activate を対象としなければ
   ならない。各シナリオが検証する仕様そのものは各担当 item の規範であり、ここでは

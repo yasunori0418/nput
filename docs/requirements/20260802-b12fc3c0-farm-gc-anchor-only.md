@@ -18,14 +18,15 @@ specification: |
   and stale detection.
 specification_ja: |
   `mkManifest` が返す derivation が含む symlink farm は GC アンカー専用でなければ
-  ならず、engine が配置に使う値は `manifest.json` の解決済み `src` 文字列とする。
-  farm アンカーを持つのは store 由来（`srcKind = "store"`）かつ `method = "symlink"` の
-  entry に限り、profile 世代が GC root として全 store src を掴む。out-of-store entry
+  ならず、engine が配置に使う値は `manifest.json` の解決済み `src` 文字列でなければ
+  ならない。farm アンカーを持つのは store 由来（`srcKind = "store"`）かつ
+  `method = "symlink"` の entry に限らなければならず、profile 世代が GC root として全
+  store src を掴む。out-of-store entry
   （`srcKind = "outOfStore"`）は store 外を指すためアンカーを持ってはならない。
   `method = "copy"` の entry は store 由来であってもアンカーを持ってはならない。copy は
   place-once でマテリアライズ後は store から独立するため store src を掴む必要がなく、
   `nix-collect-garbage` で解放されてよいためである。ただし copy entry も orphan 警告・
-  stale 判定のため `manifest.json` には記録する。
+  stale 判定のため `manifest.json` には記録しなければならない。
 ---
 # REQ-b12fc3c0: symlink farm は GC アンカー専用でアンカーは store-backed な symlink entry に限る
 

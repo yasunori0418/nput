@@ -23,8 +23,8 @@ specification_ja: |
   一律、nput エンジンをキックするだけの配線でなければならず、各層は root と activation
   タイミングだけを供給する。`systemd.tmpfiles` / `home.file` などプラットフォームの
   ネイティブ機構へ翻訳してはならない。配置・stale 除去は全層で同一の engine + store
-  マニフェストが行うものとし、振る舞いが層ごとに二重化しないようにする。OS の機構は nput の
-  関心外とする。NixOS / nix-darwin モジュールは `system.activationScripts.nput` から engine を
+  マニフェストが行わなければならず、振る舞いが層ごとに二重化しないようにする。OS の機構は
+  nput の関心外とする。NixOS / nix-darwin モジュールは `system.activationScripts.nput` から engine を
   起動しなければならない（home-manager モジュールが使うフックは REQ-8085f194 の担当）。
 ---
 # REQ-c1b3ca5f: 全モジュールと devShell は engine をキックするだけの配線とし、ネイティブ機構へ翻訳しない

@@ -52,7 +52,8 @@ specification_ja: |
   flock を取り、build をロック内に閉じる。これで profileDir 未確定の循環と、ロック外
   build の `.pending` out-link 競合が同時に解消する。
 
-  フローは次のとおりとする。(0) entrypoint 発見（`-f` 上書き）。(1) root kind の先取り
+  フローは次のとおりでなければならない。(0) entrypoint 発見（`-f` 上書き）。(1) root kind の
+  先取り
   eval → root 解決（project = git rev-parse / home = `$HOME` / system = `/` / 固定パス、
   `--root` 上書き）→ profileDir 確定。rootKind は mkManifest の passthru として eval 時に
   確定し、git toplevel / `$HOME` の実体解決は engine 実行時に行う。(2) engine を駆動する:
@@ -73,7 +74,7 @@ specification_ja: |
   (g) `--set` 成功後に `<profileDir>/.pending` を削除する（世代リンクが gcroot を引き継ぐ）。
 
   このフロー上で `apply --manifest <link-farm>` は 2a から入って 2g までを通り、0〜1 と
-  2b を skip しなければならない。build しないため pending out-link はそこで張らない。
+  2b を skip しなければならない。build しないため pending out-link はそこで張ってはならない。
   skip した段の代わりに何を行うかは `apply --manifest` の仕様の担当で、本 item では
   規定しない。
 ---

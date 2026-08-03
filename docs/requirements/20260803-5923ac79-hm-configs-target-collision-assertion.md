@@ -26,7 +26,7 @@ specification_ja: |
   eval で止めること（同一 manifest 内について REQ-5c6b07da が定める）の自然な延長で
   ある。これは単一の eval に載らない一般の cross-config 衝突（REQ-5c6b07da /
   REQ-fc1118b1 が engine 実行時の後勝ち + foreign symlink warning に委ねるもの）に
-  対する例外とする。別 entrypoint・別マシン・別ツールに跨る衝突をどう扱うかは
+  対する例外でなければならない。別 entrypoint・別マシン・別ツールに跨る衝突をどう扱うかは
   同 2 item の担当であり、本 item では再掲も変更もしない。
   検出しなければ、activation のたびに A と B が同じ target を交互に奪い合う
   フリップフロップが恒常化する。役割分離の導入自体が衝突の温床になるためである。

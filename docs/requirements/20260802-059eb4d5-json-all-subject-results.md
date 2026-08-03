@@ -66,43 +66,46 @@ specification_ja: |
   完全に同一とし、`--all` を判別するフィールドを持ってはならない（単一実行は N=1 の
   特殊形であって別文書ではない）。`specVersion` / `tool` / `command` / `dryRun` /
   `startedAt` / `finishedAt` はトップに 1 度だけ置き、`results[i]` を切り出しても単独で
-  valid な文書にはならないようにする。各 `results[i]` の中身の写像規則は単一 config と
-  同一とし、`--all` 固有の写像を持たない。
+  valid な文書にはならないようにしなければならない。各 `results[i]` の中身の写像規則は
+  単一 config と同一でなければならず、`--all` 固有の写像を持ってはならない。
 
-  `results[]` はコマンドごとの選択規則を適用したあとの辞書順で並べる。各 config は独立
-  atomic なので順序は結果に影響せず、消費側は `subject.name` で引くものとし、
+  `results[]` はコマンドごとの選択規則を適用したあとの辞書順で並べなければならない。各
+  config は独立 atomic なので順序は結果に影響せず、消費側は `subject.name` で引くものとし、
   `changes[].itemId` の解決は同一 `SubjectResult` 内に閉じなければならない。
 
-  集約 `status` は 1 主体でも `error` なら `error`、全て成功なら `success` とする。
-  部分失敗でも成功した config の `SubjectResult` は全て残さなければならない。対象 0 件は
-  `results: []` + `status:"success"` とし、N=0 でも同一形状・キーは常に存在させる。
+  集約 `status` は 1 主体でも `error` なら `error`、全て成功なら `success` としなければ
+  ならない。部分失敗でも成功した config の `SubjectResult` は全て残さなければならない。
+  対象 0 件は `results: []` + `status:"success"` としなければならず、N=0 でも同一形状・
+  キーは常に存在させなければならない。
 
   config 単位の item 非依存な失敗（build / eval / lock 等）は該当 `results[i].errors[]` へ
-  載せる。層の振り分け規則そのものは単一 config 実行と同一で、本 item では規定しない。
+  載せなければならない。層の振り分け規則そのものは単一 config 実行と同一で、本 item では
+  規定しない。
   `--all` 固有の規範として、集約エラーは既に各 subject が持つ失敗の言い換えなのでトップへ
   重ねてはならない。
 
   try-lock skip（他の apply が進行中）は、名指し apply が exit 0 を返すのと対称に、その
-  subject を `status:"success"` として扱う（skip は失敗ではない）。
+  subject を `status:"success"` として扱わなければならない（skip は失敗ではない）。
 
-  `apply --all --dryrun` は本 apply と同一の payload builder を通すため、構造 parity は
-  単一 `--dryrun` と同じとする。conflict のある config は該当 entry が
+  `apply --all --dryrun` は本 apply と同一の payload builder を通さなければならず、構造
+  parity は単一 `--dryrun` と同じとする。conflict のある config は該当 entry が
   `item.status:"failed"` + `error.code:"E_NPUT_COLLISION"` となり、その subject は
   `status:"error"`、したがって集約も `status:"error"` としなければならない。`status` は
-  「非 0 ⇔ error」だけを厳守する。終了コード同士の優先度は別 item の担当で、本 item では
-  規定しない。
+  「非 0 ⇔ error」だけを厳守しなければならない。終了コード同士の優先度は別 item の担当で、
+  本 item では規定しない。
 
   `gitignore --all` は JSON で cross-config dedup をしてはならない。各
-  `results[i].result.info.paths` はその config 自身の target のみを持ち、複数 config が
-  共有する path は双方の `SubjectResult` に現れる（どちらか一方へ帰属させるのは
-  「どの config が宣言しているか」の偽りであるため）。union が必要な消費側が `results` を
-  跨いで union + dedup する。config 横断で集約するテキスト既定出力との非対称は意図的に
-  保つ。そのテキスト出力が何をするかは別 item の担当で、本 item では規定しない。
+  `results[i].result.info.paths` はその config 自身の target のみを持たなければならず、
+  複数 config が共有する path は双方の `SubjectResult` に現れなければならない（どちらか
+  一方へ帰属させるのは「どの config が宣言しているか」の偽りであるため）。union が必要な
+  消費側が `results` を跨いで union + dedup する。config 横断で集約するテキスト既定出力との
+  非対称は意図的に保たなければならない。そのテキスト出力が何をするかは別 item の担当で、
+  本 item では規定しない。
 
   `list-generations --all` は profile ディレクトリ走査で見つかった home mode config ごとに
-  `result.info.generations` を持つ（`items: []`・単一実行と同一）。列挙途中の読み取り失敗は
-  従来どおりそこで打ち切り、失敗した config の subject がその失敗を持ち、既に列挙済みの
-  config の結果は残す。
+  `result.info.generations` を持たなければならない（`items: []`・単一実行と同一）。列挙途中の
+  読み取り失敗は従来どおりそこで打ち切らなければならず、失敗した config の subject がその
+  失敗を持ち、既に列挙済みの config の結果は残さなければならない。
 
   読み取り系 `--all` は打ち切り以降の config を `results[]` に載せてはならない
   （両者は最初の失敗で列挙を中断するため）。`apply --all` は部分失敗でも全 config を

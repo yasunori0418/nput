@@ -14,7 +14,7 @@ specification_ja: |
   `nput init` のテンプレート参照は、バイナリにハードコードした固定 flake ref
   `github:yasunori0418/nput` でなければならない（registry 登録に依存せず動くように）。
   `init` は新規 bootstrap 用途であるため、CLI 版と template 版のズレ（常に latest main
-  参照）は許容する。
+  参照）は許容しなければならない。
 ---
 # REQ-cbd61281: init のテンプレート参照はバイナリにハードコードした固定 flake ref とする
 

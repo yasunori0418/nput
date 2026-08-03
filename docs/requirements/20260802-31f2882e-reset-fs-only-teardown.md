@@ -22,14 +22,14 @@ specification: |
   and project mode.
 specification_ja: |
   `nput reset <name> [target...]` は配置物を無い状態へ戻す teardown でなければならない。
-  target 省略で全 entry、指定でその entry のみを対象とする。symlink は stale 除去と同じ
-  保守的不変条件（nput 管理・記録通りのみ・foreign は warning で残す）で除去し、
-  copy target も削除する（copy を消す唯一の明示手段）。symlink・copy いずれの除去後も
-  空親ディレクトリ剪定を適用する。データ損失リスクのため確認プロンプトを出すか
-  `-y` / `--yes`（スクリプト / CI 用）で同意を要求し、削除 target をレポート表示しなければ
-  ならない。`reset` は profile / 世代を
-  触らない FS-only teardown であり、config が entry を残す限り次の apply で再配置される。
-  home / project の両モードで使用できる。
+  target 省略で全 entry、指定でその entry のみを対象としなければならない。symlink は stale
+  除去と同じ保守的不変条件（nput 管理・記録通りのみ・foreign は warning で残す）で除去し、
+  copy target も削除しなければならない（copy を消す唯一の明示手段）。symlink・copy いずれの
+  除去後も空親ディレクトリ剪定を適用しなければならない。データ損失リスクのため確認プロンプトを
+  出すか `-y` / `--yes`（スクリプト / CI 用）で同意を要求し、削除 target をレポート表示
+  しなければならない。`reset` は profile / 世代を触らない FS-only teardown でなければならず、
+  config が entry を残す限り次の apply で
+  再配置しなければならない。home / project の両モードで使用できなければならない。
 ---
 # REQ-31f2882e: reset は profile を触らない FS-only teardown で配置物を無い状態へ戻す
 

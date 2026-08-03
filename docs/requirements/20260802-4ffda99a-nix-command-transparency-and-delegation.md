@@ -16,7 +16,7 @@ specification_ja: |
   CLI は `nput --help` 等で内部実行する nix コマンドを開示し、ユーザーが選択的に手で
   実行できるようにしなければならない。任意世代への切替・世代の GC は nput 専用の
   サブコマンドではなく、標準の `nix-env` / `nix-collect-garbage` を profile パスに対して
-  使うものとする。
+  使って行わなければならない。
 ---
 # REQ-4ffda99a: 内部実行する nix コマンドを開示し世代の切替と GC は標準の nix コマンドへ委譲する
 

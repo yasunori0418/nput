@@ -36,18 +36,20 @@ specification_ja: |
   いずれかで途中失敗したとき、その run が行った FS 変更を全て巻き戻して pre-apply 状態へ復元
   しなければならない（「失敗した apply は FS に痕跡を残さない」）。これは常時有効であり、
   フラグで制御してはならない。そのため engine は FS 書き込みごとにインメモリの undo ジャーナルへ
-  逆操作を 1 件記録する。新規配置 symlink / copy は削除、張替えは unlink 前に捕捉した旧リンク先
-  での symlink 再作成、stale 除去したリンクと PreRemove の unlink は前世代 manifest の記録 dest
-  での symlink 再作成、PreRemove の rmdir は空 dir の再作成、`--recopy` / `--backup` の rename
-  退避は退避物の rename back とする。エラーが発生したら、それまでに記録したジャーナルを逆順
-  （LIFO）で巻き戻してからエラーを返す。`nix-env --set`（コミット）が成功した後はジャーナルを
-  破棄する（`--set` 自体の失敗は冪等再実行で収束するため巻き戻し対象外）。`--recopy` の退避物は
-  成功時に削除し、`--backup` の退避物は成功時も残置する。クラッシュ（SIGKILL・電源断）は対象外
-  とする（ジャーナルはプロセスメモリ上にのみ存在し永続 WAL を持たないため）。この場合は
+  逆操作を 1 件記録しなければならない。新規配置 symlink / copy は削除、張替えは unlink 前に捕捉
+  した旧リンク先での symlink 再作成、stale 除去したリンクと PreRemove の unlink は前世代 manifest
+  の記録 dest での symlink 再作成、PreRemove の rmdir は空 dir の再作成、`--recopy` / `--backup`
+  の rename 退避は退避物の rename back としなければならない。エラーが発生したら、それまでに
+  記録したジャーナルを
+  逆順（LIFO）で巻き戻してからエラーを返さなければならない。`nix-env --set`（コミット）が成功した
+  後はジャーナルを破棄しなければならない（`--set` 自体の失敗は冪等再実行で収束するため巻き戻し
+  対象外）。`--recopy` の退避物は成功時に削除しなければならず、`--backup` の退避物は成功時も
+  残置しなければならない。クラッシュ（SIGKILL・電源断）は対象外としなければならない
+  （ジャーナルはプロセスメモリ上にのみ存在し永続 WAL を持たないため）。この場合は
   「世代未コミット + 冪等再実行で収束」が保証を担う。世代スキップ経路の drift 修復も同じ機構で
-  巻き戻し、`rollback` も apply と同じ機構を使う。ただし profile ポインタの移動はこの時点で
-  全 FS 変更が成功済みのため巻き戻し対象外とし、`rollback` には `--backup` 相当のフラグが無いため
-  Backup 段は常に空とする。
+  巻き戻さなければならず、`rollback` も apply と同じ機構を使わなければならない。ただし profile
+  ポインタの移動はこの時点で全 FS 変更が成功済みのため巻き戻し対象外とし、`rollback` には
+  `--backup` 相当のフラグが無いため Backup 段は常に空でなければならない。
 ---
 # REQ-5e75aabc: 途中失敗した apply / rollback はインメモリ undo ジャーナルで全 FS 変更を巻き戻す
 

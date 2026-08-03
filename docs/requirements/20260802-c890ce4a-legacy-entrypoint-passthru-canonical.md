@@ -20,13 +20,13 @@ specification: |
 specification_ja: |
   `shell.nix` / `default.nix` は nixpkgs `mkShell` と共存できる passthru 形を canonical と
   しなければならない。`shell.nix` は素の `mkShell` derivation を返し、
-  `passthru.nput.<name>` に named manifest を載せる（`project` template の devShell 同梱と
-  両立する）。`passthru` はホスト derivation の attrset にマージされるため、CLI が叩く
-  attr path（`nput.<name>`）はトップレベル attrset 形と同一でなければならず、CLI は
-  実装分岐を持ってはならない。素の `nix-shell`（`-A` 不要）はどちらの形でも壊れない。
-  複数 manifest の一括処理は既存の `apply --all` の一括 eval でそのまま充足させ、
-  `mkShell` の `inputsFrom` で manifest を合成するヘルパは持たない（1 profile = 1 config の
-  atomic 性と衝突するため）。
+  `passthru.nput.<name>` に named manifest を載せなければならない（`project` template の
+  devShell 同梱と両立する）。`passthru` はホスト derivation の attrset にマージされるため、
+  CLI が叩く attr path（`nput.<name>`）はトップレベル attrset 形と同一でなければならず、
+  CLI は実装分岐を持ってはならない。素の `nix-shell`（`-A` 不要）はどちらの形でも壊れては
+  ならない。複数 manifest の一括処理は既存の `apply --all` の一括 eval でそのまま充足させ
+  なければならず、`mkShell` の `inputsFrom` で manifest を合成するヘルパは持ってはならない
+  （1 profile = 1 config の atomic 性と衝突するため）。
 ---
 # REQ-c890ce4a: legacy entrypoint は mkShell passthru 形を canonical とし CLI の attr path を分岐させない
 

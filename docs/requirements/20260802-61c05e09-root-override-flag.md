@@ -12,7 +12,8 @@ specification: |
   restated here.
 specification_ja: |
   `--root <path>` は解決 root を明示上書きするフラグでなければならず、全モード共通で
-  効く（project は git toplevel を、home は `$HOME` を使わない）。明示時に profileDir を
+  効かなければならない（project は git toplevel を、home は `$HOME` を使ってはならない）。
+  明示時に profileDir を
   どうキーするかは REQ-d5a2e289 の担当で、本 item では規定しない。
 ---
 # REQ-61c05e09: --root は全モード共通で解決 root を明示上書きする

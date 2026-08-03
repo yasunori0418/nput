@@ -19,7 +19,7 @@ specification_ja: |
   「target に既存ファイルがあり copy をスキップした」という warning を出さなければならない
   （symlink の foreign 警告と対称化し、「nput が中身を置いた」という誤認を防ぐため）。上書きは
   してはならず、apply 全体を止めてもならない。「自分が置いたか」は前世代 manifest の entry
-  有無で判別し、内容では判別しない。
+  有無で判別しなければならず、内容で判別してはならない。
 ---
 # REQ-07c3b735: copy が foreign 実ファイルを skip したときは warning で可視化する
 

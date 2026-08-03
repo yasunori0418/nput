@@ -14,8 +14,8 @@ specification: |
   supported as an implicit way to select out-of-store.
 specification_ja: |
   `src` フィールドは `path` / `set`（derivation）/ `marker` の 3 種の値を受け付け
-  なければならない。`path` と `set` では配置元を Nix ストアのパスとし、これを既定の
-  挙動とする。out-of-store（ローカル FS のライブなパス）を配置元にできるのは
+  なければならない。`path` と `set` では配置元を Nix ストアのパスとしなければならず、
+  これを既定の挙動とする。out-of-store（ローカル FS のライブなパス）を配置元にできるのは
   `mkOutOfStoreSymlink` が返す marker のみとし、opt-in の明示指定でなければならない。
   `src` に生の `string` を渡して暗黙に out-of-store を選ぶ形は提供してはならない。
 ---

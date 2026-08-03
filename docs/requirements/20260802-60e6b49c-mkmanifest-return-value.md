@@ -16,9 +16,9 @@ specification: |
 specification_ja: |
   `lib.mkManifest` の返り値は profile が指す store オブジェクトでなければならない。
   これは `manifest.json`（`schemaVersion` 付き・エンジンの入力契約）と、配置元への
-  明示 symlink farm（GC アンカー）を含む。`manifest.json` は各 entry の解決済み配置元
-  （store パス / out-of-store 絶対パス）・`subpath`・`target`・`method`・root の kind
-  （project / home / system / 固定パス）を記録する。
+  明示 symlink farm（GC アンカー）を含まなければならない。`manifest.json` は各 entry の
+  解決済み配置元（store パス / out-of-store 絶対パス）・`subpath`・`target`・`method`・
+  root の kind（project / home / system / 固定パス）を記録しなければならない。
 ---
 # REQ-60e6b49c: mkManifest は manifest.json と symlink farm を含む store オブジェクトを返す
 

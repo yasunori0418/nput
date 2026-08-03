@@ -16,7 +16,7 @@ specification_ja: |
   ならない。`nput.lib.projectRoot` は project mode（実行時に git toplevel・`--root` で
   上書き可）、`nput.lib.homeRoot` は home mode（実行時の `$HOME`）、
   `nput.lib.systemRoot` は system mode（実行時の `/`）、絶対パス文字列は固定 root
-  （評価時に確定）へそれぞれ対応する。
+  （評価時に確定）へそれぞれ対応しなければならない。
 ---
 # REQ-37b56673: root は 3 マーカーと絶対パス文字列の union を取る
 

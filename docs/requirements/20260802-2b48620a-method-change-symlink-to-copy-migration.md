@@ -18,9 +18,10 @@ specification_ja: |
   同一 target で method が symlink→copy に変わり、前世代が記録した symlink の on-disk が
   記録通りであるとき、engine は配置前に除去（PreRemove）してから copy を新規配置しなければ
   ならない。この除去は意図された移行であり warning にしてはならず、配置レポートの通常の出力
-  規律に従わせる。on-disk が記録と不一致（readlink drift）のときは移行せず、通常の
-  foreign 判定へフォールバックする。method 変更 copy→symlink は自動移行してはならず、
-  conflict のままとする（ユーザーが編集し得る copy データの保護を優先するため）。
+  規律に従わせなければならない。on-disk が記録と不一致（readlink drift）のときは移行しては
+  ならず、通常の foreign 判定へフォールバックしなければならない。method 変更 copy→symlink は
+  自動移行してはならず、conflict のままとしなければならない（ユーザーが編集し得る copy
+  データの保護を優先するため）。
 ---
 # REQ-2b48620a: method 変更は symlink→copy のみ配置前除去で移行し、copy→symlink は移行しない
 

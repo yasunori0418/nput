@@ -16,8 +16,8 @@ specification_ja: |
   `flake.nix` entrypoint は pure eval とし（root 解決はエンジン実行時なので eval は
   pure のまま）、再現性は flake.lock で固定するものとしなければならない。
   `shell.nix` / `default.nix` entrypoint は impure eval（NIX_PATH / channels 依存）を
-  許容し、その再現性はユーザー責任とする。nput lib を含め nixpkgs を npins /
-  fetchTarball / flake-compat 等で固定することを推奨する。
+  許容しなければならず、その再現性はユーザー責任としなければならない。nput lib を含め
+  nixpkgs を npins / fetchTarball / flake-compat 等で固定することを推奨すべきである。
 ---
 # REQ-67095391: flake は pure eval で flake.lock が固定し legacy は impure を許容しユーザー責任とする
 

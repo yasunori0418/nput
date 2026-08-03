@@ -10,7 +10,7 @@ specification: |
   such as `$HOME`. Omitting `root` SHALL be an error at Nix evaluation time.
 specification_ja: |
   `root` は明示必須でなければならず、暗黙デフォルト（`$HOME` 等）を持ってはならない。
-  `root` を省略した場合は Nix 評価時にエラーとする。
+  `root` を省略した場合は Nix 評価時にエラーとしなければならない。
 ---
 # REQ-4ec3accc: root は明示必須で暗黙デフォルトを持たない
 

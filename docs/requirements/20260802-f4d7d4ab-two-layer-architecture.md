@@ -19,7 +19,8 @@ specification_ja: |
   nput は nput CLI（`packages.nput`・PATH 常駐の一次 UX）と engine（Go ライブラリ）の
   2 層で構成しなければならない。CLI は entrypoint を発見し、内部で `nix build` /
   `nix eval` を回して named manifest の store path を得て、engine を import して配置・
-  stale 除去・profile swap を駆動する。engine は `manifest.json` を入力に取る。
+  stale 除去・profile swap を駆動しなければならない。engine は `manifest.json` を入力に
+  取らなければならない。
   2 層の境界は `manifest.json` だけとし、engine が Nix の評価結果へ直接依存しないように
   しなければならない。どのファイルを entrypoint として発見するかは CLI 仕様の担当、
   engine がどう配置を行うかは REQ-6c4e174a の担当で、いずれも本 item では規定しない。

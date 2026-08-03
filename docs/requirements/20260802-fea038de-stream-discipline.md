@@ -16,7 +16,7 @@ specification: |
 specification_ja: |
   stdout は機械可読出力（`gitignore` の列挙・`apply --dryrun` のプラン）を専有しなければ
   ならない。配置レポート（placed / replaced / removed / skipped）・warning・shellHook の
-  skip 通知はすべて stderr へ出し、`nput gitignore <name> >> .gitignore` や
+  skip 通知はすべて stderr へ出さなければならず、`nput gitignore <name> >> .gitignore` や
   `nput apply <name> --dryrun | ...` が安全にパイプできるようにする。成功時の沈黙化の
   対象は stderr の配置レポートのみとし、stdout 専有の機械可読出力は既定でも `-v` 下でも
   常に出さなければならない。

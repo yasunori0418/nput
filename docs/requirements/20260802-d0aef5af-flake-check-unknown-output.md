@@ -19,9 +19,9 @@ specification: |
 specification_ja: |
   consumer 側の `outputs.nput.<system>.<name>`（`packages` 汚染を避ける専用 namespace）は
   `nix flake check` で `warning: unknown flake output 'nput'` を出すが exit 0 になる。
-  これは想定内・無害として許容し、CI を壊してはならない。`flake check` は `nput` 直下
-  attrset の eval 健全性は検査するが、配下の `.<system>.<name>` derivation は build も
-  eval もしない（誤 build しない）。flake-parts module で `flake.nput.<system>` へ
+  これは想定内・無害として許容しなければならず、CI を壊してはならない。`flake check` は
+  `nput` 直下 attrset の eval 健全性は検査するが、配下の `.<system>.<name>` derivation は
+  build も eval もしてはならない（誤 build しない）。flake-parts module で `flake.nput.<system>` へ
   transpose しても警告は消えない（nix 本体が known-output を hardcode するため）。
   output 名を変えても消えない。`nput` 成果物の主検証は
   `nix build .#nput.<system>.<name>` で行わなければならない。

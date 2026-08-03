@@ -24,16 +24,17 @@ specification: |
   roothash.
 specification_ja: |
   `profileDir` は各 config 専用のディレクトリでなければならず、その中に profile リンク・世代・
-  build out-link を置く。基底 `<state>` は `$XDG_STATE_HOME` があればそれ、無ければ
-  `~/.local/state` とする（nix 本体の profile 既定と整合）。profile リンクは
-  `<profileDir>/profile` とし、これを `nix-env --profile` の対象とする。`nix-env` が作る世代
-  `profile-N-link` と `nix build --out-link` の対象は、同じディレクトリ内の兄弟として並べ、
-  profile リンクを貫通させてはならない（read-only な store パスを貫通する破綻を構造的に
-  起こさないため）。pending out-link は専用ディレクトリ内に config あたり最大 1 個であり、
-  名は `.pending` とする。元 root の絶対パスを記録した backref ファイル `.root` は roothash 階層
-  （`<name>` dir の親）に置き、複数の `<name>` で共有する。`profileDir` は flock キーでもあり、
+  build out-link を置かなければならない。基底 `<state>` は `$XDG_STATE_HOME` があればそれ、
+  無ければ `~/.local/state` としなければならない（nix 本体の profile 既定と整合）。profile
+  リンクは `<profileDir>/profile` でなければならず、これを `nix-env --profile` の対象と
+  しなければならない。`nix-env` が作る世代 `profile-N-link` と `nix build --out-link` の対象は、
+  同じディレクトリ内の兄弟として並べなければならず、profile リンクを貫通させてはならない
+  （read-only な store パスを貫通する破綻を構造的に起こさないため）。pending out-link は専用
+  ディレクトリ内に config あたり最大 1 個であり、名は `.pending` としなければならない。元 root の
+  絶対パスを記録した backref ファイル `.root` は roothash 階層（`<name>` dir の親）に置かなければ
+  ならず、複数の `<name>` で共有しなければならない。`profileDir` は flock キーでもあり、
   同一 config の apply / reset / rollback を直列化しつつ、同 roothash でも別 `<name>` dir とは
-  独立させる。
+  独立させなければならない。
 ---
 # REQ-2aa3abbc: profileDir は config 専用ディレクトリとし、profile リンク・世代・pending out-link をその中に並べる
 

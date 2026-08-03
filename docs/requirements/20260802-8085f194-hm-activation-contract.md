@@ -28,7 +28,7 @@ specification_ja: |
   `nix build` を行ってはならない。flock は blocking で取り、配置レポートを可視とし、
   engine error（conflict 等）は非 0 終了で switch を止めなければならない（宣言的 switch・
   `home.file` の clobber エラーと同型）。pin 版 nput CLI（`packages.nput`）と `mkManifest` が
-  同一 flake input 由来のため、schemaVersion skew は構造的に起こらないものとする。本 item が
+  同一 flake input 由来のため、schemaVersion skew は構造的に起きてはならない。本 item が
   規定するのは 1 起動あたりの契約であり、1 config が 1 manifest = 1 profile に対応することは
   REQ-c6891aeb、その entries を供給するオプションの定義は REQ-fc1c7ce6 の担当で、いずれも
   本 item では規定しない。複数 config があるとき activation が engine を何回 kick するか・

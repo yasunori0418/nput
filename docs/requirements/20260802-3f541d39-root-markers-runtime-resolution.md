@@ -13,8 +13,8 @@ specification: |
 specification_ja: |
   `lib.projectRoot` / `lib.homeRoot` / `lib.systemRoot` は、実行時解決の種別（kind）を
   運ぶマーカー attrset を返す純粋関数でなければならない。パス文字列を返す糖衣であっては
-  ならない。`mkManifest` は kind を `manifest.json` に記録し、実体パスの解決は engine の
-  実行時責務とする。
+  ならない。`mkManifest` は kind を `manifest.json` に記録しなければならず、実体パスの
+  解決は engine の実行時責務としなければならない。
 ---
 # REQ-3f541d39: root マーカーは kind を運ぶ入れ物でパス解決は engine が行う
 

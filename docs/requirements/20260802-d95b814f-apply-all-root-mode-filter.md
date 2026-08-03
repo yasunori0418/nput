@@ -17,13 +17,13 @@ specification: |
 specification_ja: |
   `apply --all` に `--project-root` / `--home-root` / `--system-root` を付けたときは、
   `nput.*` のうち該当 root モードの config のみを適用しなければならない（root マーカー名に
-  揃えたフィルタ・opt-in）。素の `--all` は全 config を適用する。home mode と project mode の
-  config が混在する entrypoint で devShell の `shellHook` から素の `--all` を打つと home mode
-  config も `$HOME` に配置される footgun があるため、devShell は
+  揃えたフィルタ・opt-in）。素の `--all` は全 config を適用しなければならない。home mode と
+  project mode の config が混在する entrypoint で devShell の `shellHook` から素の `--all` を
+  打つと home mode config も `$HOME` に配置される footgun があるため、devShell は
   `nput apply --all --project-root`（または名指し `nput apply <name>`）を使うべきである。
-  フィルタは `--all` の修飾に限る（名指し apply では `<name>` が 1 config を pin するため
-  無意味）。`--system-root` は system mode が未実装のため当面どの config にもマッチしない
-  将来 seam として受理する。
+  フィルタは `--all` の修飾に限らなければならない（名指し apply では `<name>` が 1 config を
+  pin するため無意味）。`--system-root` は system mode が未実装のため当面どの config にも
+  マッチしない将来 seam として受理しなければならない。
 ---
 # REQ-d95b814f: --all は root モードフィルタで対象 config を絞れる
 

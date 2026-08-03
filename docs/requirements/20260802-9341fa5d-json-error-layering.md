@@ -23,13 +23,14 @@ specification_ja: |
   単一 config コマンドは RunE 冒頭・name 引数の時点で subject が確定するため、その実行の
   失敗（entrypoint 発見・eval / build・lock・engine 実行時）は全て `results[0].errors[]` に
   載せなければならない。トップ `errors[]` に載せてよいのは subject を持たない実行の失敗
-  （subject が 1 つも確定していない段階の失敗）のみとする。item 起因の失敗は `item.error` に
-  埋め、包含する `SubjectResult` の `errors[]` へ重複させてはならない。どちらも stderr の人間向け
-  テキスト（op + 対象パスの wrap 規約）を常時併存させ、終了コード表は不変とする。
-  エラーコードは sentinel / 型で判定できるものを分類する — `E_LOCK`（flock）/
+  （subject が 1 つも確定していない段階の失敗）のみでなければならない。item 起因の失敗は
+  `item.error` に埋め、包含する `SubjectResult` の `errors[]` へ重複させてはならない。どちらも
+  stderr の人間向けテキスト（op + 対象パスの wrap 規約）を常時併存させなければならず、
+  終了コード表は不変でなければならない。
+  エラーコードは sentinel / 型で判定できるものを分類しなければならない — `E_LOCK`（flock）/
   `E_NPUT_BUILD`（内部 nix eval / build 呼び出しの失敗）/ `E_NOTFOUND` / `E_PERMISSION` /
   `E_IO`（それ以外の FS / 外部 I/O 失敗）/ `E_NPUT_COLLISION`（`apply --dryrun` の
-  conflict = exit 2）。それ以外はツール総称 fallback `E_NPUT_FAILED` とする。
+  conflict = exit 2）。それ以外はツール総称 fallback `E_NPUT_FAILED` としなければならない。
 ---
 # REQ-9341fa5d: エンベロープのエラーは主体の有無で層を分けコードを分類する
 

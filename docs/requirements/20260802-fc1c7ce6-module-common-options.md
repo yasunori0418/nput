@@ -24,7 +24,8 @@ specification_ja: |
   `nput.configs :: attrsOf (submodule { entries :: attrsOf entry; })`（デフォルト `{}`・
   `entries` のデフォルトも `{}`）・`nput.backup.enable :: bool`（デフォルト false）・
   `nput.backup.suffix :: str`（デフォルト `"nput-backup"`）。素の `nput.entries` は
-  `configs.default.entries` への rename 糖衣として非破壊に残し、deprecated とする。
+  `configs.default.entries` への rename 糖衣として非破壊に残さなければならず、deprecated と
+  しなければならない。
   これらは全モジュール共通に定義し、モジュールごとに集合が分岐しないようにしなければ
   ならない。`configs` の `<name>` 次元が profile の粒度にとって何を意味するかは
   REQ-c6891aeb の担当で、本 item では規定しない。モジュールは自分の性質で root を pin

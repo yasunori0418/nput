@@ -11,8 +11,8 @@ specification: |
   root-relative target and SHALL NOT include the config name.
 specification_ja: |
   item id は `id = lowercase-hex(sha256(JCS(identity)))` で導出しなければならない。
-  identity は `kind="entry"`, `key={target}` とする。key は root 相対 target のみを含み、
-  config 名を含めてはならない。
+  identity は `kind="entry"`, `key={target}` でなければならない。key は root 相対 target
+  のみを含まなければならず、config 名を含めてはならない。
 ---
 # REQ-57137302: item id は identity の JCS を SHA-256 した小文字 hex とする
 

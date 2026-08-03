@@ -10,7 +10,7 @@ specification: |
   discovers SHALL be the entrypoint *file*, not the configuration content.
 specification_ja: |
   config は Nix で記述し、`nix build` によって評価されなければならない。CLI が発見する
-  のは entrypoint *ファイル*であって config の内容ではない。
+  のは entrypoint *ファイル*でなければならず、config の内容であってはならない。
 ---
 # REQ-1767b250: config は Nix で書き nix build で評価する
 

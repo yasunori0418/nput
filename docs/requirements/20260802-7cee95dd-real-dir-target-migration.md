@@ -22,8 +22,9 @@ specification_ja: |
   全 leaf が「recorded かつ stale な symlink（当該 entry 自身の前世代が記録・on-disk 一致・
   次世代に無い）」または「空の sub dir（由来を問わない）」であるときに限り、target 全体を
   配置前に除去（PreRemove: leaf は unlink・dir は子から親へ rmdir）してから symlink を新規
-  配置する。この除去は意図された移行であり warning にしてはならず、配置レポートの通常の出力
-  規律に従わせる。それ以外の leaf が 1 つでもある（中身のある実 file / dir・foreign symlink・
+  配置しなければならない。この除去は意図された移行であり warning にしてはならず、配置レポート
+  の通常の出力規律に従わせなければならない。それ以外の leaf が 1 つでもある（中身のある実
+  file / dir・foreign symlink・
   次世代にも残る自己矛盾）ときは target 全体をエラーで停止しなければならず、部分除去を
   してはならない。
 ---

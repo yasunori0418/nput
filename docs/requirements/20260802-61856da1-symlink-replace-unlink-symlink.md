@@ -16,8 +16,9 @@ specification: |
   journal and restored by re-creating the symlink.
 specification_ja: |
   既存 symlink の張替えは unlink + symlink の 2 操作で行わなければならず、rename ベースの
-  atomic swap は採らない。2 操作の間でクラッシュすると target が一時消失しうるが、冪等な
-  再実行で収束することを根拠にこれを受け入れる（「積まれる世代は常に完全適用済み」と整合）。
+  atomic swap を採ってはならない。2 操作の間でクラッシュすると target が一時消失しうるが、
+  冪等な再実行で収束することを根拠にこれを受け入れなければならない（「積まれる世代は常に
+  完全適用済み」と整合）。
   クラッシュ（SIGKILL・電源断）以外で、この run 自身が後続の段でエラーを検知した場合は、
   unlink 前に捕捉した張替え先を undo ジャーナルへ記録し、symlink の再作成で復元しなければ
   ならない。

@@ -10,7 +10,7 @@ specification: |
   as it stands.
 specification_ja: |
   src ツリー内の symlink は symlink のまま複製しなければならず、deref してはならない
-  （循環・サイズ膨張を避けるため）。相対 symlink はそのまま保つ。
+  （循環・サイズ膨張を避けるため）。相対 symlink はそのまま保たなければならない。
 ---
 # REQ-0bd55dfc: copy は src ツリー内の symlink を deref せず symlink のまま複製する
 

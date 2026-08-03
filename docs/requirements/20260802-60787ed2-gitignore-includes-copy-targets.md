@@ -13,8 +13,8 @@ specification: |
   responsibility of nput, and the ephemeral principle of project mode SHALL NOT be broken.
 specification_ja: |
   `nput gitignore` は `method` を区別せず、copy target も含めて全 target を列挙しなければ
-  ならない。project mode の copy target も ephemeral 扱いとし、各 clone で place-once で
-  再マテリアライズされ、その編集は clone local / 使い捨てとする。copy を committed
+  ならない。project mode の copy target も ephemeral 扱いとしなければならない。各 clone で
+  place-once で再マテリアライズされ、その編集は clone local / 使い捨てである。copy を committed
   （vendoring）にするのは nput の責務外であり、project mode の ephemeral 原則を
   崩してはならない。
 ---

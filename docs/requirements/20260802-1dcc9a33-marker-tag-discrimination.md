@@ -16,7 +16,7 @@ specification_ja: |
   marker（`mkOutOfStoreSymlink` / root マーカー）は `_nputMarker` 判別タグを持ち、
   custom optionType の `check` で derivation と判別できなければならない。`_nputMarker` は
   Nix 評価内で完結させ、`manifest.json` へ漏らしてはならない。Go 契約へ渡すのは
-  `srcKind` / `rootKind` の clean enum とする。
+  `srcKind` / `rootKind` の clean enum でなければならない。
 ---
 # REQ-1dcc9a33: marker は判別タグで識別し manifest.json には漏らさない
 

@@ -20,10 +20,11 @@ specification: |
 specification_ja: |
   copy entry は target が不在のときにだけマテリアライズしなければならない。subpath が
   ディレクトリで target が不在のときは `<root>/<target>` を作成して `<src>/<subpath>/` の内容を
-  ネイティブ FS 操作で再帰コピーし、subpath がファイルで target が不在のときは親ディレクトリを
-  作成して `<src>/<subpath>` を `<root>/<target>` へコピーする。target が既に存在するときは
-  何もせずユーザー管理に委ねる（place-once。初回マテリアライズ後、target が在れば触らない）。
-  したがってストア更新の反映は `apply --recopy`、または `reset` で撤去後に再 apply で行う。
+  ネイティブ FS 操作で再帰コピーしなければならず、subpath がファイルで target が不在のときは
+  親ディレクトリを作成して `<src>/<subpath>` を `<root>/<target>` へコピーしなければならない。
+  target が既に存在するときは何もせずユーザー管理に委ねなければならない（place-once。初回
+  マテリアライズ後、target が在れば触ってはならない）。したがってストア更新の反映は
+  `apply --recopy`、または `reset` で撤去後に再 apply で行わなければならない。
   構造不一致（subpath がディレクトリのとき target に通常ファイルが存在する / subpath がファイルの
   とき target がディレクトリである）はエラーで停止しなければならない。copy は世代管理の対象外と
   し、ロールバックしてはならない。

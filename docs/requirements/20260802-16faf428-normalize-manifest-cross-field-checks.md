@@ -17,7 +17,8 @@ specification_ja: |
   `normalizeManifest` は単一フィールドの型検査では表現できない組み合わせを
   `lib.throwIf` で拒否しなければならない。対象は `method = "copy"` かつ out-of-store
   marker の組み合わせである。out-of-store は「ライブ symlink」、copy は「place-once
-  スナップショット」で意図が矛盾するため、暗黙降格ではなく評価時の早期エラーとする。
+  スナップショット」で意図が矛盾するため、暗黙降格ではなく評価時に早期エラーとしなければ
+  ならない。
 ---
 # REQ-16faf428: 意図が矛盾する組み合わせをクロスフィールドチェックで評価時に拒否する
 

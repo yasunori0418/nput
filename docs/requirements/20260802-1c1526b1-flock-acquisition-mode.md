@@ -15,10 +15,10 @@ specification: |
   and SHALL NOT block entry into the shell.
 specification_ja: |
   フラグ無しの既定では、明示 apply / rollback は flock を待たなければならない
-  （`LOCK_EX`・blocking）。待っている間は、他の apply の完了待ちである旨を表示する。
-  `--no-wait` は flock 競合時に待たずスキップさせるフラグでなければならない
-  （shellHook 用）。ロックは try-lock（`LOCK_NB`）で取得し、保持中ならスキップして
-  stderr に 1 行通知し、シェル入室をブロックしてはならない。
+  （`LOCK_EX`・blocking）。待っている間は、他の apply の完了待ちである旨を表示しなければ
+  ならない。`--no-wait` は flock 競合時に待たずスキップさせるフラグでなければならない
+  （shellHook 用）。ロックは try-lock（`LOCK_NB`）で取得しなければならず、保持中なら
+  スキップして stderr に 1 行通知しなければならず、シェル入室をブロックしてはならない。
 ---
 # REQ-1c1526b1: flock の取得は既定 blocking とし --no-wait のときだけ try-lock でスキップする
 

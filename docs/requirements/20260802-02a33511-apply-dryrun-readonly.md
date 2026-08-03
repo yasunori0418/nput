@@ -15,11 +15,12 @@ specification: |
   already exists it SHALL remain a conflict even under `--backup`.
 specification_ja: |
   `nput apply <name> --dryrun` は読み取り専用でなければならず、FS 書込・`--set`・flock の
-  いずれも行わない。副作用ゼロで place / replace / remove / conflict / no-op を表示する。
-  conflict があれば非ゼロ終了しなければならない（CI の事前 gate に使えるように）。
-  `--dryrun --backup` は組み合わせ可能とし、`--backup` 無しなら conflict（exit 2）になる
-  箇所が「backup + 配置予定」の非 conflict プラン（exit 0）へ変わる。ただし退避先が
-  既存の場合は `--backup` 下でも conflict のままとする。
+  いずれも行ってはならない。副作用ゼロで place / replace / remove / conflict / no-op を
+  表示しなければならない。conflict があれば非ゼロ終了しなければならない（CI の事前 gate に
+  使えるように）。`--dryrun --backup` は組み合わせ可能でなければならず、`--backup` 無しなら
+  conflict（exit 2）になる箇所が「backup + 配置予定」の非 conflict プラン（exit 0）へ
+  変わらなければならない。ただし退避先が既存の場合は `--backup` 下でも conflict のままと
+  しなければならない。
 ---
 # REQ-02a33511: apply --dryrun は読み取り専用で conflict 検出時に非ゼロ終了する
 

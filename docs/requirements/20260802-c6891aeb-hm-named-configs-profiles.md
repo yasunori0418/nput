@@ -21,9 +21,9 @@ specification: |
 specification_ja: |
   home-manager モジュールの利用者も、役割分離された複数の独立 profile（それぞれが自分の
   世代を持つ）を取れなければならず、役割分離を standalone CLI 経路に限ってはならない。
-  `nput.configs` の `<name>` 1 つが 1 manifest = 1 profile に対応するものとする。
-  「1 config = 1 profile = 1 manifest」の atomic 性は保ち、複数 config を合成するヘルパを
-  提供してはならない。`<name>` 次元の導入は非破壊でなければならず、`default` という名の
+  `nput.configs` の `<name>` 1 つが 1 manifest = 1 profile に対応しなければならない。
+  「1 config = 1 profile = 1 manifest」の atomic 性は保たなければならず、複数 config を
+  合成するヘルパを提供してはならない。`<name>` 次元の導入は非破壊でなければならず、`default` という名の
   config は従来と同じ profile に解決され続け、profile ディレクトリのレイアウト変更を伴っては
   ならない。profile ディレクトリをどうキーするかは REQ-d5a2e289、オプション自体の定義
   （canonical な形が `nput.configs.<name>.entries` であり、素の `nput.entries` が
