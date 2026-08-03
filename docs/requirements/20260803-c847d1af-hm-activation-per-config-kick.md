@@ -62,7 +62,7 @@ specification_ja: |
 > 独立に規定する。文面は重なるが、適用先（CLI の `--all` か activation の configs ループか）
 > が別経路であり、片方の規範が他方を含意しないため、規範としては別立てになる。
 >
-> **本文箇条書き 2 番目に対応する規範文を持たない理由**: 「各起動は profileDir 単位の
+> **本文箇条書き第 2 項に対応する規範文を持たない理由**: 「各起動は profileDir 単位の
 > flock・前世代 diff・保守的 stale 除去・`nix-env --set` が profile ごとに独立して走る」は、
 > 本 item の「config ごとに 1 回 engine を起動する」と、profileDir 単位の flock を定める
 > REQ-1c1526b1・profileDir のキーを定める REQ-d5a2e289・世代機構を定める REQ-1be4d678 の

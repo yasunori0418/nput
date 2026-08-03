@@ -13,8 +13,9 @@ specification: |
   that eval can see, stated for a single manifest by REQ-5c6b07da. It SHALL be an exception
   to the general cross-config collision, which does not ride on a single evaluation and
   which REQ-5c6b07da and REQ-fc1118b1 leave to last-writer-wins plus a foreign symlink
-  warning at engine runtime; that treatment SHALL remain unchanged for collisions across
-  separate entrypoints, machines or tools. Without this detection, the two configs would
+  warning at engine runtime; how a collision across separate entrypoints, machines or
+  tools is treated is stated by those two items and is not restated or altered here.
+  Without this detection, the two configs would
   take the same target from each other at every activation, making a flip-flop permanent,
   the introduction of role separation itself being what breeds the collision.
 specification_ja: |
@@ -25,7 +26,8 @@ specification_ja: |
   eval で止めること（同一 manifest 内について REQ-5c6b07da が定める）の自然な延長で
   ある。これは単一の eval に載らない一般の cross-config 衝突（REQ-5c6b07da /
   REQ-fc1118b1 が engine 実行時の後勝ち + foreign symlink warning に委ねるもの）に
-  対する例外とする。別 entrypoint・別マシン・別ツールに跨る衝突の扱いは変わらない。
+  対する例外とする。別 entrypoint・別マシン・別ツールに跨る衝突をどう扱うかは
+  同 2 item の担当であり、本 item では再掲も変更もしない。
   検出しなければ、activation のたびに A と B が同じ target を交互に奪い合う
   フリップフロップが恒常化する。役割分離の導入自体が衝突の温床になるためである。
 ---
