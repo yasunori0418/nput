@@ -15,9 +15,10 @@ specification: |
 specification_ja: |
   全モジュール共通の `nput.backup` submodule は、`nput.backup.enable` が true のときに限り、
   activation で行う `nput apply --manifest` 起動へ `--backup=<suffix>` を配線しなければ
-  ならない（退避はユーザーの明示 opt-in であるため）。suffix は `nput.backup.suffix` の値と
-  し、そのデフォルトは REQ-fc1c7ce6 が定める。`nput.backup` は `entries`（manifest v1 契約）
-  とは独立な起動配線レイヤーのオプションであり、manifest 自体に影響してはならない。
+  ならない（退避はユーザーの明示 opt-in であるため）。suffix は `nput.backup.suffix` の値で
+  なければならず、そのデフォルトは REQ-fc1c7ce6 が定める。`nput.backup` は `entries`
+  （manifest v1 契約）とは独立な起動配線レイヤーのオプションであり、manifest 自体に影響して
+  はならない。
 ---
 # REQ-e1e1114b: nput.backup は engine 起動の配線レイヤーのオプションで manifest には影響しない
 

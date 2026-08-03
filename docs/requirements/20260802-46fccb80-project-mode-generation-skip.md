@@ -36,21 +36,22 @@ specification_ja: |
   project mode では profile を解決済み root でキーしなければならない。同一 entrypoint を複数箇所へ
   クローンしても profile が衝突せず、stale 除去が互いのクローンの配置を破壊しないようにするため
   である（home mode（1 ユーザー 1 つ）では起きない問題）。`<roothash>` は解決後の絶対 root パスの
-  sha256 を短縮した hex（固定長・FS 安全）とする。project mode では世代をユーザーに公開しては
-  ならない。profile は stale 除去と世代スキップ判定の内部機構に留め、`rollback` /
-  `list-generations` を出してはならない（配置物が ephemeral で rollback の意味が薄く、devShell
-  キック時は戻し先 host 世代も無いため）。新 link farm derivation が前世代と同一なら新世代を
-  積んではならない。これは必須であり、devShell / direnv 運用では `shellHook` がシェル再入のたびに
-  走るため、毎回新世代を積むと世代が無限増殖するからである。home mode は従来通り「適用のたびに
-  新世代」のままとし、世代スキップは project mode 限定とする。ただし世代スキップ時も完全 no-op に
-  せず、FS 検査だけは軽量に行わなければならない。各 entry の target を `lstat` で検査し、記録通り
-  でない（foreign tool に書き換えられた・消えた）entry があればその entry だけ再張りする
+  sha256 を短縮した hex（固定長・FS 安全）でなければならない。project mode では世代をユーザーに
+  公開してはならない。profile は stale 除去と世代スキップ判定の内部機構に留めなければならず、
+  `rollback` / `list-generations` を出してはならない（配置物が ephemeral で rollback の意味が薄く、
+  devShell キック時は戻し先 host 世代も無いため）。新 link farm derivation が前世代と同一なら
+  新世代を積んではならない。これは必須であり、devShell / direnv 運用では `shellHook` がシェル
+  再入のたびに走るため、毎回新世代を積むと世代が無限増殖するからである。home mode は従来通り
+  「適用のたびに新世代」のままでなければならず、世代スキップは project mode 限定としなければ
+  ならない。ただし世代スキップ時も完全 no-op にせず、FS 検査だけは軽量に行わなければならない。
+  各 entry の target を `lstat` で検査しなければならず、記録通りでない（foreign tool に
+  書き換えられた・消えた）entry があればその entry だけ再張りしなければならない
   （foreign symlink なら warning）。「derivation 同一 ⇒ FS 同一」は foreign 書き換えで崩れるため、
-  新世代を積まずに FS だけ収束させる。lstat 比較は安価で `shellHook` の高頻度実行に耐える。この
-  ドリフト修復は symlink と copy の両方を対象とする。copy entry は target が不在のときだけ
-  place-once で再マテリアライズし、存在するが内容が異なる（ユーザー編集）場合は触ってはならない
-  （home mode の place-once と振る舞いを一致させる）。src 追従は `apply --recopy` 限定とし、内容
-  ハッシュ比較はしない。
+  新世代を積まずに FS だけ収束させなければならない。lstat 比較は安価で `shellHook` の高頻度実行に
+  耐える。このドリフト修復は symlink と copy の両方を対象としなければならない。copy entry は
+  target が不在のときだけ place-once で再マテリアライズしなければならず、存在するが内容が異なる
+  （ユーザー編集）場合は触ってはならない（home mode の place-once と振る舞いを一致させる）。
+  src 追従は `apply --recopy` 限定としなければならず、内容ハッシュ比較はしてはならない。
 ---
 # REQ-46fccb80: project mode は世代を非公開にし、derivation 同一なら世代を積まず lstat ドリフト修復だけ行う
 

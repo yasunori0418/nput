@@ -13,7 +13,8 @@ specification: |
 specification_ja: |
   CLI は entrypoint ファイル（`nput.<name>` に named manifest を公開する nix ファイル）を
   発見しなければならない。既定では CWD を `flake.nix` → `shell.nix` → `default.nix` の
-  優先順で探す。`-f` / `--file <path>` は entrypoint を明示指定し、自動探索を上書きする。
+  優先順で探さなければならない。`-f` / `--file <path>` は entrypoint を明示指定し、自動探索を
+  上書きしなければならない。
 ---
 # REQ-1cc080f6: entrypoint は CWD で flake.nix → shell.nix → default.nix の順に探し -f で上書きする
 

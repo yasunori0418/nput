@@ -15,7 +15,7 @@ specification_ja: |
   copy は元の mode を保存しつつ owner-write を付与しなければならない（例: `0444` → `0644` /
   `0555` → `0755`）。store パスは read-only のためそのまま保存すると編集できないが、copy は
   「store から切り離してユーザーが所有・編集する」用途である。したがって perm の相対構造
-  （実行ビット・group / other）は保ちつつ、所有者が編集できる状態にする。
+  （実行ビット・group / other）は保ちつつ、所有者が編集できる状態にしなければならない。
 ---
 # REQ-84e3c717: copy は元の mode を保存しつつ owner-write を付与する
 

@@ -13,8 +13,9 @@ specification: |
   independently of the concrete value of root (which is resolved at runtime).
 specification_ja: |
   `normalizeManifest` は `target` / `subpath` のパス安全性を検査しなければならない。
-  絶対パス（`/` 始まり）はエラーとし、`filepath.Clean` 相当で正規化したうえで `..` に
-  よって root / src の外へ出るものを拒否する。`target` の静的な絶対 / `..` 判定は root の
+  絶対パス（`/` 始まり）はエラーとしなければならず、`filepath.Clean` 相当で正規化した
+  うえで `..` によって root / src の外へ出るものを拒否しなければならない。`target` の
+  静的な絶対 / `..` 判定は root の
   実体値（実行時解決）に依らず eval 時に可能でなければならない。
 ---
 # REQ-6911eab6: target / subpath のパス安全性を評価時に検査する

@@ -20,7 +20,8 @@ specification_ja: |
   文字列の重複として eval 時に `lib.throwIf` で検出し停止しなければならない
   （engine 実行時ではない）。単一の eval に載らない cross-config（別 entrypoint・別マシン・
   別ツールに跨る場合）の同一 target 衝突は eval では検出できず、engine 実行時の後勝ち +
-  foreign symlink warning として扱う。両者は別経路とする。単一の eval に載る複数 config
+  foreign symlink warning として扱わなければならない。両者は別経路として保たなければ
+  ならない。単一の eval に載る複数 config
   （1 つのモジュール config の `nput.configs` など）については静的検出が可能であり、
   本 item はそれを妨げない。その場合の規範は REQ-5923ac79 の担当で、本 item では
   規定しない。

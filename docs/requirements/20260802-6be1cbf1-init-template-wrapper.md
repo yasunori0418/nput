@@ -15,8 +15,8 @@ specification_ja: |
   `nput init <template>` は `nix flake init -t github:yasunori0418/nput#<template>` への
   透明なラッパーでなければならない。ファイルを作るのは nix の templates 機構であり、
   nput 自身が generate してはならない（「設定を生成しない」thesis を維持するため）。
-  `nix flake init` の「既存ファイルを上書きしない」保守性を継承する。テンプレートは
-  `standalone` と `project` の 2 つを提供する。
+  `nix flake init` の「既存ファイルを上書きしない」保守性を継承しなければならない。
+  テンプレートは `standalone` と `project` の 2 つを提供しなければならない。
 ---
 # REQ-6be1cbf1: nput init は nix flake init -t への透明なラッパーとしファイルを生成しない
 

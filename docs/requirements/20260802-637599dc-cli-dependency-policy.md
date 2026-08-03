@@ -15,9 +15,10 @@ specification: |
   the build does not fetch a toolchain of its own and stays reproducible under Nix.
 specification_ja: |
   CLI が持ち込むものは明示的に許可したものだけに閉じ、いずれも固定しなければならない
-  （engine の stdlib-only 制約とは対照的に扱う）。第三者依存は最小限だけ許可する
-  （サブコマンド / help のための cobra）。配置そのものは engine を import して行う。
-  それらの依存は `buildGoModule` と vendorHash 文字列でビルドすることによって固定する。
+  （engine の stdlib-only 制約とは対照的に扱う）。第三者依存は最小限だけ許可しなければ
+  ならない（サブコマンド / help のための cobra）。配置そのものは engine を import して行う。
+  それらの依存は `buildGoModule` と vendorHash 文字列でビルドすることによって固定しなければ
+  ならない。
   Go ツールチェーンは nixpkgs の go に pin しなければならず、`toolchain` ディレクティブを
   使ってはならない（ビルドが独自にツールチェーンを取得せず Nix の下で再現可能に保つため）。
 ---

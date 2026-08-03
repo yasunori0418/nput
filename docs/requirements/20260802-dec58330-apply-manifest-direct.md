@@ -19,12 +19,13 @@ specification: |
 specification_ja: |
   `nput apply --manifest <link-farm>` はビルド済み link-farm を engine へ直接適用しなければ
   ならない（host / module activation の seam）。entrypoint 発見・rootKind 先取り eval・
-  `nix build` を行わず、引数の link-farm 内 `manifest.json` から engine が rootKind を読む
-  （project / home / fixed の全モード対応）。取得後の挙動は通常 apply と同一とし、
-  配置ロジックは二重化してはならない。引数は link-farm（`mkManifest` 出力の store path =
-  世代としてコミットされる対象）であり、`manifest.json` 単体ファイルは受け付けない。
-  取得元が衝突するため `-f` / `--all` との併用はエラーとし、位置引数 `name`
-  （profile 選択）とは直交して両立する（省略 = `default`）。
+  `nix build` を行ってはならず、引数の link-farm 内 `manifest.json` から engine が rootKind
+  を読まなければならない（project / home / fixed の全モード対応）。取得後の挙動は通常 apply
+  と同一でなければならず、配置ロジックは二重化してはならない。引数は link-farm
+  （`mkManifest` 出力の store path = 世代としてコミットされる対象）でなければならず、
+  `manifest.json` 単体ファイルは受け付けてはならない。取得元が衝突するため `-f` / `--all`
+  との併用はエラーとしなければならず、位置引数 `name`（profile 選択）とは直交して両立
+  しなければならない（省略 = `default`）。
 ---
 # REQ-dec58330: apply --manifest はビルド済み link-farm を engine へ直接適用する
 

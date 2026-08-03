@@ -10,7 +10,7 @@ specification: |
   be achieved by splitting the config (`nput.<name>`).
 specification_ja: |
   一部 entry だけを適用する `--only` は提供してはならない。profile 世代の atomic 性と
-  衝突するため。選択的更新は config（`nput.<name>`）の分割で担保する。
+  衝突するため。選択的更新は config（`nput.<name>`）の分割で担保しなければならない。
 ---
 # REQ-4fc98fa6: 一部 entry だけを適用する --only は提供しない
 

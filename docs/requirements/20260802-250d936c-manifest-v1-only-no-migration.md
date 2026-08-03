@@ -14,7 +14,7 @@ specification: |
   previous generation's manifest — SHALL be revisited once a field addition makes v2
   necessary after the first release.
 specification_ja: |
-  MVP は `schemaVersion = 1` のみを発行・受理し、古い版の manifest を読む
+  MVP は `schemaVersion = 1` のみを発行・受理しなければならず、古い版の manifest を読む
   マイグレーション機構を最初から作ってはならない。後方互換ポリシー（engine が
   stale 除去 / rollback のために古い版の manifest を読めること。アップグレード直後の
   stale 除去は前世代 manifest を読む）は、最初のリリース後にフィールド追加で v2 が

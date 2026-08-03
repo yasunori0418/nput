@@ -71,47 +71,53 @@ specification_ja: |
   変更系コマンド（`apply` / `reset` / `rollback`）の JSON ペイロードは、`-v` レポートと
   同一の engine 結果から DTO 経由で生成しなければならず、二重集計してはならない。
 
-  `items` はフルインベントリとする。`apply` / `rollback` は新（rollback は戻り先）
-  manifest の全 entry + stale 除去計画に載った旧 entry、`reset` は選択済み teardown entry
-  （`[target...]` 絞り込み後）。各 item は `kind="entry"`・`label` = target・
+  `items` はフルインベントリでなければならない。`apply` / `rollback` は新（rollback は
+  戻り先）manifest の全 entry + stale 除去計画に載った旧 entry、`reset` は選択済み
+  teardown entry（`[target...]` 絞り込み後）。各 item は `kind="entry"`・`label` = target・
   `info={target, method, subpath}`（`subpath` 空は省略。ビルド毎に変わる src は item info に
-  置かない）とする。変更の無い entry も `success` とし、method 変更で新旧両方に現れる
-  target は新 entry が item を代表する。
+  置かない）を持たなければならない。変更の無い entry も `success` としなければならず、
+  method 変更で新旧両方に現れる target は新 entry が item を代表しなければならない。
 
   `changes` は実差分のみとし no-op を含めてはならない。place / copy 新規 → `add`、
   replace / recopy → `modify`、stale 除去 / reset の除去 → `remove`。`kind` は意図した
-  遷移ではなく実際に生じた遷移とする。同一 target の unlink + 再配置は 1 つの `modify` に
-  合体させる。記録どおりの dest への機械的 re-link（old == new）は状態遷移が無いため
-  change にしない。`change.info = {old, new}` は symlink 先 / copy src を運び、replace の
+  遷移ではなく実際に生じた遷移を反映しなければならない。同一 target の unlink + 再配置は
+  1 つの `modify` に合体させなければならない。記録どおりの dest への機械的 re-link
+  （old == new）は状態遷移が無いため change にしてはならない。
+  `change.info = {old, new}` は symlink 先 / copy src を運ばなければならず、replace の
   `old` は re-link 直前の実 on-disk dest、stale 除去の `old` は記録 dest とする。
-  recopy の `old` と copy 削除の info は省略する。`reversible` は symlink の add / modify /
-  remove と copy 新規を `true`、recopy 上書きと reset の copy 削除を `false` とする。
+  recopy の `old` と copy 削除の info は省略しなければならない。`reversible` は symlink の
+  add / modify / remove と copy 新規を `true`、recopy 上書きと reset の copy 削除を
+  `false` としなければならない。
 
-  部分失敗は次のように写像する。失敗した entry → `item.status:"failed"` + `item.error`。
-  前段の失敗で未到達だった entry → `"skipped"`（この用途のみ）。失敗までに完了した
-  entry → `"success"` + 対応する change を全て含む。undo ジャーナルが巻き戻した実行でも
-  changes は「失敗時点までに生じた差分」の記録として保ち、subject 警告 `W_NPUT_UNWOUND` で
-  差分がディスク上に残っていないことを通知する。commit / build / lock など entry 非依存の
-  失敗は item を落とさず `results[0].errors[]` へ載せる。
+  部分失敗は次のように写像しなければならない。失敗した entry → `item.status:"failed"` +
+  `item.error`。前段の失敗で未到達だった entry → `"skipped"`（この用途のみ）。失敗までに
+  完了した entry → `"success"`（対応する change を全て含まなければならない）。undo
+  ジャーナルが巻き戻した実行でも changes は「失敗時点までに生じた差分」の記録として保た
+  なければならず、subject 警告 `W_NPUT_UNWOUND` で差分がディスク上に残っていないことを
+  通知しなければならない。commit / build / lock など entry 非依存の失敗は item を落として
+  はならず、`results[0].errors[]` へ載せなければならない。
 
   非 dryrun の conflict 停止は該当 entry を `item.status:"failed"` +
-  `error.code:"E_NPUT_COLLISION"` とし、残りの計画 entry は skipped とする。集約エラーは
-  item 起因のため `subjectResult.errors[]` へ重複させてはならない。
+  `error.code:"E_NPUT_COLLISION"` としなければならず、残りの計画 entry は skipped と
+  しなければならない。集約エラーは item 起因のため `subjectResult.errors[]` へ
+  重複させてはならない。
 
-  `generation = {profile, before?, after?}` は `apply` / `rollback` のみが出す
-  （実行開始 / 終了時点の観測値・観測できない値は省略）。失敗時は動かなかったポインタの
-  観測（before == after）とする。`rollback` の From→To は `generation.before/after` が運び、
-  `result.info` には置かない。`reset` は generation スロット自体を出してはならない
+  `generation = {profile, before?, after?}` は `apply` / `rollback` のみが出さなければ
+  ならない（実行開始 / 終了時点の観測値・観測できない値は省略）。失敗時は動かなかった
+  ポインタの観測（before == after）としなければならない。`rollback` の From→To は
+  `generation.before/after` が運ばなければならず、`result.info` には置いてはならない。
+  `reset` は generation スロット自体を出してはならない
   （profile / 世代は untouched の FS-only teardown で遷移が存在しないため）。
 
-  planner の構造化 warning は `W_NPUT_*` に写像し、対象 target がインベントリ内なら
-  該当 `item.warnings`、外なら `subjectResult.warnings` へ振り分ける。コードは
-  `W_NPUT_FOREIGN_SYMLINK` / `W_NPUT_COPY_FOREIGN` / `W_NPUT_STALE_MISMATCH` /
-  `W_NPUT_STALE_NON_SYMLINK` / `W_NPUT_COPY_ORPHAN` / `W_NPUT_UNWOUND` とし、
-  `detail = {target}` を付ける。stderr の人間向けテキストは常時併存させる。
+  planner の構造化 warning は `W_NPUT_*` に写像しなければならず、対象 target が
+  インベントリ内なら該当 `item.warnings`、外なら `subjectResult.warnings` へ
+  振り分けなければならない。コードは `W_NPUT_FOREIGN_SYMLINK` / `W_NPUT_COPY_FOREIGN` /
+  `W_NPUT_STALE_MISMATCH` / `W_NPUT_STALE_NON_SYMLINK` / `W_NPUT_COPY_ORPHAN` /
+  `W_NPUT_UNWOUND` としなければならず、`detail = {target}` を付けなければならない。
+  stderr の人間向けテキストは常時併存させなければならない。
 
-  `reset` の changes は実際に除去したもののみとする。`--backup` の退避と空親ディレクトリ
-  剪定は entry の状態遷移ではないため changes / items に載せてはならない。
+  `reset` の changes は実際に除去したもののみでなければならない。`--backup` の退避と
+  空親ディレクトリ剪定は entry の状態遷移ではないため changes / items に載せてはならない。
 ---
 # REQ-2ea19863: 変更系の JSON ペイロードは engine 結果からフルインベントリと実差分を導く
 

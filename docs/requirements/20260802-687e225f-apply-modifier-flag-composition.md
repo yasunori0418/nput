@@ -13,8 +13,8 @@ specification: |
 specification_ja: |
   `apply --all --recopy` は合成可能でなければならない。`--recopy` は apply の修飾であり
   `--all` と直交するため、`--all`（必要なら `--project-root` 等のフィルタ）が選んだ各
-  config に `--recopy` を適用する。`--all --backup[=<suffix>]` も同様に合成可能とする
-  （`--backup` も apply の修飾であるため）。
+  config に `--recopy` を適用しなければならない。`--all --backup[=<suffix>]` も同様に
+  合成可能でなければならない（`--backup` も apply の修飾であるため）。
 ---
 # REQ-687e225f: apply 修飾フラグは --all と合成できる
 

@@ -12,8 +12,8 @@ specification: |
   conditions for real-directory migration.
 specification_ja: |
   symlink entry の target に通常ファイルまたはディレクトリが存在する場合、engine は
-  エラーで停止しなければならず、上書きしてはならない。実 dir のみが例外であり、実 dir
-  migration の条件を満たす場合に限り配置前に除去して配置する。
+  エラーで停止しなければならず、上書きしてはならない。実 dir のみが例外でなければならず、
+  実 dir migration の条件を満たす場合に限り配置前に除去して配置しなければならない。
 ---
 # REQ-053cfed2: target に通常ファイル・ディレクトリが在れば上書きせずエラーで停止する
 

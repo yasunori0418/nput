@@ -12,8 +12,9 @@ specification: |
   restated here.
 specification_ja: |
   `nput apply` は name 省略時に `nput.default` を適用しなければならない（flake の
-  `default` 慣例に倣う）。`default` が未定義ならエラーとする。`<name>` を明示すれば
-  その config を、`--all` で `nput.*` 全てを適用する。profile が config 単位で atomic で
+  `default` 慣例に倣う）。`default` が未定義ならエラーとしなければならない。`<name>` を
+  明示すればその config を、`--all` で `nput.*` 全てを適用しなければならない。profile が
+  config 単位で atomic で
   あることは REQ-1be4d678 の担当で、本 item では規定しない。
 ---
 # REQ-c2d44626: apply の config 選択は name 省略で default・明示で単一・--all で全件

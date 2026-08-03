@@ -15,9 +15,10 @@ specification: |
 specification_ja: |
   `lib.mkManifest` の返り値 derivation は `passthru.rootKind`（`"project"` / `"home"` /
   `"system"` / `"fixed"`）を持たなければならない。`fixed` のときは `passthru.root` に
-  絶対パス文字列を持つ。`rootKind` は eval 時に確定し（実体パス解決は engine 実行時）、
-  CLI がビルド前に `nix eval <ep>#nput.<system>.<name>.rootKind` で profileDir を確定して
-  flock → build の順に進めるようにする。
+  絶対パス文字列を持たなければならない。`rootKind` は eval 時に確定しなければならず
+  （実体パス解決は engine 実行時）、CLI がビルド前に
+  `nix eval <ep>#nput.<system>.<name>.rootKind` で profileDir を確定して flock → build の
+  順に進められるようにする。
 ---
 # REQ-2f9205ee: mkManifest の返り値は passthru で root kind を露出する
 

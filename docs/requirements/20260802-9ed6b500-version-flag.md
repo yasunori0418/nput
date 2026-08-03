@@ -11,7 +11,7 @@ specification: |
   is already assigned to `--verbose`.
 specification_ja: |
   `--version` は埋め込みバージョンを cobra 既定書式（`nput version X.Y.Z`）で表示して
-  終了しなければならない。`-v` は `--verbose` に割当済みのため短縮形は持たない。
+  終了しなければならない。`-v` は `--verbose` に割当済みのため短縮形を持ってはならない。
 ---
 # REQ-9ed6b500: --version は埋め込みバージョンを cobra 既定書式で表示して終了し短縮形を持たない
 

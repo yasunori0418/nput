@@ -16,8 +16,9 @@ specification: |
 specification_ja: |
   `lib.mkManifest` はシグネチャ `mkManifest :: { pkgs, entries, root } -> derivation` の
   純粋関数でなければならない。副作用（profile swap・FS 配置）を持ってはならず、それらは
-  engine の実行時責務とする。entrypoint が `nput.<name>` に公開し、nput CLI が
-  `nix build` してエンジンへ渡す。また Nix 評価テスト（nix-unit / namaka）の単体対象と
+  engine の実行時責務でなければならない。entrypoint は `nput.<name>` に公開しなければ
+  ならず、nput CLI がこれを `nix build` してエンジンへ渡す。また Nix 評価テスト
+  （nix-unit / namaka）の単体対象と
   しなければならない。返り値 derivation が何を含むかは REQ-60e6b49c が規定しており、
   本 item では重ねて規定しない。
 ---

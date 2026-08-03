@@ -15,7 +15,7 @@ specification: |
 specification_ja: |
   `--json` 指定時、既定の行指向 stdout（`gitignore` の列挙・`apply --dryrun` /
   `reset --dryrun` のプラン・`list-generations` の一覧）を出してはならない
-  （エンベロープが stdout を専有する）。`--json` なしの既定契約は不変とする。
+  （エンベロープが stdout を専有する）。`--json` なしの既定契約は不変でなければならない。
 ---
 # REQ-2353259f: --json 指定時は行指向 stdout を出さずエンベロープが stdout を専有する
 

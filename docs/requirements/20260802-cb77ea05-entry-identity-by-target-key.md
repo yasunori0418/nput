@@ -13,9 +13,9 @@ specification: |
   SHALL be used as its default.
 specification_ja: |
   `entries` は attrset とし、属性キーが target パス（= entry の識別子）でなければ
-  ならない。識別子の一意性は Nix attrset のキー重複不可によって native に担保し、
-  重複 name を検出する `lib.throwIf` を持ってはならない。`target` フィールドを省略した
-  場合は属性キーを既定値とする。
+  ならない。識別子の一意性は Nix attrset のキー重複不可によって native に担保しなければ
+  ならず、重複 name を検出する `lib.throwIf` を持ってはならない。`target` フィールドを
+  省略した場合は属性キーを既定値としなければならない。
 ---
 # REQ-cb77ea05: entry の識別子は属性キー = target とし一意性は Nix が担保する
 

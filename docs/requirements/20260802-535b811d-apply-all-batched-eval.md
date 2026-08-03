@@ -17,9 +17,10 @@ specification_ja: |
   `apply --all` は rootKind を 1 回の一括 eval で取らなければならない。
   `nix eval <ep>#nput.<system> --apply 'cs: builtins.mapAttrs (_: c: c.rootKind) cs' --json`
   （legacy は per-system 次元なし: `nix eval -f <ep> nput --apply 'cs: …' --json`）で
-  config 名 → rootKind マップを 1 回で取得し、各 profileDir を確定する。`--project-root` 等の
-  フィルタもこの結果で振り分ける。build だけは atomic 性のため config ごと N 回行う。
-  eval プロセス起動コストを N→1 に固定する。
+  config 名 → rootKind マップを 1 回で取得し、各 profileDir を確定しなければならない。
+  `--project-root` 等のフィルタもこの結果で振り分けなければならない。build だけは
+  atomic 性のため config ごと N 回行わなければならない。eval プロセス起動コストを
+  N→1 に固定しなければならない。
 ---
 # REQ-535b811d: apply --all は rootKind を 1 回の一括 eval で取る
 

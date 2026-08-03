@@ -19,10 +19,11 @@ specification_ja: |
   `perSystem.nput.<name> = mkManifest { inherit pkgs; ... }` を宣言しなければならない。
   flake-parts はこれを `flake.nput.<system>.<name>` へ transpose し、直書きと同一の
   derivation を生まなければならない（CLI のアドレッシングは不変）。この経路では `pkgs`
-  が perSystem 由来になり `packages.nput` と一貫する（二重解決なし）。flake-parts
-  利用者にはこの形が canonical で、直書きは plain flake と `shell.nix` /
-  `default.nix` の canonical とする。`mkManifest` は両形で唯一の公開 API であり続け、
-  flakeModule の option は `mkManifest` の derivation を格納するだけとする。
+  は perSystem 由来でなければならず `packages.nput` と一貫しなければならない（二重解決
+  なし）。flake-parts 利用者にはこの形が canonical でなければならず、直書きは plain flake と
+  `shell.nix` / `default.nix` の canonical でなければならない。`mkManifest` は両形で唯一の
+  公開 API であり続けなければならず、flakeModule の option は `mkManifest` の derivation を
+  格納するだけでなければならない。
 ---
 # REQ-c50df875: flake-parts 経路は直書きと同一の derivation を生み CLI のアドレッシングを変えない
 

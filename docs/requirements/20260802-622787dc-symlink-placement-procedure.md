@@ -25,10 +25,12 @@ specification_ja: |
   した symlink は warning を出さずに置き換え（配置レポートの通常の出力規律に従う）、記録の無い
   （foreign な）symlink——他 nput profile / 他ツール / 手動——も置き換えるが warning を出す
   （後勝ち）。そのうえで `<配置元>/<subpath>` を
-  指す symlink を `<root>/<target>` に作成する。配置元は store link では Nix ストアパス、
-  out-of-store symlink では marker の絶対パスとする。subpath がファイル・ディレクトリの
-  いずれでも処理は同じとする。別 config（別 profile）が同一 target を狙うことは起きない前提と
-  し、後勝ちを許容しつつ foreign symlink の上書きは warning で可視化する。
+  指す symlink を `<root>/<target>` に作成しなければならない。配置元は store link では Nix
+  ストアパス、out-of-store symlink では marker の絶対パスでなければならない。subpath が
+  ファイル・
+  ディレクトリのいずれでも処理は同じでなければならない。別 config（別 profile）が同一
+  target を狙うことは起きない前提として扱わなければならず、後勝ちを許容しつつ foreign
+  symlink の上書きは warning で可視化しなければならない。
 ---
 # REQ-622787dc: symlink 配置は親 dir を作り配置元/subpath を指すリンクを張り、foreign symlink は警告して後勝ちする
 

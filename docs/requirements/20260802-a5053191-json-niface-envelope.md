@@ -23,13 +23,14 @@ specification_ja: |
   `--json` 指定時、CLI は stdout に niface エンベロープを 1 文書だけ出さなければならない。
   トップレベルは `specVersion` / `tool` / `command` / `status` / `dryRun` / `startedAt` /
   `finishedAt` / `errors[]` / `results[]`（camelCase・時刻は RFC 3339・`T` 区切り・
-  オフセット必須・UTC は `Z`）とする。single / batch を問わずトップレベルは常に
-  `results[]`（要素数 0 以上）とし、実行形態の判別子フィールドを持ってはならない。
-  `items` / `changes` / `info` は各 `results[i].result` 配下に置く。デフォルトの行指向
-  stdout は不変で、`--json` は opt-in の第 2 契約とする。エラーはエンベロープに構造化
-  しつつ、stderr の人間向けテキストを常時併存させなければならない。終了コード表は不変で、
-  niface `status` は exit 0 → `success` / 1・2 → `error` に連動させる。`tool.version` は
-  ldflags 埋め込みの `main.version` とする。nput の JSON 出力は現在も将来の機能も niface
+  オフセット必須・UTC は `Z`）を持たなければならない。single / batch を問わずトップレベルは
+  常に `results[]`（要素数 0 以上）でなければならず、実行形態の判別子フィールドを持っては
+  ならない。`items` / `changes` / `info` は各 `results[i].result` 配下に置かなければならない。
+  デフォルトの行指向 stdout は不変でなければならず、`--json` は opt-in の第 2 契約とする。
+  エラーはエンベロープに構造化しつつ、stderr の人間向けテキストを常時併存させなければ
+  ならない。終了コード表は不変でなければならず、niface `status` は exit 0 → `success` /
+  1・2 → `error` に連動させなければならない。`tool.version` は ldflags 埋め込みの
+  `main.version` としなければならない。nput の JSON 出力は現在も将来の機能も niface
   規約に準拠しなければならない。
 ---
 # REQ-a5053191: --json は niface 規約準拠のエンベロープを出す第 2 契約とする

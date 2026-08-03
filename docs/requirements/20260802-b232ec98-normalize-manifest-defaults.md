@@ -22,9 +22,10 @@ specification_ja: |
   `"symlink"` / `target` → 属性キー）・内部 marker タグ（`_nputMarker`）から clean enum
   （`srcKind` / `rootKind`）への変換を行う純データ関数とし、Nix 評価テスト
   （nix-unit / namaka）の単体対象としなければならない。`mkManifest = args:
-  derivation` は `normalizeManifest` の出力を `manifest.json` に書き symlink farm を組む。
-  lib 層は unparameterized とし、各関数が呼び出し時に `lib`（`normalizeManifest`）または
-  `pkgs`（`mkManifest`）を明示引数として要求する。
+  derivation` は `normalizeManifest` の出力を `manifest.json` に書き symlink farm を
+  組まなければならない。lib 層は unparameterized でなければならず、各関数が呼び出し時に
+  `lib`（`normalizeManifest`）または `pkgs`（`mkManifest`）を明示引数として要求しなければ
+  ならない。
 ---
 # REQ-b232ec98: normalizeManifest が検査・デフォルト適用・marker 変換を行い mkManifest が derivation を組む
 

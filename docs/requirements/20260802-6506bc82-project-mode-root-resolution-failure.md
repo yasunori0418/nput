@@ -14,7 +14,7 @@ specification_ja: |
   project mode において engine が git から root を解決できないとき、別の root で続行せず
   実行時にエラーで停止しなければならない（意図と異なる root へ配置すればプロジェクト外へ
   ファイルを撒くため）。git リポジトリ外かつ `--root` 未指定で toplevel の解決に失敗する
-  場合と、`git` が PATH に無い場合の双方に適用する。
+  場合と、`git` が PATH に無い場合の双方に適用しなければならない。
 ---
 # REQ-6506bc82: project mode で git から root を解決できないときは engine 実行時に停止する
 

@@ -15,9 +15,10 @@ specification: |
 specification_ja: |
   module では `nput rollback` を公開してはならず、ユーザー向けロールバックは host
   （`home-manager --rollback` 等）に一本化しなければならない。host rollback は旧 config を
-  再 activate して nput を再 kick することで FS を自動収束させる。したがって nput profile は
-  前進のみ（旧内容の新世代を積む）とする。host から nput へ要求するのは switch 時の kick だけ
-  とし、ホストの `oldGenPath` 配管を要求してはならない。
+  再 activate して nput を再 kick することで FS を自動収束させなければならない。したがって
+  nput profile は前進のみ（旧内容の新世代を積む）でなければならない。host から nput へ
+  要求するのは switch 時の kick だけとしなければならず、ホストの `oldGenPath` 配管を要求
+  してはならない。
 ---
 # REQ-844ee375: module 時は rollback を host へ一本化し、nput profile は前進のみで追従する
 

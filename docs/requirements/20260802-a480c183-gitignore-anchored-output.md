@@ -16,9 +16,9 @@ specification_ja: |
   `nput gitignore <name>` は配置 target を `.gitignore` 向けに列挙して stdout へ出力する
   だけでなければならず、ファイルを書き込んではならない（更新責務はプロジェクト管理者）。
   出力は root 相対 target に先頭 `/` を付けたアンカー形式（例: `/.claude/skills/nix`）で
-  1 行 1 件とする。project mode の root = git toplevel = `.gitignore` の置き場所なので
-  先頭 `/` が正しくアンカーし、別階層の同名パスを誤って無視してはならない。
-  ディレクトリ / ファイルとも末尾 `/` は付けない。
+  1 行 1 件でなければならない。project mode の root = git toplevel = `.gitignore` の
+  置き場所なので先頭 `/` が正しくアンカーし、別階層の同名パスを誤って無視してはならない。
+  ディレクトリ / ファイルとも末尾 `/` を付けてはならない。
 ---
 # REQ-a480c183: gitignore は配置 target を stdout へ列挙するだけでファイルを書き込まない
 

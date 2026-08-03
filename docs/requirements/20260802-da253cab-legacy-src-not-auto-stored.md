@@ -16,8 +16,9 @@ specification: |
 specification_ja: |
   flake entrypoint では評価前にディレクトリ全体が store へコピーされるため、相対 path
   リテラル（`src = ./foo;`）がそのまま store symlink になる。legacy entrypoint
-  （`-f` eval）にはこの事前コピーが無く、相対 path はファイルの実位置基準で解決され、
-  live な作業木パスのまま manifest に載る。legacy entrypoint で reproducible /
+  （`-f` eval）にはこの事前コピーが無いため、相対 path はファイルの実位置基準で解決され
+  なければならず、live な作業木パスのまま manifest に載らなければならない。legacy
+  entrypoint で reproducible /
   store-backed な `src` を得るには、`builtins.path { path = ./foo; }` や `fetchTarball` /
   `builtins.fetchGit` など明示的に store へ add する手段を使わなければならない。
 ---

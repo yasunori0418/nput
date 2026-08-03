@@ -23,17 +23,18 @@ specification: |
   so the filesystem SHALL converge first and the pointer move SHALL come last. The apply
   engine SHALL be reused by substituting the pair (`baseline`, `target`).
 specification_ja: |
-  `nput rollback <name>` は配置を前世代へ戻すものである。nput は profile
+  `nput rollback <name>` は配置を前世代へ戻さなければならない。nput は profile
   dir 自体ではなく任意 root に配置するため、profile ポインタの移動だけでは FS が変わらず、
   再配置が必須である。stale 除去の diff は、`baseline` を現世代 N の manifest（FS の現状）、
   `target` を戻る世代 N-1 の manifest とし、この組で planner を計算して apply と同順
   （配置前除去 → 配置 / 張替え → stale 除去）で FS へ反映しなければならない。世代 N が自己記録の
   祖先 symlink を配下ネスト entries へ移行した世代であれば、配置前除去は戻り先 N-1 の祖先を
-  塞いでいる自己記録 symlink を配置前に除去する（apply の配置前除去と同一実行経路・drift 時は
-  同じくエラー停止）。最後に `nix-env --profile <profileDir>/profile --rollback`（または
-  `--switch-generation N-1`）で profile ポインタを移す。ポインタを先に動かすと baseline が N-2 へ
-  ずれ stale 除去が誤るため、FS 収束を先に、ポインタ移動を最後にしなければならない。apply
-  エンジンは（`baseline`, `target`）の差し替えで再利用する。
+  塞いでいる自己記録 symlink を配置前に除去しなければならない（apply の配置前除去と同一実行
+  経路・drift 時は同じくエラー停止）。最後に `nix-env --profile <profileDir>/profile
+  --rollback`（または `--switch-generation N-1`）で profile ポインタを移さなければならない。
+  ポインタを先に動かすと baseline が N-2 へずれ stale 除去が誤るため、FS 収束を先に、
+  ポインタ移動を最後にしなければならない。apply エンジンは（`baseline`, `target`）の
+  差し替えで再利用しなければならない。
 ---
 # REQ-0e341430: rollback は FS を先に収束させてから profile ポインタを最後に移す
 

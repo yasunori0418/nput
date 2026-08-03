@@ -15,12 +15,13 @@ specification: |
   point at a root no longer in existence, and deleting them — can be implemented once
   demand for it arises.
 specification_ja: |
-  クローンを削除すると profile は `<state>/nix/profiles/nput/` 下に孤児として残る。store は
-  `nix-collect-garbage` で解放されるが profile ディレクトリは残る。これは放置許容（または手動
-  削除）とし、公開ドキュメントに注記しなければならない。どの root 由来の孤児かは `<roothash>`
-  階層の backref ファイル `.root` で逆引きできるものとする。実害が小さいため MVP では cleanup
-  コマンドを持ってはならない。ただし backref があることで、実在しない root を指す孤児系列を
-  逆引きして削除する将来の `nput prune` を、消費側の要求が出た時点で実装できる seam を残す。
+  クローンを削除すると profile は `<state>/nix/profiles/nput/` 下に孤児として残らなければ
+  ならない。store は `nix-collect-garbage` で解放されるが profile ディレクトリは残らなければ
+  ならない。これは放置許容（または手動削除）としなければならず、公開ドキュメントに注記
+  しなければならない。どの root 由来の孤児かは `<roothash>` 階層の backref ファイル `.root`
+  で逆引きできなければならない。実害が小さいため MVP では cleanup コマンドを持っては
+  ならない。ただし backref があることで、実在しない root を指す孤児系列を逆引きして削除する
+  将来の `nput prune` を、消費側の要求が出た時点で実装できる seam を残さなければならない。
 ---
 # REQ-d41b1d0a: 孤児 profile は backref で逆引き可能なまま放置許容とし、MVP では cleanup コマンドを持たない
 

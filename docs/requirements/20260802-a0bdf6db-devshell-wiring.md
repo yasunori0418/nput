@@ -16,10 +16,11 @@ specification: |
   REQ-fc1c7ce6; neither is restated here.
 specification_ja: |
   devShell は `devShells.<name>` の `shellHook` から engine を起動しなければならない
-  （HM モジュールと同型）。供給する activation タイミングはシェル入室とし、`nix develop` /
-  direnv（`use flake`）でシェルに入った瞬間にキックされ、git toplevel を root に
-  プロジェクト内へ配置する。`shellHook` は高頻度で走るため、変更なしなら no-op になる
-  project mode の世代スキップ短絡をこの配線の前提とする。配置ロジックを持たず root と
+  （HM モジュールと同型）。供給する activation タイミングはシェル入室でなければならず、
+  `nix develop` / direnv（`use flake`）でシェルに入った瞬間にキックされなければならず、
+  git toplevel を root にプロジェクト内へ配置しなければならない。`shellHook` は高頻度で
+  走るため、変更なしなら no-op になる project mode の世代スキップ短絡をこの配線の前提と
+  しなければならない。配置ロジックを持たず root と
   activation タイミングだけを供給することは REQ-c1b3ca5f、`projectRoot` を pin することは
   REQ-fc1c7ce6 の担当で、いずれも本 item では規定しない。
 ---

@@ -11,7 +11,8 @@ specification: |
   removes is stated by REQ-16aef46b and SHALL NOT be restated here.
 specification_ja: |
   `entries = {}` は正当な全クリアとして扱わなければならず、エラーにも警告にもして
-  はならない。前世代の全 nput symlink を保守的 stale 除去で除去し、新世代は空とする。
+  はならない。前世代の全 nput symlink を保守的 stale 除去で除去しなければならず、
+  新世代は空でなければならない。
   保守的 stale 除去が何を除去するかは REQ-16aef46b の規範であり、ここでは再掲しない。
 ---
 # REQ-fc64de4c: 空の entries は正当な全クリアとして扱い、エラーにも警告にもしない

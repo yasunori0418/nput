@@ -16,9 +16,10 @@ specification: |
 specification_ja: |
   `method` フィールドは entry の配置方法を選ぶものでなければならない。
   `method = "symlink"` では、store 由来の `src` に対して Nix ストアへの読み取り専用
-  symlink、out-of-store marker に対してローカルパスへのライブ symlink となり、いずれも
-  世代管理下に置かれる。`method = "copy"` では、store 由来の `src` に対して
-  place-once コピー（書き込み可・ユーザー管理）となり、世代管理の対象外とする。
+  symlink、out-of-store marker に対してローカルパスへのライブ symlink とならなければならず、
+  いずれも世代管理下に置かれなければならない。`method = "copy"` では、store 由来の `src` に
+  対して place-once コピー（書き込み可・ユーザー管理）とならなければならず、世代管理の
+  対象外でなければならない。
 ---
 # REQ-77689c68: method は配置方法を選び symlink は世代管理下・copy は世代管理外になる
 

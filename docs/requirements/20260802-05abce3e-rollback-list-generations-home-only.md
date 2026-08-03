@@ -12,8 +12,8 @@ specification: |
 specification_ja: |
   `nput rollback` と `nput list-generations` は home mode 限定でなければならない。
   project mode では世代を内部機構に留め、ユーザーに公開してはならない。
-  `list-generations --all` は home mode の全 config の世代を一覧する読み取り専用の
-  操作とする。
+  `list-generations --all` は home mode の全 config の世代を一覧しなければならず、
+  読み取り専用でなければならない。
 ---
 # REQ-05abce3e: rollback と list-generations は home mode 限定にする
 

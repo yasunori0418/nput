@@ -24,11 +24,13 @@ specification_ja: |
   通常ファイル / ディレクトリ・copy 構造不一致・copy foreign 実ファイル・method 変更
   copy→symlink。対象の外延は REQ-9b0046e0 が定める）を `<target>.<suffix>` へ rename 退避して
   から配置しなければならない（conflict の脱出ハッチ）。値なしは suffix `nput-backup` を
-  意味する。cobra `NoOptDefVal` の制約により suffix 指定は `=` 区切り必須とし（`--backup=bak`）、
-  スペース区切りは suffix として扱わない。祖先 symlink conflict は対象外のままとする
+  意味しなければならない。cobra `NoOptDefVal` の制約により suffix 指定は `=` 区切り必須と
+  しなければならず（`--backup=bak`）、スペース区切りは suffix として扱ってはならない。
+  祖先 symlink conflict は対象外のままでなければならない
   （構造問題であり退避では解消しないため）。退避の発動は warning 級で常時 stderr に
-  出さなければならない。退避先 `<target>.<suffix>` が既に存在するときは conflict で停止し、
-  黙って上書きしてはならない。退避も途中失敗時の undo ジャーナルの対象とする。
+  出さなければならない。退避先 `<target>.<suffix>` が既に存在するときは conflict で停止
+  しなければならず、黙って上書きしてはならない。退避も途中失敗時の undo ジャーナルの
+  対象としなければならない。
   `nput reset` は退避物を復元してはならない。
 ---
 # REQ-5dd5a4e9: apply --backup は配置を塞ぐ記録外実体を rename 退避してから配置する

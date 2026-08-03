@@ -17,8 +17,9 @@ specification_ja: |
   project mode（`root = projectRoot`）の root は、既定で
   `git rev-parse --show-toplevel` から解決しなければならない（どのサブディレクトリから
   実行しても同じ root に解決される）。git 外で使う場合や別ルートを指す場合は
-  `--root <path>` で明示する。config ファイル相対は採ってはならない（Nix で flake source が
-  store にコピーされ store path 化するため成立しないため）。CWD（`$PWD`）相対も採っては
+  `--root <path>` で明示しなければならない。config ファイル相対は採ってはならない
+  （Nix で flake source が store にコピーされ store path 化するため成立しないため）。
+  CWD（`$PWD`）相対も採っては
   ならない（実行場所で配置先がズレ冪等性を壊すため）。
 ---
 # REQ-9cb26ffd: project mode の root は git toplevel から解決し、config 相対も CWD 相対も採らない

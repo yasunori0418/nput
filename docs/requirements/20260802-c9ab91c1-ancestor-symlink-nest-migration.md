@@ -22,7 +22,8 @@ specification_ja: |
   symlink の配置に先立ち、engine は target の各祖先 component を `lstat` で walk し、
   祖先の symlink を非対称に扱わなければならない。自己記録 stale の祖先（当該 entry 自身の
   前世代 manifest が記録し、on-disk が記録 dest と一致し、次世代には無い）は配置前に除去
-  （PreRemove）して配下の子を新規配置し、ネストへ移行させる。この除去は意図された移行であり
+  （PreRemove）して配下の子を新規配置し、ネストへ移行させなければならない。この除去は
+  意図された移行であり
   warning にしてはならず、配置レポートの通常の出力規律に従わせる。foreign な祖先（記録なし /
   記録 dest と不一致 / 前世代なし）と、次世代にも祖先が残る自己矛盾はエラーで停止しなければ
   ならない（配下にネストすると store 汚染 / dangling を招くため）。

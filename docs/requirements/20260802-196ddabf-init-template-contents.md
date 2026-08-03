@@ -26,14 +26,15 @@ specification_ja: |
   `method = "copy"` / `mkOutOfStoreSymlink` / 複数 entry / 動的生成）はコメントで示さなければ
   ならない。starter を小さく保ち、ユーザーが不要分を削除する手間を最小化するため。
   `standalone` template は `homeRoot` の 1 config 例 + バリエーションコメントを持つ
-  `flake.nix` を提供する。`project` template は `projectRoot` の 1 config 例 + devShell
-  （`packages = [ nput.packages.${system}.nput ]`・`shellHook` は名指し apply）+
+  `flake.nix` を提供しなければならない。`project` template は `projectRoot` の 1 config 例
+  + devShell（`packages = [ nput.packages.${system}.nput ]`・`shellHook` は名指し apply）+
   「配置物は ephemeral・`.gitignore` へ `nput gitignore <name>` 出力を追記」コメントを持つ
   `flake.nix` と、`# nput: regenerate with 'nput gitignore <name>'` ヘッダコメント付きの
-  `.gitignore` 雛形を提供する。`project` template の `shellHook` は名指しの
-  `nput apply <name> --no-wait` を既定とする（example が 1 config なので最も明確で混在
-  footgun が起きないため）。複数 config 向けの
-  `nput apply --all --project-root --no-wait` はコメントで示す。`.envrc`（direnv）は
+  `.gitignore` 雛形を提供しなければならない。`project` template の `shellHook` は名指しの
+  `nput apply <name> --no-wait` を既定としなければならない（example が 1 config なので
+  最も明確で混在 footgun が起きないため）。複数 config 向けの
+  `nput apply --all --project-root --no-wait` はコメントで示さなければならない。
+  `.envrc`（direnv）は
   同梱してはならず（非利用者に不要ファイルを増やすため）、コメント案内に留める。
 ---
 # REQ-196ddabf: template は動く example を 1 config だけ置きバリエーションはコメントで示す

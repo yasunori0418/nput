@@ -16,10 +16,10 @@ specification: |
   evaluate the entrypoint in order to read the entries.
 specification_ja: |
   `nput reset` は名指し必須とし、`--all` に対応してはならない（一斉撤去は破壊的な
-  footgun であり、`rollback --all` の却下と一貫させるため）。複数撤去は名指しを複数回行う。
-  `reset` は解決後 `profileDir` 単位の blocking flock を取得して、並行する apply / reset と
-  直列化しなければならない。非 build コマンド共通の eval 先行前段に加えて、`reset` は
-  entries 読みのため entrypoint eval も行う。
+  footgun であり、`rollback --all` の却下と一貫させるため）。複数撤去は名指しを複数回
+  行わなければならない。`reset` は解決後 `profileDir` 単位の blocking flock を取得して、
+  並行する apply / reset と直列化しなければならない。非 build コマンド共通の eval 先行
+  前段に加えて、`reset` は entries 読みのため entrypoint eval も行わなければならない。
 ---
 # REQ-a8edc58f: reset は名指し必須で profileDir 単位の blocking flock を取る
 

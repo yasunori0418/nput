@@ -17,9 +17,10 @@ specification: |
 specification_ja: |
   `nput apply <name> --recopy` は通常 apply に加えて、config 内の全 copy target を現在の
   `src` / `subpath` から無条件に上書き再コピーしなければならない。copy は世代外で hash 追跡
-  しないため差分判定はせず無条件とする。上書きした target はレポート表示し、フラグ自体が
-  opt-in なので確認は出さない。したがってローカルの copy 編集は破棄され src の内容に戻る
-  （upstream 追従の意図）。symlink 部の世代コミット挙動は不変で、copy は世代を増やさない。
+  しないため差分判定をしてはならず、上書きは無条件でなければならない。上書きした target は
+  レポート表示しなければならず、フラグ自体が opt-in なので確認を出してはならない。したがって
+  ローカルの copy 編集は破棄され src の内容に戻る（upstream 追従の意図）。symlink 部の世代
+  コミット挙動は不変でなければならず、copy は世代を増やしてはならない。
 ---
 # REQ-7cc32a2b: apply --recopy は config 内の全 copy target を src から無条件に上書き再コピーする
 

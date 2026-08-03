@@ -15,7 +15,7 @@ specification: |
   recorded after defaulting). An entry `name` field SHALL NOT exist.
 specification_ja: |
   `manifest.json` の `entries` は Nix の attrset を配列へ正規化したものでなければ
-  ならない（Go は配列を読む）。各要素は次の 5 フィールドを記録する: `srcKind`
+  ならない（Go は配列を読む）。各要素は次の 5 フィールドを記録しなければならない: `srcKind`
   （`"store"` / `"outOfStore"`）・`src`（string。`store` は解決済み store パス、
   `outOfStore` は marker の絶対パス）・`subpath`（string。デフォルト適用後を記録し、
   省略形も `"."` で記録する）・`target`（string。root 相対の配置先で entry の

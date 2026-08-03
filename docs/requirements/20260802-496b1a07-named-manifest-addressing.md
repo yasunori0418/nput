@@ -19,11 +19,11 @@ specification_ja: |
   entrypoint は `nput.<name>` に named manifest（`mkManifest` の結果）を公開しなければ
   ならない。これにより 1 プロジェクトに複数 config を置ける（役割ごと独立 profile）。
   flake entrypoint では `outputs.nput.<system>.<name>`（直書き）または
-  `perSystem.nput.<name>`（flakeModule 経由）に公開し、CLI は現行 `<system>` を
-  差し込んで `nix build <ep>#nput.<system>.<name>` で build する。`default.nix` /
+  `perSystem.nput.<name>`（flakeModule 経由）に公開しなければならず、CLI は現行 `<system>` を
+  差し込んで `nix build <ep>#nput.<system>.<name>` で build しなければならない。`default.nix` /
   `shell.nix` entrypoint では `mkShell` derivation の `passthru.nput.<name>` または
-  トップレベル attrset `{ nput.<name> = ...; }` に公開し、CLI は
-  `nix build -f <ep> nput.<name>` で build する。legacy entrypoint には flake の
+  トップレベル attrset `{ nput.<name> = ...; }` に公開しなければならず、CLI は
+  `nix build -f <ep> nput.<name>` で build しなければならない。legacy entrypoint には flake の
   `<system>` に相当する次元が無く、addressing はフラットな `nput.<name>` になる。
 ---
 # REQ-496b1a07: entrypoint は nput.<name> に named manifest を公開し CLI は形ごとの attr path で build する

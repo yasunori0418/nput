@@ -12,7 +12,8 @@ specification: |
 specification_ja: |
   `--set` 到達前に apply が失敗すると `<profileDir>/.pending` gcroot が残り、ビルド済み
   未使用 link-farm を掴み続ける。次回 apply が同名（`.pending`）で上書きするため config
-  あたり最大 1 個に有界であり、回収処理は持たず許容する。
+  あたり最大 1 個に有界でなければならず、回収処理を持ってはならない。これは許容
+  しなければならない。
 ---
 # REQ-840b3641: 失敗時に残る pending gcroot は config あたり最大 1 個に有界とし回収処理を持たない
 

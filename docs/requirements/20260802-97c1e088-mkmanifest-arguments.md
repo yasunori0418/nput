@@ -16,8 +16,9 @@ specification: |
 specification_ja: |
   `lib.mkManifest` は引数として `pkgs` / `entries` / `root` の 3 つを取らなければ
   ならない。`pkgs` は derivation ビルド（`runCommandLocal` 等）と `pkgs.lib` の取得に
-  使う nixpkgs の attrset で、デフォルトを持たない必須引数とする。`entries` は配置定義の
-  attrset とする。`root` は配置先の基準とする。`root` 固有の規範（明示必須であること・
+  使う nixpkgs の attrset でなければならず、デフォルトを持たない必須引数でなければ
+  ならない。`entries` は配置定義の attrset でなければならない。`root` は配置先の基準で
+  なければならない。`root` 固有の規範（明示必須であること・
   型が `string | marker` であること）は REQ-4ec3accc と REQ-37b56673 が規定しており、
   本 item では重ねて規定しない。
 ---

@@ -13,7 +13,8 @@ specification: |
 specification_ja: |
   engine が外部コマンドとして叩いてよいのは `nix`（profile 操作）と `git`（toplevel の
   取得）のみでなければならない。place / replace / remove と保守的 stale 除去は
-  ネイティブ FS 操作で行わなければならない。profile の切り替えは `nix-env --set` で行う。
+  ネイティブ FS 操作で行わなければならない。profile の切り替えは `nix-env --set` で
+  行わなければならない。
 ---
 # REQ-6c4e174a: engine が叩く外部コマンドは nix と git のみに限る
 

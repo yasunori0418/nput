@@ -28,7 +28,8 @@ specification: |
 specification_ja: |
   「配置したもの」のマニフェストは、純粋関数 `lib.mkManifest` が生成する link farm derivation の
   一部として store 内に埋め込まなければならない（当該 derivation が何を含むかは REQ-60e6b49c が
-  規定し、ここでは繰り返さない）。store 外の可変 JSON は持たず、`manifest.json` は不変とする。
+  規定し、ここでは繰り返さない）。store 外の可変 JSON を持ってはならず、`manifest.json` は
+  不変でなければならない。
   engine は実行時に、解決後 `profileDir` 単位の flock を取得し、前世代の store マニフェストと
   新世代を diff して消えた entry を判定し、symlink / out-of-store symlink / place-once copy を
   配置し（新規・張替を先に、stale 除去を最後に）、全て成功してから
@@ -36,9 +37,9 @@ specification_ja: |
   profile を更新しなければならない。この `--set` が全モード共通のコミット点であり、途中失敗は
   そこへ到達せず前世代を保つ。前世代は standalone / module を問わず全モード共通で nput 自身の
   profile の前世代から読み、ホストの `oldGenPath` に依存してはならない。nput は全モードで自前
-  profile を持ち、standalone ではユーザー向け rollback に使い、module（HM / NixOS / darwin）では
-  前世代マニフェストと stale 追跡のための内部機構に留める。1 profile は 1 config に対応し、
-  config 単位で atomic とする。
+  profile を持たなければならず、standalone ではユーザー向け rollback に使い、module
+  （HM / NixOS / darwin）では前世代マニフェストと stale 追跡のための内部機構に留めなければ
+  ならない。1 profile は 1 config に対応しなければならず、config 単位で atomic とする。
 ---
 # REQ-1be4d678: 世代は link farm derivation を nput 自前 profile へコミットして積み、前世代 manifest から stale を除去する
 

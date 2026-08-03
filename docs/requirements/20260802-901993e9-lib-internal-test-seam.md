@@ -10,7 +10,8 @@ specification: |
 specification_ja: |
   `lib.__internal` は private helper（`escapesBase` / `pathChecks` / `anchorName` /
   `resolveEntry` / `farmEntries`）を nix-unit / namaka のテスト seam として公開する
-  内部 API でなければならない。これは安定 API ではなく、後方互換の保証対象に含めない。
+  内部 API でなければならない。これは安定 API であってはならず、後方互換の保証対象に
+  含めてはならない。
 issues:
   - "#71"
 ---

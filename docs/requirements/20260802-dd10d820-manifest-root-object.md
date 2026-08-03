@@ -16,7 +16,8 @@ specification_ja: |
   `"home"` / `"system"` / `"fixed"` のいずれかでなければならない。`project` / `home` /
   `system` は engine が実行時に解決する（git toplevel / `$HOME` / `/`）ためパスを
   持ってはならない。`rootKind = "fixed"` のときのみ、評価時に確定した絶対パスを
-  `root` フィールドに併記し、それ以外の kind では当該フィールドを省略する。
+  `root` フィールドに併記しなければならず、それ以外の kind では当該フィールドを
+  省略しなければならない。
 ---
 # REQ-dd10d820: manifest.json の root は rootKind を持ち fixed のときだけ絶対パスを併記する
 

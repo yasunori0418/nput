@@ -18,10 +18,11 @@ specification: |
 specification_ja: |
   home mode（`root = homeRoot`）の root は、層ごとに定まった供給元から解決しなければならない。
   standalone は実行時のシェル環境変数 `$HOME`、home-manager モジュールは HM が内部解決した
-  `$HOME`（モジュールが `homeRoot` を pin する）から解決し、いずれも OS を問わず動作する。
-  NixOS モジュールは `config.users.users.${cfg.user}.home` から解決する
-  （`isNormalUser = true` なら `/home/<user>`）。nix-darwin モジュールも同じく
-  `config.users.users.${cfg.user}.home` から解決するが、そこにはデフォルト値が無いため
+  `$HOME`（モジュールが `homeRoot` を pin する）から解決しなければならず、いずれも OS を
+  問わず動作しなければならない。NixOS モジュールは `config.users.users.${cfg.user}.home` から
+  解決しなければならない（`isNormalUser = true` なら `/home/<user>`）。nix-darwin モジュールも
+  同じく `config.users.users.${cfg.user}.home` から解決しなければならないが、そこには
+  デフォルト値が無いため
   明示設定を必須としなければならない。
 ---
 # REQ-8d965ca2: home mode の root は層ごとに定まった供給元から解決する

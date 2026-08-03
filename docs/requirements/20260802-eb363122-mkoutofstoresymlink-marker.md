@@ -15,10 +15,10 @@ specification: |
 specification_ja: |
   `lib.mkOutOfStoreSymlink` は、ローカルパスへの out-of-store symlink を表すマーカーを
   返す純粋関数（`mkOutOfStoreSymlink :: string -> marker`）でなければならない。
-  引数は Nix 評価時に確定する絶対パスの文字列とし、シェルの `$HOME` は使えない。
-  core lib ではパスをマーカー attrset に包むだけとし、実際の link 生成は engine が行う。
-  プラットフォームのネイティブ機構（home-manager の
-  `config.lib.file.mkOutOfStoreSymlink` 等）へは委譲しない。
+  引数は Nix 評価時に確定する絶対パスの文字列でなければならず、シェルの `$HOME` を
+  使えてはならない。core lib ではパスをマーカー attrset に包むだけとしなければならず、
+  実際の link 生成は engine が行わなければならない。プラットフォームのネイティブ機構
+  （home-manager の `config.lib.file.mkOutOfStoreSymlink` 等）へは委譲してはならない。
 ---
 # REQ-eb363122: mkOutOfStoreSymlink は out-of-store symlink を表すマーカーを返す
 

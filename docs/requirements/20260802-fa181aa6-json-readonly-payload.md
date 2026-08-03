@@ -49,39 +49,42 @@ specification: |
   NOT be used to express the absence of side effects.
 specification_ja: |
   `apply --dryrun` は apply と dryRun パリティを持たなければならない。apply と同一の変換を
-  通すことでスキーマの一致を構造的に保証し、値（観測結果）だけが異なるようにする。
-  `items` は新 manifest の全 entry + stale 除去計画に載った旧 entry のフルインベントリと
-  し、item 形は apply と同一とする。dryrun は何も実行しないため skipped 区分は現れない。
+  通すことでスキーマの一致を構造的に保証し、値（観測結果）だけが異なるようにしなければ
+  ならない。`items` は新 manifest の全 entry + stale 除去計画に載った旧 entry のフルイン
+  ベントリとし、item 形は apply と同一としなければならない。dryrun は何も実行しないため
+  skipped 区分は現れてはならない。
   conflict の entry は `item.status:"failed"` + `error.code:"E_NPUT_COLLISION"` とし、
   JSON 出力と exit 2 は両立させ、item 起因エラーを `results[i].errors[]` へ二重化しては
   ならない。
 
-  `apply --dryrun` の changes は予定差分のみとする（place / copy 新規 → `add`・
-  replace → `modify`・除去 → `remove`。同一 target の unlink + 再配置は 1 つの `modify` に
-  合体）。dryrun は re-link を実行しないため re-link 直前の on-disk dest を観測せず、
-  記録どおりの dest への予定 re-link も `modify` として残す。`--recopy` の上書きは dryrun の
-  plan に現れない（planner は place-once 分類のみで recopy は engine の materialize 側経路の
-  ため）。dryrun に現れる change は全て `reversible: true` とする。
+  `apply --dryrun` の changes は予定差分のみとしなければならない（place / copy 新規 →
+  `add`・replace → `modify`・除去 → `remove`。同一 target の unlink + 再配置は 1 つの
+  `modify` に合体）。dryrun は re-link を実行しないため re-link 直前の on-disk dest を
+  観測せず、記録どおりの dest への予定 re-link も `modify` として残さなければならない。
+  `--recopy` の上書きは dryrun の plan に現れてはならない（planner は place-once 分類のみで
+  recopy は engine の materialize 側経路のため）。dryrun に現れる change は全て
+  `reversible: true` としなければならない。
   空親ディレクトリ剪定と `--backup` の rename 退避は entry 識別を持たず item /
-  change を生まない。`generation` は観測記録とし、切替が起きないため before = after、
-  profile 未作成の初回 plan では `before` / `after` を両省略し `profile` のみとする。
-  warnings の写像・振り分けは apply と共通とする。
+  change を生んではならない。`generation` は観測記録とし、切替が起きないため
+  before = after、profile 未作成の初回 plan では `before` / `after` を両省略し `profile`
+  のみとしなければならない。warnings の写像・振り分けは apply と共通としなければならない。
 
   `list-generations <name>` は `results[i].result.info.generations = [{number, date,
-  current}]`（`date` は nix-env 表示の生文字列）と `items: []` を出し、
+  current}]`（`date` は nix-env 表示の生文字列）と `items: []` を出さなければならず、
   `SubjectResult.generation` スロットは出してはならない（世代番号の二重符号化回避）。
-  空 profile でも `"generations": []` を明示する。
+  空 profile でも `"generations": []` を明示しなければならない。
 
   `gitignore <name>` は `results[i].result.info.paths` に anchor 形 target（先頭 `/`）と
-  `items: []` を出す。entry 0 件でも `"paths": []` を明示する。
+  `items: []` を出さなければならない。entry 0 件でも `"paths": []` を明示しなければ
+  ならない。
 
   `init <template>` は主体を持たないため `results: []` のままとし、トップレベル `info` に
-  `{template, ref}` を載せる。info は展開実行前に確定するため、失敗時もトップ
-  `errors[]` と並んで残さなければならない。
+  `{template, ref}` を載せなければならない。info は展開実行前に確定するため、失敗時も
+  トップ `errors[]` と並んで残さなければならない。
 
-  読み取り系（list-generations / gitignore / init）の `dryRun` は常に `false` とする。
-  `dryRun` は `--dryrun` フラグの反映に限定し、副作用の無さを `dryRun` で表現しては
-  ならない。
+  読み取り系（list-generations / gitignore / init）の `dryRun` は常に `false` としなければ
+  ならない。`dryRun` は `--dryrun` フラグの反映に限定し、副作用の無さを `dryRun` で表現
+  してはならない。
 ---
 # REQ-fa181aa6: 読み取り系の JSON ペイロードは dryRun パリティと info インベントリで表す
 

@@ -19,11 +19,12 @@ specification: |
   specification and is not restated here.
 specification_ja: |
   `nput` CLI（`packages.nput`）は PATH に常駐する一次 UX でなければならない。導入形は
-  2 つとする。standalone（home mode）ではグローバルに導入し（例:
+  2 つを支援しなければならない。standalone（home mode）ではグローバルに導入し（例:
   `nix profile install github:yasunori0418/nput`）、グローバル CLI とユーザー flake が
   pin する `nput.lib` は別入力になるため `schemaVersion` が skew し得る。よって CLI と
-  flake pin の `nput` を同一 input から揃えることを推奨し、この形では devShell 同梱を
-  強制しない。project mode（canonical）では `templates/project` の devShell に pin 版
+  flake pin の `nput` を同一 input から揃えることを推奨すべきであり、この形では
+  devShell 同梱を強制してはならない。project mode（canonical）では `templates/project` の
+  devShell に pin 版
   `nput` を同梱し（`packages = [ nput.packages.${system}.nput ]`）、CLI と `nput.lib`
   が同一 flake 入力から来て `schemaVersion` が一致するようにしなければならない。
   skew した `schemaVersion` に engine がどう反応するかは manifest スキーマ仕様の担当で、

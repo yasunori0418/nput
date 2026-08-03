@@ -16,10 +16,10 @@ specification: |
   prompt and the abort notice of `reset` SHALL also remain.
 specification_ja: |
   成功時はデフォルト沈黙でなければならない。`apply` / `reset` / `rollback` の成功は
-  終了コード 0 が語り、配置レポート（サマリ + per-target 行）・try-lock skip 通知・
-  `apply --all` 完了サマリは既定では出さない。warning（foreign symlink 等）と error は
-  常時 stderr に出さなければならず、沈黙の対象外とする。`reset` の確認プロンプト・
-  中止通知も存続させる。
+  終了コード 0 が語らなければならず、配置レポート（サマリ + per-target 行）・try-lock
+  skip 通知・`apply --all` 完了サマリは既定では出してはならない。warning（foreign
+  symlink 等）と error は常時 stderr に出さなければならず、沈黙の対象外でなければ
+  ならない。`reset` の確認プロンプト・中止通知も存続させなければならない。
 ---
 # REQ-8ef34101: 成功時はデフォルト沈黙とし warning と error は常時 stderr へ出す
 
