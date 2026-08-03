@@ -37,7 +37,7 @@ nput list-generations <name> # 世代一覧
 | out-of-store symlink | あり（リンク先のみ）| 指す先の内容は設計上ライブ。版管理しない |
 | copy | **なし（世代外）** | place-once・ユーザー管理の副作用 |
 
-> **上表は `docs/concept.md` からの写し**。use_case は規範を持たないため、配置種別ごとの
+> **上表は分割時点の `docs/concept.md`（原文）からの写し**。use_case は規範を持たないため、配置種別ごとの
 > 世代管理の有無の規範は REQ-77689c68（method と世代管理の対応）/ REQ-d2277c7a（copy が
 > 世代外であること）/ REQ-a8a923ad（out-of-store の版管理範囲）にある。
 
