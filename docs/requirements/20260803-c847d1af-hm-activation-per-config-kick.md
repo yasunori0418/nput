@@ -58,9 +58,15 @@ specification_ja: |
 > REQ-1c1526b1、profileDir のキーは REQ-d5a2e289。世代が nput 自前 profile に積まれる
 > ことは REQ-1be4d678、module 経路で rollback を host へ一本化することは REQ-844ee375。
 > 辞書順・部分失敗続行・最後に集約という姿勢を standalone の `apply --all` について
-> 定めるのは REQ-4cbd9a0d で、本 item は同じ姿勢を HM activation の configs ループへ
-> 適用する（同一の規範を再掲するのではなく、適用先が別経路であるため独立した item に
-> なる）。
+> 定めるのは REQ-4cbd9a0d。本 item は同じ姿勢を HM activation の configs ループについて
+> 独立に規定する。文面は重なるが、適用先（CLI の `--all` か activation の configs ループか）
+> が別経路であり、片方の規範が他方を含意しないため、規範としては別立てになる。
+>
+> **本文箇条書き 2 番目に対応する規範文を持たない理由**: 「各起動は profileDir 単位の
+> flock・前世代 diff・保守的 stale 除去・`nix-env --set` が profile ごとに独立して走る」は、
+> 本 item の「config ごとに 1 回 engine を起動する」と、profileDir 単位の flock を定める
+> REQ-1c1526b1・profileDir のキーを定める REQ-d5a2e289・世代機構を定める REQ-1be4d678 の
+> 合成から従うため、規範として再掲しない。
 
 ## 出典
 
