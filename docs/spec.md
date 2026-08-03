@@ -282,6 +282,7 @@ root は評価時にパスへ展開せず、マーカーが運ぶ kind をエン
 ## 依存関係
 
 - [REQ-b74a118a](requirements/20260802-b74a118a-engine-stdlib-only.md) — engine は第三者依存ゼロの stdlib-only とし内部層に閉じる
+- [REQ-2bd0d35f](requirements/20260803-2bd0d35f-modules-common-nixpkgs-lib-only.md) — modules/common.nix は nixpkgs.lib のみに依存する
 - [REQ-637599dc](requirements/20260802-637599dc-cli-dependency-policy.md) — CLI が持ち込む依存は許可した第三者ライブラリと pin した Go に限り、いずれも固定する
 
 ---
