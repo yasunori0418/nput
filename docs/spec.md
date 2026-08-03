@@ -259,6 +259,7 @@ root は評価時にパスへ展開せず、マーカーが運ぶ kind をエン
 - [REQ-c2654ca5](requirements/20260802-c2654ca5-module-user-option.md) — NixOS / nix-darwin モジュールは配置先ユーザーを特定する user オプションを必須で取る
 - [REQ-c1b3ca5f](requirements/20260802-c1b3ca5f-modules-are-engine-wiring.md) — 全モジュールと devShell は engine をキックするだけの配線とし、ネイティブ機構へ翻訳しない
 - [REQ-8085f194](requirements/20260802-8085f194-hm-activation-contract.md) — home-manager モジュールの engine kick 1 回は activation からビルド済み link-farm を渡し、失敗で switch を止める
+- [REQ-c847d1af](requirements/20260803-c847d1af-hm-activation-per-config-kick.md) — HM の activation は configs を辞書順に走査して profile ごとに engine を起動し、部分失敗を最後に集約する
 - [REQ-a0bdf6db](requirements/20260802-a0bdf6db-devshell-wiring.md) — devShell は shellHook から engine を起動する配線で、シェル入室のたびに project mode で配置する
 
 ---
