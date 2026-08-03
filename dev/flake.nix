@@ -251,11 +251,38 @@
                 touch "$out"
               '';
 
+          # requirement item の specification / specification_ja の様式を固定する
+          # テスト（dev/tests/spec-style.sh・→ Issue #229）。checks.sara-id と同じ
+          # 二重化の意図で、ローカルの `nix flake check ./dev` と CI の sara job
+          # （devShells.sara 経由）の両方から走らせる。
+          #
+          # sara-id のテストと違い docs/ を実際に読むため、サンドボックスへ
+          # docs/requirements を持ち込む必要がある。git 解決に頼らず
+          # SPEC_STYLE_DOCS_DIR で走査先を明示的に渡す（サンドボックスには
+          # .git が無く `git rev-parse` が使えない）。
+          #
+          # 走査先は root flake の source（= git 追跡済みのツリー）なので、
+          # この経路が見るのは **コミット済み（少なくとも git add 済み）の docs** に限る。
+          # 編集中の item を手元で確かめるときは devShell から直接叩く:
+          #   nix develop ./dev -c dev/tests/spec-style.sh
+          checks.spec-style = pkgs.runCommandLocal "spec-style-test" {
+            nativeBuildInputs = [
+              pkgs.gnugrep
+              pkgs.gawk
+              pkgs.coreutils
+            ];
+            env.SPEC_STYLE_DOCS_DIR = "${inputs.root}/docs";
+          } ''
+            bash ${./tests/spec-style.sh}
+            touch "$out"
+          '';
+
           # CI の sara check 専用シェル。default devShell は nput のビルドと
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
           # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
           # yasunori0418.cachix.org から引くだけで済む。
-          # CI からは sara check と dev/tests/sara-id.sh の両方をこのシェルで実行する。
+          # CI からは sara check・dev/tests/sara-id.sh・dev/tests/spec-style.sh を
+          # このシェルで実行する。
           devShells.sara = pkgs.mkShell {
             packages = [
               inputs'.nur.packages.sara
@@ -266,6 +293,9 @@
               pkgs.git
               pkgs.gnused
               pkgs.coreutils
+              # dev/tests/spec-style.sh が使う（checks.spec-style と揃えて明示する）。
+              pkgs.gnugrep
+              pkgs.gawk
             ];
             env.TERM = "dumb";
           };
