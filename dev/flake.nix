@@ -58,6 +58,130 @@
           niface-validate = pkgs.writeShellScriptBin "niface-validate" ''
             exec ${inputs'.niface.packages.validate}/bin/validate "$@"
           '';
+
+          # sara item の ID を採番する（UUIDv4 二層構成・→ ADR-0048、epic #203）。
+          #
+          #   sara-id <型名 | prefix> [slug]
+          #
+          # 正式 ID（frontmatter の id:）・ファイル名素材・散文中の参照の 3 つを出す。
+          # sara init の自動採番（suggest_next_id）は連番前提で使えないため代替する。
+          #
+          # 乱数 ID は並列レーン（parallel-worktree）での採番衝突を構造的に回避する。
+          # フル UUIDv4 は事実上衝突ゼロだが、人間が触る前方 8 文字は 120 item で
+          # 約 10⁻⁶ の偶然重複がありうるので、採番時に docs/ を 1 回走査して
+          # 既出なら生成し直す（ms オーダーで item 数が増えても実用上コスト増なし）。
+          sara-id = pkgs.writeShellApplication {
+            name = "sara-id";
+            runtimeInputs = with pkgs; [
+              # macOS 標準の uuidgen には -r が無いため、明示的に載せて移植性を担保する。
+              util-linux
+              ripgrep
+              coreutils
+              # 既出チェックの走査先をリポジトリルート基準で解決するため。
+              git
+            ];
+            text = ''
+              usage() {
+                cat >&2 <<'EOF'
+              usage: sara-id <type|prefix> [slug]
+
+                type|prefix  sara の型名（requirement / test_condition …）または
+                             prefix そのもの（REQ / TC …）
+                slug         ファイル名に使う短い識別子（省略可・英数字とハイフン）
+
+              例:
+                sara-id requirement lock-ordering
+                sara-id adr
+              EOF
+              }
+
+              # help は引数個数に先立って処理する（`sara-id --help extra` も help になる）。
+              case "''${1-}" in
+                -h | --help)
+                  usage
+                  exit 0
+                  ;;
+              esac
+
+              if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+                usage
+                exit 2
+              fi
+
+              # 型名 → prefix。docs/model.yaml の item_types と対応させる。
+              # 別名は sara init のサブコマンド別名に揃える。ただし defect の `d` は
+              # 落とす（design を `d` と略した入力が黙って defect を引くため）。
+              # 未知の入力は prefix そのものを渡されたとみなして大文字化して通す。
+              case "$1" in
+                solution | sol) prefix=SOL ;;
+                use_case | use-case | uc) prefix=UC ;;
+                requirement | req) prefix=REQ ;;
+                design | dsg) prefix=DSG ;;
+                infrastructure | inf) prefix=INF ;;
+                adr) prefix=ADR ;;
+                risk) prefix=RISK ;;
+                test_condition | test-condition | tc) prefix=TC ;;
+                test_case | test-case | case) prefix=CASE ;;
+                defect) prefix=D ;;
+                *) prefix=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]') ;;
+              esac
+
+              slug=''${2-}
+
+              # ADR は連番を維持する（既存 47 本の相互参照・docs/adr/README.md の運用・
+              # Issue 言及を壊さないため → ADR-0048）。UUID は採番しない。
+              if [ "$prefix" = "ADR" ]; then
+                echo "sara-id: ADR は連番を維持する（docs/adr/ の最大値 + 1 を手で採番する）" >&2
+                exit 2
+              fi
+
+              # UUID 生成は seam 経由で呼ぶ（テストが決定論的に差し替えるため）。
+              uuidgen_cmd=''${SARA_ID_UUIDGEN:-uuidgen}
+
+              # 既出チェックの走査先。リポジトリルート基準で解決する（カレント相対だと
+              # dev/ 等から叩いたときに docs/ を見つけられず、重複チェックが黙って
+              # 外れる）。git 管理外ならカレント基準へフォールバックする。
+              repo_root=$(git rev-parse --show-toplevel 2>/dev/null || printf '.')
+              scan_dir="$repo_root/docs"
+
+              uuid=""
+              # 8 文字 prefix の偶然重複は極めて稀なので、有限回で打ち切る。
+              # 打ち切りに達するのは乱数源が壊れているとき（同じ値を返し続ける等）で、
+              # 黙って重複 ID を返すより失敗させたほうがよい。
+              for _ in $(seq 1 16); do
+                candidate=$("$uuidgen_cmd" -r | tr -d '\n')
+                short=''${candidate:0:8}
+                if [ ! -d "$scan_dir" ]; then
+                  uuid=$candidate
+                  break
+                fi
+                # 省略形は正式 ID の前方一致なので、8 文字で引けば
+                # 宣言側（frontmatter の id:）と参照側（散文・relation）の両方に当たる。
+                if ! rg -q --fixed-strings "$short" "$scan_dir"; then
+                  uuid=$candidate
+                  break
+                fi
+              done
+
+              if [ -z "$uuid" ]; then
+                echo "sara-id: 8 文字 prefix の未使用な候補を 16 回で引けなかった" >&2
+                exit 1
+              fi
+
+              short=''${uuid:0:8}
+              date_prefix=$(date +%Y%m%d)
+
+              if [ -n "$slug" ]; then
+                filename="$date_prefix-$short-$slug.md"
+              else
+                filename="$date_prefix-$short.md"
+              fi
+
+              printf 'id: %s-%s\n' "$prefix" "$uuid"
+              printf 'filename: %s\n' "$filename"
+              printf 'ref: %s-%s\n' "$prefix" "$short"
+            '';
+          };
         in
         {
           devShells.default = pkgs.mkShell {
@@ -70,6 +194,10 @@
               # CONTEXT.md / docs/adr の設計文書運用を補助する開発時ツールで、
               # nput のビルド・テスト経路には関与しない。
               inputs'.nur.packages.sara
+              # sara item の ID 採番（UUIDv4 二層構成）。定義は上の let 束縛を参照。
+              # uuidgen -r の供給元（util-linux）は sara-id の runtimeInputs で
+              # wrapper の PATH に前置されるため、devShell 側には載せない。
+              sara-id
               go
               gopls
               # ローカルでカバレッジ計測する coverage ツール（go test -coverprofile + go tool cover）。
@@ -88,6 +216,56 @@
               # 競合時は待たず skip（--no-wait）し、no-op
               nput apply skills -f "$REPO_ROOT/dev" --no-wait
             '';
+          };
+
+          # sara-id の採番契約を固定するテスト（dev/tests/sara-id.sh）。同じスクリプトを
+          # 2 経路から走らせる意図的な二重化で、役割が違う:
+          #
+          # - この checks 派生: ローカルの `nix flake check ./dev`（CLAUDE.md の標準検証
+          #   手順）に載せ、dev flake を触ったときに手を動かさず走るようにする。
+          #   CI の flake-check job はルート flake を対象にするため、ここは CI では回らない。
+          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行する。
+          #   PR での退行検知はこちらが担保する。
+          #
+          # サンドボックス（runCommandLocal）と devShell では実行条件が違うので、
+          # 両経路とも緑であることを確認してから変更を入れること。
+          checks.sara-id =
+            pkgs.runCommandLocal "sara-id-test"
+              {
+                nativeBuildInputs = [
+                  sara-id
+                  pkgs.ripgrep
+                  pkgs.coreutils
+                  # テストがルート解決経路を検証するため一時 repo を git init する。
+                  pkgs.git
+                  # テストが sara-id の出力から id / filename / ref を抜くのに使う。
+                  # stdenv 既定でも PATH に載るが、暗黙依存にすると実行条件の違う
+                  # サンドボックスで踏み抜く（→ 0a18d87 の exit 126）ため明示する。
+                  pkgs.gnused
+                ];
+              }
+              ''
+                bash ${./tests/sara-id.sh}
+                touch "$out"
+              '';
+
+          # CI の sara check 専用シェル。default devShell は nput のビルドと
+          # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
+          # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
+          # yasunori0418.cachix.org から引くだけで済む。
+          # CI からは sara check と dev/tests/sara-id.sh の両方をこのシェルで実行する。
+          devShells.sara = pkgs.mkShell {
+            packages = [
+              inputs'.nur.packages.sara
+              sara-id
+              # 以下は dev/tests/sara-id.sh が使う。stdenv 既定や runner の system
+              # PATH でも引けるが、checks.sara-id と揃えて明示する。
+              pkgs.ripgrep
+              pkgs.git
+              pkgs.gnused
+              pkgs.coreutils
+            ];
+            env.TERM = "dumb";
           };
 
           # 非 NixOS E2E ハーネス（tests/e2e/run.sh）専用の最小 CI シェル（→ ADR-0012 §2）。

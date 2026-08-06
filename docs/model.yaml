@@ -1,0 +1,403 @@
+# sara カスタムモデルスキーマ（nput）
+#
+# sara（https://github.com/cledouarec/sara）が docs/ をナレッジグラフとして
+# 検証するための型定義。`sara schema -o` で吐いた組み込みモデルを起点に、
+# nput の文書構造へ全面的に置き換えたもの（カスタムスキーマは組み込みを
+# 完全置換する仕様で、部分マージはされない）。
+#
+# 設計の出典: epic GitHub Issue #203（grilling 2026-07-31 / 2026-08-01 で確定）、
+# ADR-0048。
+#
+# ## 組み込みから落とした型
+#
+# hardware_requirement / hardware_detailed_design / scenario / system_architecture は
+# 定義しない。nput にハードウェアは無く、Scenario / SystemArchitecture に対応する
+# 実体（use_case と requirement の中間層・requirement と design の中間層）も持たない。
+# 組み込みの system_requirement / software_requirement / software_detailed_design は
+# 汎用名の requirement / design へ寄せた。
+#
+# ## 型名・フィールド名の方針
+#
+# 型名・フィールド名は汎用のまま保ち、nput 固有の語彙を混ぜない。この model.yaml は
+# 当面 nput 内に置くが、型が安定したら skills リポジトリか専用リポジトリへ切り出して
+# 他プロジェクトへ横展開する前提のため（→ #203「model.yaml の置き場所」）。
+#
+# ## ID 形式（UUIDv4 二層構成）
+#
+# 正式 ID は `<PREFIX>-<フル UUIDv4>`（例: REQ-8521e8f8-99cc-47f0-b7d0-70c24c837612）。
+# 人間が触る面（ファイル名・散文中の参照）は前方 8 文字の省略形を使う。
+# 乱数 ID により並列レーン（parallel-worktree）での採番衝突を構造的に回避する。
+# 採番は devShell 同梱の `sara-id` コマンドで行う（8 文字 prefix の重複チェック込み）。
+#
+# 下の id_format はこの規約を表記したもの。sara の ID 検証は「非空」「英数字 /
+# ハイフン / アンダースコア」のみで id_format も prefix 一致も検証しないため
+# （sara-core/src/model/item.rs 実装確認済み）、これは `sara init` の自動採番
+# （連番前提で本リポジトリでは使わない）向けの記述であり、人間向けのドキュメントを
+# 兼ねる。ADR のみ既存 47 本の相互参照・README 運用・Issue 言及を壊さないため
+# 連番（ADR-NNNN）を維持する。
+
+item_types:
+  # ---- 仕様の系統（solution → use_case → requirement → design）----
+
+  # 根。nput というプロダクトが何であるかの 1 件。docs/solution/。
+  - id: solution
+    display_name: Solution
+    prefix: SOL
+    # 以降の id_format は sara に検証されない人間向けの表記（冒頭「ID 形式」節を参照）。
+    # 実際の採番は devShell の sara-id が行う。
+    id_format: '{prefix}-{uuid}'
+    parent_types: []
+    fields: []
+    allowed_targets: []
+
+  # ユーザーがどう使うか。docs/use-cases/。
+  - id: use_case
+    display_name: Use Case
+    prefix: UC
+    id_format: '{prefix}-{uuid}'
+    parent_types:
+      - solution
+    fields: []
+    allowed_targets:
+      - relation: refines
+        targets:
+          - solution
+
+  # 何を満たすべきか。docs/requirements/。docs/spec.md の分割先。
+  - id: requirement
+    display_name: Requirement
+    prefix: REQ
+    id_format: '{prefix}-{uuid}'
+    parent_types:
+      - use_case
+    fields:
+      - name: specification
+        display_name: Specification
+        field_type: text
+        required: true
+        placeholder: The system SHALL <describe the requirement>.
+    allowed_targets:
+      - relation: derives_from
+        targets:
+          - use_case
+      - relation: depends_on
+        targets:
+          - requirement
+
+  # どう実現するか。docs/design/。docs/design.md の分割先。
+  - id: design
+    display_name: Design
+    prefix: DSG
+    id_format: '{prefix}-{uuid}'
+    parent_types:
+      - requirement
+    fields: []
+    allowed_targets:
+      - relation: satisfies
+        targets:
+          - requirement
+      - relation: depends_on
+        targets:
+          - design
+
+  # ---- 独立した根 ----
+
+  # CI・リリース・開発環境など、プロダクト仕様の系統に載らない基盤。docs/infrastructure/。
+  # requirement 系統の子ではないため親を持たない根として置く。
+  - id: infrastructure
+    display_name: Infrastructure
+    prefix: INF
+    id_format: '{prefix}-{uuid}'
+    parent_types: []
+    fields: []
+    allowed_targets:
+      - relation: depends_on
+        targets:
+          - infrastructure
+
+  # 意思決定の記録。docs/adr/。仕様ツリーから分離した独立型で、justifies で
+  # requirement / design / infrastructure へ任意に接続する（接続は必須ではない）。
+  - id: adr
+    display_name: Architecture Decision Record
+    prefix: ADR
+    # ADR のみ連番を維持する（既存 47 本の相互参照・docs/adr/README.md の運用・
+    # Issue 言及を壊さないため）。
+    id_format: '{prefix}-{seq:04}'
+    parent_types: []
+    fields:
+      # 実データの表記に合わせた日本語 enum。ADR は全 48 本が「採用」で `accepted` 等の
+      # 英語表記は 1 本も無く、英語化すると #208（既存 47 本への frontmatter 追加）が
+      # 全件翻訳になるため採らない。
+      #
+      # 「廃止」は当面値に持たない。ADR-0048 §3 の通り、文書丸ごとの失効を表す
+      # supersedes を定義していない現状では、廃止ステータスだけを先に置くと
+      # 「旧 ADR は読まなくてよい」という誤読を生む。supersedes の追加を再検討する
+      # 時点で「廃止」も併せて足す。
+      - name: status
+        display_name: Status
+        field_type: !enum
+          values:
+            - 提案
+            - 採用
+        required: true
+        placeholder: 採用
+      # ステータス行のカッコ書き注記（例: 「採用（2026-06-14 改訂: … → ADR-0015）」）の
+      # 受け皿。#208 が扱う既存 47 本のうち 10 本が持つ。docs/adr/README.md が「正しい運用例」として明示的に
+      # 保護している情報なので、enum 化で捨てずにここへ逃がす。
+      - name: status_note
+        display_name: Status note
+        field_type: text
+        required: false
+      # 外部参照の逃がし先。sara の item にできない参照（GitHub Issue 番号・
+      # grilling セッション等の起点）は text フィールドへ入れる。
+      - name: issues
+        display_name: Issues
+        field_type: !list text
+        required: false
+      - name: origin
+        display_name: Origin
+        field_type: text
+        required: false
+    allowed_targets:
+      - relation: justifies
+        targets:
+          - requirement
+          - design
+          - infrastructure
+      # ADR ヘッダの「改訂対象:」。詳細は下の relations 節のコメントを参照。
+      - relation: revises
+        targets:
+          - adr
+      # ADR ヘッダの「関連:」。
+      - relation: references
+        targets:
+          - adr
+
+  # ---- リスクとテストの系統（risk → test_condition → test_case → defect）----
+
+  # 満たされない懸念。docs/risks/。requirement と design の両方を脅かせる。
+  # 使い分け規約: その設計を別案に置き換えれば消えるリスクのみ design 側。
+  # 要求が満たされないこと自体への懸念は常に requirement 側（→ #203）。
+  - id: risk
+    display_name: Risk
+    prefix: RISK
+    id_format: '{prefix}-{uuid}'
+    parent_types:
+      - requirement
+      - design
+    fields:
+      - name: likelihood
+        display_name: Likelihood
+        field_type: !enum
+          values:
+            - high
+            - medium
+            - low
+        required: true
+        placeholder: medium
+      - name: impact
+        display_name: Impact
+        field_type: !enum
+          values:
+            - high
+            - medium
+            - low
+        required: true
+        placeholder: medium
+      - name: level
+        display_name: Level
+        field_type: !enum
+          values:
+            - high
+            - medium
+            - low
+        required: true
+        placeholder: medium
+    allowed_targets:
+      - relation: threatens
+        targets:
+          - requirement
+          - design
+
+  # リスクを潰すためのテスト条件。docs/test/<対象>/。
+  - id: test_condition
+    display_name: Test Condition
+    prefix: TC
+    id_format: '{prefix}-{uuid}'
+    parent_types:
+      - risk
+    fields: []
+    allowed_targets:
+      - relation: mitigates
+        targets:
+          - risk
+
+  # 具体的なテストケース。docs/test/<対象>/。
+  - id: test_case
+    display_name: Test Case
+    prefix: CASE
+    id_format: '{prefix}-{uuid}'
+    parent_types:
+      - test_condition
+    fields: []
+    allowed_targets:
+      - relation: covers
+        targets:
+          - test_condition
+      - relation: reveals
+        targets:
+          - defect
+
+  # 検出した不具合。docs/test/<対象>/。
+  - id: defect
+    display_name: Defect
+    prefix: D
+    id_format: '{prefix}-{uuid}'
+    parent_types:
+      - test_case
+    fields: []
+    allowed_targets: []
+
+relations:
+  # ---- 組み込み由来（そのまま使う）----
+
+  - id: refines
+    display_name: Refines
+    inverse: is_refined_by
+    direction: upstream
+    primary: true
+  - id: is_refined_by
+    display_name: Is refined by
+    inverse: refines
+    direction: downstream
+    primary: false
+
+  - id: derives_from
+    display_name: Derives from
+    inverse: derives
+    direction: upstream
+    primary: true
+  - id: derives
+    display_name: Derives
+    inverse: derives_from
+    direction: downstream
+    primary: false
+
+  - id: satisfies
+    display_name: Satisfies
+    inverse: is_satisfied_by
+    direction: upstream
+    primary: true
+  - id: is_satisfied_by
+    display_name: Is satisfied by
+    inverse: satisfies
+    direction: downstream
+    primary: false
+
+  - id: depends_on
+    display_name: Depends on
+    inverse: is_required_by
+    direction: peer
+    primary: true
+  - id: is_required_by
+    display_name: Is required by
+    inverse: depends_on
+    direction: peer
+    primary: false
+
+  - id: justifies
+    display_name: Justifies
+    inverse: justified_by
+    direction: upstream
+    primary: true
+  - id: justified_by
+    display_name: Justified by
+    inverse: justifies
+    direction: downstream
+    primary: false
+
+  # ---- 独自定義: ADR 間の peer 関係 ----
+  #
+  # 組み込みの supersedes / superseded_by は当面定義しない（恒久的な排除ではない）。
+  # supersedes は「文書丸ごとの失効」を意味するが、nput の ADR 改訂は全て節単位の
+  # 部分改訂で、丸ごと失効した実例が無い（改訂実態の調査 2026-08-01: 最も近い
+  # ADR-0033 ← ADR-0043 でも、タイトルになった決定自体は存続している）。
+  # 実例の無い関係を先に定義すると、部分改訂に supersedes を誤用して「旧 ADR は
+  # 読まなくてよい」と誤読させる。よって部分改訂を正しく表す revises を独自に定義し、
+  # 全節が実質失効した ADR が現れた時点で supersedes ＋「廃止」ステータスの追加を
+  # 再検討する（→ #203「関係（relation）」、ADR-0048）。
+  #
+  # ADR ヘッダの「改訂対象:」に対応。旧 ADR 側の blockquote 注記
+  # （docs/adr/README.md の運用）と対になり、注記漏れを機械検証できるようにする。
+  - id: revises
+    display_name: Revises
+    inverse: is_revised_by
+    direction: peer
+    primary: true
+  - id: is_revised_by
+    display_name: Is revised by
+    inverse: revises
+    direction: peer
+    primary: false
+
+  # ADR ヘッダの「関連:」に対応。改訂を伴わない参照。
+  - id: references
+    display_name: References
+    inverse: is_referenced_by
+    direction: peer
+    primary: true
+  - id: is_referenced_by
+    display_name: Is referenced by
+    inverse: references
+    direction: peer
+    primary: false
+
+  # ---- 独自定義: リスクとテストの系統 ----
+
+  # risk → requirement / design。
+  - id: threatens
+    display_name: Threatens
+    inverse: is_threatened_by
+    direction: upstream
+    primary: true
+  - id: is_threatened_by
+    display_name: Is threatened by
+    inverse: threatens
+    direction: downstream
+    primary: false
+
+  # test_condition → risk。
+  - id: mitigates
+    display_name: Mitigates
+    inverse: is_mitigated_by
+    direction: upstream
+    primary: true
+  - id: is_mitigated_by
+    display_name: Is mitigated by
+    inverse: mitigates
+    direction: downstream
+    primary: false
+
+  # test_case → test_condition。
+  - id: covers
+    display_name: Covers
+    inverse: is_covered_by
+    direction: upstream
+    primary: true
+  - id: is_covered_by
+    display_name: Is covered by
+    inverse: covers
+    direction: downstream
+    primary: false
+
+  # test_case → defect。テストが不具合を暴く方向。
+  - id: reveals
+    display_name: Reveals
+    inverse: is_revealed_by
+    direction: downstream
+    primary: true
+  - id: is_revealed_by
+    display_name: Is revealed by
+    inverse: reveals
+    direction: upstream
+    primary: false
