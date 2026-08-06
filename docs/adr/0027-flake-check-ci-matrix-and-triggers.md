@@ -18,6 +18,11 @@ references:
 - 関連: ADR-0012, ADR-0011（cgo 未使用 / stdlib-only）, ADR-0006
 - 参照: PR #40, `~/src/github.com/yasunori0418/cryoflow` の CI 構成
 
+> **2026-06-21 改訂注記（ADR-0030）**: §2 のトリガ段 `paths` フィルタ記述が対象。
+> 「docs-only で nix を実走させない」最適化意図と §1 / §3 の決定は不変で、実現手段だけが
+> trigger-paths から変更検出 action + `if:` スキップへ変わった（→ ADR-0030 §2）。詳細は §2 の
+> インライン注記。
+
 ## 背景
 
 ADR-0012 §3 は「lib（nix-unit / namaka）と engine Go を `nix flake check` に集約し PR で常時実行する」と決めたが、

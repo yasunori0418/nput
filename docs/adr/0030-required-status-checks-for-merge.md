@@ -7,9 +7,10 @@ status_note: "public 化を前提とする"
 origin: "参照: 現行 `.github/workflows/test.yml`, `.github/actions/setup-nix`"
 justifies:
   - "INF-8b97573f-d4d6-4abf-85e2-d859afbd96c6"
+revises:
+  - "ADR-0027"
 references:
   - "ADR-0012"
-  - "ADR-0027"
   - "ADR-0028"
 ---
 # ADR-0030: テスト成功を main マージの必須条件にする（ruleset で required status check）
@@ -17,6 +18,7 @@ references:
 - ステータス: 採用（public 化を前提とする）
 - 日付: 2026-06-21
 - 関連: ADR-0027（flake check CI マトリクス / トリガ・本 ADR が §2 を補足訂正）, ADR-0012（CI とテスト実行）, ADR-0028（cachix push）
+- 改訂対象: ADR-0027 §2 のトリガ段 `paths` フィルタ記述を補足訂正
 - 参照: 現行 `.github/workflows/test.yml`, `.github/actions/setup-nix`
 
 ## 背景
