@@ -18,10 +18,12 @@ references:
 - 関連: ADR-0012, ADR-0011（cgo 未使用 / stdlib-only）, ADR-0006
 - 参照: PR #40, `~/src/github.com/yasunori0418/cryoflow` の CI 構成
 
-> **2026-06-21 改訂注記（ADR-0030）**: §2 のトリガ段 `paths` フィルタ記述が対象。
-> 「docs-only で nix を実走させない」最適化意図と §1 / §3 の決定は不変で、実現手段だけが
-> trigger-paths から変更検出 action + `if:` スキップへ変わった（→ ADR-0030 §2）。詳細は §2 の
-> インライン注記。
+> **2026-06-21 改訂注記（ADR-0030）**: 本 ADR §2 のトリガ段 `paths` フィルタ記述と、それに伴う
+> 「docs-only PR は `workflow_dispatch` で回す」回避策が対象。「docs-only で nix を実走させない」
+> 最適化意図と §1 / §3 の決定は不変で、実現手段だけが trigger-paths から変更検出 action + `if:`
+> スキップへ変わった（→ ADR-0030 §2）。`paths` 撤去で docs-only PR でも workflow は起動するため
+> 回避策は不要になる（`workflow_dispatch` トリガ自体は手動再実行用として存続）。詳細は
+> 本 ADR §2 のインライン注記。
 
 ## 背景
 
