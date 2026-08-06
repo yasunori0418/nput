@@ -18,7 +18,7 @@ references:
 - ステータス: 採用（public 化を前提とする）
 - 日付: 2026-06-21
 - 関連: ADR-0027（flake check CI マトリクス / トリガ・本 ADR が §2 を補足訂正）, ADR-0012（CI とテスト実行）, ADR-0028（cachix push）
-- 改訂対象: ADR-0027 §2 のトリガ段 `paths` フィルタ記述を補足訂正
+- 改訂対象: ADR-0027 §2 のトリガ段 `paths` フィルタ記述と docs-only の `workflow_dispatch` 回避策を補足訂正
 - 参照: 現行 `.github/workflows/test.yml`, `.github/actions/setup-nix`
 
 ## 背景
