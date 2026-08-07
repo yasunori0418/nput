@@ -15,14 +15,6 @@ let
   # flake input の readDir は IFD を起こさない）が、現行運用（skills-lock.json）の skill 集合を
   # 明示列挙して忠実に再現する。skills-lock.json は vercel skills 用に残置（両者は別経路）。
   skillSubpaths = [
-    "engineering/grill-with-docs"
-    "engineering/improve-codebase-architecture"
-    "engineering/prototype"
-    "engineering/setup-matt-pocock-skills"
-    "engineering/tdd"
-    "engineering/to-issues"
-    "engineering/to-prd"
-    "engineering/triage"
     "productivity/grilling"
     "productivity/handoff"
   ];
