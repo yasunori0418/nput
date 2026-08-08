@@ -3,6 +3,79 @@
 How to place items in this repo's sara knowledge graph (`docs/model.yaml`, validated by
 `sara check`). Covers the conventions that the model schema itself cannot enforce.
 
+## Where a norm belongs: `requirement`, `quality` or `test_plan`
+
+Three types carry a `specification` / `specification_ja` pair and hang off the spec side of
+the graph: `requirement` (under a `use_case`), `quality` (under the `solution`) and
+`test_plan` (under the `solution`). Nothing mechanical distinguishes them — an item placed
+in the wrong one still passes `sara check`, because a wrong parent of the right shape is
+indistinguishable from a right one. The choice is therefore a judgement call, made by the
+rule below.
+
+> Ask **who the norm binds**. A norm binding the product as the user meets it is a
+> `requirement`. A norm binding the people and the process that build the product is a
+> `quality`. A norm binding what and how we test is a `test_plan`.
+
+Stated as a discriminator per type:
+
+| Type | The norm binds | Parent | Signature test |
+|---|---|---|---|
+| `requirement` | The product's behaviour and contracts. Observable by a user who never reads this repo. | `use_case` | Some way of *using* nput would change if it were dropped. |
+| `quality` | The development process, conventions and governance. Cuts across the work rather than attaching to a feature. | `solution` | Only contributors would notice it being dropped; the shipped artifact is unchanged. |
+| `test_plan` | The scope, levels and approach of testing, including access to what is under test. | `solution` | The reason it exists at all is that something has to be verified. |
+
+Examples: exit-code meanings, the field layout of `manifest.json` and stopping on a
+conflict are `requirement`. "Write `specification` in English", "run `flake check` on every
+platform in CI" are `quality`. The scope of the E2E harness, an explicit out-of-scope
+declaration, and securing testability are `test_plan`.
+
+### Grey zones
+
+The rule above decides most items on its own. The cases where it does not are these; the
+precedents settle them so that parallel lanes do not diverge.
+
+**An API surface opened for testing.** `TP-403c55c7` (`lib.__internal`, formerly
+`REQ-901993e9`) was settled as `test_plan` in Issue #239. It is a real attrset the product
+exposes, so it reads as a contract, but its only motive is to let evaluation tests reach
+private helpers, and its `specification` spends its SHALL NOTs *excluding* the surface from
+stability and backward compatibility. Where a surface exists solely so that something can
+be tested, and disclaims the guarantees a contract would carry, testability dominates and
+the item is a `test_plan`.
+
+**A norm about how nput is built.** Constraints such as "the engine is stdlib-only", "the
+CLI's third-party dependencies are limited to cobra and pinned by vendorHash", "`lib`
+depends on nixpkgs.lib alone" look like process rules, but they stay `requirement`. They
+are architectural boundaries the user meets: `lib` depending on nixpkgs.lib alone is what
+lets a user import it into any Nix environment without dragging in home-manager. The
+discriminator is the signature test — drop the norm and a way of using nput changes. A
+genuine `quality` counterpart would be a rule about *how the repo works* (a review
+convention, a CI obligation) that no consumer can observe.
+
+**A norm about error message content.** "An error carries a line of remediation guidance"
+is a `requirement`. Message text is part of the CLI's observable behaviour, and a user
+meets it directly. It would be a `quality` only if it were a repo-wide writing convention
+that no single command's contract depended on.
+
+**A version or compatibility policy.** "`schemaVersion` is fixed at 1", "the MVP emits and
+accepts v1 only and builds no migration mechanism" are `requirement`. They bind the
+contract a consumer of `manifest.json` reads, and the second additionally binds what the
+engine accepts at run time. A policy that only told contributors when they may bump a
+version — without changing what the product emits or accepts — would be `quality`.
+
+**A norm about a nix-level workflow.** "`nix flake check` warns `unknown flake output` and
+this is accepted; primary verification is `nix build`" is a `requirement`, because the
+warning is something the *consumer's* flake emits — it is a property of the output namespace
+nput asks users to adopt. Had it been a rule about this repository's own CI, it would be
+`quality` (or `infrastructure`, if it were about the pipeline that runs it rather than the
+norm it upholds).
+
+### `quality` versus `infrastructure`
+
+`quality` holds the norm; `infrastructure` holds the machinery that upholds it. "Every
+platform's `flake check` passes before merge" is a `quality`; the CI pipeline that runs it
+is an `infrastructure`. When in doubt, ask whether the item would still hold if the tooling
+were replaced — if so, it is the norm.
+
 ## Where a risk attaches: `requirement` or `design`
 
 A `risk` may point at either a `requirement` or a `design` via `threatens`. The model
