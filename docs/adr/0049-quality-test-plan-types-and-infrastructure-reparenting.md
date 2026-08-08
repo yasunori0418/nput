@@ -16,9 +16,10 @@ revises:
 
 - ステータス: 採用
 - 日付: 2026-08-08
-- 関連: ADR-0048, `docs/adr/README.md`, GitHub Issue #237, #203
-- 改訂対象: **ADR-0048 §2** の型定義表（10 型 → 12 型）。sara 採用そのもの・model.yaml の全面置換・
-  UUIDv4 二層 ID・CI 非必須開始（§1 / §3 / §4 / §5）は不変
+- 関連: ADR-0048, GitHub Issue #237, #203
+- 改訂対象: **ADR-0048 §2 の型定義表だけ**（10 型 → 12 型）。§2 のそれ以外の決定（組み込みモデルの
+  全面置換・落とした 4 型・改名表・型名の汎用性維持・`status` の日本語 enum と `status_note` 等）は
+  不変で、§1 / §3 / §4 / §5 も全て不変
 - 起点: epic #203 の grilling セッション（2026-08-08）で確定
 
 ## 背景
@@ -114,17 +115,19 @@ ID 変更 = 全参照の張り替えを伴う。違和感の主因だった品�
 ### 4. design の `satisfies` 対象へ test_plan を追加する
 
 design の `satisfies` は ADR-0048 では requirement のみを対象としていた。テスト計画系 requirement の
-移設対象 4 件のうち 3 件は design item から `satisfies` で参照されており（計 6 辺）、しかも
-DSG-2947b4a5 と DSG-901351ea は **`satisfies` がその 1 本だけ**である。対象を拡張しないまま移設すると、
-今度は design 側が orphan 化して epic #203 の完了条件（warning 0）が成立しない。
+移設対象 4 件のうち 3 件は design 側から `satisfies` で参照されており、参照元は design item 6 件・
+辺の総数は 6 本である。しかも DSG-2947b4a5 と DSG-901351ea は **`satisfies` がその 1 本だけ**である。
+対象を拡張しないまま移設すると、今度は design 側が orphan 化して epic #203 の完了条件（warning 0）が
+成立しない。
 
 意味づけとしても「テストハーネスの実装形を表す design は、requirement ではなくテスト計画を満たす
 実体」であり、`satisfies` の語義と整合する。移設側は 6 辺を新 TP-ID へ張り替えるだけで済む。
 
 ### 5. ADR の `justifies` 対象型へ quality / test_plan を追加する
 
-ADR は requirement / design / infrastructure / quality / test_plan へ任意に接続する。ADR-0048 §2 の
-時点では前 3 型のみだった。
+ADR は requirement / design / infrastructure / quality / test_plan へ任意に接続する。ADR-0048 §2 が
+定めた model.yaml では前 3 型のみが対象だった（§2 の本文は `justifies` の対象型に触れていない。
+対象型は model.yaml の `adr` 型の `allowed_targets` が持つ）。
 
 ## 根拠
 
@@ -164,28 +167,38 @@ design 側を orphan のまま放置する案・`satisfies` とは別の専用 r
 
 ## 影響
 
-- `docs/quality/` と `docs/test-plan/` が新設され、既存 requirement のうちテスト計画・品質方針に
-  あたるものが移設される。移設は epic #203 の後続 issue が段階的に進める
-- `dev/flake.nix` の `sara-id` prefix マップへ `quality | qa) prefix=QA` / `test_plan | test-plan | tp)
-  prefix=TP` を追加する
-- `CLAUDE.md` のディレクトリ表・`docs/model.yaml` 冒頭コメント・epic #203 本文の mermaid モデル図が
-  12 型構成へ更新される
-- **infrastructure の 6 件は再定義の直後から一時的に orphan warning を出す**。root から外れた一方で
-  `satisfies` の張り替えが未了なためで、これは意図した中間状態である。解消は後続 issue が担当する
+本 ADR は #237（型構成の改訂本体）のマージ後に、その決定を記録するため後追いで起票した。したがって
+影響のうち型定義側は既に適用済みで、item 側の移設が残っている。
+
+適用済み:
+
+- `docs/model.yaml` が 12 型構成になり、`dev/flake.nix` の `sara-id` prefix マップへ
+  `quality | qa) prefix=QA` / `test_plan | test-plan | tp) prefix=TP` が追加された。`CLAUDE.md` の
+  ディレクトリ表と `docs/model.yaml` 冒頭コメントも 12 型構成へ更新済み
+- `docs/test-plan/` が新設され、テスト計画にあたる requirement 4 件が TP item として移設された。
+  §4 で述べた design → test_plan の 6 辺も新 TP-ID へ張り替え済み
+
+未了:
+
+- **`docs/quality/` は未作成で、`type: quality` の item は 0 件**。品質方針にあたる requirement の
+  移設は epic #203 の後続 issue が担当する
+- **infrastructure の 6 件は orphan warning を出し続けている**。root から外れた一方で `satisfies` の
+  張り替えが未了なためで、これは意図した中間状態である。dev 基盤側の張り替え先は quality item なので、
+  上の `docs/quality/` 新設が解消の前提になる。解消は後続 issue が担当する
+- epic #203 本文の mermaid モデル図の 12 型構成への差し替え
 
 ## 棄却した代替案
 
 ### quality と test_plan を 1 型（例: `policy`）にまとめる
 
-型数は 11 で済むが、infrastructure が抱えていた品質系と基盤系の混在を新型内で再発させる。しかも
-その混在の解消が §3（infrastructure を root から外す）の前提になっているため、同じ変更の中で
-矛盾する。→ 根拠「なぜ quality と test_plan を分けたのか」
+型数は 11 で済むが、混在の解消が §3 の前提になっているため同じ変更の中で矛盾する。
+→ 根拠「なぜ quality と test_plan を分けたのか」
 
 ### infrastructure を root のまま残す
 
 `docs/infrastructure/` の item が構造上ずっと orphan であり続け、「接続漏れ = orphan warning」の
 不変条件が全型では成立しない。orphan warning に 1 件でも構造的な常在ノイズがあると、本物の
-張り忘れがその中に埋もれる。
+張り忘れがその中に埋もれる。→ 根拠「なぜ infrastructure を root から外せるようになったのか」
 
 ### infrastructure を改名する（例: `platform`）
 
