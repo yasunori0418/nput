@@ -1,11 +1,12 @@
 # nput 仕様書
 
-nput が「何を満たすべきか」の全体像と、個別仕様（requirement item）・テスト計画
-（test_plan item）への索引。
+nput が「何を満たすべきか」の全体像と、個別仕様（requirement item）・品質方針
+（quality item）・テスト計画（test_plan item）への索引。
 
-規範的な仕様は **すべて `docs/requirements/` の item が持ち**、何をどこまでテストするかは
-`docs/test-plan/` の item が持つ。本文書は通読の入口として全体像だけを述べ、詳細は item への
-リンクで示す（README → 本文書 → item の 3 層構造）。
+規範的な仕様は **すべて `docs/requirements/` の item が持ち**、開発プロセスと規約に関する
+方針は `docs/quality/` の item が、何をどこまでテストするかは `docs/test-plan/` の item が
+持つ。本文書は通読の入口として全体像だけを述べ、詳細は item へのリンクで示す
+（README → 本文書 → item の 3 層構造）。
 
 > **この文書の書き方（規約）**
 >
@@ -13,8 +14,8 @@ nput が「何を満たすべきか」の全体像と、個別仕様（requireme
 >   ブロックはこの制限に含めない
 > - **詳細は必ず item へリンクし、本文に書き下さない**。仕様の断片をここへ写すと item と
 >   二重管理になり、改訂時に片方だけ古くなる
-> - requirement / test_plan item を足したら本文書のリンク集にも足す。逆に本文書へ仕様を
->   書き足さない
+> - requirement / quality / test_plan item を足したら本文書のリンク集にも足す。逆に本文書へ
+>   仕様を書き足さない
 > - item を横断して検索・追跡するには `sara query`（→ `docs/agents/domain.md`）を使う
 >
 > **item の `## 出典` は概要文書の現行章立てを指さない。** 出典が記録するのは分割時点
@@ -288,6 +289,19 @@ root は評価時にパスへ展開せず、マーカーが運ぶ kind をエン
 
 ---
 
+## 品質
+
+quality は開発プロセス・規約・ガバナンスに関する方針を持つ。requirement とは別系統で、
+use_case を経由せず solution 直下に接続する。方針を実現する仕組みは `docs/infrastructure/` の
+item が持ち、`satisfies` で quality へ接続する。
+
+- [QA-a5f7f088](quality/20260808-a5f7f088-cross-platform-verification-before-merge.md) — サポート対象の全プラットフォームでの自動検証をマージの必須条件にする
+- [QA-58522afb](quality/20260808-58522afb-prebuilt-artifact-availability.md) — 最新 main のビルド成果物を再ビルドなしに消費できる状態を保つ
+- [QA-0949183b](quality/20260808-0949183b-release-driven-by-source-of-truth.md) — リリースはバージョンの一次情報の変更で駆動し、手作業の工程を挟まない
+- [QA-6bf957d9](quality/20260808-6bf957d9-documentation-generated-and-verified.md) — ドキュメントの正しさは人手の点検ではなく生成と機械検証で担保する
+
+---
+
 ## テスト計画
 
 test_plan は requirement とは別系統で、use_case を経由せず solution 直下に接続する。
@@ -311,5 +325,6 @@ test_plan は requirement とは別系統で、use_case を経由せず solution
 - `README.md` / `README.ja.md` — 3 層構造の最上段（導入と使い方）
 - `docs/concept.md` — コンセプト（solution / use_case への索引）
 - `docs/design.md` — 設計（design item への索引）
-- `docs/adr/` — 意思決定の記録。requirement / design / test_plan などを `justifies` で裏づける
+- `docs/infrastructure/` — 品質方針を実現する技術基盤（CI / リリース / 配信）
+- `docs/adr/` — 意思決定の記録。requirement / design / quality / test_plan などを `justifies` で裏づける
 - `docs/model.yaml` — sara の型定義（item の型・関係・ID 形式）

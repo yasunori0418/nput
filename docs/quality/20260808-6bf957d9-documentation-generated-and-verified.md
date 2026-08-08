@@ -1,0 +1,52 @@
+---
+id: "QA-6bf957d9-17d9-4660-92b7-ebd6eeb71a8c"
+type: quality
+name: "ドキュメントの正しさは人手の点検ではなく生成と機械検証で担保する"
+derives_from:
+  - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
+specification: |
+  The documentation of nput SHALL NOT rely on manual inspection to stay consistent with
+  what it describes. Reference documentation SHALL be generated from the source it
+  documents at build time and SHALL NOT be committed in generated form, so that it cannot
+  drift from that source. The traceability of the document graph — that every reference
+  resolves to an item that exists, that identifiers are unique, and that the graph is
+  acyclic — SHALL be verified mechanically, and both that verification and the buildability
+  of the published documentation SHALL run in CI rather than on request. The verification
+  MAY report unfinished connections as warnings without failing, while work that the graph
+  is still migrating remains in flight.
+specification_ja: |
+  nput のドキュメントは、記述対象との整合性の維持を人手の点検に依存してはならない。
+  リファレンスドキュメントはビルド時に記述対象のソースから生成されなければならず、生成物を
+  コミットしてはならない（ソースとの乖離が起こり得ないようにするため）。ドキュメント
+  グラフのトレーサビリティ（すべての参照が実在する item を指すこと・ID が一意であること・
+  グラフが非循環であること）は機械的に検証されなければならず、その検証と公開ドキュメントの
+  ビルド可能性はいずれも、要求されたときではなく CI で実行されなければならない。グラフの
+  移行が進行中である間は、検証は未接続を失敗とせず警告として報告してもよい。
+---
+# QA-6bf957d9: ドキュメントの正しさは人手の点検ではなく生成と機械検証で担保する
+
+## 方針
+
+ドキュメントが記述対象からずれる形は 2 つある — 記述対象を変えたのに記述を直し忘れる形と、
+文書間の参照が指す先を失う形。どちらも「気づいた人が直す」運用では検出できないため、生成と
+機械検証で塞ぐ。
+
+- **リファレンスは生成する**。ソースの doc-comment から毎回生成し、生成物をコミットしない。
+  乖離が起こり得る状態そのものを作らない
+- **グラフは機械検証する**。存在しない ID への参照・ID の重複・循環は、人が読んで気づく類の
+  誤りではない。参照先の実在を検証しない突合（grep による ID 照合など）では穴が残る
+
+検証は移行期のあいだ未接続を警告に留めてよい。移行中の item やテスト未着手の要求が正常に
+存在するため、そこで失敗させると検証自体が回らなくなる。強度を上げる判断は移行の完了後に行う。
+
+## 実現する基盤
+
+- INF-0865477b（ドキュメントサイト）— リファレンスのビルド時生成と公開
+- INF-659b139d（トレーサビリティ検証基盤）— sara によるドキュメントグラフの機械検証
+
+## 出典
+
+ADR-0037（ドキュメントサイトは Astro Starlight + 同一リポジトリ + Cloudflare Pages で構築する）、
+ADR-0048（ドキュメントは sara でグラフ構造化する）が置いた方針を、基盤（INF）から分離して
+quality item として立てたもの。SSG の選定・ホスティング・i18n 構成・model.yaml の型定義・
+`strict_mode` の設定は上記 INF が持つ。
