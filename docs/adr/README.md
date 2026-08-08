@@ -197,11 +197,15 @@ references:             # 「関連:」の ADR
     委譲先の item に当該 ADR が既に張られていれば寄与は回収済み（#254 で ADR-0002 →
     `REQ-c847d1af`・ADR-0026 → `REQ-c847d1af`・ADR-0015 → `REQ-5923ac79` の 3 件がこれで撤去
     された。それぞれ `REQ-844ee375` / `REQ-dec58330` / `REQ-5c6b07da` 側で回収済み）。
-    ただし **item の `specification`（frontmatter）自身が、その ADR の決定を対称化・拡張の
-    対象として明示的に指しているときは張る**。`REQ-07c3b735` は symlink 側の foreign 警告を
+    ただし **item の `specification`（frontmatter）自身が、その ADR が決めた規範を対称化・拡張の
+    対象として直に述べているときは張る**。`REQ-07c3b735` は symlink 側の foreign 警告を
     `REQ-622787dc` へ委譲する一方、規範文が "symmetrically with the foreign warning for
-    symlinks" とその警告を名指しして copy 側を対称化しているので ADR-0015 を張る。撤去した
-    `REQ-c847d1af` の規範文は ADR-0002 の決定を指さず他 item のみを参照するため該当しない。
+    symlinks" とその警告を名指しして copy 側を対称化しているので ADR-0015 を張る。
+    **他 item を経由した参照はこれに当たらない**。撤去した `REQ-c847d1af` の規範文は他 item
+    （`REQ-8085f194` / `REQ-c6891aeb` / `REQ-4cbd9a0d`）のみを参照する。`REQ-5923ac79` は
+    `REQ-5c6b07da` の eval 時検出の "natural extension" と述べるが、参照先は item であって
+    ADR-0024 の決定文ではなく、cross-config 側は "not restated or altered here" と自分の規範外に
+    置いている（ADR-0024 は eval 時検出そのものを決めたので別途張る）。
     **判定材料は本文の注記ではなく `specification` に置く**（本文注記は周辺規範にも触れるため）。
   - 「淵源」「姿勢」といった**態度の供給元**としてのみ挙がるもの（例: ADR-0018 → `REQ-c847d1af`
     の「部分失敗を集約する姿勢の淵源」）。ただし語で判定せず、決定節に対応する決定文があるかで
