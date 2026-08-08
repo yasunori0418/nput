@@ -346,11 +346,12 @@ fi
 # 正式型名は 6b-3 で自己修復する（risk → RISK・adr → ADR）ものも 6b-1 が確実に拾う。
 #
 # 担保できないもの（正本が無いため、この節では検知しない）:
-#   - 短縮別名の削除。model.yaml は正式型名しか持たないので 6b-1 / 6b-2 の集合突合には
-#     現れず、6b-3 もフォールバックと一致するため通る。該当するのは sol / uc / req /
-#     dsg / inf / qa / tp / tc / case の 9 件。とくに case（test_case の別名）は
+#   - 短縮別名の個別削除。model.yaml は正式型名しか持たないので 6b-1 / 6b-2 の集合
+#     突合には現れず、6b-3 もフォールバックと一致するため通る。該当するのは sol / uc /
+#     req / dsg / inf / qa / tp / tc / case の 9 件。とくに case（test_case の別名）は
 #     `case) prefix=CASE ;;` を削っても全経路が緑のまま通る。ハイフン別名
-#     （use-case / test-plan / test-condition / test-case）は 6b-3 が検知する
+#     （use-case / test-plan / test-condition / test-case）は 6b-3 が検知し、
+#     別名が一括で消える退行だけは 6b-2 の件数下限が拾う
 #   - 既存 prefix を再利用した誤アーム（`requirment) prefix=REQ` のような綴り誤り）。
 #     6b-2 は prefix の集合しか見ないので別名と区別が付かず、SUT も同じ flake.nix から
 #     ビルドされるため 6b-3 でも REQ- を返して通る
@@ -449,10 +450,26 @@ else
       arm_prefix["${pair%% *}"]="${pair##* }"
     done
 
+    # prefix は型を一意に指す前提で ID 体系が組まれている（`REQ-<uuid>` を見て
+    # requirement だと分かる）。2 つの型が同じ prefix を持つとその前提が崩れるが、
+    # 下の 6b-1 / 6b-2 / 6b-3 は型ごと・prefix 集合ごとに見るので揃って緑になる。
+    # model.yaml 側の性質なのでここで先に弾く。
     declare -A model_prefix_of=()
+    declare -A model_type_of_prefix=()
+    prefix_unique=1
     for pair in "${model_pairs[@]}"; do
-      model_prefix_of["${pair%% *}"]="${pair##* }"
+      model_type="${pair%% *}"
+      model_p="${pair##* }"
+      if [[ -n "${model_type_of_prefix[$model_p]:-}" ]]; then
+        fault "model.yaml の prefix $model_p が重複している（${model_type_of_prefix[$model_p]} と $model_type）"
+        prefix_unique=0
+      fi
+      model_type_of_prefix["$model_p"]="$model_type"
+      model_prefix_of["$model_type"]="$model_p"
     done
+    if [[ "$prefix_unique" -eq 1 ]]; then
+      pass "model.yaml の prefix が型ごとに一意である"
+    fi
 
     # --- 6b-1. model.yaml の型が case アームに揃っているか -------------------
     forward_ok=1
@@ -493,7 +510,12 @@ else
         backward_ok=0
       fi
     done
-    if [[ "$backward_ok" -eq 1 ]]; then
+    # 別名が 1 件も無い状態を緑にしない。短縮別名は 6b-1（model.yaml 起点なので
+    # 別名を見ない）でも 6b-3（フォールバックと一致して自己修復する）でも拾えず、
+    # 一括削除されるとこの 6b-2 だけが「0 件を検査して合格」と報告してしまう。
+    if [[ "$alias_checked" -eq 0 ]]; then
+      fault "case アームに別名が 1 件も無い（抽出漏れか、別名が一括で消えている）"
+    elif [[ "$backward_ok" -eq 1 ]]; then
       pass "case アームの別名 $alias_checked 件が model.yaml のいずれかの prefix に対応する（正式型名は 6b-1）"
     fi
 
