@@ -322,6 +322,86 @@ else
   fault "未知の入力は prefix とみなして大文字化する（実際: $fallback_id）"
 fi
 
+# --- 6b. prefix マップと docs/model.yaml の突合（契約テスト）-----------------
+#
+# 型を足すたび model.yaml / dev/flake.nix の case 分岐 / CLAUDE.md の 3 箇所を手で
+# 同期する構図に対し、前 2 者の機械的な突合を 1 つ置く（→ Issue #250）。§6 の
+# 代表サンプル 3 件では、正式型名のマップ行が失われても sara が prefix を検証しない
+# （model.yaml 冒頭: 検証は「非空」「英数字 / ハイフン / アンダースコア」のみ）ため
+# 誤 prefix の ID が黙って frontmatter へ流入する。
+#
+# 検知力の非対称性を承知のうえで全 12 型を回す:
+#   - 正式型名（quality / test_plan …）は case 分岐が消えると `*)` フォールバックが
+#     QUALITY / TEST_PLAN を返して落ちる（＝退行を検知できる）
+#   - 別名（qa / tp …）はフォールバックの大文字化と結果が一致し自己修復するため
+#     ここでは回さない。回しても常に緑で検知力を持たない
+#   - adr は prefix が 3 文字大文字でフォールバックと一致し、かつ exit 2 の拒否経路
+#     （§8）へ入るので同様に検知力を持たない。ADR-<UUID> の採番拒否は §8 が担保する
+#
+# model.yaml の在り処は 3 経路で異なるので順に解決する:
+#   1. SARA_MODEL_YAML（checks.sara-id のサンドボックス。docs/ が無いので nix が渡す）
+#   2. git のリポジトリルート基準（`nix develop` からの直接実行・CI の sara job）
+#   3. カレント基準（git 管理外のフォールバック）
+# どれでも見つからなければ skip せず失敗させる。黙って素通りすると、この節が
+# 存在するのに何も検証していない状態を緑で隠すことになる。
+
+model_yaml=""
+if [[ -n "${SARA_MODEL_YAML:-}" && -f "${SARA_MODEL_YAML:-}" ]]; then
+  model_yaml="$SARA_MODEL_YAML"
+else
+  # $work は git init 済みなのでルート解決は必ず成功する。テスト自身の cwd ではなく
+  # スクリプトを起動した元のリポジトリを見るため、run_sara_id とは違い cd しない。
+  model_root="$(git rev-parse --show-toplevel 2>/dev/null || printf '.')"
+  if [[ -f "$model_root/docs/model.yaml" ]]; then
+    model_yaml="$model_root/docs/model.yaml"
+  fi
+fi
+
+if [[ -z "$model_yaml" ]]; then
+  fault "docs/model.yaml を解決できない（SARA_MODEL_YAML 未設定かつリポジトリ内に無い）"
+else
+  # item_types: 〜 relations: の範囲から `- id:` と直後の `prefix:` を組にする。
+  # yq を devShell に足さず awk で済ませる（この 2 フィールドの並びは model.yaml が
+  # 固定しており、崩れれば下の型数チェックが検知する）。
+  mapfile -t model_pairs < <(
+    awk '
+      /^item_types:/ { in_types = 1; next }
+      /^relations:/  { in_types = 0 }
+      !in_types      { next }
+      /^  - id: /    { type = $3; next }
+      /^    prefix: / { if (type != "") { print type, $2; type = "" } }
+    ' "$model_yaml"
+  )
+
+  # 抽出そのものの健全性を先に固定する。パースが壊れて 0 件になったとき、
+  # 下のループが 1 件も回らず「全て緑」に見えるのを防ぐ。
+  if [[ "${#model_pairs[@]}" -eq 12 ]]; then
+    pass "model.yaml から 12 型の prefix を抽出する"
+  else
+    fault "model.yaml から 12 型の prefix を抽出する（実際: ${#model_pairs[@]} 件）"
+  fi
+
+  contract_ok=1
+  for pair in "${model_pairs[@]}"; do
+    model_type="${pair%% *}"
+    model_prefix="${pair##* }"
+
+    # ADR は採番せず exit 2 で拒否する（§8）。prefix 一致では検証できない。
+    [[ "$model_type" == "adr" ]] && continue
+
+    run_sara_id sara-id "$model_type" probe
+    got_id="$(field id)"
+    if [[ "$status_capture" -ne 0 || "$got_id" != "$model_prefix-"* ]]; then
+      fault "sara-id $model_type が $model_prefix- を返す（exit=$status_capture 実際: $got_id）"
+      contract_ok=0
+    fi
+  done
+
+  if [[ "$contract_ok" -eq 1 ]]; then
+    pass "model.yaml の全型で sara-id の prefix が一致する（adr を除く 11 型）"
+  fi
+fi
+
 # --- 7. slug 省略 ------------------------------------------------------------
 
 run_sara_id sara-id design

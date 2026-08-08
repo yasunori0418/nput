@@ -236,6 +236,11 @@
           checks.sara-id =
             pkgs.runCommandLocal "sara-id-test"
               {
+                # prefix マップと docs/model.yaml の突合（テスト §6b）に渡す正本。
+                # サンドボックスにはリポジトリの docs/ が無く、テスト側の git ルート
+                # 解決も効かないため nix から store path を渡す。devShell / CI 経路は
+                # cwd がリポジトリルートなのでテスト側の解決に任せる。
+                SARA_MODEL_YAML = ../docs/model.yaml;
                 nativeBuildInputs = [
                   sara-id
                   pkgs.ripgrep
