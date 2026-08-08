@@ -4,6 +4,8 @@ type: adr
 name: "`apply --all` を build・配置の両段階で並列化する（ADR-0038 の前段衝突検査を前提）"
 status: 採用
 origin: "次期マイルストーン追加計画の grilling（2026-07-04）。複数 profile / manifest 処理の高速化要望"
+justifies:
+  - "REQ-4cbd9a0d-9f94-4747-8881-56020dc6d5af"
 revises:
   - "ADR-0016"
 references:

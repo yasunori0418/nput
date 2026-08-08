@@ -4,6 +4,9 @@ type: adr
 name: "root marker に `subdir` 適用形を追加する（実体は target 前置の eval 時糖衣）"
 status: 採用
 origin: "次期マイルストーン追加計画の grilling（2026-07-04）。「root マーカーの解決位置を宣言的にずらしたい」要望を、grilling で「root 配下のサブディレクトリを基点にする」意図（配下方向）と確認した"
+justifies:
+  - "REQ-37b56673-6e40-4a1b-a2a7-5d3c084e3e66"
+  - "REQ-3f541d39-da41-4ef8-858b-707f54cf6a29"
 revises:
   - "ADR-0007"
 references:
@@ -19,6 +22,20 @@ references:
 - 関連: ADR-0004, ADR-0014, ADR-0017, ADR-0019, `docs/spec.md`, `lib/types.nix`, `lib/manifest.nix`
 - 改訂対象: ADR-0007 の 3 root マーカー（projectRoot / homeRoot / systemRoot）の形を「引数適用可能（`homeRoot { subdir = ...; }`）」へ拡張（決定の反転なし・単体使用は不変）
 - 起点: 次期マイルストーン追加計画の grilling（2026-07-04）。「root マーカーの解決位置を宣言的にずらしたい」要望を、grilling で「root 配下のサブディレクトリを基点にする」意図（配下方向）と確認した
+
+> **2026-08-08 注記（#243）**: `justifies` 先の選定根拠。REQ-37b56673 / REQ-3f541d39 は
+> いずれも本文注記で「適用形は担当範囲外」と述べているが、これは *その item の規範に
+> `subdir` 適用形を含めない* という宣言であって、本 ADR が両 item の規範に依拠していない
+> ことを意味しない。§2 のとおり `subdir` の実体は target 前置の eval 時糖衣で、root の
+> 解決値も `rootKind` も変えない。つまり「marker が kind を運ぶ」（REQ-3f541d39）と
+> 「root は 3 マーカーと絶対パス文字列の union を取る」（REQ-37b56673）を前提として上に
+> 乗る拡張であり、両 item へ `justifies` を張る。
+>
+> REQ-3f541d39 が同じ「担当範囲外」の論法で ADR-0036 を `justifies` の対象外としているのと
+> 線引きが異なる点に注意。ADR-0036 は「`systemRoot` が実行時に `/` へ解決する」という
+> **当該 item の規範に無い追加の主張**を必要とするため対象外だが、本 ADR は両 item の規範を
+> 変更も拡張もせず前提として利用するだけなので対象になる。なお `subdir` 前置そのものを
+> 規範化する requirement は未整備で、これは張り漏れではない。
 
 ## 背景
 
