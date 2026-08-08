@@ -4,6 +4,8 @@ type: infrastructure
 name: "トレーサビリティ検証基盤（sara によるドキュメントグラフの機械検証）"
 depends_on:
   - "INF-d1230e1f-8ba8-49d8-8386-409bfbb7dd27"
+satisfies:
+  - "QA-6bf957d9-17d9-4660-92b7-ebd6eeb71a8c"
 ---
 # INF-659b139d: トレーサビリティ検証基盤（sara によるドキュメントグラフの機械検証）
 

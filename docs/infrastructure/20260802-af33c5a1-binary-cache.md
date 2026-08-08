@@ -4,6 +4,8 @@ type: infrastructure
 name: "バイナリキャッシュ（main push 時の cachix 投入）"
 depends_on:
   - "INF-d1230e1f-8ba8-49d8-8386-409bfbb7dd27"
+satisfies:
+  - "QA-58522afb-31d5-4a1f-a7df-0858efa9e44b"
 ---
 # INF-af33c5a1: バイナリキャッシュ（main push 時の cachix 投入）
 
