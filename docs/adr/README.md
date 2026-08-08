@@ -67,7 +67,7 @@ status_note: "…"        # ステータス行のカッコ書きがあるとき�
 issues:                 # 「関連:」「起点 Issue:」「起点:」の GitHub Issue 番号
   - "#123"
 origin: "…"             # 「起点:」の内容（無ければ「起点 Issue:」「参照:」）
-justifies:              # この ADR が決めた requirement / design / infrastructure（任意）
+justifies:              # この ADR が決めた requirement / design / infrastructure（必須・1 本以上）
   - "REQ-8521e8f8-99cc-47f0-b7d0-70c24c837612"
 revises:                # 「改訂対象:」の ADR
   - "ADR-0020"
@@ -159,7 +159,12 @@ references:             # 「関連:」の ADR
     ADR-0013 → 0015                   ADR-0014 → 0015
     ADR-0038 → 0039 / 0040
     ```
-- `justifies` は任意。requirement / design / infrastructure が揃うまでは空でよい。
+- **`justifies` は必須**。その ADR が決めた requirement / design / infrastructure を 1 本以上張る。
+  requirement / design / infrastructure は #209〜#212 で出揃い、#243 で既存 ADR 48 本すべてが非空に
+  なった。**空 = 埋め忘れ**として `sara check` の orphan warning で機械判定できる状態を保つため、
+  空のまま出さない。張る先の item がまだ無い場合は、**その ADR で item を起こしてから張る**。
+  item 化の判断自体を保留するなら、なぜ張れないかと起票予定を ADR 本文に注記したうえで空にする
+  （このとき orphan warning が 1 件出るので、注記と対で残す）。
 - ID は連番を維持する（`ADR-0049`）。ファイル名も `NNNN-<slug>.md` のまま。他の型は UUIDv4 二層 ID を使う
   （採番は devShell の `sara-id`）が、ADR だけは既存の相互参照・本ドキュメントの運用・Issue 言及を
   壊さないため連番のまま。
@@ -173,8 +178,12 @@ nix develop '.?dir=dev#sara' -c sara check
 ```
 
 `Broken reference`（存在しない ADR への参照）・`Duplicate ID`・`Circular reference` がいずれも 0 件で
-exit 0 になること。`Orphan item` の warning は ADR 全件に出るが、ADR が仕様ツリーから分離した独立型で
-upstream parent を持たない設計どおりなので無視してよい。CI の `sara` job も同じコマンドを走らせる。
+exit 0 になること。**`Orphan item` の warning は ADR には 1 件も出ないこと**。ADR は仕様ツリーから
+分離した独立型で upstream parent を持たないが、`justifies` を 1 本以上張っていれば orphan にはならない。
+ADR に orphan warning が出たら `justifies` の埋め忘れなので、無視せず張ってから完了とする（張れない
+事情がある場合の扱いは「新しい ADR を書く」の `justifies` の項）。ADR 以外の型の orphan warning は
+移行中のため残る（現在は infrastructure 6 件）。これは ADR とは別件なので混同しない。CI の `sara` job も
+同じコマンドを走らせる。
 
 **注記漏れの確認は `sara check` では代替できない**。sara は frontmatter しか見ず、旧 ADR 側の blockquote
 注記が本文に書かれているかを検証しないため。`revises` に挙げた旧 ADR それぞれについて、逆引きで関係を
