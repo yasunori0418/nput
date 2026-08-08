@@ -53,7 +53,6 @@ manifest をエンジンへ渡す。エンジンは `manifest.json` を唯一の
 行う単一ゲートに集約する。
 
 - [REQ-d85f0cef](requirements/20260802-d85f0cef-lib-pure-data-generator.md) — lib は nixpkgs.lib のみに依存する純データ生成器である
-- [REQ-901993e9](requirements/20260802-901993e9-lib-internal-test-seam.md) — lib.\_\_internal は private helper のテスト seam として公開する
 
 ### `lib.mkManifest`
 
@@ -294,6 +293,7 @@ root は評価時にパスへ展開せず、マーカーが運ぶ kind をエン
 test_plan は requirement とは別系統で、use_case を経由せず solution 直下に接続する。
 
 - [TP-229b69c0](test-plan/20260808-229b69c0-e2e-harness-scope.md) — 非 NixOS で動く主張を実 nix の一気通貫 E2E で検証する
+- [TP-403c55c7](test-plan/20260808-403c55c7-lib-internal-test-seam.md) — lib.\_\_internal は private helper のテスト seam として公開する
 - [TP-b7f1dc79](test-plan/20260808-b7f1dc79-nixos-vm-test-future.md) — NixOS / nix-darwin モジュール経路の実 activate は E2E ハーネスの対象外とする
 - [TP-d3000054](test-plan/20260808-d3000054-json-conformance-verification.md) — エンベロープの niface 適合を Go テストと E2E の両方で検証する
 

@@ -7,7 +7,7 @@ satisfies:
   - "REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281"
   - "REQ-b232ec98-af3b-41f3-a050-29d417322002"
   - "REQ-d1b5b3f5-10a0-400d-9f03-ba00c63d1c34"
-  - "REQ-901993e9-771c-480a-ba0d-ca4be042e206"
+  - "TP-403c55c7-d996-4951-8e6b-c3a7dddd387c"
 ---
 # DSG-fb49e36c: lib は nix-unit の評価テストと namaka のスナップショットの 2 手段で検証する
 
@@ -32,7 +32,7 @@ satisfies:
 
 いずれも**実際のビルドを伴わない評価だけで完結する**のが選択理由でもある。
 REQ-2b0c2bb8 が `mkManifest` を純粋関数と定めている以上、検証も評価層で閉じるのが自然で、
-FS も nix daemon も要らない。テスト対象の private helper へは、REQ-901993e9 が
+FS も nix daemon も要らない。テスト対象の private helper へは、TP-403c55c7 が
 テスト seam として公開する `lib.__internal` から到達する。
 
 engine 側の検証手段は DSG-836aa5cb、実経路の一気通貫は DSG-2947b4a5 が担う。
