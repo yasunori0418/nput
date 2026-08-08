@@ -27,10 +27,10 @@ don't skim it as an index.
 | `docs/solution/` | solution | `SOL` | What nput is and what it solves |
 | `docs/use-cases/` | use_case | `UC` | How it gets used |
 | `docs/requirements/` | requirement | `REQ` | What must hold of the product (normative, RFC2119) |
-| `docs/design/` | design | `DSG` | How a requirement is realised |
+| `docs/design/` | design | `DSG` | How a requirement or a test_plan is realised |
 | `docs/quality/` | quality | `QA` | Norms binding the development process (normative, RFC2119) |
 | `docs/test-plan/` | test_plan | `TP` | Scope, levels and approach of testing (normative, RFC2119) |
-| `docs/infrastructure/` | infrastructure | `INF` | CI, release, docs site, merge gate |
+| `docs/infrastructure/` | infrastructure | `INF` | The machinery upholding a quality or a design (CI, release, docs site, merge gate) |
 | `docs/risks/` | risk | `RISK` | What threatens a requirement or a design — **not started** |
 | `docs/test/<subject>/` | test_condition | `TC` | What a risk needs covered — **not started** |
 | `docs/test/<subject>/` | test_case | `CASE` | A concrete case under a condition — **not started** |
@@ -39,9 +39,11 @@ don't skim it as an index.
 
 The four types marked **not started** are defined in `docs/model.yaml` but have neither items nor
 directories yet; they get created when the test process is taken up, at which point the granularity
-of `<subject>` (per feature or per requirement) is decided. Note also that `defect` has no way to
-declare an upstream relation, so a `defect` item always raises an orphan warning — see the header
-of `docs/model.yaml`.
+of `<subject>` (per feature or per requirement) is decided.
+
+Every type but `solution` and `adr` hangs off at least one upstream relation, so a missing link
+shows up as an orphan warning. `defect` is the exception: it has no way to declare one, and so
+always raises the warning — see the header of `docs/model.yaml`.
 
 Start from the overview that matches the topic (spec for behaviour, design for structure, concept
 for positioning), follow its link into the item, then traverse relations for the surrounding context.
@@ -55,7 +57,8 @@ Full conventions — ID format, placement rules, which type owns what — are in
 
 ```bash
 sara query <full-id> -u      # upstream: requirement -> use_case -> solution
-sara query <full-id> -d      # downstream: requirement -> design (risk / test not started yet)
+sara query <full-id> -d      # downstream: requirement / test_plan -> design, quality -> infrastructure
+                             #             (risk and below not started yet)
 sara check                   # validate the whole graph (broken refs / duplicate IDs / cycles)
 sara report coverage         # coverage
 sara report matrix           # traceability matrix

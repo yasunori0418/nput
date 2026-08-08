@@ -156,6 +156,6 @@ CI での実行基盤・キャッシュ・リリースは infrastructure item �
 
 - `README.md` / `README.ja.md` — 3 層構造の最上段（導入と使い方）
 - `docs/concept.md` — コンセプト（solution / use_case への索引）
-- `docs/spec.md` — 仕様（requirement item への索引）
+- `docs/spec.md` — 仕様（requirement / quality / test_plan item への索引）
 - `docs/adr/` — 意思決定の記録
 - `docs/model.yaml` — sara の型定義（item の型・関係・ID 形式）
