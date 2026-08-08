@@ -174,7 +174,8 @@ design 側を orphan のまま放置する案・`satisfies` とは別の専用 r
 
 - `docs/model.yaml` が 12 型構成になり、`dev/flake.nix` の `sara-id` prefix マップへ
   `quality | qa) prefix=QA` / `test_plan | test-plan | tp) prefix=TP` が追加された。`CLAUDE.md` の
-  ディレクトリ表と `docs/model.yaml` 冒頭コメントも 12 型構成へ更新済み
+  ディレクトリ表・`docs/model.yaml` 冒頭コメント・epic #203 本文の mermaid モデル図も 12 型構成へ
+  更新済み
 - `docs/test-plan/` が新設され、テスト計画にあたる requirement 4 件が TP item として移設された。
   §4 で述べた design → test_plan の 6 辺も新 TP-ID へ張り替え済み
 
@@ -183,9 +184,12 @@ design 側を orphan のまま放置する案・`satisfies` とは別の専用 r
 - **`docs/quality/` は未作成で、`type: quality` の item は 0 件**。品質方針にあたる requirement の
   移設は epic #203 の後続 issue が担当する
 - **infrastructure の 6 件は orphan warning を出し続けている**。root から外れた一方で `satisfies` の
-  張り替えが未了なためで、これは意図した中間状態である。dev 基盤側の張り替え先は quality item なので、
-  上の `docs/quality/` 新設が解消の前提になる。解消は後続 issue が担当する
-- epic #203 本文の mermaid モデル図の 12 型構成への差し替え
+  張り替えが未了なためで、これは意図した中間状態である。runtime 基盤にあたるものは design へ即座に
+  張れるが、dev 基盤にあたるものは張り替え先の quality item がまだ無く、上の `docs/quality/` 新設を
+  待つ。いずれも解消は後続 issue が担当する
+- `CLAUDE.md` の散文（ディレクトリ表の直後にある「quality / test_plan は item もディレクトリも
+  まだ無い」の記述）が表の更新に追随していない。test_plan は既に実在するため未着手なのは quality
+  だけである旨へ直す必要がある
 
 ## 棄却した代替案
 
