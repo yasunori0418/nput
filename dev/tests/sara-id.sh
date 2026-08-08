@@ -15,6 +15,7 @@
 #   4c. git 管理外ではカレント基準へフォールバックする
 #   5.  docs/ が無いリポジトリでも採番できる
 #   6.  型名・別名から prefix を引き、未知の入力はフォールバックで大文字化する
+#   6b. prefix マップが docs/model.yaml の型・prefix と双方向に一致する（契約テスト）
 #   7.  slug 未指定でもファイル名素材を出す
 #   8.  ADR は連番維持のため exit 2 で拒否する
 #   9.  異常系の終了コードを区別する（引数不正 = 2 / --help = 0）
@@ -320,6 +321,238 @@ if [[ "$fallback_id" =~ ^XYZ- ]]; then
   pass "未知の入力は prefix とみなして大文字化する"
 else
   fault "未知の入力は prefix とみなして大文字化する（実際: $fallback_id）"
+fi
+
+# --- 6b. prefix マップと docs/model.yaml の突合（契約テスト）-----------------
+#
+# 型を足すたび model.yaml / dev/flake.nix の case 分岐 / CLAUDE.md の 3 箇所を手で
+# 同期する構図に対し、前 2 者の機械的な突合を置く（→ Issue #250）。§6 の代表サンプル
+# 3 件では、マップ行が失われても sara が prefix を検証しない（model.yaml 冒頭:
+# 検証は「非空」「英数字 / ハイフン / アンダースコア」のみ）ため、誤 prefix の ID が
+# 黙って frontmatter へ流入する。
+#
+# 検査は 4 つに分ける。正本が別々なので担保できる範囲も違う:
+#   - 6b-0: model.yaml の prefix が型ごとに一意（突合の前提。下記 3 つは型ごと・
+#           prefix 集合ごとに見るので、2 型が同じ prefix を持つと揃って緑になる）
+#   - 6b-1: model.yaml の型 ⊆ case アーム（型を足して case へ足し忘れると落ちる）
+#   - 6b-2: case アームの prefix ⊆ model.yaml の prefix（model.yaml に無い prefix の
+#           アームが増えたら落ちる。下記のとおり担保範囲は狭い）
+#   - 6b-3: case アームの全入力（別名含む）を実起動し、宣言どおりの prefix を返す
+#
+# 6b-3 の検知力は入力によって違う。`*)` フォールバックが大文字化した結果と期待 prefix が
+# 一致する入力（sol → SOL・qa → QA・case → CASE 等）は、case アームを削っても同じ値が
+# 返るため退行を検知できない。一方 quality → QUALITY・use-case → USE-CASE のように
+# 一致しない入力は検知する。除外リストを手で持つとその一覧自体が事実と乖離するので、
+# 6b-1 の集合突合で漏れを押さえたうえで 6b-3 は全入力を回す。
+#
+# 正式型名は 6b-3 で自己修復する（risk → RISK・adr → ADR）ものも 6b-1 が確実に拾う。
+#
+# 担保できないもの（正本が無いため、この節では検知しない）:
+#   - 短縮別名の個別削除。model.yaml は正式型名しか持たないので 6b-1 / 6b-2 の集合
+#     突合には現れず、6b-3 もフォールバックと一致するため通る。該当するのは sol / uc /
+#     req / dsg / inf / qa / tp / tc / case の 9 件。とくに case（test_case の別名）は
+#     `case) prefix=CASE ;;` を削っても全経路が緑のまま通る。ハイフン別名
+#     （use-case / test-plan / test-condition / test-case）は 6b-3 が検知し、
+#     別名が一括で消える退行だけは 6b-2 の件数下限が拾う
+#   - 既存 prefix を再利用した誤アーム（`requirment) prefix=REQ` のような綴り誤り）。
+#     6b-2 は prefix の集合しか見ないので別名と区別が付かず、SUT も同じ flake.nix から
+#     ビルドされるため 6b-3 でも REQ- を返して通る
+#
+# ADR は「採番せず exit 2 で拒否する」が期待動作なので 6b-3 の実起動からは外す
+# （拒否経路は §8 が担保する）。集合突合の 6b-1 / 6b-2 には含める。
+#
+# 正本 2 ファイルの在り処は 2 経路ある。どちらでも解決できなければ skip せず失敗させる
+# （黙って素通りすると、この節が存在するのに何も検証していない状態を緑で隠す）:
+#   1. SARA_MODEL_YAML / SARA_DEV_FLAKE（checks.sara-id のサンドボックス。リポジトリの
+#      作業ツリーが無いので nix が store path を渡す）
+#   2. git のリポジトリルート基準（`nix develop` からの直接実行・CI の sara job）
+
+model_yaml="${SARA_MODEL_YAML:-}"
+dev_flake="${SARA_DEV_FLAKE:-}"
+# テスト自身の cwd（$work）ではなくスクリプトを起動した元のリポジトリを見るため、
+# run_sara_id とは違い cd しない。git 管理外なら `.` に落とす（相対解決に失敗させ、
+# `/docs/model.yaml` のような読み取れないパスを fault メッセージに出さない）。
+contract_root="$(git rev-parse --show-toplevel 2>/dev/null || printf '.')"
+[[ -f "$model_yaml" ]] || model_yaml="$contract_root/docs/model.yaml"
+[[ -f "$dev_flake" ]] || dev_flake="$contract_root/dev/flake.nix"
+
+if [[ ! -f "$model_yaml" || ! -f "$dev_flake" ]]; then
+  fault "契約テストの正本を解決できない（model.yaml=$model_yaml flake.nix=$dev_flake）"
+else
+  # model.yaml の item_types: 〜 relations: から `- id:` と直後の `prefix:` を組にする。
+  # yq を devShell に足さず awk で済ませる（並びが崩れれば下の件数突合が検知する）。
+  mapfile -t model_pairs < <(
+    awk '
+      /^item_types:/  { in_types = 1; next }
+      /^relations:/   { in_types = 0; next }
+      !in_types       { next }
+      /^  - id: /     { type = $3; next }
+      /^    prefix: / { if (type != "") { print type, $2; type = "" } }
+    ' "$model_yaml"
+  )
+
+  # 抽出の健全性を先に固定する。件数は直書きせず model.yaml 側の `- id:` 行数と
+  # 突き合わせる（型を足したとき、この節が余計な更新点にならないようにする）。
+  model_type_lines="$(awk '
+    /^item_types:/ { in_types = 1; next }
+    /^relations:/  { in_types = 0; next }
+    in_types && /^  - id: / { n++ }
+    END { print n + 0 }
+  ' "$model_yaml")"
+
+  # case アームから「入力名 → prefix」を全て取り出す（正式型名・別名の両方）。
+  # 拾うのは `<名前>[ | <名前> …]) prefix=<PREFIX> ;;` の形をした行だけに限る。
+  # `prefix=` を含むだけの行（`*)` フォールバック・コメント・他の代入）を拾うと、
+  # `)` を持たない行の左半分が行全体になってゴミの入力名が契約集合へ紛れ込む。
+  #
+  # 名前・prefix とも数字を許す。sara の ID 検証は「英数字 / ハイフン / アンダースコア」
+  # までしか要求しない（model.yaml 冒頭）ので、数字を含む型名・prefix は仕様上ありうる。
+  # ここで落とすと 6b-1 が「アームに無い」と誤診し、原因追跡が遠回りになる。
+  mapfile -t arm_pairs < <(
+    awk '
+      /case "\$1" in/ { in_case = 1; next }
+      /^ *esac/       { in_case = 0 }
+      !in_case        { next }
+      /^ *[a-zA-Z0-9_][a-zA-Z0-9_|[:space:]-]*\) *prefix=[A-Za-z0-9_-]+ *;;/ {
+        line = $0
+        sub(/^ */, "", line)
+        split(line, halves, ")")
+        prefix = line
+        sub(/.*prefix=/, "", prefix)
+        sub(/[^A-Za-z0-9_-].*/, "", prefix)
+        n = split(halves[1], names, "|")
+        for (i = 1; i <= n; i++) {
+          gsub(/ /, "", names[i])
+          if (names[i] != "") { print names[i], prefix }
+        }
+      }
+    ' "$dev_flake"
+  )
+
+  extract_ok=1
+  if [[ "${#model_pairs[@]}" -ne "$model_type_lines" || "$model_type_lines" -eq 0 ]]; then
+    fault "model.yaml の全型から prefix を抽出する（型 $model_type_lines 件に対し抽出 ${#model_pairs[@]} 件）"
+    extract_ok=0
+  fi
+  if [[ "${#arm_pairs[@]}" -eq 0 ]]; then
+    fault "dev/flake.nix の case アームから prefix マップを抽出する（0 件）"
+    extract_ok=0
+  fi
+
+  if [[ "$extract_ok" -eq 0 ]]; then
+    # 抽出が壊れた状態で突合を回すと、集合が空なので全て緑に見える。
+    fault "prefix マップの突合を実行できない（抽出が壊れているため中断した）"
+  else
+    # 連想配列へ畳むと同じ入力名の重複アームは後勝ちで潰れる（case は先勝ちなので
+    # 期待値が実装と逆になる）が、ここでは検知しない。writeShellApplication の
+    # shellcheck が SC2221 / SC2222 でビルド時に弾くため、重複アームを持つ sara-id は
+    # そもそもビルドできずこのテストまで到達しない。
+    declare -A arm_prefix=()
+    for pair in "${arm_pairs[@]}"; do
+      arm_prefix["${pair%% *}"]="${pair##* }"
+    done
+
+    # --- 6b-0. model.yaml の prefix が型ごとに一意か --------------------------
+    #
+    # prefix は型を一意に指す前提で ID 体系が組まれている（`REQ-<uuid>` を見て
+    # requirement だと分かる）。2 つの型が同じ prefix を持つとその前提が崩れるが、
+    # 下の 6b-1 / 6b-2 / 6b-3 は型ごと・prefix 集合ごとに見るので揃って緑になる。
+    # model.yaml 側の性質なので突合の前提としてここで先に弾く。
+    declare -A model_prefix_of=()
+    declare -A model_type_of_prefix=()
+    prefix_unique=1
+    for pair in "${model_pairs[@]}"; do
+      model_type="${pair%% *}"
+      model_p="${pair##* }"
+      if [[ -n "${model_type_of_prefix[$model_p]:-}" ]]; then
+        fault "model.yaml の prefix $model_p が重複している（${model_type_of_prefix[$model_p]} と $model_type）"
+        prefix_unique=0
+      fi
+      model_type_of_prefix["$model_p"]="$model_type"
+      model_prefix_of["$model_type"]="$model_p"
+    done
+    if [[ "$prefix_unique" -eq 1 ]]; then
+      pass "model.yaml の prefix が型ごとに一意である"
+    fi
+
+    # --- 6b-1. model.yaml の型が case アームに揃っているか -------------------
+    forward_ok=1
+    for model_type in "${!model_prefix_of[@]}"; do
+      want_prefix="${model_prefix_of[$model_type]}"
+      if [[ -z "${arm_prefix[$model_type]:-}" ]]; then
+        fault "型 $model_type が dev/flake.nix の case アームに無い（model.yaml は $want_prefix）"
+        forward_ok=0
+      elif [[ "${arm_prefix[$model_type]}" != "$want_prefix" ]]; then
+        fault "型 $model_type の prefix が食い違う（model.yaml=$want_prefix case=${arm_prefix[$model_type]}）"
+        forward_ok=0
+      fi
+    done
+    if [[ "$forward_ok" -eq 1 ]]; then
+      pass "model.yaml の全 $model_type_lines 型が case アームに同じ prefix で載っている"
+    fi
+
+    # --- 6b-2. case アームの prefix が model.yaml にあるか --------------------
+    #
+    # 別名（req / uc …）は model.yaml に載らないので、入力名では突合できない。
+    # 代わりに prefix の集合で見て、model.yaml のどの型の prefix でもないアームを弾く。
+    # したがってここが検知するのは「model.yaml に無い prefix のアームが増えた」場合
+    # だけで、既存 prefix を再利用したアーム（正当な別名も、綴りを誤った型名も）は
+    # 区別が付かず素通りする（→ 節冒頭「担保できないもの」）。
+    backward_ok=1
+    alias_checked=0
+    for arm_name in "${!arm_prefix[@]}"; do
+      # 正式型名は 6b-1 が model.yaml 起点で見ているのでここでは飛ばす。
+      [[ -n "${model_prefix_of[$arm_name]:-}" ]] && continue
+      alias_checked=$((alias_checked + 1))
+      arm_p="${arm_prefix[$arm_name]}"
+      known_prefix=0
+      for model_type in "${!model_prefix_of[@]}"; do
+        [[ "${model_prefix_of[$model_type]}" == "$arm_p" ]] && known_prefix=1 && break
+      done
+      if [[ "$known_prefix" -eq 0 ]]; then
+        fault "case アームの $arm_name（prefix=$arm_p）に対応する型が model.yaml に無い"
+        backward_ok=0
+      fi
+    done
+    # 別名が 1 件も無い状態を緑にしない。短縮別名は 6b-1（model.yaml 起点なので
+    # 別名を見ない）でも 6b-3（フォールバックと一致して自己修復する）でも拾えず、
+    # 一括削除されるとこの 6b-2 だけが「0 件を検査して合格」と報告してしまう。
+    if [[ "$alias_checked" -eq 0 ]]; then
+      fault "case アームに別名が 1 件も無い（抽出漏れか、別名が一括で消えている）"
+    elif [[ "$backward_ok" -eq 1 ]]; then
+      pass "case アームの別名 $alias_checked 件が model.yaml のいずれかの prefix に対応する（正式型名は 6b-1）"
+    fi
+
+    # --- 6b-3. 全入力を実起動して宣言どおりの prefix を返すか ----------------
+    #
+    # UUID 部分は検証しないので偽 uuidgen で決定論化する（本物の乱数を
+    # 入力数ぶん引かない）。既出チェックは docs/ を再帰走査するので、サブディレクトリ
+    # ごと作り直して空にする（前段の片付け漏れに依存しない）。
+    rm -rf "$work/docs"
+    mkdir -p "$work/docs"
+    : >"$count_file"
+    export SARA_ID_UUIDGEN="$fake" SARA_ID_FAKE_COUNT="$count_file" \
+      SARA_ID_FAKE_TAKEN="$fresh" SARA_ID_FAKE_FRESH="$fresh" SARA_ID_FAKE_SWITCH=0
+
+    invoke_ok=1
+    for arm_name in "${!arm_prefix[@]}"; do
+      # ADR は採番せず exit 2 で拒否する（§8）。prefix 一致では検証できない。
+      [[ "${arm_prefix[$arm_name]}" == "ADR" ]] && continue
+
+      run_sara_id sara-id "$arm_name" probe
+      got_id="$(field id)"
+      if [[ "$status_capture" -ne 0 || "$got_id" != "${arm_prefix[$arm_name]}-"* ]]; then
+        fault "sara-id $arm_name が ${arm_prefix[$arm_name]}- を返す（exit=$status_capture 実際: $got_id）"
+        invoke_ok=0
+      fi
+    done
+
+    unset SARA_ID_UUIDGEN SARA_ID_FAKE_COUNT SARA_ID_FAKE_TAKEN SARA_ID_FAKE_FRESH SARA_ID_FAKE_SWITCH
+
+    if [[ "$invoke_ok" -eq 1 ]]; then
+      pass "case アームの全入力が宣言どおりの prefix を返す（ADR の拒否経路は §8）"
+    fi
+  fi
 fi
 
 # --- 7. slug 省略 ------------------------------------------------------------
