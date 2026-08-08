@@ -147,9 +147,10 @@ CI での実行基盤・キャッシュ・リリースは infrastructure item �
 ## 設計判断の所在
 
 本節はリンク集ではなく、決定がどこにあるかの案内。主要な設計判断の決定と根拠は **ADR が持つ**
-（`docs/adr/`）。ADR は `justifies` で requirement / design / infrastructure / quality / test_plan へ
-接続しているため、ある item を裏づける決定は本文書の一覧ではなく `sara query <フル ID> -u` で
-辿る。全 ADR をここへ並べても改訂のたびに古くなるだけなので置かない。
+（`docs/adr/`）。`docs/model.yaml` は ADR の `justifies` の接続先として requirement / design /
+infrastructure / quality / test_plan の 5 型を許す（現時点で実際に張られているのは quality を
+除く 4 型）。ある item を裏づける決定は本文書の一覧ではなく `sara query <フル ID> -u` で辿る。
+全 ADR をここへ並べても改訂のたびに古くなるだけなので置かない。
 
 ---
 
