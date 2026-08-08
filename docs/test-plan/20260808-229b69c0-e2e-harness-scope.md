@@ -64,4 +64,6 @@ bash・詳細は `tests/e2e/README.md`）が、flake entrypoint からの `nix b
 > スコープの規定であり、ユーザーの使われ方（use_case）から導かれるプロダクトの振る舞いでは
 > ないため、use_case を親に持てず orphan になっていた（当時の判断は Issue #211）。テスト計画
 > の型を新設して solution 直下で受けることにしたため、`derives_from` は
-> SOL-9fcd1d6e を指す。TP-d3000054・TP-b7f1dc79 も同じ経緯で移設した。
+> SOL-9fcd1d6e を指す。TP-d3000054・TP-b7f1dc79 も同じ経緯で移設した。TP-403c55c7 は
+> #238 では「テスト計画そのものではない」と判断して見送ったが、Issue #239 でその判断を
+> 改めて移設した（経緯は同 item の注記）。
