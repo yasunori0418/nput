@@ -120,12 +120,86 @@ item_types:
       - requirement
     fields: []
     allowed_targets:
+      # satisfies の対象に test_plan を含めるのは、テストハーネスの実装形を表す design が
+      # requirement ではなくテスト計画を満たす実体だから（→ #237 §3）。専用 relation の
+      # 新設案は「satisfies と意味が重なる関係を 2 本持つ」ことになるため採らず、design を
+      # orphan のまま容認する案も epic #203 の完了条件（warning 0）と両立しないため採らない。
       - relation: satisfies
         targets:
           - requirement
+          - test_plan
       - relation: depends_on
         targets:
           - design
+
+  # ---- 品質とテスト計画の系統（solution 直下）----
+
+  # 品質方針・規約・プロセス横断のガバナンス文書。docs/quality/。
+  # テストプロセスの外にある関心事なので test_plan とは別型に分ける（1 型へ混ぜると
+  # infrastructure が抱えていた「品質系と基盤系の混在」を新型内で再発させる → #237）。
+  - id: quality
+    display_name: Quality
+    prefix: QA
+    id_format: '{prefix}-{uuid}'
+    parent_types:
+      - solution
+    fields:
+      # requirement の specification / specification_ja と同じ様式で書く。ただし sara の
+      # RFC2119 キーワード検証は requirement 型にハードコードされており（metadata.rs）、
+      # quality / test_plan の specification には効かない。英語の規範文で書く規約は
+      # 機械検証されないのでレビューで守る。
+      - name: specification
+        display_name: Specification
+        field_type: text
+        required: true
+        placeholder: The project SHALL <describe the quality policy>.
+      - name: specification_ja
+        display_name: Specification (ja)
+        field_type: text
+        required: true
+        placeholder: nput は <品質方針> を満たさなければならない。
+    allowed_targets:
+      - relation: derives_from
+        targets:
+          - solution
+      - relation: depends_on
+        targets:
+          - quality
+
+  # ISTQB のテスト計画活動の成果物。docs/test-plan/。テストスコープ・スコープ外宣言・
+  # テストレベル・テストアプローチ・テスト容易性の要求を収容する。
+  # 既存のテスト系 4 型（risk / test_condition / test_case / defect）はテスト分析以降に
+  # 対応しており、テスト計画に対応する型が空いていた（→ #237）。
+  #
+  # risk の parent_types には test_plan を追加しない。risk の親は「リスクが何に対して
+  # 発生しているか」を示す構造であり、requirement / design が正しい対応先であるため。
+  # テスト計画がどの risk を扱うかは下流の test_condition → mitigates → risk で追跡できる。
+  # テスト工程が動いてから不足が判明した場合に peer relation の追加を再検討する。
+  - id: test_plan
+    display_name: Test Plan
+    prefix: TP
+    id_format: '{prefix}-{uuid}'
+    parent_types:
+      - solution
+    fields:
+      # RFC2119 検証が効かない点は quality の同フィールドのコメントを参照。
+      - name: specification
+        display_name: Specification
+        field_type: text
+        required: true
+        placeholder: The test process SHALL <describe the test planning decision>.
+      - name: specification_ja
+        display_name: Specification (ja)
+        field_type: text
+        required: true
+        placeholder: テストプロセスは <テスト計画上の決定> を満たさなければならない。
+    allowed_targets:
+      - relation: derives_from
+        targets:
+          - solution
+      - relation: depends_on
+        targets:
+          - test_plan
 
   # ---- 独立した根 ----
 
@@ -156,7 +230,8 @@ item_types:
           - infrastructure
 
   # 意思決定の記録。docs/adr/。仕様ツリーから分離した独立型で、justifies で
-  # requirement / design / infrastructure へ任意に接続する（接続は必須ではない）。
+  # requirement / design / infrastructure / quality / test_plan へ任意に接続する
+  # （接続は必須ではない）。
   - id: adr
     display_name: Architecture Decision Record
     prefix: ADR
@@ -204,6 +279,8 @@ item_types:
           - requirement
           - design
           - infrastructure
+          - quality
+          - test_plan
       # ADR ヘッダの「改訂対象:」。詳細は下の relations 節のコメントを参照。
       - relation: revises
         targets:
