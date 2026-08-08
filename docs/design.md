@@ -1,6 +1,7 @@
 # nput 設計書
 
-要求（requirement）を「どう実現するか」の全体像と、個別設計（design item）への索引。
+要求（requirement）とテスト計画（test_plan）を「どう実現するか」の全体像と、個別設計
+（design item）への索引。
 
 設計判断は **すべて `docs/design/` の item が持ち**、その決定と根拠は `docs/adr/` の ADR が
 `justifies` で裏づける。本文書は通読の入口として全体像だけを述べ、詳細は item へのリンクで
@@ -146,9 +147,10 @@ CI での実行基盤・キャッシュ・リリースは infrastructure item �
 ## 設計判断の所在
 
 本節はリンク集ではなく、決定がどこにあるかの案内。主要な設計判断の決定と根拠は **ADR が持つ**
-（`docs/adr/`）。ADR は `justifies` で requirement / design / infrastructure へ接続しているため、
-ある item を裏づける決定は本文書の一覧ではなく `sara query <フル ID> -u` で辿る。全 ADR を
-ここへ並べても改訂のたびに古くなるだけなので置かない。
+（`docs/adr/`）。`docs/model.yaml` は ADR の `justifies` の接続先として requirement / design /
+infrastructure / quality / test_plan の 5 型を許す（現時点で実際に張られているのは quality を
+除く 4 型）。ある item を裏づける決定は本文書の一覧ではなく `sara query <フル ID> -u` で辿る。
+全 ADR をここへ並べても改訂のたびに古くなるだけなので置かない。
 
 ---
 
@@ -156,6 +158,6 @@ CI での実行基盤・キャッシュ・リリースは infrastructure item �
 
 - `README.md` / `README.ja.md` — 3 層構造の最上段（導入と使い方）
 - `docs/concept.md` — コンセプト（solution / use_case への索引）
-- `docs/spec.md` — 仕様（requirement item への索引）
+- `docs/spec.md` — 仕様（requirement / quality / test_plan item への索引）
 - `docs/adr/` — 意思決定の記録
 - `docs/model.yaml` — sara の型定義（item の型・関係・ID 形式）
