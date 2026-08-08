@@ -17,10 +17,10 @@
 # 技術基盤:         quality → infrastructure、design → infrastructure
 # リスクとテスト:   requirement / design → risk → test_condition → test_case → defect
 # 独立した根:       adr（justifies で requirement / design / infrastructure / quality /
-#                   test_plan へ任意に接続する）
+#                   test_plan へ必須で接続する。1 本以上 → docs/adr/README.md）
 #
-# 親を持たない根は solution と adr のみ。他の型は upstream relation を 1 本以上持ち、
-# 「接続漏れ = orphan warning」が成立する（→ #203・#237）。
+# 親を持たない根は solution と adr のみ。adr も justifies（upstream relation）を
+# 1 本以上持つため、「接続漏れ = orphan warning」は全型で成立する（→ #203・#237・#253）。
 #
 # 例外は defect で、allowed_targets が空のため upstream relation を張る手段が無い
 # （親側の test_case が downstream の reveals で接続する）。defect item は作った時点で
@@ -267,8 +267,8 @@ item_types:
   # ---- 独立した根 ----
 
   # 意思決定の記録。docs/adr/。仕様ツリーから分離した独立型で、justifies で
-  # requirement / design / infrastructure / quality / test_plan へ任意に接続する
-  # （接続は必須ではない）。
+  # requirement / design / infrastructure / quality / test_plan へ必須で接続する
+  # （1 本以上。空 = 埋め忘れ。選定基準は docs/adr/README.md の `justifies` の項）。
   - id: adr
     display_name: Architecture Decision Record
     prefix: ADR
