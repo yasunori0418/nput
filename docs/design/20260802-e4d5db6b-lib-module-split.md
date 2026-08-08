@@ -8,7 +8,7 @@ satisfies:
   - "REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281"
   - "REQ-eb363122-385a-499c-a074-c95efb949d07"
   - "REQ-37b56673-6e40-4a1b-a2a7-5d3c084e3e66"
-  - "REQ-901993e9-771c-480a-ba0d-ca4be042e206"
+  - "TP-403c55c7-d996-4951-8e6b-c3a7dddd387c"
   - "REQ-b232ec98-af3b-41f3-a050-29d417322002"
 ---
 # DSG-e4d5db6b: lib は公開 API・型定義・manifest 生成・マーカー構築子の 4 ファイルへ分割する
@@ -28,7 +28,7 @@ lib/
 - **`default.nix` を公開 API のまとめに限る**ことで、REQ-97c1e088（`mkManifest` の引数は
   pkgs / entries / root の 3 つ）・REQ-60e6b49c（返り値）・REQ-eb363122
   （`mkOutOfStoreSymlink`）・REQ-37b56673（root マーカー 3 種）が定める API 面が 1 ファイルを
-  読めば分かる。`__internal` はここから露出するが安定 API ではなく、REQ-901993e9 が定める
+  読めば分かる。`__internal` はここから露出するが安定 API ではなく、TP-403c55c7 が定める
   テスト seam に限る
 - **`types.nix` を独立させる**のは、entries の型定義を `lib` と `modules/` の双方が
   共有するため。共有できる形にしておかないと、モジュール側が型を再定義して二重管理になる
