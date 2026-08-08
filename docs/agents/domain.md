@@ -26,14 +26,28 @@ don't skim it as an index.
 |---|---|---|---|
 | `docs/solution/` | solution | `SOL` | What nput is and what it solves |
 | `docs/use-cases/` | use_case | `UC` | How it gets used |
-| `docs/requirements/` | requirement | `REQ` | What must hold (normative, RFC2119) |
+| `docs/requirements/` | requirement | `REQ` | What must hold of the product (normative, RFC2119) |
 | `docs/design/` | design | `DSG` | How a requirement is realised |
+| `docs/quality/` | quality | `QA` | Norms binding the development process (normative, RFC2119) |
+| `docs/test-plan/` | test_plan | `TP` | Scope, levels and approach of testing (normative, RFC2119) |
 | `docs/infrastructure/` | infrastructure | `INF` | CI, release, docs site, merge gate |
+| `docs/risks/` | risk | `RISK` | What threatens a requirement or a design — **not started** |
+| `docs/test/<subject>/` | test_condition | `TC` | What a risk needs covered — **not started** |
+| `docs/test/<subject>/` | test_case | `CASE` | A concrete case under a condition — **not started** |
+| `docs/test/<subject>/` | defect | `D` | What a case revealed — **not started** |
 | `docs/adr/` | adr | `ADR` | Decisions, linked by `justifies` |
+
+The four types marked **not started** are defined in `docs/model.yaml` but have neither items nor
+directories yet; they get created when the test process is taken up, at which point the granularity
+of `<subject>` (per feature or per requirement) is decided. Note also that `defect` has no way to
+declare an upstream relation, so a `defect` item always raises an orphan warning — see the header
+of `docs/model.yaml`.
 
 Start from the overview that matches the topic (spec for behaviour, design for structure, concept
 for positioning), follow its link into the item, then traverse relations for the surrounding context.
-Full conventions — ID format, placement rules, which type owns what — are in `CLAUDE.md`.
+Full conventions — ID format, placement rules, which type owns what — are in `CLAUDE.md`. Which of
+`requirement` / `quality` / `test_plan` a norm belongs to, and whether a risk attaches to a
+`requirement` or a `design`, are decided by `docs/agents/sara-graph.md`.
 
 ## Traverse with `sara query`
 
@@ -74,7 +88,10 @@ This repo (single-context, with the item graph under `docs/`):
     ├── model.yaml                     ← the graph's type definitions
     ├── solution/  use-cases/          ← SOL / UC
     ├── requirements/  design/         ← REQ / DSG
+    ├── quality/  test-plan/           ← QA / TP
     ├── infrastructure/                ← INF
+    ├── risks/                         ← RISK (not started; no directory yet)
+    ├── test/<subject>/                ← TC / CASE / D (not started; no directory yet)
     └── adr/                           ← ADR (sequential IDs, unlike the rest)
 ```
 
