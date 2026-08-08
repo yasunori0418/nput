@@ -4,6 +4,11 @@ type: adr
 name: "root 一般化と「純粋関数プリミティブ」としての positioning"
 status: 採用
 status_note: "2026-06-11 改訂: root を公開引数へ昇格 → ADR-0005／2026-06-13 改訂: root を明示必須・3 マーカー化 → ADR-0007"
+justifies:
+  - "REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4"
+  - "REQ-d85f0cef-0f1e-4897-a841-41b61a8dae51"
+  - "REQ-4ec3accc-8bb6-461f-9024-dcf0027849e4"
+  - "REQ-37b56673-6e40-4a1b-a2a7-5d3c084e3e66"
 references:
   - "ADR-0002"
   - "ADR-0003"

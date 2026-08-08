@@ -4,6 +4,10 @@ type: adr
 name: "`--json` 機械可読出力を全サブコマンド一律のグローバルフラグとして導入する"
 status: 採用
 origin: "次期マイルストーン計画の grilling（2026-07-04）。ADR-0023 が「必要になった時点で追加」とした条件を、`nput prune` 新設（→ ADR-0034）や外部ツール連携（statusline / エディタ統合 / CI）の消費側要求で満たしたと判断した"
+justifies:
+  - "REQ-a5053191-1c6a-449b-9c5e-5ff49dc5aead"
+  - "REQ-2353259f-5878-452a-8e11-3445de69abc2"
+  - "REQ-fea038de-55eb-45ac-87fc-ec3a7287592a"
 revises:
   - "ADR-0023"
 references:

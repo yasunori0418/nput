@@ -4,6 +4,9 @@ type: adr
 name: "`listFilesInRepo` を `listFilesInSrc` に改名する"
 status: 採用
 origin: "「`listFilesInRepo` は初期コンセプト（git リポジトリを fetch して配置）由来の名で、`pkgs.hello` 等の store パッケージも走査できる今の射程より狭い」という指摘"
+justifies:
+  - "REQ-99ca5381-6c53-426c-b145-7b4297c53868"
+  - "DSG-d2e17f4f-0d32-45c1-8125-17e589664c85"
 references:
   - "ADR-0008"
 ---

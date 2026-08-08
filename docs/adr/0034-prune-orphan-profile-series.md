@@ -4,6 +4,8 @@ type: adr
 name: "`nput prune` を孤児 profile 系列の削除に限定して実装する"
 status: 採用
 origin: "次期マイルストーン計画の grilling（2026-07-04）。公開後の実運用（プロジェクトのクローン削除・`--root` 使い分け）で孤児系列が実際に蓄積し始めたことを「消費側の要求」と判断した"
+justifies:
+  - "REQ-d41b1d0a-c6d5-41cc-93f9-e5cc7f152da4"
 revises:
   - "ADR-0024"
 references:
