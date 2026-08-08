@@ -1,6 +1,7 @@
 # nput 設計書
 
-要求（requirement）を「どう実現するか」の全体像と、個別設計（design item）への索引。
+要求（requirement）とテスト計画（test_plan）を「どう実現するか」の全体像と、個別設計
+（design item）への索引。
 
 設計判断は **すべて `docs/design/` の item が持ち**、その決定と根拠は `docs/adr/` の ADR が
 `justifies` で裏づける。本文書は通読の入口として全体像だけを述べ、詳細は item へのリンクで

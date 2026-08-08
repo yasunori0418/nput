@@ -30,7 +30,7 @@ don't skim it as an index.
 | `docs/design/` | design | `DSG` | How a requirement or a test_plan is realised |
 | `docs/quality/` | quality | `QA` | Norms binding the development process (normative, RFC2119) |
 | `docs/test-plan/` | test_plan | `TP` | Scope, levels and approach of testing (normative, RFC2119) |
-| `docs/infrastructure/` | infrastructure | `INF` | The machinery upholding a quality or a design (CI, release, docs site, merge gate) |
+| `docs/infrastructure/` | infrastructure | `INF` | The machinery upholding a quality — CI, release, docs site, merge gate |
 | `docs/risks/` | risk | `RISK` | What threatens a requirement or a design — **not started** |
 | `docs/test/<subject>/` | test_condition | `TC` | What a risk needs covered — **not started** |
 | `docs/test/<subject>/` | test_case | `CASE` | A concrete case under a condition — **not started** |
@@ -40,6 +40,10 @@ don't skim it as an index.
 The four types marked **not started** are defined in `docs/model.yaml` but have neither items nor
 directories yet; they get created when the test process is taken up, at which point the granularity
 of `<subject>` (per feature or per requirement) is decided.
+
+The Holds column above describes each type as the graph currently stands, not the full set of
+parents `docs/model.yaml` permits: `infrastructure` may hang off a `design` as well as a
+`quality`, though every `INF` item satisfies a `QA` today.
 
 Every type but `solution` and `adr` hangs off at least one upstream relation, so a missing link
 shows up as an orphan warning. `defect` is the exception: it has no way to declare one, and so
@@ -56,7 +60,8 @@ Full conventions — ID format, placement rules, which type owns what — are in
 `sara` lives in the dev shell, so prefix commands with `nix develop ./dev --command`.
 
 ```bash
-sara query <full-id> -u      # upstream: requirement -> use_case -> solution
+sara query <full-id> -u      # upstream: requirement -> use_case -> solution,
+                             #           quality / test_plan -> solution
 sara query <full-id> -d      # downstream: requirement / test_plan -> design, quality -> infrastructure
                              #             (risk and below not started yet)
 sara check                   # validate the whole graph (broken refs / duplicate IDs / cycles)
