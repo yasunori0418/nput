@@ -24,8 +24,9 @@
 #
 # 例外は defect で、allowed_targets が空のため upstream relation を張る手段が無い
 # （親側の test_case が downstream の reveals で接続する）。defect item は作った時点で
-# 必ず orphan warning になるため、テスト工程に着手する段で reveals の逆向き upstream を
-# 定義するかを再検討する（現時点で defect item は 0 件）。
+# 必ず orphan warning になるため、テスト工程に着手する段で is_revealed_by（定義済みの
+# upstream relation）を defect の allowed_targets へ足すかを再検討する
+# （現時点で defect item は 0 件）。
 #
 # ## 組み込みから落とした型
 #
