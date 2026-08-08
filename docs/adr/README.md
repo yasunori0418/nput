@@ -161,14 +161,15 @@ references:             # 「関連:」の ADR
     ```
 - **`justifies` は必須**。その ADR が決めた item を 1 本以上張る。対象型は `model.yaml` の
   `justifies` の `allowed_targets`。**空 = 埋め忘れ**を `sara check` の orphan warning で機械判定
-  できる状態を保つため、空のまま出さない（→ Issue #212、Issue #243）。張る先の item がまだ無い
+  できる状態を保つため、空のまま出さない（→ #212、#243）。張る先の item がまだ無い
   場合は、**その ADR と同じ変更の中で item を起こしてから張る**。「後で張る」は許容しない
   （改訂注記と同じく、遅延は崩壊の原因になるため）。決定を item に落とせない ADR は、そもそも
   決定が定まっていないか ADR の粒度が大きすぎるので、先にそちらを解く。
 
   `model.yaml` のコメントは `justifies` を「任意に接続する（接続は必須ではない）」と書いたままで
-  未追随（別 issue で回収する・未起票）。**必須であることの規範は本 README が持つ**。`model.yaml`
-  を参照するのは対象型の一覧を得るためで、必須かどうかの判断には使わない。
+  未追随（冒頭の系統図と `adr` 型の 2 箇所。別 issue で回収する・未起票）。**必須であることの規範は
+  本 README が持つ**。`model.yaml` を参照するのは対象型の一覧を得るためで、必須かどうかの判断には
+  使わない。
 - ID は連番を維持する（`ADR-0049`）。ファイル名も `NNNN-<slug>.md` のまま。他の型は UUIDv4 二層 ID を使う
   （採番は devShell の `sara-id`）が、ADR だけは既存の相互参照・本ドキュメントの運用・Issue 言及を
   壊さないため連番のまま。
@@ -183,18 +184,24 @@ nix develop '.?dir=dev#sara' -c sara check
 
 合格条件は次の 2 つ。
 
-- `Broken reference`（存在しない ID への参照）・`Duplicate ID`・`Circular reference` がいずれも 0 件で
-  exit 0 になること。`justifies` に書いた ID のタイポはここで `Broken reference` として落ちる
-  （orphan warning は非空であることしか見ないため）。
-- **`Orphan item` の warning のうち `ADR-` で始まる ID の行が 1 件も無いこと**。ADR は仕様ツリーから
-  分離した独立型で upstream parent を持たないが、`justifies` を 1 本以上張っていれば orphan にはなら
-  ない。`ADR-` の行が出たら `justifies` の埋め忘れなので、無視せず張ってから完了とする
-  （→「frontmatter」節の `justifies` の項）。**他の型の orphan warning は移行中のため残ることがあり、
-  この合格条件の判定対象外**。件数は増減してよい。
+- `Broken reference`（存在しない ID への参照）・`Duplicate identifier`・`Circular reference detected`
+  がいずれも 0 件で exit 0 になること。
+- **`Orphan item` の行に `ADR-` で始まる ID が 1 つも現れないこと**。ADR は仕様ツリーから分離した
+  独立型で upstream parent を持たないが、`justifies` を 1 本以上張っていれば orphan にはならない。
+  `ADR-` が現れたら `justifies` の埋め忘れなので、無視せず張ってから完了とする（→「frontmatter」
+  節の `justifies` の項）。
 
-`strict_mode` は `sara.toml` で無効にしてあるため、orphan は warning 止まりで exit 0 を落とさない
-（→ ADR-0048）。ただし `sara check --strict` を付けて実行した場合は error に変わり exit 1 になる。
-CI の `sara` job は上と同じコマンド（`--strict` なし）を走らせる。
+2 つ目は他の型の warning に埋もれるので、出力を絞って見る。
+
+```bash
+nix develop '.?dir=dev#sara' -c sara check | grep 'Orphan item' | grep 'ADR-'
+```
+
+**他の型の orphan warning は移行中のため残ることがあり、上の合格条件の判定対象外**（確認不要）。
+`justifies` に書いた ID のタイポは orphan ではなく 1 つ目の `Broken reference` として落ちる
+（orphan は非空であることしか見ないため）。`strict_mode` は `sara.toml` で無効にしてあるので orphan は
+warning 止まりで exit 0 を落とさない（→ ADR-0048）が、`sara check --strict` を付けると error に変わり
+exit 1 になる。CI の `sara` job は上と同じコマンド（`--strict` なし）を走らせる。
 
 **注記漏れの確認は `sara check` では代替できない**。sara は frontmatter しか見ず、旧 ADR 側の blockquote
 注記が本文に書かれているかを検証しないため。`revises` に挙げた旧 ADR それぞれについて、逆引きで関係を
