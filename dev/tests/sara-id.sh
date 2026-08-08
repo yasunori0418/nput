@@ -338,15 +338,19 @@ fi
 #   - 6b-3: case アームの全入力（別名含む）を実起動し、宣言どおりの prefix を返す
 #
 # 6b-3 の検知力は入力によって違う。`*)` フォールバックが大文字化した結果と期待 prefix が
-# 一致する入力（risk → RISK・adr → ADR・qa → QA・tp → TP 等の短縮別名）は、case アームを
-# 削っても同じ値が返るため退行を検知できない。一方 quality → QUALITY・use-case →
-# USE-CASE のように一致しない入力は検知する。除外リストを手で持つとその一覧自体が
-# 事実と乖離するので、6b-1 の集合突合で漏れを押さえたうえで 6b-3 は全入力を回す。
+# 一致する入力（sol → SOL・qa → QA・case → CASE 等）は、case アームを削っても同じ値が
+# 返るため退行を検知できない。一方 quality → QUALITY・use-case → USE-CASE のように
+# 一致しない入力は検知する。除外リストを手で持つとその一覧自体が事実と乖離するので、
+# 6b-1 の集合突合で漏れを押さえたうえで 6b-3 は全入力を回す。
+#
+# 正式型名は 6b-3 で自己修復する（risk → RISK・adr → ADR）ものも 6b-1 が確実に拾う。
 #
 # 担保できないもの（正本が無いため、この節では検知しない）:
-#   - 別名（req / uc / use-case …）の削除。model.yaml は正式型名しか持たないので
-#     6b-1 / 6b-2 の集合突合には現れず、6b-3 も短縮別名はフォールバックと一致する。
-#     ハイフン別名（use-case → USE-CASE）だけは 6b-3 が検知する
+#   - 短縮別名の削除。model.yaml は正式型名しか持たないので 6b-1 / 6b-2 の集合突合には
+#     現れず、6b-3 もフォールバックと一致するため通る。該当するのは sol / uc / req /
+#     dsg / inf / qa / tp / tc / case の 9 件。とくに case（test_case の別名）は
+#     `case) prefix=CASE ;;` を削っても全経路が緑のまま通る。ハイフン別名
+#     （use-case / test-plan / test-condition / test-case）は 6b-3 が検知する
 #   - 既存 prefix を再利用した誤アーム（`requirment) prefix=REQ` のような綴り誤り）。
 #     6b-2 は prefix の集合しか見ないので別名と区別が付かず、SUT も同じ flake.nix から
 #     ビルドされるため 6b-3 でも REQ- を返して通る
@@ -394,21 +398,25 @@ else
   ' "$model_yaml")"
 
   # case アームから「入力名 → prefix」を全て取り出す（正式型名・別名の両方）。
-  # 拾うのは `<名前>[ | <名前>…>) prefix=<PREFIX> ;;` の形をした行だけに限る。
+  # 拾うのは `<名前>[ | <名前> …]) prefix=<PREFIX> ;;` の形をした行だけに限る。
   # `prefix=` を含むだけの行（`*)` フォールバック・コメント・他の代入）を拾うと、
   # `)` を持たない行の左半分が行全体になってゴミの入力名が契約集合へ紛れ込む。
+  #
+  # 名前・prefix とも数字を許す。sara の ID 検証は「英数字 / ハイフン / アンダースコア」
+  # までしか要求しない（model.yaml 冒頭）ので、数字を含む型名・prefix は仕様上ありうる。
+  # ここで落とすと 6b-1 が「アームに無い」と誤診し、原因追跡が遠回りになる。
   mapfile -t arm_pairs < <(
     awk '
       /case "\$1" in/ { in_case = 1; next }
       /^ *esac/       { in_case = 0 }
       !in_case        { next }
-      /^ *[a-z_][a-z_|[:space:]-]*\) *prefix=[A-Z]+ *;;/ {
+      /^ *[a-zA-Z0-9_][a-zA-Z0-9_|[:space:]-]*\) *prefix=[A-Za-z0-9_-]+ *;;/ {
         line = $0
         sub(/^ */, "", line)
         split(line, halves, ")")
         prefix = line
         sub(/.*prefix=/, "", prefix)
-        sub(/[^A-Za-z0-9_].*/, "", prefix)
+        sub(/[^A-Za-z0-9_-].*/, "", prefix)
         n = split(halves[1], names, "|")
         for (i = 1; i <= n; i++) {
           gsub(/ /, "", names[i])
@@ -470,8 +478,11 @@ else
     # だけで、既存 prefix を再利用したアーム（正当な別名も、綴りを誤った型名も）は
     # 区別が付かず素通りする（→ 節冒頭「担保できないもの」）。
     backward_ok=1
+    alias_checked=0
     for arm_name in "${!arm_prefix[@]}"; do
+      # 正式型名は 6b-1 が model.yaml 起点で見ているのでここでは飛ばす。
       [[ -n "${model_prefix_of[$arm_name]:-}" ]] && continue
+      alias_checked=$((alias_checked + 1))
       arm_p="${arm_prefix[$arm_name]}"
       known_prefix=0
       for model_type in "${!model_prefix_of[@]}"; do
@@ -483,7 +494,7 @@ else
       fi
     done
     if [[ "$backward_ok" -eq 1 ]]; then
-      pass "case アームの全 ${#arm_prefix[@]} 入力が model.yaml のいずれかの prefix に対応する"
+      pass "case アームの別名 $alias_checked 件が model.yaml のいずれかの prefix に対応する（正式型名は 6b-1）"
     fi
 
     # --- 6b-3. 全入力を実起動して宣言どおりの prefix を返すか ----------------
