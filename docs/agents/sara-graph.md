@@ -13,7 +13,7 @@ still passes `sara check`; and the RFC2119 check offers no help either, since sa
 it to any non-empty `specification` whatever the type holding it (`validate_item_metadata`
 branches on the field, not on `item_type` — verified against sara 0.9.4 by stripping the
 SHALL from a `test_plan` and watching the check fail). The choice is therefore a judgement
-call, made by the rule below and upheld by review — nothing catches a wrong one for us.
+call, made by the rule below and upheld by review alone.
 
 > Ask **who the norm binds**. A norm binding the product as the user meets it is a
 > `requirement`. A norm binding the people and the process that build the product is a
