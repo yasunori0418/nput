@@ -8,19 +8,19 @@ specification: |
   Every change to `main` SHALL be verified automatically before it is merged. The test
   layers whose behaviour varies by platform — nix evaluation and build among them — SHALL
   be verified on every platform the project declares as verified in CI, and the layers that
-  do not SHALL be verified on at least one such platform. Passing that verification SHALL be a technical precondition of merging
-  rather than a rule contributors are asked to follow, and no participant SHALL be able to
-  bypass it. A change that does not affect the verified sources MAY skip the verification
-  work itself, but SHALL NOT thereby become unmergeable.
+  do not SHALL be verified on at least one such platform. Passing that verification SHALL
+  be a technical precondition of merging rather than a rule contributors are asked to
+  follow, and no participant SHALL be able to bypass it. A change that does not affect the
+  verified sources MAY skip the verification work itself, but SHALL NOT thereby become
+  unmergeable.
 specification_ja: |
   main へのすべての変更は、マージ前に自動的に検証されなければならない。振る舞いが
   プラットフォームによって変わるテスト層（nix の評価とビルドはこれにあたる）は、
   プロジェクトが CI での検証対象として宣言する全プラットフォーム上で検証されなければ
   ならず、そうでない層は、そのうち少なくとも 1 つのプラットフォーム上で検証されなければ
-  ならない。検証の成功は、参加者に遵守を求める運用
-  ルールではなくマージの技術的な必須条件でなければならず、いかなる参加者もこれを迂回
-  できてはならない。検証対象のソースに影響しない変更は検証の実行自体を省いてもよいが、
-  それによってマージ不能になってはならない。
+  ならない。検証の成功は、参加者に遵守を求める運用ルールではなくマージの技術的な必須条件で
+  なければならず、いかなる参加者もこれを迂回できてはならない。検証対象のソースに影響しない
+  変更は検証の実行自体を省いてもよいが、それによってマージ不能になってはならない。
 ---
 # QA-a5f7f088: マージ前の自動検証を必須にし、プラットフォーム差が効く層は全プラットフォームで通す
 
