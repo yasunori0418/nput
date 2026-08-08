@@ -67,7 +67,7 @@ status_note: "…"        # ステータス行のカッコ書きがあるとき�
 issues:                 # 「関連:」「起点 Issue:」「起点:」の GitHub Issue 番号
   - "#123"
 origin: "…"             # 「起点:」の内容（無ければ「起点 Issue:」「参照:」）
-justifies:              # この ADR が決めた item（必須・1 本以上。対象型は model.yaml 参照）
+justifies:              # この ADR が決めた item（必須・1 本以上。→ 下の `justifies` の項）
   - "REQ-8521e8f8-99cc-47f0-b7d0-70c24c837612"
 revises:                # 「改訂対象:」の ADR
   - "ADR-0020"
@@ -160,13 +160,15 @@ references:             # 「関連:」の ADR
     ADR-0038 → 0039 / 0040
     ```
 - **`justifies` は必須**。その ADR が決めた item を 1 本以上張る。対象型は `model.yaml` の
-  `justifies` の `allowed_targets`（requirement / design / infrastructure / quality / test_plan）。
-  **空 = 埋め忘れ**を `sara check` の orphan warning で機械判定できる状態を保つため、空のまま出さない
-  （→ #212、#243）。張る先の item がまだ無い場合は、**その ADR と同じ変更の中で item を起こしてから
-  張る**。「後で張る」は許容しない（改訂注記と同じく、遅延は崩壊の原因になるため）。決定を item に
-  落とせない ADR は、そもそも決定が定まっていないか ADR の粒度が大きすぎるので、先にそちらを解く。
-  なお orphan warning が担保するのは非空であることまでで、**存在しない ID を書いた場合は orphan で
-  はなく `Broken reference` の error として落ちる**。
+  `justifies` の `allowed_targets`。**空 = 埋め忘れ**を `sara check` の orphan warning で機械判定
+  できる状態を保つため、空のまま出さない（→ Issue #212、Issue #243）。張る先の item がまだ無い
+  場合は、**その ADR と同じ変更の中で item を起こしてから張る**。「後で張る」は許容しない
+  （改訂注記と同じく、遅延は崩壊の原因になるため）。決定を item に落とせない ADR は、そもそも
+  決定が定まっていないか ADR の粒度が大きすぎるので、先にそちらを解く。
+
+  `model.yaml` のコメントは `justifies` を「任意に接続する（接続は必須ではない）」と書いたままで
+  未追随（別 issue で回収する・未起票）。**必須であることの規範は本 README が持つ**。`model.yaml`
+  を参照するのは対象型の一覧を得るためで、必須かどうかの判断には使わない。
 - ID は連番を維持する（`ADR-0049`）。ファイル名も `NNNN-<slug>.md` のまま。他の型は UUIDv4 二層 ID を使う
   （採番は devShell の `sara-id`）が、ADR だけは既存の相互参照・本ドキュメントの運用・Issue 言及を
   壊さないため連番のまま。
@@ -182,15 +184,17 @@ nix develop '.?dir=dev#sara' -c sara check
 合格条件は次の 2 つ。
 
 - `Broken reference`（存在しない ID への参照）・`Duplicate ID`・`Circular reference` がいずれも 0 件で
-  exit 0 になること。
-- **`Orphan item` の warning が ADR に 1 件も出ないこと**。ADR は仕様ツリーから分離した独立型で
-  upstream parent を持たないが、`justifies` を 1 本以上張っていれば orphan にはならない。ADR に
-  orphan warning が出たら `justifies` の埋め忘れなので、無視せず張ってから完了とする（→「frontmatter」
-  節の `justifies` の項）。
+  exit 0 になること。`justifies` に書いた ID のタイポはここで `Broken reference` として落ちる
+  （orphan warning は非空であることしか見ないため）。
+- **`Orphan item` の warning のうち `ADR-` で始まる ID の行が 1 件も無いこと**。ADR は仕様ツリーから
+  分離した独立型で upstream parent を持たないが、`justifies` を 1 本以上張っていれば orphan にはなら
+  ない。`ADR-` の行が出たら `justifies` の埋め忘れなので、無視せず張ってから完了とする
+  （→「frontmatter」節の `justifies` の項）。**他の型の orphan warning は移行中のため残ることがあり、
+  この合格条件の判定対象外**。件数は増減してよい。
 
-**ADR 以外の型の orphan warning は移行中のため残ることがある**。ADR とは別件なので混同しない。
-残っている型と件数は都度 `sara check` の出力を見る。なお `strict_mode` は無効で、orphan は warning
-止まりで exit 0 を落とさない（→ ADR-0048）。CI の `sara` job も同じコマンドを走らせる。
+`strict_mode` は `sara.toml` で無効にしてあるため、orphan は warning 止まりで exit 0 を落とさない
+（→ ADR-0048）。ただし `sara check --strict` を付けて実行した場合は error に変わり exit 1 になる。
+CI の `sara` job は上と同じコマンド（`--strict` なし）を走らせる。
 
 **注記漏れの確認は `sara check` では代替できない**。sara は frontmatter しか見ず、旧 ADR 側の blockquote
 注記が本文に書かれているかを検証しないため。`revises` に挙げた旧 ADR それぞれについて、逆引きで関係を
