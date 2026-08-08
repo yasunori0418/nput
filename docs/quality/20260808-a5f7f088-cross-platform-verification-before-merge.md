@@ -5,18 +5,19 @@ name: "マージ前の自動検証を必須にし、プラットフォーム差�
 derives_from:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 specification: |
-  Every change to `main` SHALL be verified automatically before it is merged. The layers
-  whose behaviour varies by platform SHALL be verified on every platform the project
-  declares as verified in CI, and the layers that do not SHALL be verified on at least one
-  such platform. Passing that verification SHALL be a technical precondition of merging
+  Every change to `main` SHALL be verified automatically before it is merged. The test
+  layers whose behaviour varies by platform — nix evaluation and build among them — SHALL
+  be verified on every platform the project declares as verified in CI, and the layers that
+  do not SHALL be verified on at least one such platform. Passing that verification SHALL be a technical precondition of merging
   rather than a rule contributors are asked to follow, and no participant SHALL be able to
   bypass it. A change that does not affect the verified sources MAY skip the verification
   work itself, but SHALL NOT thereby become unmergeable.
 specification_ja: |
   main へのすべての変更は、マージ前に自動的に検証されなければならない。振る舞いが
-  プラットフォームによって変わる層は、プロジェクトが CI での検証対象として宣言する全
-  プラットフォーム上で検証されなければならず、そうでない層は、そのうち少なくとも 1 つの
-  プラットフォーム上で検証されなければならない。検証の成功は、参加者に遵守を求める運用
+  プラットフォームによって変わるテスト層（nix の評価とビルドはこれにあたる）は、
+  プロジェクトが CI での検証対象として宣言する全プラットフォーム上で検証されなければ
+  ならず、そうでない層は、そのうち少なくとも 1 つのプラットフォーム上で検証されなければ
+  ならない。検証の成功は、参加者に遵守を求める運用
   ルールではなくマージの技術的な必須条件でなければならず、いかなる参加者もこれを迂回
   できてはならない。検証対象のソースに影響しない変更は検証の実行自体を省いてもよいが、
   それによってマージ不能になってはならない。
@@ -42,10 +43,10 @@ nput は複数の OS / system で動くことを主張するツールであり�
 ただし「実走を省く」ことが「マージできなくなる」に転化してはならない — 省略の手段はこの制約と
 両立するものに限られる。
 
-「検証対象として宣言するプラットフォーム」の実体は INF-d1230e1f が持つ（現在は
-`ubuntu-latest` / `ubuntu-24.04-arm` / `macos-latest` の 3 環境。`flake.nix` の `perSystem` が
-定義する 4 system とは一致しない）。各テストレベルの範囲・アプローチも本 item は規定せず、
-何をどこまでテストするかは test_plan（`docs/test-plan/`）が、実装形は design が持つ。
+「検証対象として宣言するプラットフォーム」の実体は INF-d1230e1f が持つ。これは `flake.nix` の
+`perSystem` が定義する system の集合とは一致せず、**CI で検証すると宣言した範囲**を指す。各
+テストレベルの範囲・アプローチも本 item は規定せず、何をどこまでテストするかは test_plan
+（`docs/test-plan/`）が、実装形は design が持つ。
 
 ## 出典
 
