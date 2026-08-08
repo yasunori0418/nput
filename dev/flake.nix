@@ -120,6 +120,8 @@
                 requirement | req) prefix=REQ ;;
                 design | dsg) prefix=DSG ;;
                 infrastructure | inf) prefix=INF ;;
+                quality | qa) prefix=QA ;;
+                test_plan | test-plan | tp) prefix=TP ;;
                 adr) prefix=ADR ;;
                 risk) prefix=RISK ;;
                 test_condition | test-condition | tc) prefix=TC ;;

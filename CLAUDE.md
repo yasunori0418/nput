@@ -24,15 +24,24 @@ item を新設し、概要文書にはリンクを 1 行足すに留める。
 | `docs/solution/` | solution | `SOL` | なし（根）|
 | `docs/use-cases/` | use_case | `UC` | solution |
 | `docs/requirements/` | requirement | `REQ` | use_case |
-| `docs/design/` | design | `DSG` | requirement |
-| `docs/infrastructure/` | infrastructure | `INF` | なし（根）|
+| `docs/design/` | design | `DSG` | requirement / test_plan |
+| `docs/quality/` | quality | `QA` | solution |
+| `docs/test-plan/` | test_plan | `TP` | solution |
+| `docs/infrastructure/` | infrastructure | `INF` | quality / design |
+| `docs/risks/` | risk | `RISK` | requirement / design |
+| `docs/test/<対象>/` | test_condition | `TC` | risk |
+| `docs/test/<対象>/` | test_case | `CASE` | test_condition |
+| `docs/test/<対象>/` | defect | `D` | test_case |
 | `docs/adr/` | adr | `ADR` | なし（分離型）|
 
-型・関係・フィールドの定義は `docs/model.yaml` が持つ。
+型・関係・フィールドの定義は `docs/model.yaml` が持つ。親を持たない根は **solution と adr のみ**で、
+他の型は upstream relation を 1 本以上張る（張り忘れは `sara check` の orphan warning で出る）。
+例外は defect で、upstream relation を張る手段が無く必ず orphan warning になる（→ model.yaml 冒頭）。
 
-**risk（`RISK`）とテスト系（`TC` / `CASE` / `D`）は model.yaml に定義済みだが、item も
-ディレクトリもまだ無い。** テスト工程に着手する段で `docs/risks/` と `docs/test/<対象>/` を
-作る。`<対象>` の粒度（機能単位か requirement 単位か）はその時点で決めて本節へ追記する。
+**quality（`QA`）・test_plan（`TP`）・risk（`RISK`）・テスト系（`TC` / `CASE` / `D`）は
+model.yaml に定義済みだが、item もディレクトリもまだ無い。** quality / test_plan は既存 item の
+移設で作られる。テスト系は工程に着手する段で `docs/risks/` と `docs/test/<対象>/` を作り、
+`<対象>` の粒度（機能単位か requirement 単位か）はその時点で決めて本節へ追記する。
 risk を `requirement` と `design` のどちらに張るかの使い分けは `docs/agents/sara-graph.md`。
 
 ### ID 規約（UUIDv4 二層構成）
@@ -48,9 +57,10 @@ risk を `requirement` と `design` のどちらに張るかの使い分けは `
 - **ADR のみ連番を維持する**。既存 ADR の相互参照・`docs/adr/README.md` の運用・Issue 言及を
   壊さないため。`sara-id ADR` は採番せず exit 2 で落ちる仕様なので、`docs/adr/` の最大値 + 1 を
   手で採る
-- requirement の `specification` フィールドは **英語で書く**。sara が RFC2119 キーワード
-  （MUST / SHALL / SHOULD …）の存在をハードコードで検証するため。対になる日本語の規範文は
-  `specification_ja` に併記する
+- `specification` フィールドを持つ型（requirement / quality / test_plan）は**英語で書く**。
+  sara が RFC2119 キーワード（MUST / SHALL / SHOULD …）の存在をハードコードで検証するため。
+  対になる日本語の規範文は `specification_ja` に併記する。ただし検証が効くのは requirement
+  だけ（型名がハードコードされている）で、quality / test_plan の様式はレビューで守る
 
 ### item を辿る（`sara query`）
 
