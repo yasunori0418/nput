@@ -10,6 +10,8 @@ justifies:
   - "REQ-1be4d678-959c-44d7-a346-44bfd95af56e"
   - "REQ-844ee375-919f-4341-81e1-a5f89fd32840"
   - "REQ-a8a923ad-07fb-4582-b90a-07a6e0c41baa"
+  - "REQ-4fc98fa6-fd5f-4f25-8b10-60755bf49bd2"
+  - "REQ-d2277c7a-7992-49af-a9dc-4cc73843a6f9"
 references:
   - "ADR-0001"
 ---

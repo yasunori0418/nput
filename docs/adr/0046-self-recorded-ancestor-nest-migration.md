@@ -9,6 +9,7 @@ origin: "dotfiles 側での実遭遇（#170）と、次期マイルストーン�
 justifies:
   - "REQ-c9ab91c1-f778-4f87-a2ea-c66d6b3c2575"
   - "REQ-0e341430-17f0-498b-9439-65491652163a"
+  - "REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98"
 revises:
   - "ADR-0015"
 references:
