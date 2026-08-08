@@ -4,7 +4,7 @@ type: design
 name: "実装スコープを standalone CLI + project mode + home mode に限り、system mode とモジュール 2 層は将来拡張に置く"
 satisfies:
   - "REQ-14f0aec9-abae-4621-82f3-40536a1ad904"
-  - "REQ-690f2730-2628-420d-8e72-ed1ce747ac1e"
+  - "TP-b7f1dc79-0222-4b6e-9e91-0545046e34f2"
   - "REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9"
 ---
 # DSG-4a84f282: 実装スコープを standalone CLI + project mode + home mode に限り、system mode とモジュール 2 層は将来拡張に置く
@@ -30,7 +30,7 @@ REQ-14f0aec9 が nput CLI を一次 UX に据え、project mode を devShell 同
   home-manager モジュールで確立する engine kick の形（DSG-98d7fa5d の
   ビルド済み manifest クラス）をそのまま流用できる。実装が後になっても
   engine の設計が変わらない。実 activate を E2E で検証しないことは
-  REQ-690f2730 が定めている
+  TP-b7f1dc79 が定めている
 - **system mode**: root マーカーとしては `systemRoot` を最初から union に含めるため
   （root マーカーの型は requirement 側の担当）、engine の root 解決に
   分岐を後から足すだけで済む

@@ -1,9 +1,11 @@
 # nput 仕様書
 
-nput が「何を満たすべきか」の全体像と、個別仕様（requirement item）への索引。
+nput が「何を満たすべきか」の全体像と、個別仕様（requirement item）・テスト計画
+（test_plan item）への索引。
 
-規範的な仕様は **すべて `docs/requirements/` の item が持つ**。本文書は通読の入口として
-全体像だけを述べ、詳細は item へのリンクで示す（README → 本文書 → item の 3 層構造）。
+規範的な仕様は **すべて `docs/requirements/` の item が持ち**、何をどこまでテストするかは
+`docs/test-plan/` の item が持つ。本文書は通読の入口として全体像だけを述べ、詳細は item への
+リンクで示す（README → 本文書 → item の 3 層構造）。
 
 > **この文書の書き方（規約）**
 >
@@ -11,7 +13,8 @@ nput が「何を満たすべきか」の全体像と、個別仕様（requireme
 >   ブロックはこの制限に含めない
 > - **詳細は必ず item へリンクし、本文に書き下さない**。仕様の断片をここへ写すと item と
 >   二重管理になり、改訂時に片方だけ古くなる
-> - requirement item を足したら本文書のリンク集にも足す。逆に本文書へ仕様を書き足さない
+> - requirement / test_plan item を足したら本文書のリンク集にも足す。逆に本文書へ仕様を
+>   書き足さない
 > - item を横断して検索・追跡するには `sara query`（→ `docs/agents/domain.md`）を使う
 >
 > **item の `## 出典` は概要文書の現行章立てを指さない。** 出典が記録するのは分割時点
@@ -142,7 +145,6 @@ eval して root を解決し、flock を取ってから `nix build` をロッ�
 - [REQ-9341fa5d](requirements/20260802-9341fa5d-json-error-layering.md) — エンベロープのエラーは主体の有無で層を分けコードを分類する
 - [REQ-57137302](requirements/20260802-57137302-json-item-id-derivation.md) — item id は identity の JCS を SHA-256 した小文字 hex とする
 - [REQ-2a613337](requirements/20260802-2a613337-json-reset-requires-yes.md) — reset --json は --yes を必須とし無ければ fail fast する
-- [REQ-2381d93a](requirements/20260802-2381d93a-json-conformance-verification.md) — エンベロープの niface 適合を Go テストと E2E の両方で検証する
 
 ### 実行フロー
 
@@ -287,10 +289,13 @@ root は評価時にパスへ展開せず、マーカーが運ぶ kind をエン
 
 ---
 
-## E2E 検証範囲（非 NixOS）
+## テスト計画
 
-- [REQ-6419e4b0](requirements/20260802-6419e4b0-e2e-harness-scope.md) — 非 NixOS で動く主張を実 nix の一気通貫 E2E で検証する
-- [REQ-690f2730](requirements/20260802-690f2730-nixos-vm-test-future.md) — NixOS / nix-darwin モジュール経路の実 activate は E2E ハーネスの対象外とする
+test_plan は requirement とは別系統で、use_case を経由せず solution 直下に接続する。
+
+- [TP-229b69c0](test-plan/20260808-229b69c0-e2e-harness-scope.md) — 非 NixOS で動く主張を実 nix の一気通貫 E2E で検証する
+- [TP-b7f1dc79](test-plan/20260808-b7f1dc79-nixos-vm-test-future.md) — NixOS / nix-darwin モジュール経路の実 activate は E2E ハーネスの対象外とする
+- [TP-d3000054](test-plan/20260808-d3000054-json-conformance-verification.md) — エンベロープの niface 適合を Go テストと E2E の両方で検証する
 
 ---
 
@@ -306,5 +311,5 @@ root は評価時にパスへ展開せず、マーカーが運ぶ kind をエン
 - `README.md` / `README.ja.md` — 3 層構造の最上段（導入と使い方）
 - `docs/concept.md` — コンセプト（solution / use_case への索引）
 - `docs/design.md` — 設計（design item への索引）
-- `docs/adr/` — 意思決定の記録。requirement / design を `justifies` で裏づける
+- `docs/adr/` — 意思決定の記録。requirement / design / test_plan などを `justifies` で裏づける
 - `docs/model.yaml` — sara の型定義（item の型・関係・ID 形式）

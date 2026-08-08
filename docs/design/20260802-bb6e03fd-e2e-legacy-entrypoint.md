@@ -6,13 +6,13 @@ satisfies:
   - "REQ-c890ce4a-6528-4ab3-ac86-23d7aebff7da"
   - "REQ-da253cab-34d4-4d6e-96f0-de99e012b376"
   - "REQ-67095391-eab2-45d2-b75b-b428d481bcc2"
-  - "REQ-6419e4b0-629c-435f-b1e1-0bc996b5e61d"
+  - "TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9"
 ---
 # DSG-bb6e03fd: E2E に legacy entrypoint シナリオを置き、NIX_PATH を flake.lock の nixpkgs に pin して検証する
 
 ## 設計
 
-REQ-6419e4b0 がハーネスに課すシナリオ 5 件（project mode / home mode / stale 除去 /
+TP-229b69c0 がハーネスに課すシナリオ 5 件（project mode / home mode / stale 除去 /
 copy place-once・out-of-store / HM module）に加えて、**legacy entrypoint シナリオ**を
 E2E に置く。
 
