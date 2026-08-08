@@ -18,10 +18,19 @@ references:
 
 - ステータス: 採用
 - 日付: 2026-08-02
-- 関連: ADR-0030, ADR-0037, `docs/spec.md`, `docs/design.md`, `docs/concept.md`, `docs/adr/README.md`, GitHub Issue #203, #206, #207
+- 関連: ADR-0030, ADR-0037, ADR-0049, `docs/spec.md`, `docs/design.md`, `docs/concept.md`, `docs/adr/README.md`, GitHub Issue #203, #206, #207
 - 改訂対象: なし（新領域。「仕様とテストの全体像把握」= quality-observability（→ Issue #203）の実現手段を
   差し替えるが、既存 ADR の決定を反転しない）
 - 起点: epic #203 の grilling セッション（2026-07-31・2026-08-01）で確定
+
+> **2026-08-08 改訂注記（ADR-0049）**: 本 ADR §2 の型定義表（10 型）が対象。sara を採用してドキュメントを
+> ナレッジグラフ化する決定そのもの（§1）・`docs/model.yaml` で組み込みモデルを全面置換する方針（§2 前段）・
+> `supersedes` を当面定義せず `revises` を独自定義する決定（§3）・UUIDv4 二層 ID と ADR の連番維持（§4）・
+> CI 非必須開始（§5）はいずれも不変。変わったのは型の内訳と接続で、`quality`（QA）/ `test_plan`（TP）を
+> 新設して 12 型となり、`infrastructure` は root ではなく quality / design を `satisfies` する型へ、
+> `design` の親は requirement / test_plan へ、ADR の `justifies` 対象は requirement / design /
+> infrastructure / quality / test_plan へそれぞれ拡張された。§2 の表をそのまま実装に使わないこと
+> （→ ADR-0049）。
 
 ## 背景
 
