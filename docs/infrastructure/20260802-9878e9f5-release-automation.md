@@ -4,6 +4,8 @@ type: infrastructure
 name: "リリース自動化（VERSION ファイル起点の bump PR・自動タグ・自動リリースノート）"
 depends_on:
   - "INF-8b97573f-d4d6-4abf-85e2-d859afbd96c6"
+satisfies:
+  - "QA-0949183b-7ef0-4cae-b88f-3ad361576b63"
 ---
 # INF-9878e9f5: リリース自動化（VERSION ファイル起点の bump PR・自動タグ・自動リリースノート）
 
