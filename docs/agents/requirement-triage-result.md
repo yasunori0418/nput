@@ -9,11 +9,13 @@ T3b（Issue #241）の移設完了後に削除する一時ファイル。
 対象は移設（#238 / #239）後に残る **134 件**（2026-08-08 時点）。表の行は手作業の判定結果で
 あり自動生成物ではないので、`docs/requirements/` が増減しても追従しない。表が実体と一致して
 いることは件数ではなく **ID 集合の差分**で確かめる（差分が出たら、その時点で表は陳腐化して
-いる）:
+いる）。**リポジトリルートで bash / zsh から実行する**（プロセス置換を使うため sh / dash では
+動かない。両辺ともルート起点の相対パスなので、別ディレクトリで実行すると差分が全件出て
+陳腐化と見分けが付かない）:
 
 ```bash
 diff <(sed -n 's/^| `\(REQ-[0-9a-f]\{8\}\)` .*/\1/p' docs/agents/requirement-triage-result.md | sort) \
-     <(rg -o '^id: "(REQ-[0-9a-f]{8})' -r '$1' docs/requirements/*.md | cut -d: -f2 | sort)
+     <(rg --no-filename -o '^id: "(REQ-[0-9a-f]{8})' -r '$1' docs/requirements/*.md | sort)
 ```
 
 | 判定 | 件数 |
@@ -33,10 +35,19 @@ requirement には多い」という Issue #240 背景の想定は、全件を�
 レビューで否認された場合は #241 ではなく本 issue（#240）へ差し戻し、否認された判定を
 基準に照らして再判定してから改めて #241 へ渡す。
 
-**申し送り（境界外・#241 での対応）**: `docs/quality/` が 0 件のまま残る帰結は、`CLAUDE.md`
-「ドキュメント」節の「quality / test_plan は既存 item の移設で作られる」という記述と食い違う。
-同節は `docs/test-plan/` を「item もディレクトリもまだ無い」と書いたままでもあり（#238 /
-#239 で作成済み）、いずれも本レーンの境界（`docs/agents/**`）の外なので #241 側で直す。
+**申し送り（境界外・#241 での対応）**: いずれも本レーンの境界（`docs/agents/**`）の外なので
+#241 側で直す。
+
+1. `docs/quality/` が 0 件のまま残る帰結は、`CLAUDE.md`「ドキュメント」節の「quality /
+   test_plan は既存 item の移設で作られる」という記述と食い違う。同節は `docs/test-plan/` を
+   「item もディレクトリもまだ無い」と書いたままでもある（#238 / #239 で作成済み）
+2. `docs/model.yaml` の `quality` / `test_plan` の `specification` フィールドに付いた
+   「RFC2119 キーワード検証は requirement 型にハードコードされており quality / test_plan の
+   specification には効かない」というコメントは**事実に反する**。sara 0.9.4 の
+   `validate_item_metadata` は `item_type` ではなく `specification` フィールドの有無だけで
+   分岐しており、実地でも `test_plan` item から SHALL を外すと
+   `Test Plan specification must contain at least one RFC2119 keyword` で `sara check` が
+   落ちることを確認した
 
 ## quality item が今後生まれる先
 

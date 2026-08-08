@@ -7,14 +7,13 @@ How to place items in this repo's sara knowledge graph (`docs/model.yaml`, valid
 
 Three types carry a `specification` / `specification_ja` pair and hang off the spec side of
 the graph: `requirement` (under a `use_case`), `quality` (under the `solution`) and
-`test_plan` (under the `solution`). Graph validation cannot tell them apart — an item placed
-in the wrong one still passes `sara check`, because a wrong parent of the right shape is
-indistinguishable from a right one. What is *not* symmetric is the RFC2119 check: sara
-hardcodes it to `requirement` (`sara-core/src/validation/rules/metadata.rs`, and neither
-`strict_mode` nor `model.yaml` can turn it off), so moving an item out of `requirement`
-silently drops the only mechanical check its `specification` had. A wrong move therefore
-costs verification rather than merely relabelling. The choice is a judgement call, made by
-the rule below and upheld by review — nothing catches a wrong one for us.
+`test_plan` (under the `solution`). Nothing mechanical tells them apart. A wrong parent of
+the right shape is indistinguishable from a right one, so an item placed in the wrong type
+still passes `sara check`; and the RFC2119 check offers no help either, since sara applies
+it to any non-empty `specification` whatever the type holding it (`validate_item_metadata`
+branches on the field, not on `item_type` — verified against sara 0.9.4 by stripping the
+SHALL from a `test_plan` and watching the check fail). The choice is therefore a judgement
+call, made by the rule below and upheld by review — nothing catches a wrong one for us.
 
 > Ask **who the norm binds**. A norm binding the product as the user meets it is a
 > `requirement`. A norm binding the people and the process that build the product is a
