@@ -331,7 +331,9 @@ fi
 # 検証は「非空」「英数字 / ハイフン / アンダースコア」のみ）ため、誤 prefix の ID が
 # 黙って frontmatter へ流入する。
 #
-# 突合は 3 つに分ける。正本が別々なので担保できる範囲も違う:
+# 検査は 4 つに分ける。正本が別々なので担保できる範囲も違う:
+#   - 6b-0: model.yaml の prefix が型ごとに一意（突合の前提。下記 3 つは型ごと・
+#           prefix 集合ごとに見るので、2 型が同じ prefix を持つと揃って緑になる）
 #   - 6b-1: model.yaml の型 ⊆ case アーム（型を足して case へ足し忘れると落ちる）
 #   - 6b-2: case アームの prefix ⊆ model.yaml の prefix（model.yaml に無い prefix の
 #           アームが増えたら落ちる。下記のとおり担保範囲は狭い）
@@ -450,10 +452,12 @@ else
       arm_prefix["${pair%% *}"]="${pair##* }"
     done
 
+    # --- 6b-0. model.yaml の prefix が型ごとに一意か --------------------------
+    #
     # prefix は型を一意に指す前提で ID 体系が組まれている（`REQ-<uuid>` を見て
     # requirement だと分かる）。2 つの型が同じ prefix を持つとその前提が崩れるが、
     # 下の 6b-1 / 6b-2 / 6b-3 は型ごと・prefix 集合ごとに見るので揃って緑になる。
-    # model.yaml 側の性質なのでここで先に弾く。
+    # model.yaml 側の性質なので突合の前提としてここで先に弾く。
     declare -A model_prefix_of=()
     declare -A model_type_of_prefix=()
     prefix_unique=1
