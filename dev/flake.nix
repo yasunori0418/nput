@@ -236,11 +236,15 @@
           checks.sara-id =
             pkgs.runCommandLocal "sara-id-test"
               {
-                # prefix マップと docs/model.yaml の突合（テスト §6b）に渡す正本。
-                # サンドボックスにはリポジトリの docs/ が無く、テスト側の git ルート
-                # 解決も効かないため nix から store path を渡す。devShell / CI 経路は
-                # cwd がリポジトリルートなのでテスト側の解決に任せる。
+                # prefix マップの突合（テスト §6b）が読む正本 2 つ。サンドボックスには
+                # リポジトリの作業ツリーが無く、テスト側の git ルート解決も効かないため
+                # nix から store path を渡す。devShell / CI 経路は cwd がリポジトリ
+                # ルートなのでテスト側の解決に任せる。
+                #
+                # このファイル自身（case アームの正本）も入力に取るため、prefix マップを
+                # 書き換えると checks.sara-id は必ず再ビルドされる。
                 SARA_MODEL_YAML = ../docs/model.yaml;
+                SARA_DEV_FLAKE = ./flake.nix;
                 nativeBuildInputs = [
                   sara-id
                   pkgs.ripgrep
