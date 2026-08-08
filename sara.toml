@@ -9,7 +9,8 @@ model_schema = "docs/model.yaml"
 paths = ["./docs"]
 
 [validation]
-# 非必須チェックとして開始するため strict なし。orphan は警告に留める
-# （移行中・テスト未着手の要求が正常に存在するため）。検出対象は broken refs /
-# duplicate ID / cycles。strict 化・必須チェック化は移行完了後に判断する。
-strict_mode = false
+# strict 有効。orphan（接続漏れ）を含む全 warning が error になり exit 1 を返す
+# （epic #203 の移行完了・warning 0 到達を受けて有効化 → ADR-0050）。
+# CI の sara job は required status check にはしない（検出は機械・判断は人 → ADR-0050）。
+# テスト系型の着手で defect（構造的 orphan）が現れたら再検討する（→ ADR-0050 再検討条件）。
+strict_mode = true

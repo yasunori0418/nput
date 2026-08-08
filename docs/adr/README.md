@@ -233,28 +233,22 @@ references:             # 「関連:」の ADR
 nix develop '.?dir=dev#sara' -c sara check
 ```
 
-合格条件は次の 2 つ。
+合格条件は **warning / error とも 0 件で exit 0 になること**。`sara.toml` は `strict_mode = true`
+（→ ADR-0050）なので、`Orphan item`（接続漏れ）も `Broken reference`（存在しない ID への参照）・
+`Duplicate identifier`・`Circular reference detected` と同様に error として exit 1 を落とす。
+ADR で orphan が出るのは `justifies` の埋め忘れなので、張ってから完了とする（→「frontmatter」節の
+`justifies` の項）。
 
-- `Broken reference`（存在しない ID への参照）・`Duplicate identifier`・`Circular reference detected`
-  がいずれも 0 件で exit 0 になること。
-- **`Orphan item` の行に `ADR-` で始まる ID が 1 つも現れないこと**。ADR は仕様ツリーから分離した
-  独立型で upstream parent を持たないが、`justifies` を 1 本以上張っていれば orphan にはならない。
-  `ADR-` が現れたら `justifies` の埋め忘れなので、無視せず張ってから完了とする（→「frontmatter」
-  節の `justifies` の項）。
-
-1 つ目は上の素の実行で判定する。2 つ目は他の型の warning に埋もれるので、**目視の補助**として
-出力を絞る。パイプの exit code は `sara` のものではなくなるので、判定には使わない（出力が空なら合格）。
+orphan の出どころを型で切り分けたいときは、**目視の補助**として出力を絞れる。パイプの exit code は
+`sara` のものではなくなるので、判定には使わない（判定は素の実行の exit code で行う）。
 
 ```bash
 nix develop '.?dir=dev#sara' -c sara check | grep 'Orphan item' | grep 'ADR-'
 ```
 
-**他の型の orphan warning は移行中のため残ることがあり、2 つ目の判定対象外**。絞らずに生の出力を
-見たときも、`ADR-` 以外の orphan は確認不要。
-`justifies` に書いた ID のタイポは orphan ではなく 1 つ目の `Broken reference` として落ちる
-（orphan は非空であることしか見ないため）。`strict_mode` は `sara.toml` で無効にしてあるので orphan は
-warning 止まりで exit 0 を落とさない（→ ADR-0048）が、`sara check --strict` を付けると error に変わり
-exit 1 になる。CI の `sara` job は上と同じコマンド（`--strict` なし）を走らせる。
+`justifies` に書いた ID のタイポは orphan ではなく `Broken reference` として落ちる
+（orphan は非空であることしか見ないため）。CI の `sara` job は上と同じコマンドを走らせるが、
+required status check ではないため、赤くなってもマージはブロックしない（→ ADR-0050）。
 
 **注記漏れの確認は `sara check` では代替できない**。sara は frontmatter しか見ず、旧 ADR 側の blockquote
 注記が本文に書かれているかを検証しないため。`revises` に挙げた旧 ADR それぞれについて、逆引きで関係を
