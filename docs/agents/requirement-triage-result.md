@@ -10,8 +10,9 @@ T3b（Issue #241）の移設完了後に削除する一時ファイル。
 あり自動生成物ではないので、`docs/requirements/` が増減しても追従しない。表が実体と一致して
 いることは件数ではなく **ID 集合の差分**で確かめる（差分が出たら、その時点で表は陳腐化して
 いる）。**リポジトリルートで bash / zsh から実行する**（プロセス置換を使うため sh / dash では
-動かない。両辺ともルート起点の相対パスなので、別ディレクトリで実行すると差分が全件出て
-陳腐化と見分けが付かない）:
+動かない。両辺ともルート起点の相対パスなので、別ディレクトリで実行すると両辺とも空集合に
+なり、`sed` / `rg` がエラーを吐きながら `diff` 自体は差分ゼロで成功する。差分ゼロを合格と
+読む前にエラー出力が無いことを確かめる）:
 
 ```bash
 diff <(sed -n 's/^| `\(REQ-[0-9a-f]\{8\}\)` .*/\1/p' docs/agents/requirement-triage-result.md | sort) \
@@ -41,13 +42,14 @@ requirement には多い」という Issue #240 背景の想定は、全件を�
 1. `docs/quality/` が 0 件のまま残る帰結は、`CLAUDE.md`「ドキュメント」節の「quality /
    test_plan は既存 item の移設で作られる」という記述と食い違う。同節は `docs/test-plan/` を
    「item もディレクトリもまだ無い」と書いたままでもある（#238 / #239 で作成済み）
-2. `docs/model.yaml` の `quality` / `test_plan` の `specification` フィールドに付いた
-   「RFC2119 キーワード検証は requirement 型にハードコードされており quality / test_plan の
-   specification には効かない」というコメントは**事実に反する**。sara 0.9.4 の
-   `validate_item_metadata` は `item_type` ではなく `specification` フィールドの有無だけで
-   分岐しており、実地でも `test_plan` item から SHALL を外すと
+2. `docs/model.yaml` の `quality` の `specification` フィールドに付いた「RFC2119 キーワード
+   検証は requirement 型にハードコードされており quality / test_plan の specification には
+   効かない」というコメント（`test_plan` 側はこれを参照している）は**事実に反する**。
+   sara 0.9.4 の `validate_item_metadata` は `item_type` ではなく `specification` フィールド
+   の有無だけで分岐しており、実地でも `test_plan` item から SHALL を外すと
    `Test Plan specification must contain at least one RFC2119 keyword` で `sara check` が
-   落ちることを確認した
+   落ちることを確認した。`requirement` の同フィールドのコメント（「sara は requirement の
+   `specification` に … ハードコードで検証する」）も、型限定と読める書き方なので併せて直す
 
 ## quality item が今後生まれる先
 

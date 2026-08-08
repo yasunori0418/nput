@@ -127,12 +127,13 @@ Risks are where test conditions hang from (`test_condition --mitigates--> risk`)
 misplacing a risk misplaces the tests that cover it. A requirement-level risk parked under
 one design leaves the other designs looking untested for a concern they share.
 
-## How a requirement states its norm: `specification` / `specification_ja`
+## How an item states its norm: `specification` / `specification_ja`
 
-A `requirement` carries its norm twice — `specification` in English (which sara validates
-for the presence of an RFC2119 keyword) and `specification_ja` in Japanese (which sara does
-not inspect at all). Both are normative; neither is a translation gloss of the other. The
-rules below keep the two readable as one norm.
+The three types of the section above — `requirement`, `quality` and `test_plan` — each
+carry their norm twice: `specification` in English (which sara validates for the presence
+of an RFC2119 keyword, whatever the type) and `specification_ja` in Japanese (which sara
+does not inspect at all). Both are normative; neither is a translation gloss of the other.
+The rules below apply to all three and keep the two fields readable as one norm.
 
 Nothing enforces them mechanically. sara only asks whether *some* RFC2119 keyword is
 present, never which spelling, and it does not look at `specification_ja` at all. These
@@ -150,7 +151,7 @@ The `placeholder` in `docs/model.yaml` uses SHALL for the same reason.
 
 A sentence that states the norm must end in a normative auxiliary. The plain declarative
 ("〜する", "〜となる") reads as a description of the current implementation rather than as a
-demand on it, which is exactly the distinction the requirement exists to record.
+demand on it, which is exactly the distinction the item exists to record.
 
 This applies per sentence, not per item: within one `specification_ja`, the sentences that
 state the norm take an auxiliary, while sentences that supply background, rationale, or a
@@ -169,4 +170,4 @@ not itself normative.
 Inflected forms of these are fine where the sentence needs them (e.g. 「〜してはならず、」 to
 join a following clause), as long as the strength is unchanged. What must not happen is a
 strength drifting across the two fields — a `SHALL` rendered as 「〜すべきである」 weakens the
-requirement in the field most readers of this repo actually read.
+norm in the field most readers of this repo actually read.
