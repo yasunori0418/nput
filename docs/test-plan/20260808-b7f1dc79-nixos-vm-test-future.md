@@ -1,7 +1,9 @@
 ---
-id: "REQ-690f2730-2628-420d-8e72-ed1ce747ac1e"
-type: requirement
+id: "TP-b7f1dc79-0222-4b6e-9e91-0545046e34f2"
+type: test_plan
 name: "NixOS / nix-darwin モジュール経路の実 activate は E2E ハーネスの対象外とする"
+derives_from:
+  - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 specification: |
   Actually activating the NixOS and nix-darwin module paths SHALL be outside the scope of
   the E2E harness, since it requires a VM or a sandbox whereas the harness is a single
@@ -14,7 +16,7 @@ specification_ja: |
   VM テストを同ハーネスの前提条件にしてはならない。これらの経路の検証は、モジュール経路を
   本実装する段で別途追加しなければならない。
 ---
-# REQ-690f2730: NixOS / nix-darwin モジュール経路の実 activate は E2E ハーネスの対象外とする
+# TP-b7f1dc79: NixOS / nix-darwin モジュール経路の実 activate は E2E ハーネスの対象外とする
 
 ## 仕様
 
@@ -23,7 +25,7 @@ activate は VM / sandbox を要し、本ハーネス（非 NixOS の単一ジ�
 モジュール経路を本実装する段で別途追加する。
 
 > **上は原文の写しで、規範は frontmatter が正**。E2E ハーネス本体の検証範囲は
-> REQ-6419e4b0、NixOS / nix-darwin モジュールが engine キックの配線であることは
+> TP-229b69c0、NixOS / nix-darwin モジュールが engine キックの配線であることは
 > REQ-c1b3ca5f、その `user` オプションは REQ-c2654ca5 の担当。原文が併記する
 > `runNixOSTest` という手段と `docs/design.md`「テスト戦略」への参照は、将来追加する際の
 > 実装手段の示唆であり規範に採らない。
@@ -36,10 +38,13 @@ activate は VM / sandbox を要し、本ハーネス（非 NixOS の単一ジ�
 「テスト戦略」節で、「NixOS VM テスト（`runNixOSTest`）はモジュール経路の実装段で追加」と
 定めている。ハーネス側が非 NixOS の単一ジョブであることは ADR-0012「CI・テスト実行基盤を
 cryoflow 構成踏襲で確定する」が定めるが、同 ADR は VM テストの扱いを決めていないため、
-側面の根拠として `justifies` は張らない（ハーネス本体の検証範囲は REQ-6419e4b0 が担当し、
+側面の根拠として `justifies` は張らない（ハーネス本体の検証範囲は TP-229b69c0 が担当し、
 そちらが ADR-0012 から張られる）。
 
-> **`derives_from` を持たないのは意図的**（→ Issue #211）。本 item は E2E ハーネスの
-> 検証範囲に関する要求であり、ユーザーの使われ方（use_case）から導かれない。モジュール
-> 経路そのものは UC-d39c1994 が担い、REQ-c1b3ca5f 等がそちらへ紐づく。REQ-6419e4b0・
-> REQ-2381d93a・REQ-901993e9 と同類で、いずれも use_case を持たない orphan として残す。
+> **本 item は requirement から test_plan へ移設した**（→ Issue #238。旧 ID は
+> `REQ-690f2730`）。E2E ハーネスの検証範囲からの除外を宣言するスコープ外規定であり、
+> ユーザーの使われ方（use_case）から導かれるものではないため、use_case を親に持てず orphan に
+> なっていた（当時の判断は Issue #211）。モジュール経路そのものは UC-d39c1994 が担い、
+> REQ-c1b3ca5f 等がそちらへ紐づく。テスト計画の型を新設して solution 直下で受けることに
+> したため、`derives_from` は SOL-9fcd1d6e を指す。TP-229b69c0・TP-d3000054 も同じ経緯で
+> 移設した。

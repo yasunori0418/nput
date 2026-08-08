@@ -1,7 +1,9 @@
 ---
-id: "REQ-6419e4b0-629c-435f-b1e1-0bc996b5e61d"
-type: requirement
+id: "TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9"
+type: test_plan
 name: "非 NixOS で動く主張を実 nix の一気通貫 E2E で検証する"
+derives_from:
+  - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 specification: |
   The claim that nput runs on a non-NixOS system given only nix SHALL be verified against a
   real nix by an E2E harness that drives the actual path end to end, including `nix build`,
@@ -26,7 +28,7 @@ specification_ja: |
   ならない。各シナリオが検証する仕様そのものは各担当 item の規範であり、ここでは
   再掲しない。
 ---
-# REQ-6419e4b0: 非 NixOS で動く主張を実 nix の一気通貫 E2E で検証する
+# TP-229b69c0: 非 NixOS で動く主張を実 nix の一気通貫 E2E で検証する
 
 ## 仕様
 
@@ -57,8 +59,9 @@ bash・詳細は `tests/e2e/README.md`）が、flake entrypoint からの `nix b
 決定の実体は ADR-0012「CI・テスト実行基盤を cryoflow 構成踏襲で確定する」で、非 NixOS の
 実 nix 上で E2E を回す検証範囲を定めている。
 
-> **`derives_from` を持たないのは意図的**（→ Issue #211）。この要求は「非 NixOS で動く」
-> 主張を検証するための要求であり、ユーザーの使われ方（use_case）から導かれるものではない。
-> 表の右列が指す仕様は個々に use_case へ紐づいているが、それを E2E で検証すること自体の
-> 動機は品質保証にある。REQ-2381d93a・REQ-690f2730・REQ-901993e9 と同類で、いずれも
-> use_case を持たない orphan として残す。
+> **本 item は requirement から test_plan へ移設した**（→ Issue #238。旧 ID は
+> `REQ-6419e4b0`）。「非 NixOS で動く」主張を何をどこまで E2E で検証するかを定めるテスト
+> スコープの規定であり、ユーザーの使われ方（use_case）から導かれるプロダクトの振る舞いでは
+> ないため、use_case を親に持てず orphan になっていた（当時の判断は Issue #211）。テスト計画
+> の型を新設して solution 直下で受けることにしたため、`derives_from` は
+> SOL-9fcd1d6e を指す。TP-d3000054・TP-b7f1dc79 も同じ経緯で移設した。

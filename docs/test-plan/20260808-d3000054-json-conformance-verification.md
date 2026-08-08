@@ -1,7 +1,9 @@
 ---
-id: "REQ-2381d93a-732e-4437-910b-fac14d398aa0"
-type: requirement
+id: "TP-d3000054-42d9-4bac-912a-dd3abc38d3e9"
+type: test_plan
 name: "エンベロープの niface 適合を Go テストと E2E の両方で検証する"
+derives_from:
+  - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 specification: |
   A Go test SHALL verify the emitted document against the niface
   `conformance.NewDefaultChecker()` (the embedded canonical schema including format
@@ -20,7 +22,7 @@ specification_ja: |
   提供する `niface-validate` CLI（`-schema` 省略 = embed 正本）でシナリオの実出力を検証し、
   item id は同 input の `id-vectors.json` testdata と突き合わせなければならない。
 ---
-# REQ-2381d93a: エンベロープの niface 適合を Go テストと E2E の両方で検証する
+# TP-d3000054: エンベロープの niface 適合を Go テストと E2E の両方で検証する
 
 ## 仕様
 
@@ -43,7 +45,10 @@ item id の導出規則そのものは REQ-57137302 の担当。
 
 決定の実体は ADR-0043。
 
-> **`derives_from` を持たないのは意図的**（→ Issue #211）。エンベロープを niface 規約準拠に
-> すること自体は REQ-a5053191 が担い、そちらは use_case へ紐づく。本 item はその適合を
-> どう検証するかの要求であり、ユーザーの使われ方からは導かれない。REQ-6419e4b0・
-> REQ-690f2730・REQ-901993e9 と同類で、いずれも use_case を持たない orphan として残す。
+> **本 item は requirement から test_plan へ移設した**（→ Issue #238。旧 ID は
+> `REQ-2381d93a`）。エンベロープを niface 規約準拠にすること自体は REQ-a5053191 が担い、
+> そちらは use_case へ紐づく。本 item はその適合をどのテストレベルでどう検証するかを定める
+> テストアプローチの規定であり、ユーザーの使われ方からは導かれないため、use_case を親に
+> 持てず orphan になっていた（当時の判断は Issue #211）。テスト計画の型を新設して solution
+> 直下で受けることにしたため、`derives_from` は SOL-9fcd1d6e を指す。TP-229b69c0・
+> TP-b7f1dc79 も同じ経緯で移設した。

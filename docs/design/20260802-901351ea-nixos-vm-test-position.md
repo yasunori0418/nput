@@ -3,7 +3,7 @@ id: "DSG-901351ea-f01b-4bb0-a470-b890d92c980b"
 type: design
 name: "NixOS VM テストは runNixOSTest でモジュール経路の実装時に追加し、E2E ハーネスとは別系統に置く"
 satisfies:
-  - "REQ-690f2730-2628-420d-8e72-ed1ce747ac1e"
+  - "TP-b7f1dc79-0222-4b6e-9e91-0545046e34f2"
 ---
 # DSG-901351ea: NixOS VM テストは runNixOSTest でモジュール経路の実装時に追加し、E2E ハーネスとは別系統に置く
 
@@ -14,7 +14,7 @@ NixOS / nix-darwin モジュール経路の実 activate は、**`runNixOSTest`�
 `tests/e2e/` の bash ハーネス（DSG-2947b4a5）のスコープ外に置く。
 
 **E2E ハーネスへ入れずに別系統とする**理由は、要求する実行環境が違うため。
-REQ-690f2730 が「NixOS / nix-darwin モジュール経路の実 activate は E2E ハーネスの
+TP-b7f1dc79 が「NixOS / nix-darwin モジュール経路の実 activate は E2E ハーネスの
 対象外」と定めているのは、E2E が非 NixOS（ubuntu ランナー）で「nix さえあれば動く」を
 検証する趣旨で組まれているのに対し、NixOS モジュールの activate には NixOS 自体が
 要るからである。同じハーネスへ押し込むと、前提の異なるシナリオが 1 つの実行系に混ざる。
