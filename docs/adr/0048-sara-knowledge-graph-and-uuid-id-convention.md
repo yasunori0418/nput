@@ -18,7 +18,7 @@ references:
 
 - ステータス: 採用
 - 日付: 2026-08-02
-- 関連: ADR-0030, ADR-0037, ADR-0049, `docs/spec.md`, `docs/design.md`, `docs/concept.md`, `docs/adr/README.md`, GitHub Issue #203, #206, #207
+- 関連: ADR-0030, ADR-0037, ADR-0049, ADR-0050, `docs/spec.md`, `docs/design.md`, `docs/concept.md`, `docs/adr/README.md`, GitHub Issue #203, #206, #207
 - 改訂対象: なし（新領域。「仕様とテストの全体像把握」= quality-observability（→ Issue #203）の実現手段を
   差し替えるが、既存 ADR の決定を反転しない）
 - 起点: epic #203 の grilling セッション（2026-07-31・2026-08-01）で確定
@@ -31,6 +31,11 @@ references:
 > ではなく quality / design を `satisfies` する型へ、`design` の親は requirement / test_plan へ、
 > ADR の `justifies` 対象は requirement / design / infrastructure / quality / test_plan へそれぞれ
 > 拡張された。§2 の表をそのまま実装に使わないこと（→ ADR-0049）。
+
+> **2026-08-09 改訂注記（ADR-0050）**: 改訂対象は本 ADR **§5 の `strict_mode = false` の決定だけ**。
+> epic #203 の移行完了（warning 0 到達）により保留を解き、`strict_mode = true` へ変更した。
+> §5 のそれ以外の決定（required status check に登録しない・DoD に追加しない・CI job のローカル
+> filter）は不変で、§1〜§4 も全て不変（→ ADR-0050）。
 
 ## 背景
 
