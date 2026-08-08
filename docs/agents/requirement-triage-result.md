@@ -6,8 +6,15 @@ T3b（Issue #241）の移設完了後に削除する一時ファイル。
 
 ## 集計
 
-対象は移設（#238 / #239）後に残る **134 件**（`ls docs/requirements/*.md | wc -l`、
-2026-08-08 時点）。
+対象は移設（#238 / #239）後に残る **134 件**（2026-08-08 時点）。表の行は手作業の判定結果で
+あり自動生成物ではないので、`docs/requirements/` が増減しても追従しない。表が実体と一致して
+いることは件数ではなく **ID 集合の差分**で確かめる（差分が出たら、その時点で表は陳腐化して
+いる）:
+
+```bash
+diff <(sed -n 's/^| `\(REQ-[0-9a-f]\{8\}\)` .*/\1/p' docs/agents/requirement-triage-result.md | sort) \
+     <(rg -o '^id: "(REQ-[0-9a-f]{8})' -r '$1' docs/requirements/*.md | cut -d: -f2 | sort)
+```
 
 | 判定 | 件数 |
 |---|---|
@@ -21,8 +28,15 @@ requirement には多い」という Issue #240 背景の想定は、全件を�
 そもそも `docs/agents/` と `CLAUDE.md` に置かれていて requirement 化されていないため。
 テスト計画に相当する 4 件は #238 / #239 で既に `docs/test-plan/` へ抜けている。
 
-したがって **T3b（#241）に移設作業は発生しない**。この結論の合意が取れた場合、#241 は
-「移設 0 件」の確認と本作業ファイルの削除のみが残る。
+したがって **T3b（#241）に移設作業は発生しない**。#241 に残るのは「移設 0 件」の確認と
+本ファイルの削除のみになる。本ファイルの削除トリガは #241 のクローズで、この結論が
+レビューで否認された場合は #241 ではなく本 issue（#240）へ差し戻し、否認された判定を
+基準に照らして再判定してから改めて #241 へ渡す。
+
+**申し送り（境界外・#241 での対応）**: `docs/quality/` が 0 件のまま残る帰結は、`CLAUDE.md`
+「ドキュメント」節の「quality / test_plan は既存 item の移設で作られる」という記述と食い違う。
+同節は `docs/test-plan/` を「item もディレクトリもまだ無い」と書いたままでもあり（#238 /
+#239 で作成済み）、いずれも本レーンの境界（`docs/agents/**`）の外なので #241 側で直す。
 
 ## quality item が今後生まれる先
 
@@ -43,18 +57,24 @@ quality を作るなら requirement 以外を出典に新規起票すること�
 
 グレーゾーンに当たった 19 件は、基準の「Grey zones」節が定めた先例で判定した。
 
-| 類型 | 件数 | 該当 |
-|---|---|---|
-| アーキテクチャ境界（`bound`）| 6 | `REQ-637599dc` / `REQ-6c4e174a` / `REQ-b74a118a` / `REQ-d85f0cef` / `REQ-2bd0d35f` / `REQ-f4d7d4ab` |
-| エラーメッセージの内容（`msg`）| 5 | `REQ-07c3b735` / `REQ-8ef34101` / `REQ-95e97d01` / `REQ-9fca28c9` / `REQ-fea038de` |
-| nix ワークフロー（`nixflow`）| 3 | `REQ-67095391` / `REQ-d0aef5af` / `REQ-f9920c87` |
-| 提供しないことの宣言（`scope`）| 3 | `REQ-4fc98fa6` / `REQ-d41b1d0a` / `REQ-fc1118b1` |
-| バージョン・互換方針（`compat`）| 2 | `REQ-250d936c` / `REQ-79ce0a09` |
+| 類型 | 件数 | 基準の対応節 | 該当 |
+|---|---|---|---|
+| アーキテクチャ境界（`bound`）| 6 | A norm about how nput is built | `REQ-637599dc` / `REQ-6c4e174a` / `REQ-b74a118a` / `REQ-d85f0cef` / `REQ-2bd0d35f` / `REQ-f4d7d4ab` |
+| エラー・警告の出力（`msg`）| 5 | A norm about error and warning output | `REQ-07c3b735` / `REQ-8ef34101` / `REQ-95e97d01` / `REQ-9fca28c9` / `REQ-fea038de` |
+| nix ワークフロー（`nixflow`）| 3 | A norm about a nix-level workflow | `REQ-67095391` / `REQ-d0aef5af` / `REQ-f9920c87` |
+| 提供しないことの宣言（`scope`）| 3 | A declaration that something is out of scope | `REQ-4fc98fa6` / `REQ-d41b1d0a` / `REQ-fc1118b1` |
+| バージョン・互換方針（`compat`）| 2 | A version or compatibility policy | `REQ-250d936c` / `REQ-79ce0a09` |
 
 いずれも「落とせば nput の使い方が変わるか」の signature test で requirement に落ちた。
-`REQ-2b0c2bb8`（mkManifest は nix-unit / namaka の単体対象でもある）は test_plan 的な
-一文を含むが、item の主張は `mkManifest` のシグネチャと純粋性であり、テスト対象である
-ことは従属節に留まるため requirement のまま。
+`scope` の 3 件は、テスト範囲のスコープ外宣言（`TP-b7f1dc79`）と違って**プロダクトが機能を
+提供しないこと**の宣言であり、利用者が使える操作の範囲を規定するため requirement 側になる。
+
+`REQ-2b0c2bb8`（`mkManifest` は nix-unit / namaka の単体対象でもある）と `REQ-b232ec98`
+（`normalizeManifest` について同様）は、いずれも specification にテストへ言及する SHALL 文を
+持つが requirement のまま。基準の先例（`TP-403c55c7`）が test_plan と裁く条件は「その面が
+存在する唯一の動機が検証であること」かつ「契約としての保証を自ら放棄していること」の 2 つで、
+この 2 件はどちらも満たさない。`mkManifest` / `normalizeManifest` はテストが無くてもプロダクト
+の動作に必要な関数であり、シグネチャと純粋性という契約を放棄せず宣言している。
 
 ## 全件
 
@@ -66,7 +86,7 @@ quality を作るなら requirement 以外を出典に新規起票すること�
 | `REQ-053cfed2` | target に通常ファイル・ディレクトリが在れば上書きせずエラーで停止する | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | engine の実行時の振る舞い（配置・除去・失敗時の収束）を規定する |
 | `REQ-059eb4d5` | --all は config ごとの SubjectResult を単一実行と同一形状で積む | `UC-1c280dce` / `UC-0b6f60cb` | requirement 据え置き | --json 契約（niface エンベロープ）の形を規定する。機械 consumer が読む契約 |
 | `REQ-05abce3e` | rollback と list-generations は home mode 限定にする | `UC-0b6f60cb` | requirement 据え置き | CLI が利用者へ見せる振る舞い。落とせば nput の使い方が変わる |
-| `REQ-07c3b735` | copy が foreign 実ファイルを skip したときは warning で可視化する | `UC-403fbe32` | requirement 据え置き | エラー・警告の出力内容と経路を規定する。利用者が直接受け取る振る舞い（→ 基準「A norm about error message content」） |
+| `REQ-07c3b735` | copy が foreign 実ファイルを skip したときは warning で可視化する | `UC-403fbe32` | requirement 据え置き | エラー・警告の出力内容と経路を規定する。利用者が直接受け取る振る舞い（→ 基準「A norm about error and warning output」） |
 | `REQ-0a123b89` | 冗長度は -v、デバッグは --debug に分離し --json と直交させる | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | CLI が利用者へ見せる振る舞い。落とせば nput の使い方が変わる |
 | `REQ-0b0cd1e3` | manifest.json の entries は attrset を配列へ正規化し 5 フィールドを記録する | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | Nix ↔ engine の契約（manifest.json）の形を規定する。consumer が読む契約 |
 | `REQ-0bd55dfc` | copy は src ツリー内の symlink を deref せず symlink のまま複製する | `UC-403fbe32` | requirement 据え置き | engine の実行時の振る舞い（配置・除去・失敗時の収束）を規定する |
@@ -102,7 +122,7 @@ quality を作るなら requirement 以外を出典に新規起票すること�
 | `REQ-496b1a07` | entrypoint は nput.<name> に named manifest を公開し CLI は形ごとの attr path で build する | `UC-1c280dce` | requirement 据え置き | lib の公開 API の形と意味を規定する。利用者が entrypoint で直接触る面 |
 | `REQ-4cbd9a0d` | apply --all は辞書順に適用し部分失敗でも続行して最後に集約する | `UC-1c280dce` | requirement 据え置き | CLI が利用者へ見せる振る舞い。落とせば nput の使い方が変わる |
 | `REQ-4ec3accc` | root は明示必須で暗黙デフォルトを持たない | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | lib の公開 API の形と意味を規定する。利用者が entrypoint で直接触る面 |
-| `REQ-4fc98fa6` | 一部 entry だけを適用する --only は提供しない | `UC-1c280dce` | requirement 据え置き | 機能を提供しないことの宣言。利用者が使える操作の範囲を規定する |
+| `REQ-4fc98fa6` | 一部 entry だけを適用する --only は提供しない | `UC-1c280dce` | requirement 据え置き | 機能を提供しないことの宣言。利用者が使える操作の範囲を規定する（→ 基準「A declaration that something is out of scope」）|
 | `REQ-4ffda99a` | 内部実行する nix コマンドを開示し世代の切替と GC は標準の nix コマンドへ委譲する | `UC-0b6f60cb` / `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | CLI が利用者へ見せる振る舞い。落とせば nput の使い方が変わる |
 | `REQ-535b811d` | apply --all は rootKind を 1 回の一括 eval で取る | `UC-1c280dce` | requirement 据え置き | CLI が利用者へ見せる振る舞い。落とせば nput の使い方が変わる |
 | `REQ-57137302` | item id は identity の JCS を SHA-256 した小文字 hex とする | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | --json 契約（niface エンベロープ）の形を規定する。機械 consumer が読む契約 |
@@ -141,9 +161,9 @@ quality を作るなら requirement 以外を出典に新規起票すること�
 | `REQ-84e3c717` | copy は元の mode を保存しつつ owner-write を付与する | `UC-403fbe32` | requirement 据え置き | engine の実行時の振る舞い（配置・除去・失敗時の収束）を規定する |
 | `REQ-89c7baf9` | rollback は名指し必須で --all に対応しない | `UC-0b6f60cb` | requirement 据え置き | CLI が利用者へ見せる振る舞い。落とせば nput の使い方が変わる |
 | `REQ-8d965ca2` | home mode の root は層ごとに定まった供給元から解決する | `UC-f2436d68` / `UC-d39c1994` | requirement 据え置き | engine の実行時の振る舞い（配置・除去・失敗時の収束）を規定する |
-| `REQ-8ef34101` | 成功時はデフォルト沈黙とし warning と error は常時 stderr へ出す | `UC-f2436d68` / `UC-19a90989` / `UC-0b6f60cb` / `UC-403fbe32` | requirement 据え置き | エラー・警告の出力内容と経路を規定する。利用者が直接受け取る振る舞い（→ 基準「A norm about error message content」） |
+| `REQ-8ef34101` | 成功時はデフォルト沈黙とし warning と error は常時 stderr へ出す | `UC-f2436d68` / `UC-19a90989` / `UC-0b6f60cb` / `UC-403fbe32` | requirement 据え置き | エラー・警告の出力内容と経路を規定する。利用者が直接受け取る振る舞い（→ 基準「A norm about error and warning output」） |
 | `REQ-9341fa5d` | エンベロープのエラーは主体の有無で層を分けコードを分類する | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | --json 契約（niface エンベロープ）の形を規定する。機械 consumer が読む契約 |
-| `REQ-95e97d01` | conflict で停止するときは全件を対処ガイダンス付きで列挙してから 1 本の集約エラーを返す | `UC-f2436d68` / `UC-19a90989` / `UC-0b6f60cb` | requirement 据え置き | エラー・警告の出力内容と経路を規定する。利用者が直接受け取る振る舞い（→ 基準「A norm about error message content」） |
+| `REQ-95e97d01` | conflict で停止するときは全件を対処ガイダンス付きで列挙してから 1 本の集約エラーを返す | `UC-f2436d68` / `UC-19a90989` / `UC-0b6f60cb` | requirement 据え置き | エラー・警告の出力内容と経路を規定する。利用者が直接受け取る振る舞い（→ 基準「A norm about error and warning output」） |
 | `REQ-97c1e088` | mkManifest の引数は pkgs / entries / root の 3 つとする | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | lib の公開 API の形と意味を規定する。利用者が entrypoint で直接触る面 |
 | `REQ-99ca5381` | src は path / set / marker の 3 種を取り store link を既定として out-of-store は marker で opt-in する | `UC-f2436d68` / `UC-01b896b4` | requirement 据え置き | lib の公開 API の形と意味を規定する。利用者が entrypoint で直接触る面 |
 | `REQ-9b0046e0` | backup 退避は配置前除去の後・配置の前に置き、drift 修復経路でも同じく実施する | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | engine の実行時の振る舞い（配置・除去・失敗時の収束）を規定する |
@@ -151,7 +171,7 @@ quality を作るなら requirement 以外を出典に新規起票すること�
 | `REQ-9cb26ffd` | project mode の root は git toplevel から解決し、config 相対も CWD 相対も採らない | `UC-19a90989` | requirement 据え置き | engine の実行時の振る舞い（配置・除去・失敗時の収束）を規定する |
 | `REQ-9dc7dac7` | 配置元の実在は判定できる層で検査し、いずれの層でも停止する | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | lib の公開 API の形と意味を規定する。利用者が entrypoint で直接触る面 |
 | `REQ-9ed6b500` | --version は埋め込みバージョンを cobra 既定書式で表示して終了し短縮形を持たない | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | CLI が利用者へ見せる振る舞い。落とせば nput の使い方が変わる |
-| `REQ-9fca28c9` | 巻き戻し自体の失敗は best-effort で続行し、全件を stderr へ報告して停止する | `UC-0b6f60cb` / `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | エラー・警告の出力内容と経路を規定する。利用者が直接受け取る振る舞い（→ 基準「A norm about error message content」） |
+| `REQ-9fca28c9` | 巻き戻し自体の失敗は best-effort で続行し、全件を stderr へ報告して停止する | `UC-0b6f60cb` / `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | エラー・警告の出力内容と経路を規定する。利用者が直接受け取る振る舞い（→ 基準「A norm about error and warning output」） |
 | `REQ-a0bdf6db` | devShell は shellHook から engine を起動する配線で、シェル入室のたびに project mode で配置する | `UC-19a90989` | requirement 据え置き | モジュール統合層が利用者へ公開する option と activation の振る舞いを規定する |
 | `REQ-a33a11e3` | entry submodule のフィールドは src / subpath / target / method の 4 つとする | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | lib の公開 API の形と意味を規定する。利用者が entrypoint で直接触る面 |
 | `REQ-a480c183` | gitignore は配置 target を stdout へ列挙するだけでファイルを書き込まない | `UC-19a90989` | requirement 据え置き | CLI が利用者へ見せる振る舞い。落とせば nput の使い方が変わる |
@@ -177,7 +197,7 @@ quality を作るなら requirement 以外を出典に新規起票すること�
 | `REQ-d0aef5af` | nput カスタム output は nix flake check の unknown 警告を許容し主検証は nix build で行う | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | consumer の flake / nix ワークフローに現れる性質を規定する（→ 基準「A norm about a nix-level workflow」） |
 | `REQ-d1b5b3f5` | mkManifest 自身が evalModules で入力を検査する単一ゲートになる | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | lib の公開 API の形と意味を規定する。利用者が entrypoint で直接触る面 |
 | `REQ-d2277c7a` | copy は target 不在のときだけマテリアライズする place-once で世代管理の対象外とする | `UC-403fbe32` | requirement 据え置き | engine の実行時の振る舞い（配置・除去・失敗時の収束）を規定する |
-| `REQ-d41b1d0a` | 孤児 profile は backref で逆引き可能なまま放置許容とし、MVP では cleanup コマンドを持たない | `UC-19a90989` | requirement 据え置き | 機能を提供しないことの宣言。利用者が使える操作の範囲を規定する |
+| `REQ-d41b1d0a` | 孤児 profile は backref で逆引き可能なまま放置許容とし、MVP では cleanup コマンドを持たない | `UC-19a90989` | requirement 据え置き | 機能を提供しないことの宣言。利用者が使える操作の範囲を規定する（→ 基準「A declaration that something is out of scope」）|
 | `REQ-d5a2e289` | profileDir は home のみ name 直キーとし、fixed root と --root 上書きは roothash でキーする | `UC-0b6f60cb` / `UC-19a90989` / `UC-403fbe32` | requirement 据え置き | 世代・profile の振る舞いを規定する。rollback / GC として利用者から観測できる |
 | `REQ-d85f0cef` | lib は nixpkgs.lib のみに依存する純データ生成器である | `UC-f2436d68` / `UC-19a90989` / `UC-d39c1994` | requirement 据え置き | アーキテクチャ境界の宣言。lib / engine を任意環境から取り込める性質は利用者が観測できる（→ 基準「A norm about how nput is built」） |
 | `REQ-d95b814f` | --all は root モードフィルタで対象 config を絞れる | `UC-1c280dce` | requirement 据え置き | CLI が利用者へ見せる振る舞い。落とせば nput の使い方が変わる |
@@ -192,7 +212,7 @@ quality を作るなら requirement 以外を出典に新規起票すること�
 | `REQ-f4d7d4ab` | nput は CLI とエンジンの 2 層で構成する | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | アーキテクチャ境界の宣言。lib / engine を任意環境から取り込める性質は利用者が観測できる（→ 基準「A norm about how nput is built」） |
 | `REQ-f9920c87` | nix experimental-features は前提条件とし、CLI は自動付与せず案内エラーで停止する | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | consumer の flake / nix ワークフローに現れる性質を規定する（→ 基準「A norm about a nix-level workflow」） |
 | `REQ-fa181aa6` | 読み取り系の JSON ペイロードは dryRun パリティと info インベントリで表す | `UC-f2436d68` / `UC-19a90989` / `UC-0b6f60cb` | requirement 据え置き | --json 契約（niface エンベロープ）の形を規定する。機械 consumer が読む契約 |
-| `REQ-fc1118b1` | 同一 target を複数 config で狙うことによる振動はユーザー責任とし warning で可視化するに留める | `UC-1c280dce` | requirement 据え置き | 機能を提供しないことの宣言。利用者が使える操作の範囲を規定する |
+| `REQ-fc1118b1` | 同一 target を複数 config で狙うことによる振動はユーザー責任とし warning で可視化するに留める | `UC-1c280dce` | requirement 据え置き | 機能を提供しないことの宣言。利用者が使える操作の範囲を規定する（→ 基準「A declaration that something is out of scope」）|
 | `REQ-fc1c7ce6` | 全モジュールは共通オプションの同一集合を公開し、entries は configs 経由・root はモジュールが pin する | `UC-d39c1994` | requirement 据え置き | モジュール統合層が利用者へ公開する option と activation の振る舞いを規定する |
 | `REQ-fc64de4c` | 空の entries は正当な全クリアとして扱い、エラーにも警告にもしない | `UC-1c280dce` | requirement 据え置き | engine の実行時の振る舞い（配置・除去・失敗時の収束）を規定する |
-| `REQ-fea038de` | stdout は機械可読出力を専有しレポートと warning は stderr へ出す | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | エラー・警告の出力内容と経路を規定する。利用者が直接受け取る振る舞い（→ 基準「A norm about error message content」） |
+| `REQ-fea038de` | stdout は機械可読出力を専有しレポートと warning は stderr へ出す | `UC-f2436d68` / `UC-19a90989` | requirement 据え置き | エラー・警告の出力内容と経路を規定する。利用者が直接受け取る振る舞い（→ 基準「A norm about error and warning output」） |
