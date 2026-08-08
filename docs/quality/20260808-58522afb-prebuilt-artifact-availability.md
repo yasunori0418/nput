@@ -19,7 +19,7 @@ specification_ja: |
 ---
 # QA-58522afb: 最新 main のビルド成果物を再ビルドなしに消費できる状態を保つ
 
-## 方針
+## 仕様
 
 nput は flake input として消費されるツールであり、消費側の CI やローカル環境が nput を使う
 たびにソースからビルドするのは実用上のコストになる。最新 main の成果物を公開キャッシュから
@@ -29,9 +29,11 @@ nput は flake input として消費されるツールであり、消費側の C
 リリース間の main 変更がキャッシュされず、「flake input として最新 main を追う」という
 消費のされ方と噛み合わない。リリース（QA-0949183b）とキャッシュは互いに独立に駆動する。
 
-## 実現する基盤
-
-- INF-af33c5a1（バイナリキャッシュ）— cachix への投入経路とトリガ
+> **受益者は消費側だが、型は quality に置いた。** この norm を落として困るのはビルド時間を
+> 払う消費側であり、`docs/agents/sara-graph.md` の quality の signature test（落ちて気づくのは
+> contributor だけ）とは張力がある。それでも quality に置くのは、落としても **shipped artifact も
+> 検証も変わらない**（同一 derivation をキャッシュから引くか実ビルドするかの差でしかない）ため。
+> requirement の signature test「nput の使い方が変わるか」は成立せず、対応する use_case も無い。
 
 ## 出典
 

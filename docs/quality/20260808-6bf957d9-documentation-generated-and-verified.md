@@ -11,38 +11,30 @@ specification: |
   drift from that source. The traceability of the document graph — that every reference
   resolves to an item that exists, that identifiers are unique, and that the graph is
   acyclic — SHALL be verified mechanically, and both that verification and the buildability
-  of the published documentation SHALL run in CI rather than on request. The verification
-  MAY report unfinished connections as warnings without failing, while work that the graph
-  is still migrating remains in flight.
+  of the published documentation SHALL run in CI rather than on request.
 specification_ja: |
   nput のドキュメントは、記述対象との整合性の維持を人手の点検に依存してはならない。
   リファレンスドキュメントはビルド時に記述対象のソースから生成されなければならず、生成物を
   コミットしてはならない（ソースとの乖離が起こり得ないようにするため）。ドキュメント
   グラフのトレーサビリティ（すべての参照が実在する item を指すこと・ID が一意であること・
   グラフが非循環であること）は機械的に検証されなければならず、その検証と公開ドキュメントの
-  ビルド可能性はいずれも、要求されたときではなく CI で実行されなければならない。グラフの
-  移行が進行中である間は、検証は未接続を失敗とせず警告として報告してもよい。
+  ビルド可能性はいずれも、要求されたときではなく CI で実行されなければならない。
 ---
 # QA-6bf957d9: ドキュメントの正しさは人手の点検ではなく生成と機械検証で担保する
 
-## 方針
+## 仕様
 
-ドキュメントが記述対象からずれる形は 2 つある — 記述対象を変えたのに記述を直し忘れる形と、
-文書間の参照が指す先を失う形。どちらも「気づいた人が直す」運用では検出できないため、生成と
-機械検証で塞ぐ。
+「ドキュメントの正しさを人手の点検に委ねない」という 1 つの方針を、ずれ方の 2 つの形に当てて
+述べたもの。記述対象を変えたのに記述を直し忘れる形と、文書間の参照が指す先を失う形は、
+どちらも「気づいた人が直す」運用では検出できない。
 
 - **リファレンスは生成する**。ソースの doc-comment から毎回生成し、生成物をコミットしない。
   乖離が起こり得る状態そのものを作らない
 - **グラフは機械検証する**。存在しない ID への参照・ID の重複・循環は、人が読んで気づく類の
   誤りではない。参照先の実在を検証しない突合（grep による ID 照合など）では穴が残る
 
-検証は移行期のあいだ未接続を警告に留めてよい。移行中の item やテスト未着手の要求が正常に
-存在するため、そこで失敗させると検証自体が回らなくなる。強度を上げる判断は移行の完了後に行う。
-
-## 実現する基盤
-
-- INF-0865477b（ドキュメントサイト）— リファレンスのビルド時生成と公開
-- INF-659b139d（トレーサビリティ検証基盤）— sara によるドキュメントグラフの機械検証
+検証の**強度**（未接続を失敗とするか警告に留めるか）は本 item の規範に含めない。移行の
+進行度に応じて変わる設定であり、現在の値と strict 化の判断時期は INF-659b139d が持つ。
 
 ## 出典
 

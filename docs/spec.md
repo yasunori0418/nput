@@ -295,10 +295,10 @@ quality は開発プロセス・規約・ガバナンスに関する方針を持
 use_case を経由せず solution 直下に接続する。方針を実現する仕組みは `docs/infrastructure/` の
 item が持ち、`satisfies` で quality へ接続する。
 
-- [QA-a5f7f088](quality/20260808-a5f7f088-cross-platform-verification-before-merge.md) — サポート対象の全プラットフォームでの自動検証をマージの必須条件にする
-- [QA-58522afb](quality/20260808-58522afb-prebuilt-artifact-availability.md) — 最新 main のビルド成果物を再ビルドなしに消費できる状態を保つ
 - [QA-0949183b](quality/20260808-0949183b-release-driven-by-source-of-truth.md) — リリースはバージョンの一次情報の変更で駆動し、手作業の工程を挟まない
+- [QA-58522afb](quality/20260808-58522afb-prebuilt-artifact-availability.md) — 最新 main のビルド成果物を再ビルドなしに消費できる状態を保つ
 - [QA-6bf957d9](quality/20260808-6bf957d9-documentation-generated-and-verified.md) — ドキュメントの正しさは人手の点検ではなく生成と機械検証で担保する
+- [QA-a5f7f088](quality/20260808-a5f7f088-cross-platform-verification-before-merge.md) — サポート対象の全プラットフォームでの自動検証をマージの必須条件にする
 
 ---
 
