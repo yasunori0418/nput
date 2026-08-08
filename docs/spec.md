@@ -296,9 +296,10 @@ use_case を経由せず solution 直下に接続する。方針を実現する�
 item が持ち、`satisfies` で quality へ接続する。
 
 - [QA-0949183b](quality/20260808-0949183b-release-driven-by-source-of-truth.md) — リリースはバージョンの一次情報の変更で駆動し、手作業の工程を挟まない
+- [QA-0d42104c](quality/20260808-0d42104c-reference-docs-generated-from-source.md) — リファレンスドキュメントは記述対象のソースから生成し、生成物を持たない
 - [QA-58522afb](quality/20260808-58522afb-prebuilt-artifact-availability.md) — 最新 main のビルド成果物を再ビルドなしに消費できる状態を保つ
-- [QA-6bf957d9](quality/20260808-6bf957d9-documentation-generated-and-verified.md) — ドキュメントの正しさは人手の点検ではなく生成と機械検証で担保する
-- [QA-a5f7f088](quality/20260808-a5f7f088-cross-platform-verification-before-merge.md) — サポート対象の全プラットフォームでの自動検証をマージの必須条件にする
+- [QA-6bf957d9](quality/20260808-6bf957d9-document-graph-mechanically-verified.md) — ドキュメントグラフのトレーサビリティは機械的に検証する
+- [QA-a5f7f088](quality/20260808-a5f7f088-cross-platform-verification-before-merge.md) — マージ前の自動検証を必須にし、プラットフォーム差が効く層は全プラットフォームで通す
 
 ---
 

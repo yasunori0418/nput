@@ -11,16 +11,13 @@ specification: |
   every other place that states the version SHALL be derived rather than maintained by
   hand. Releasing SHALL be driven by a change to that source of truth reaching `main`, and
   the tag, the release notes and the GitHub Release SHALL be produced automatically from
-  it; no manual tagging or hand-written changelog SHALL be part of the release path. The
-  change that drives a release SHALL itself go through the merge gate that every other
-  change to `main` goes through.
+  it; no manual tagging or hand-written changelog SHALL be part of the release path.
 specification_ja: |
   nput のバージョンはリポジトリ内に唯一の一次情報を持たなければならず、バージョンを述べる
   他のすべての箇所はそこから導出されなければならない（手で二重管理してはならない）。
   リリースはその一次情報の変更が main へ到達することで駆動されなければならず、タグ・
   リリースノート・GitHub Release はそこから自動的に生成されなければならない。手動での
-  タグ打ちや手書きの CHANGELOG をリリース経路に含めてはならない。リリースを駆動する変更
-  自体も、main へのその他の変更と同じマージゲートを通らなければならない。
+  タグ打ちや手書きの CHANGELOG をリリース経路に含めてはならない。
 ---
 # QA-0949183b: リリースはバージョンの一次情報の変更で駆動し、手作業の工程を挟まない
 
@@ -33,9 +30,9 @@ specification_ja: |
 人が別途タグを打つ工程を挟むと「マージしたがタグを忘れた」状態が生じ、CHANGELOG を手書き
 すればコミット履歴との二重管理になる。
 
-リリースを駆動する変更も PR としてマージゲート（QA-a5f7f088）を通る。「main 直接コミット
-禁止」と「リリースの自動化」がここで整合する。この依存は frontmatter の `depends_on` が正で、
-上の言及はその読解の補助。
+リリースを駆動する変更も main への変更である以上、QA-a5f7f088 のマージゲートを通る。
+「main 直接コミット禁止」と「リリースの自動化」がここで整合する。この規範は QA-a5f7f088 の
+担当なので本 item の specification では繰り返さず、`depends_on` で依存だけを示す。
 
 ## 出典
 

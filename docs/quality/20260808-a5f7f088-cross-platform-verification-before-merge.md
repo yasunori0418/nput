@@ -1,42 +1,51 @@
 ---
 id: "QA-a5f7f088-a459-4bb2-9674-82b1a4a52053"
 type: quality
-name: "サポート対象の全プラットフォームでの自動検証をマージの必須条件にする"
+name: "マージ前の自動検証を必須にし、プラットフォーム差が効く層は全プラットフォームで通す"
 derives_from:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 specification: |
-  Every change to `main` SHALL be verified automatically on all supported platforms before
-  it is merged, and the verification SHALL cover every test level the project maintains.
-  Passing that verification SHALL be a technical precondition of merging rather than a rule
-  contributors are asked to follow, and no participant SHALL be able to bypass it. A change
-  that does not affect the verified sources MAY skip the verification work itself, but
-  SHALL NOT thereby become unmergeable.
+  Every change to `main` SHALL be verified automatically before it is merged. The layers
+  whose behaviour varies by platform SHALL be verified on every platform the project
+  declares as verified in CI, and the layers that do not SHALL be verified on at least one
+  such platform. Passing that verification SHALL be a technical precondition of merging
+  rather than a rule contributors are asked to follow, and no participant SHALL be able to
+  bypass it. A change that does not affect the verified sources MAY skip the verification
+  work itself, but SHALL NOT thereby become unmergeable.
 specification_ja: |
-  main へのすべての変更は、マージ前にサポート対象の全プラットフォーム上で自動的に検証され
-  なければならず、その検証はプロジェクトが維持するすべてのテストレベルを対象としなければ
-  ならない。検証の成功は、参加者に遵守を求める運用ルールではなくマージの技術的な必須条件で
-  なければならず、いかなる参加者もこれを迂回できてはならない。検証対象のソースに影響しない
-  変更は検証の実行自体を省いてもよいが、それによってマージ不能になってはならない。
+  main へのすべての変更は、マージ前に自動的に検証されなければならない。振る舞いが
+  プラットフォームによって変わる層は、プロジェクトが CI での検証対象として宣言する全
+  プラットフォーム上で検証されなければならず、そうでない層は、そのうち少なくとも 1 つの
+  プラットフォーム上で検証されなければならない。検証の成功は、参加者に遵守を求める運用
+  ルールではなくマージの技術的な必須条件でなければならず、いかなる参加者もこれを迂回
+  できてはならない。検証対象のソースに影響しない変更は検証の実行自体を省いてもよいが、
+  それによってマージ不能になってはならない。
 ---
-# QA-a5f7f088: サポート対象の全プラットフォームでの自動検証をマージの必須条件にする
+# QA-a5f7f088: マージ前の自動検証を必須にし、プラットフォーム差が効く層は全プラットフォームで通す
 
 ## 仕様
 
 nput は複数の OS / system で動くことを主張するツールであり、その主張は「手元の 1 環境で
-通った」では裏づけられない。サポート対象の全プラットフォームでの検証を、マージ前に自動で
-通すことを必須にする。
+通った」では裏づけられない。マージ前の自動検証を必須にし、プラットフォーム差が効く層は
+全プラットフォームで通す。
 
-必須化を**技術的な条件**として課す点が要点になる。「main へ直接コミットしない」「PR 経由で
-マージする」といった運用ルールは、テストが失敗していてもマージできる状態を残す。方針として
-求めるのはその状態を塞ぐことであり、bypass の余地を残さないことを含む。
+**全プラットフォームを要求する範囲を層ごとに分ける**のが要点になる。振る舞いが OS / system で
+変わる層（nix の評価・ビルド）は全環境で通さなければ主張の裏づけにならないが、そうでない層まで
+全環境へ広げるのは検証時間を払うだけで得るものが無い。どの層がどちらかは実装が決めるため、
+規範は分岐の存在だけを固定して割り当ては基盤（INF）へ委ねる。
 
-検証対象のソースに影響しない変更（ドキュメントのみの変更など）まで全環境の検証を実走させる
-必要はない。ただし「実走を省く」ことが「マージできなくなる」に転化してはならない — 省略の
-手段はこの制約と両立するものに限られる。
+必須化を**技術的な条件**として課す点も同様に要点になる。「main へ直接コミットしない」
+「PR 経由でマージする」といった運用ルールは、テストが失敗していてもマージできる状態を残す。
+方針として求めるのはその状態を塞ぐことであり、bypass の余地を残さないことを含む。
 
-本 item が縛るのは「維持しているテストレベルが全プラットフォームで走り、その成功がマージの
-条件になる」ことだけで、**各テストレベルの範囲・アプローチは規定しない**。何をどこまで
-テストするかは test_plan（`docs/test-plan/`）が、実装形は design が持つ。
+検証対象のソースに影響しない変更（ドキュメントのみの変更など）まで検証を実走させる必要はない。
+ただし「実走を省く」ことが「マージできなくなる」に転化してはならない — 省略の手段はこの制約と
+両立するものに限られる。
+
+「検証対象として宣言するプラットフォーム」の実体は INF-d1230e1f が持つ（現在は
+`ubuntu-latest` / `ubuntu-24.04-arm` / `macos-latest` の 3 環境。`flake.nix` の `perSystem` が
+定義する 4 system とは一致しない）。各テストレベルの範囲・アプローチも本 item は規定せず、
+何をどこまでテストするかは test_plan（`docs/test-plan/`）が、実装形は design が持つ。
 
 ## 出典
 
