@@ -8,6 +8,17 @@
 # 設計の出典: epic GitHub Issue #203（grilling 2026-07-31 / 2026-08-01 で確定）、
 # ADR-0048。
 #
+# ## 型構成（12 型）
+#
+# 仕様の系統: solution → use_case → requirement → design
+# 品質とテスト計画: solution → quality / test_plan（design は test_plan も satisfy する）
+# 技術基盤: quality / design ← infrastructure
+# リスクとテスト: requirement / design ← risk → test_condition → test_case → defect
+# 独立した根: adr（justifies で仕様・基盤・品質の各型へ任意に接続する）
+#
+# 親を持たない根は solution と adr のみ。他の全型は upstream relation を 1 本以上持ち、
+# 「接続漏れ = orphan warning」が全型で成立する（→ #203・#237）。
+#
 # ## 組み込みから落とした型
 #
 # hardware_requirement / hardware_detailed_design / scenario / system_architecture は
@@ -201,15 +212,25 @@ item_types:
         targets:
           - test_plan
 
-  # ---- 独立した根 ----
+  # ---- 技術基盤 ----
 
-  # CI・リリース・開発環境など、プロダクト仕様の系統に載らない基盤。docs/infrastructure/。
-  # requirement 系統の子ではないため親を持たない根として置く。
+  # プロダクトを開発・提供・稼働させる技術基盤。docs/infrastructure/。CI/CD・リリース・
+  # 開発環境に加え、配信・ホスティング・クラウド（Cloudflare / AWS / Vercel 等）を含む。
+  # web アプリケーションを想定範囲に含めた横展開を見据えた定義（→ #237 §5）。
+  #
+  # dev 基盤は quality を、runtime 基盤は design を satisfy する。この 2 経路で
+  # solution ツリーへ接続できるようになったため根から外した（root は solution と adr のみ）。
+  #
+  # 型名・prefix は変更しない。INF-<UUID> は ADR の justifies から参照されており、
+  # 改名は ID 変更 = 全参照の張り替えを伴う。違和感の主因だった品質系との混在は
+  # quality 型の分離で解消した。
   - id: infrastructure
     display_name: Infrastructure
     prefix: INF
     id_format: '{prefix}-{uuid}'
-    parent_types: []
+    parent_types:
+      - quality
+      - design
     fields:
       # `docs/dev/definition-of-done.md` の項目 ID（DOD-01 …）への対応。DoD は sara の
       # item ではないため relation にはせず text フィールドへ逃がす（→ #212）。
@@ -225,9 +246,15 @@ item_types:
         field_type: !list text
         required: false
     allowed_targets:
+      - relation: satisfies
+        targets:
+          - quality
+          - design
       - relation: depends_on
         targets:
           - infrastructure
+
+  # ---- 独立した根 ----
 
   # 意思決定の記録。docs/adr/。仕様ツリーから分離した独立型で、justifies で
   # requirement / design / infrastructure / quality / test_plan へ任意に接続する
