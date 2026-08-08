@@ -240,9 +240,6 @@
                 # リポジトリの作業ツリーが無く、テスト側の git ルート解決も効かないため
                 # nix から store path を渡す。devShell / CI 経路は cwd がリポジトリ
                 # ルートなのでテスト側の解決に任せる。
-                #
-                # このファイル自身（case アームの正本）も入力に取るため、prefix マップを
-                # 書き換えると checks.sara-id は必ず再ビルドされる。
                 SARA_MODEL_YAML = ../docs/model.yaml;
                 SARA_DEV_FLAKE = ./flake.nix;
                 nativeBuildInputs = [

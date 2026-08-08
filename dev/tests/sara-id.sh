@@ -333,15 +333,23 @@ fi
 #
 # 突合は 3 つに分ける。正本が別々なので担保できる範囲も違う:
 #   - 6b-1: model.yaml の型 ⊆ case アーム（型を足して case へ足し忘れると落ちる）
-#   - 6b-2: case アームの正式型名 ⊆ model.yaml（case へ足して model.yaml へ
-#           足し忘れる逆方向。正式型名だけを見る。別名は model.yaml に載らない）
+#   - 6b-2: case アームの prefix ⊆ model.yaml の prefix（model.yaml に無い prefix の
+#           アームが増えたら落ちる。下記のとおり担保範囲は狭い）
 #   - 6b-3: case アームの全入力（別名含む）を実起動し、宣言どおりの prefix を返す
 #
 # 6b-3 の検知力は入力によって違う。`*)` フォールバックが大文字化した結果と期待 prefix が
-# 一致する入力（risk → RISK・adr → ADR・qa → QA・tp → TC 等の短縮別名）は、case アームを
+# 一致する入力（risk → RISK・adr → ADR・qa → QA・tp → TP 等の短縮別名）は、case アームを
 # 削っても同じ値が返るため退行を検知できない。一方 quality → QUALITY・use-case →
 # USE-CASE のように一致しない入力は検知する。除外リストを手で持つとその一覧自体が
-# 事実と乖離するので、6b-1 / 6b-2 の集合突合で漏れを押さえたうえで 6b-3 は全入力を回す。
+# 事実と乖離するので、6b-1 の集合突合で漏れを押さえたうえで 6b-3 は全入力を回す。
+#
+# 担保できないもの（正本が無いため、この節では検知しない）:
+#   - 別名（req / uc / use-case …）の削除。model.yaml は正式型名しか持たないので
+#     6b-1 / 6b-2 の集合突合には現れず、6b-3 も短縮別名はフォールバックと一致する。
+#     ハイフン別名（use-case → USE-CASE）だけは 6b-3 が検知する
+#   - 既存 prefix を再利用した誤アーム（`requirment) prefix=REQ` のような綴り誤り）。
+#     6b-2 は prefix の集合しか見ないので別名と区別が付かず、SUT も同じ flake.nix から
+#     ビルドされるため 6b-3 でも REQ- を返して通る
 #
 # ADR は「採番せず exit 2 で拒否する」が期待動作なので 6b-3 の実起動からは外す
 # （拒否経路は §8 が担保する）。集合突合の 6b-1 / 6b-2 には含める。
@@ -355,8 +363,9 @@ fi
 model_yaml="${SARA_MODEL_YAML:-}"
 dev_flake="${SARA_DEV_FLAKE:-}"
 # テスト自身の cwd（$work）ではなくスクリプトを起動した元のリポジトリを見るため、
-# run_sara_id とは違い cd しない。
-contract_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+# run_sara_id とは違い cd しない。git 管理外なら `.` に落とす（相対解決に失敗させ、
+# `/docs/model.yaml` のような読み取れないパスを fault メッセージに出さない）。
+contract_root="$(git rev-parse --show-toplevel 2>/dev/null || printf '.')"
 [[ -f "$model_yaml" ]] || model_yaml="$contract_root/docs/model.yaml"
 [[ -f "$dev_flake" ]] || dev_flake="$contract_root/dev/flake.nix"
 
@@ -385,14 +394,15 @@ else
   ' "$model_yaml")"
 
   # case アームから「入力名 → prefix」を全て取り出す（正式型名・別名の両方）。
-  # `*)` のフォールバック行は契約の対象外なので落とす。
+  # 拾うのは `<名前>[ | <名前>…>) prefix=<PREFIX> ;;` の形をした行だけに限る。
+  # `prefix=` を含むだけの行（`*)` フォールバック・コメント・他の代入）を拾うと、
+  # `)` を持たない行の左半分が行全体になってゴミの入力名が契約集合へ紛れ込む。
   mapfile -t arm_pairs < <(
     awk '
       /case "\$1" in/ { in_case = 1; next }
       /^ *esac/       { in_case = 0 }
       !in_case        { next }
-      /^ *\*\)/       { next }
-      /prefix=/ {
+      /^ *[a-z_][a-z_|[:space:]-]*\) *prefix=[A-Z]+ *;;/ {
         line = $0
         sub(/^ */, "", line)
         split(line, halves, ")")
@@ -422,6 +432,10 @@ else
     # 抽出が壊れた状態で突合を回すと、集合が空なので全て緑に見える。
     fault "prefix マップの突合を実行できない（抽出が壊れているため中断した）"
   else
+    # 連想配列へ畳むと同じ入力名の重複アームは後勝ちで潰れる（case は先勝ちなので
+    # 期待値が実装と逆になる）が、ここでは検知しない。writeShellApplication の
+    # shellcheck が SC2221 / SC2222 でビルド時に弾くため、重複アームを持つ sara-id は
+    # そもそもビルドできずこのテストまで到達しない。
     declare -A arm_prefix=()
     for pair in "${arm_pairs[@]}"; do
       arm_prefix["${pair%% *}"]="${pair##* }"
@@ -448,11 +462,13 @@ else
       pass "model.yaml の全 $model_type_lines 型が case アームに同じ prefix で載っている"
     fi
 
-    # --- 6b-2. case アームの正式型名が model.yaml にあるか -------------------
+    # --- 6b-2. case アームの prefix が model.yaml にあるか --------------------
     #
-    # 別名（req / uc …）は model.yaml に載らないので、正式型名だけを対象にする。
-    # 「別名かどうか」は model.yaml 側の型集合で判定できないため、同じ prefix を持つ
-    # アームのうち model.yaml に存在するものが 1 つでもあれば残りは別名とみなす。
+    # 別名（req / uc …）は model.yaml に載らないので、入力名では突合できない。
+    # 代わりに prefix の集合で見て、model.yaml のどの型の prefix でもないアームを弾く。
+    # したがってここが検知するのは「model.yaml に無い prefix のアームが増えた」場合
+    # だけで、既存 prefix を再利用したアーム（正当な別名も、綴りを誤った型名も）は
+    # 区別が付かず素通りする（→ 節冒頭「担保できないもの」）。
     backward_ok=1
     for arm_name in "${!arm_prefix[@]}"; do
       [[ -n "${model_prefix_of[$arm_name]:-}" ]] && continue
@@ -473,8 +489,10 @@ else
     # --- 6b-3. 全入力を実起動して宣言どおりの prefix を返すか ----------------
     #
     # UUID 部分は検証しないので偽 uuidgen で決定論化する（本物の乱数を
-    # 入力数ぶん引かない）。既出チェックに当たらないよう docs/ を空にしておく。
-    rm -f "$work/docs"/*.md
+    # 入力数ぶん引かない）。既出チェックは docs/ を再帰走査するので、サブディレクトリ
+    # ごと作り直して空にする（前段の片付け漏れに依存しない）。
+    rm -rf "$work/docs"
+    mkdir -p "$work/docs"
     : >"$count_file"
     export SARA_ID_UUIDGEN="$fake" SARA_ID_FAKE_COUNT="$count_file" \
       SARA_ID_FAKE_TAKEN="$fresh" SARA_ID_FAKE_FRESH="$fresh" SARA_ID_FAKE_SWITCH=0
