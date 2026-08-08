@@ -191,13 +191,15 @@ nix develop '.?dir=dev#sara' -c sara check
   `ADR-` が現れたら `justifies` の埋め忘れなので、無視せず張ってから完了とする（→「frontmatter」
   節の `justifies` の項）。
 
-2 つ目は他の型の warning に埋もれるので、出力を絞って見る。
+1 つ目は上の素の実行で判定する。2 つ目は他の型の warning に埋もれるので、**目視の補助**として
+出力を絞る。パイプの exit code は `sara` のものではなくなるので、判定には使わない（出力が空なら合格）。
 
 ```bash
 nix develop '.?dir=dev#sara' -c sara check | grep 'Orphan item' | grep 'ADR-'
 ```
 
-**他の型の orphan warning は移行中のため残ることがあり、上の合格条件の判定対象外**（確認不要）。
+**他の型の orphan warning は移行中のため残ることがあり、2 つ目の判定対象外**。絞らずに生の出力を
+見たときも、`ADR-` 以外の orphan は確認不要。
 `justifies` に書いた ID のタイポは orphan ではなく 1 つ目の `Broken reference` として落ちる
 （orphan は非空であることしか見ないため）。`strict_mode` は `sara.toml` で無効にしてあるので orphan は
 warning 止まりで exit 0 を落とさない（→ ADR-0048）が、`sara check --strict` を付けると error に変わり
