@@ -9,8 +9,8 @@ covers:
 
 ## 対象
 
-`tests/nix-unit/structure.nix`（`tests/nix-unit.nix` のディレクトリ列挙で自動搭載。テスト名の
-接頭辞は `test*` でファイル横断に一意）
+`tests/nix-unit/structure.nix`（`tests/nix-unit.nix` のディレクトリ列挙で自動搭載。TP-36e90d5d
+が定めるとおり、テスト名はファイル横断で一意でなければならない）
 
 ## 検証内容
 
@@ -25,5 +25,10 @@ covers:
   変換され、`method` は既定の `"symlink"`
 - out-of-store entry に判別タグ `_nputMarker` が漏れていないことを単独でも明示アサート
 
-配置元は固定 `outPath` を持つ fake flake-input（store-backed 判定が `? outPath` を見る実装で
-あるがゆえに通る正当な double）。
+検証するのは project root のみ。他の root 種別は評価テストの対象外（→ TC-4e7cfae7）。
+配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。
+
+## 出典
+
+`tests/nix-unit/structure.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。manifest
+構造の設計判断は ADR-0006 / ADR-0010 / ADR-0014 が持つ。

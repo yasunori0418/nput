@@ -9,11 +9,15 @@ covers:
 
 ## 対象
 
-`tests/nix-unit/resolve-marker.nix`（テスト seam `nput.__internal.resolveEntry` と
-`lib/types.nix` の `isRootMarker` / `isOutOfStoreMarker` を直接叩く。manifest 全体を介さず
+`tests/nix-unit/resolve-marker.nix`（TP-403c55c7 のテスト seam `nput.__internal.resolveEntry`
+と `lib/types.nix` の `isRootMarker` / `isOutOfStoreMarker` を直接叩く。manifest 全体を介さず
 単一 entry の src 種別判定・文字列化だけを見る最小の境界）
 
 ## 検証内容
+
+src 解決については、`srcKind` 単体・`src` 単体・entry 全体の shape という 3 段のアサートを
+store / out-of-store それぞれに重ねて置く。どの段で落ちたかで、種別判定・文字列化・余分な
+キーの混入のどれが壊れたかを切り分けられるようにするため。
 
 - **store src**: `srcKind = "store"`、`src` が store パスへ文字列化、entry 全体が
   5 フィールドに exact 一致
@@ -25,4 +29,9 @@ covers:
 - **`isRootMarker`**: projectRoot / homeRoot / systemRoot には true、out-of-store marker と
   絶対パス文字列には false
 
-配置元は固定 `outPath` を持つ fake flake-input。
+配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。
+
+## 出典
+
+`tests/nix-unit/resolve-marker.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。
+marker の設計判断は ADR-0001 / ADR-0010 / ADR-0013 が持つ。

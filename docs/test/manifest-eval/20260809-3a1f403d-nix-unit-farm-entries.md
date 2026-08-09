@@ -18,9 +18,16 @@ covers:
 - **抽出条件**: store×symlink / store×copy / out-of-store×symlink が混在する manifest を
   1 つ与え、採用されるのが store×symlink の 2 件だけであること（target 列で確認）
 - **空になる条件**: copy と out-of-store しか無い manifest では抽出結果が空リストになること
-- **アンカー名**: 対象 target のアンカー名が既知の sha256 短縮 hex リテラルに一致すること
+- **アンカー名の適用**: 対象 target のアンカー名が既知の sha256 短縮 hex リテラルに一致する
+  こと。アンカー名そのものの形式・決定性・特殊文字耐性は CASE-ead15d61 の担当で、ここでは
+  farm 内で正しい target から名前が引かれることだけを見る
 - **組み立て結果**: 抽出とアンカー名の合成が
-  `ln -s <escapeShellArg src> "$out/<anchorName>"` を改行連結した文字列になり、entry ごとに
-  anchor 名が変わること
+  `ln -s <escapeShellArg src> "$out/<anchorName>"` を改行連結した文字列になり、**target ごとに**
+  anchor 名が変わること（2 entry の `src` は同一の fake store パスなので、変わるのは
+  anchor 側だけである）
 
-配置元は固定 `outPath` を持つ fake flake-input。
+配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。
+
+## 出典
+
+`tests/nix-unit/farm-entries.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。

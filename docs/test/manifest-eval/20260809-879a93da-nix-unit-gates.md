@@ -13,8 +13,10 @@ covers:
 
 ## 検証内容
 
-拒否されるべき入力が `ThrownError` になり、メッセージが理由を名指しすることをアサートする
-（`expectedError.type` + `expectedError.msg` の部分一致）。
+拒否されるべき入力が `ThrownError` になり、メッセージが**拒否されたフィールド（または理由の
+語）を名指しする**ことをアサートする（`expectedError.type` + `expectedError.msg` の部分一致）。
+`msg` はフィールド名の部分一致なので、同じフィールドを理由とする複数のゲートは互いに
+区別されない（下の 2 つの `"target"` がこれにあたる）。
 
 - `systemRoot` を root に指定 → 未実装（`"system mode"`）
 - `method = "copy"` と out-of-store marker の併用 → `"out-of-store"`
@@ -27,4 +29,9 @@ covers:
 - `lib/types.nix` の `entriesType` を `evalModules` で直接評価し、未知キー `bogus` が
   モジュール経路（`modules/common.nix` が共有する型）でも eval エラーになること
 
-配置元は固定 `outPath` を持つ fake flake-input。
+配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。
+
+## 出典
+
+`tests/nix-unit/gates.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。各ゲートの
+設計判断は ADR-0008 / ADR-0010 / ADR-0013 / ADR-0019 / ADR-0024 が持つ。

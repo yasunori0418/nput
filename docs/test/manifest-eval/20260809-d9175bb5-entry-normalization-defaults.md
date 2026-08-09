@@ -22,3 +22,7 @@ attrset で宣言された entries が配列へ正規化される過程を、3 �
 ## 覆う CASE
 
 - CASE-59de34d4（`tests/nix-unit/defaults.nix`）
+
+## 出典
+
+`tests/nix-unit/defaults.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。

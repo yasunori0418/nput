@@ -1,18 +1,20 @@
 ---
 id: "TC-e7ff0e6d-32d7-4ed6-8c2f-449dba34b2f6"
 type: test_condition
-name: "拒否すべき入力が評価時に throw することと、パス脱出判定の境界をアサートする"
+name: "拒否すべき入力が公開 API 経由で評価時に throw することをアサートする"
 mitigates:
   - "RISK-09df40d3-2752-433e-9ab0-2816fbd14969"
 ---
-# TC-e7ff0e6d: 拒否ゲートとパス脱出判定の境界をアサートする
+# TC-e7ff0e6d: 拒否ゲートが評価時に throw することをアサートする
 
 ## テスト条件
 
-「この入力は評価が失敗する」を、エラー種別とメッセージの一部で直接アサートする。正常系の
-アサートでは、ゲートが外れたことを検出できないため。
+「この入力は評価が失敗する」を、`normalizeManifest` の公開経路（evalModules）越しに、
+エラー種別と拒否されたフィールドの名指しで直接アサートする。正常系のアサートでは、ゲートが
+外れたことを検出できないため。判定ロジックそのものを private helper 越しに見るのは
+TC-311ca3b2 の担当で、検証境界が異なる。
 
-**ゲートごとの拒否**（`normalizeManifest` の evalModules 経路）:
+**ゲートごとの拒否**:
 
 - 未実装の root（systemRoot）
 - `method = "copy"` と out-of-store marker の組み合わせ（意図の矛盾）
@@ -22,12 +24,10 @@ mitigates:
   同じく eval エラーになること
 - 素の文字列 src（out-of-store は marker による opt-in であって暗黙変換しない）
 
-**パス脱出判定の境界**（`escapesBase` / `isUnsafe`）: `.` と空文字が深さを動かさないこと、
-深さがちょうど 0 まで戻る場合は脱出としないこと、その 1 つ外側で脱出とすること、途中で
-`..` に当たっても深さが残っていれば脱出としないこと、絶対パスは脱出判定とは独立に拒否される
-こと。境界の内側と外側を対で置き、片側だけのアサートにしない。
-
 ## 覆う CASE
 
 - CASE-879a93da（`tests/nix-unit/gates.nix`）
-- CASE-36b5b61a（`tests/nix-unit/escapes-base.nix`）
+
+## 出典
+
+`tests/nix-unit/gates.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。

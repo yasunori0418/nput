@@ -22,4 +22,9 @@ covers:
 - **決定的な配列化**: 属性キー `b` / `a` / `c` を与えたとき、出力 entries の `target` 列が
   `[a b c]` の辞書順になること
 
-配置元は固定 `outPath` を持つ fake flake-input。
+配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。
+
+## 出典
+
+`tests/nix-unit/defaults.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。既定と
+辞書順の設計判断は ADR-0010 / ADR-0014 / ADR-0016 が持つ。

@@ -19,10 +19,13 @@ covers:
 
 - 入力は 2 entry。1 つは `subpath` を明示（`skills/nix`）、もう 1 つは `subpath` / `target` /
   `method` を全て省略して既定適用を通す。既定と明示の双方が文書へ現れる状態を固定する
-- 配置元は固定 `outPath` を持つ fake flake-input で、2 つは store hash を違える
-  （`000…-fake-src` と `111…-other`）。実パスを import すると store hash が揺れ、スナップ
-  ショット比較そのものが成立しない
+- 配置元は TP-d3d06fe4 の fake flake-input double イディオムに従い、2 つは store hash を
+  違える（`000…-fake-src` と `111…-other`）
 - どの不変条件も名指ししていないフィールドの追加・削除・改名が、ここで差分として現れる
 
-規範として述べられている性質はこのスナップショットに委ねず、CASE-7a6c4957 /
-CASE-59de34d4 / CASE-0c9d41d1 の名前付きアサートが守る。
+スナップショットに委ねてよい範囲の線引きは TC-de6514e2 が持つ。
+
+## 出典
+
+`tests/namaka/manifest-project/expr.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。
+namaka を併用する設計判断は ADR-0006 / DSG-fb49e36c が持つ。

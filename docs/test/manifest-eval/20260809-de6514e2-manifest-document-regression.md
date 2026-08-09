@@ -16,14 +16,20 @@ mitigates:
 
 - 入力は既定適用の対象（`subpath` / `target` / `method` を省略した entry）と明示指定した
   entry を混在させ、既定と明示の双方が文書へ現れる状態を固定する
-- 配置元は固定 `outPath` を持つ fake flake-input で与える。実パスを store へ import すると
-  マシン・nixpkgs revision で store hash が揺れ、スナップショット比較そのものが成立しない
+- 配置元は TP-d3d06fe4 が定める fake flake-input の double イディオムで与える
 - 2 つの配置元は store hash を違えて置き、entry どうしの取り違えが差分として出るようにする
 
-**このスナップショットに委ねてよい範囲**: スナップショットは「あるべき姿」ではなく「現に
-そうなっている姿」を記録し、変わったときは丸ごと再承認される。規範として述べられている性質は
-TC-4e7cfae7 / TC-d9175bb5 / TC-81be084d 側の名前付きアサートで守り、ここへは委ねない。
+**このスナップショットに委ねてよい範囲**: TP-36e90d5d が定めるとおり、規範として述べられて
+いる性質は名前付きアサート（TC-4e7cfae7 / TC-d9175bb5 / TC-81be084d）で守り、スナップショット
+だけに委ねない。スナップショットは変わったときに丸ごと再承認されるため、委ねた性質は
+「変わってよかったのか」を問われないまま通る。この線引きは本 item が
+RISK-3de9753f（評価スイート自身の盲点）を緩和する部分そのものである。
 
 ## 覆う CASE
 
 - CASE-7fb33044（`tests/namaka/manifest-project/expr.nix`）
+
+## 出典
+
+`tests/namaka/manifest-project/expr.nix` と `tests/namaka/_snapshots/` の現行実装からの逆算
+（→ Issue #273「L1〜L4」節）。役割分担の規範は TP-36e90d5d、double の規範は TP-d3d06fe4。

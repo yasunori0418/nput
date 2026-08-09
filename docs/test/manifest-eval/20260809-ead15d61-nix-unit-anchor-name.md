@@ -3,7 +3,7 @@ id: "CASE-ead15d61-8ca7-41fb-9121-a5d247ef727a"
 type: test_case
 name: "nix-unit: anchor-name.nix — GC アンカー名の形式と決定性"
 covers:
-  - "TC-1d69350e-db3c-4d74-a24e-7a3fabb31b0a"
+  - "TC-a6a14739-89e5-4eba-acee-3ed5be5a0b7e"
 ---
 # CASE-ead15d61: nix-unit anchor-name.nix
 
@@ -23,3 +23,8 @@ covers:
 - 異なる target が異なる hash になる（衝突しないことの示唆）
 - cyrillic / 日本語 / 空白 / 記号（`& * " |`）を含む target でも、既知 hash に安定一致し、
   長さ 32・全 hex を保つ（FS 名として直に使えない文字が sha256 経由で潰れること）
+
+## 出典
+
+`tests/nix-unit/anchor-name.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。
+アンカー名を target の sha256 とする設計判断は ADR-0016 が持つ。

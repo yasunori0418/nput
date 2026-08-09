@@ -13,16 +13,23 @@ mitigates:
 としてアサートする。
 
 - `schemaVersion` が 1 であること
-- `root.rootKind` が指定した root マーカーの種別を反映し、project のように実行時解決の
-  root では固定の絶対パス（`root.root`）を持たないこと
+- project root について、`root.rootKind` が `"project"` になり、実行時解決の root なので
+  固定の絶対パス（`root.root`）を持たないこと
 - store-backed な entry が `srcKind` / `src` / `subpath` / `target` / `method` の 5 フィールド
   ちょうどであること（exact 一致で余分なキーの混入を落とす）
 - out-of-store marker を与えた entry が `srcKind = "outOfStore"` と marker の絶対パスへ
   変換され、判別タグ `_nputMarker` が文書に漏れないこと
 
-スナップショット（TC-de6514e2）とは役割が重ならない。ここで見るのは「そうでなければならない」
-性質であり、スナップショットが見るのは「変わっていないこと」である。
+**この条件の適用範囲は project root に限る**。`homeRoot` の `rootKind` と fixed root での
+絶対パス併記は評価テストに無く、`checks.hm-module` と E2E（`integration` 区分）が担当する。
+ここを「全 root 種別を見ている」と読ませないために範囲を明示する。
+
+スナップショット（TC-de6514e2）とは役割が重ならない。役割分担の規範は TP-36e90d5d が持つ。
 
 ## 覆う CASE
 
 - CASE-7a6c4957（`tests/nix-unit/structure.nix`）
+
+## 出典
+
+`tests/nix-unit/structure.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。

@@ -22,3 +22,7 @@ manifest 全体を組み立てずに、単一 entry の解決（`resolveEntry`�
 ## 覆う CASE
 
 - CASE-0c9d41d1（`tests/nix-unit/resolve-marker.nix`）
+
+## 出典
+
+`tests/nix-unit/resolve-marker.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。
