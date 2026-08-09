@@ -7,20 +7,23 @@ derives_from:
 depends_on:
   - "QA-a5f7f088-a459-4bb2-9674-82b1a4a52053"
 specification: |
-  A check that measures a trend, coverage among them, SHALL report its result where it can
-  be read and SHALL NOT gate merging on a threshold, so that a change is never blocked by a
-  figure another change moved. Which checks are required to pass before merging is the
-  concern of the norm that makes verification a precondition, and that question SHALL NOT
-  be answered here; what this norm fixes is that a measurement never becomes such a
-  precondition. Detection SHALL be mechanical; the judgement of what a measurement calls
-  for SHALL rest with people.
+  A check SHALL be told apart by what its failure means: a check that verifies behaviour
+  fails when something is broken, whereas a check that measures a trend, coverage among
+  them, moves without anything being broken. A check of the latter kind SHALL report its
+  result where it can be read, and SHALL NOT gate merging on a threshold, so that a change
+  is never blocked by a figure another change moved. Which of the remaining checks are
+  required to pass before merging SHALL be settled by the norm that makes verification a
+  precondition, not here. Detection SHALL be mechanical; the judgement of what a
+  measurement calls for SHALL rest with people.
 specification_ja: |
-  傾向を計測するチェック（カバレッジはこれにあたる）は、その結果を読める場所へ報告しなければ
-  ならず、閾値によってマージを塞いではならない（ある変更が、別の変更が動かした数値によって
-  塞がれることがないようにするため）。どのチェックがマージ前に通ることを必須とされるかは
-  検証を必須条件とする規範の関心事であり、その問いにここで答えてはならない。本規範が固定する
-  のは、計測がそのような必須条件になることはない、ということだけである。検出は機械的でなければ
-  ならず、計測が何を要求しているかの判断は人が負わなければならない。
+  チェックは、その失敗が何を意味するかによって判別されなければならない。振る舞いを検証する
+  チェックは何かが壊れているときに失敗するのに対し、傾向を計測するチェック（カバレッジは
+  これにあたる）は何も壊れていなくても数値が動く。後者の種類のチェックは、その結果を読める
+  場所へ報告しなければならず、閾値によってマージを塞いではならない（ある変更が、別の変更が
+  動かした数値によって塞がれることがないようにするため）。残るチェックのうちどれがマージ前に
+  通ることを必須とされるかは、ここではなく、検証を必須条件とする規範によって定められなければ
+  ならない。検出は機械的でなければならず、計測が何を要求しているかの判断は人が負わなければ
+  ならない。
 ---
 # QA-8c6767e4: 傾向の計測は報告に留め、マージのゲートにしない
 
