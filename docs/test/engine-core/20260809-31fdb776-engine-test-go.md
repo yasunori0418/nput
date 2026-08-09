@@ -7,6 +7,8 @@ covers:
   - "TC-405606f0-3ac8-4cc2-998e-d4759a62a171"
   - "TC-4da40ee8-877e-405b-98ca-6bf5de926ba4"
   - "TC-b254a5a8-7fbf-4f31-8486-3e373d66bfa7"
+  - "TC-596d697f-4ba6-4ec1-b71e-8b5375806c08"
+  - "TC-d1eb1814-ac5e-4576-b092-7db4929fba43"
 ---
 # CASE-31fdb776: engine_test.go
 
