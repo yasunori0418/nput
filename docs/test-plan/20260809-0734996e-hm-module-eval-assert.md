@@ -7,6 +7,7 @@ derives_from:
 depends_on:
   - "TP-b7f1dc79-0222-4b6e-9e91-0545046e34f2"
   - "TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9"
+  - "TP-d3d06fe4-6940-4df8-b111-bb4096d5444f"
 specification: |
   The home-manager module SHALL have a verification level between pure evaluation of the
   library and the end-to-end harness: a check that evaluates a standalone home-manager

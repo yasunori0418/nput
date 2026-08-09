@@ -4,6 +4,8 @@ type: test_plan
 name: "評価テストは nix-unit で不変条件を、namaka で manifest 全体のスナップショットを見る"
 derives_from:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
+depends_on:
+  - "TP-403c55c7-d996-4951-8e6b-c3a7dddd387c"
 specification: |
   The evaluation layer SHALL be verified by two tools with disjoint roles: nix-unit SHALL
   assert named invariants of the manifest-producing functions, one assertion per property
