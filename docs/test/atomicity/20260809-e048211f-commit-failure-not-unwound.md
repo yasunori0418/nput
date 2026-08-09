@@ -29,4 +29,4 @@ commit 段は `Commit` 関数を差し替えて失敗させる。実 FS 条件�
 
 CASE-154af597（`internal/engine/undo_journal_test.go`）。commit 失敗時の部分 `Result`
 の中身（`Unwound` が false であることを含む）は generations 側の
-CASE-2008a909 が隣接して検証する。
+CASE-2008a909 も隣接して検証する。

@@ -30,6 +30,11 @@ prevDest を復元しない・PreRemove が消した実ディレクトリを作�
 --set`）の失敗時点では FS の全書き込みが成功しており整合しているため、ここで unwind
 すると整合状態を壊す（→ ADR-0044 §2）。この非対称性が崩れる方向の欠陥も本リスクに含む。
 
+`design` ではなく `requirement` へ張るのは、undo ジャーナルという機構そのものが
+REQ-5e75aabc の `specification` に「インメモリ undo ジャーナルへ逆操作を 1 件記録する」と
+書き下ろされて要求へ昇格しており、対応する design item が `docs/design/` に存在しない
+ため（REQ-5e75aabc を satisfies するのは DSG-836aa5cb というテスト戦略の design だけ）。
+
 ## 実現性
 
 **likelihood: high** — 逆操作は 6 種（unlinkNew / relinkOld / removeCopy / restoreRename /
@@ -39,18 +44,6 @@ journal 記録漏れが入りうる構造で、実際に ADR-0046 / ADR-0047 の
 journal 側の対応が必要になっている。
 
 **impact: high** — 復旧はユーザーの手作業になり、消えた実ディレクトリは復旧手段が無い。
-
-## 張り先について
-
-`docs/agents/sara-graph.md` の判別表は「undo ジャーナルの unwind が途中で失敗する」を
-`design` へ張る代表例として名指ししている。それでも本 item が `requirement` へ張るのは、
-このリポジトリでは undo ジャーナルという機構そのものが REQ-5e75aabc の `specification`
-に「インメモリ undo ジャーナルへ逆操作を 1 件記録する」と書き下ろされて要求へ昇格して
-おり、対応する design item が `docs/design/` に存在しない（REQ-5e75aabc を satisfies
-するのは DSG-836aa5cb というテスト戦略の design だけ）ため。判別表の代表例と現物の
-食い違いは、undo ジャーナルの design item を起こすか代表例を差し替えるかで別途解消する
-必要がある（本 item の範囲外）。同じ構図は RISK-3719d298（`--backup` の rename 退避 =
-ADR-0045 の設計選択）にも当てはまる。
 
 ## 緩和
 

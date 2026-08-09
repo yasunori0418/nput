@@ -18,7 +18,7 @@ TC-36ea3609 の正常系に対し、`Rollback` の失敗経路を検証する。
 
 **ポインタ移動の失敗は巻き戻さない** — `SwitchGeneration` が失敗した時点では
 PreRemove / place / removeStale の全 FS 書き込みが成功している。ここは apply の commit
-失敗と同じ非対称性で、巻き戻さない。部分 `Result` は「遷移は起きなかった（From == To ==
+失敗と同じ非対称性で、巻き戻さない。部分の `RollbackResult` は「遷移は起きなかった（From == To ==
 現世代）」「ポインタは動いていない」「失敗は entry スコープではない」を表し、既に置いた
 配置・除去済みの stale はそのまま残る。
 
@@ -35,5 +35,5 @@ apply と同じく全 conflict を stderr へ列挙してから、件数を持�
 
 ## 対応する CASE
 
-CASE-364ebb9d（`internal/engine/generations_test.go`）。conflict / 部分失敗時の `Result`
+CASE-364ebb9d（`internal/engine/generations_test.go`）。conflict / 部分失敗時の結果
 の構造は CASE-2008a909 も隣接して検証する。

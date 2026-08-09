@@ -42,5 +42,5 @@ project mode の `rollback` / `list-generations` を拒否する分岐）にあ�
 
 ## 緩和
 
-TC-1d19aebc（Result の観測フィールドと到達状態の分割）と TC-527b5034（e2e での
+TC-1d19aebc（実行結果の観測フィールドと到達状態の分割）と TC-527b5034（e2e での
 `--json` 観測）が緩和する。

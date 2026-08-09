@@ -28,14 +28,14 @@ tmpdir 上の実 FS へ世代リンクと profile を手で組み立ててから
 **rollback の再収束**（TC-36ea3609）
 
 - gen1 = {a, b}・gen2（current）= {a, c} からの再収束。c の stale 除去・b の再配置・
-  a の据え置き。`Result` の世代観測が From / To を映し、Entries が戻り先世代の全
+  a の据え置き。`RollbackResult` の世代観測が From / To を映し、Entries が戻り先世代の全
   インベントリを持つ（→ issue #130）
 - 祖先 symlink 世代（N）から per-file 世代（N-1）への復帰。plan の PreRemove が祖先
   symlink を除去してから子を実ディレクトリへ置き直す（→ ADR-0046、issue #173）
 
 **rollback の失敗経路**（TC-fa7911c6）
 
-- `SwitchGeneration` の失敗は unwind しない。部分 `Result` が From == To == 現世代を
+- `SwitchGeneration` の失敗は unwind しない。部分の `RollbackResult` が From == To == 現世代を
   表し、既に行われた配置・stale 除去はそのまま残る（→ ADR-0044 §2）
 - 祖先 migration 成功後の無関係な配置失敗で、migration ごと巻き戻る（→ ADR-0044、
   issue #168）
