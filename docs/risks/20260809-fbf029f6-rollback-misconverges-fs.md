@@ -4,9 +4,6 @@ type: risk
 name: "rollback が FS を前世代へ収束させ損ね、世代表示と実配置が食い違う"
 threatens:
   - "REQ-0e341430-17f0-498b-9439-65491652163a"
-  - "REQ-31f2882e-d2e3-4e3b-b783-feb627d73ac6"
-  - "REQ-6a950d6d-c191-4235-a1b4-73ffc7c2bb38"
-  - "REQ-31dae599-f3a3-4bbe-b367-c955535265da"
 likelihood: high
 impact: high
 level: high
@@ -37,10 +34,8 @@ store パスへ書こうとして EEXIST / EROFS で落ちる → ADR-0046、iss
 そもそも無い（未 apply）・戻り先の target が foreign な実体で塞がれている、のいずれも
 エラーで停止すべきであり、部分的に配置してから諦めるのが最悪の結果になる。
 
-同じ「FS を意図した状態へ持っていく」責務を持つ `reset` の teardown も本リスクに属する。
-保守的不変条件（nput 管理・記録通りのみ）を外れて foreign symlink を消せばユーザーの
-設定が消え、`--dryrun` が副作用を持てば preview が preview でなくなり、確認プロンプトの
-中断が効かなければ同意なき削除になる。
+同じ FS 操作系でも `reset` の teardown は脅威が別で、あちらは「消してはいけないものを
+消す」側にある（→ RISK-bb54245e）。
 
 ## 実現性
 
@@ -54,5 +49,4 @@ store パスへ書こうとして EEXIST / EROFS で落ちる → ADR-0046、iss
 ## 緩和
 
 TC-36ea3609（rollback の再収束と祖先 migration）・TC-fa7911c6（rollback の途中失敗・
-前提不成立・conflict 全件報告）・TC-06052178（reset の teardown 安全性）・
-TC-527b5034（e2e での世代往復）が緩和する。
+前提不成立・conflict 全件報告）・TC-527b5034（e2e での世代往復）が緩和する。

@@ -3,7 +3,7 @@ id: "TC-06052178-ed49-4800-beb2-1d7c5d696ea8"
 type: test_condition
 name: "reset が保守的不変条件の範囲だけを消し、dryrun は副作用ゼロ、非同意では中断する"
 mitigates:
-  - "RISK-fbf029f6-866c-4a08-a4eb-f09e3c7e907e"
+  - "RISK-bb54245e-b284-4b4d-9896-8fec2b4e521c"
 ---
 # TC-06052178: reset が保守的不変条件の範囲だけを消し、dryrun は副作用ゼロ、非同意では中断する
 
