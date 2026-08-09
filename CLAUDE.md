@@ -38,11 +38,39 @@ item を新設し、概要文書にはリンクを 1 行足すに留める。
 検出した欠陥（defect）は型として持たず、GitHub Issues（`bug` label）で管理する
 （→ ADR-0051。運用規約は `docs/agents/issue-tracker.md` の「Defect issues」節）。
 
-**quality（`QA`）・test_plan（`TP`）・risk（`RISK`）・テスト系（`TC` / `CASE`）は
-model.yaml に定義済みだが、item もディレクトリもまだ無い。** quality / test_plan は既存 item の
-移設で作られる。テスト系は工程に着手する段で `docs/risks/` と `docs/test/<対象>/` を作り、
-`<対象>` の粒度（機能単位か requirement 単位か）はその時点で決めて本節へ追記する。
 risk を `requirement` と `design` のどちらに張るかの使い分けは `docs/agents/sara-graph.md`。
+
+### テスト系 item の粒度（`docs/risks/` と `docs/test/<対象>/`）
+
+`docs/test/<対象>/` の `<対象>` は**機能単位の 8 区分**。requirement 単位は 130 超の REQ との
+1:N が錯綜するため採らない（→ Issue #273 の決定事項）。
+
+| `<対象>` | 含むテスト資産 |
+|---|---|
+| `manifest-eval` | nix-unit 全 7（structure / defaults / gates / escapes-base / anchor-name / resolve-marker / farm-entries）+ namaka manifest-project |
+| `engine-core` | `internal/engine/` の engine / dryrun / preflight、`internal/planner/` |
+| `copy` | copytree / copy、e2e `04-copy` |
+| `migration-stale` | preremove_generalization / staleremove、e2e `03-stale` |
+| `atomicity` | undo / undo_journal / backup、engine の lock + `internal/lock/` |
+| `generations` | generations / reset（engine）/ result_extensions / drift、`internal/paths/`、e2e `02-home` |
+| `cli-json` | `cmd/nput/` の全テストファイル |
+| `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` |
+
+区分外: `go-vet` / `golangci-lint` / カバレッジ計測は quality の担当。`dev/tests/sara-id.sh` は
+test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（プロダクトのリスクへ
+`threatens` する構造を持たない開発基盤のため）。
+
+**逆算階層の粒度**（既存のテスト実装から item を起こすときの単位）:
+
+- **CASE** = テストファイル / e2e シナリオ / flake check 単位。本文に対象ファイルパスと
+  主な検証内容（テスト関数のテーマ列挙）を書く。テスト関数単位には割らない
+- **TC** = 検証テーマ単位（対象あたり数件）。同じ不変条件・観点を検証する CASE 群を束ねる
+- **RISK** = TC を束ねる脅威単位（対象あたり 2〜5 件）。「このテーマが壊れると何が起きるか」を
+  requirement / design への `threatens` で表す
+- 関係の向き: CASE -covers→ TC -mitigates→ RISK -threatens→ REQ / DSG
+
+**risk / TC / CASE は `docs/spec.md` へ索引しない**（`sara query` / `sara report` で辿る）。
+概要文書のリンク集に載せるのは requirement / quality / test_plan まで。
 
 ### ID 規約（UUIDv4 二層構成）
 

@@ -307,10 +307,16 @@ item が持ち、`satisfies` で quality へ接続する。
 
 test_plan は requirement とは別系統で、use_case を経由せず solution 直下に接続する。
 
+- [TP-0734996e](test-plan/20260809-0734996e-hm-module-eval-assert.md) — home-manager モジュールの配線は build sandbox 内の評価アサートで検証する
 - [TP-229b69c0](test-plan/20260808-229b69c0-e2e-harness-scope.md) — 非 NixOS で動く主張を実 nix の一気通貫 E2E で検証する
+- [TP-36e90d5d](test-plan/20260809-36e90d5d-nix-unit-namaka-split.md) — 評価テストは nix-unit で不変条件を、namaka で manifest 全体のスナップショットを見る
 - [TP-403c55c7](test-plan/20260808-403c55c7-lib-internal-test-seam.md) — lib.\_\_internal は private helper のテスト seam として公開する
 - [TP-b7f1dc79](test-plan/20260808-b7f1dc79-nixos-vm-test-future.md) — NixOS / nix-darwin モジュール経路の実 activate は E2E ハーネスの対象外とする
 - [TP-d3000054](test-plan/20260808-d3000054-json-conformance-verification.md) — エンベロープの niface 適合を Go テストと E2E の両方で検証する
+- [TP-d3d06fe4](test-plan/20260809-d3d06fe4-eval-test-double.md) — 評価テストの store-backed な入力は固定 outPath を持つ fake flake-input で与える
+- [TP-d7da4065](test-plan/20260809-d7da4065-sara-id-contract-test.md) — sara-id はモデル定義との一致を含めて契約テストで検証する
+- [TP-deb05610](test-plan/20260809-deb05610-fault-injection-atomicity.md) — 原子性は実 FS の条件で故障を誘発して不変条件ごとに検証する
+- [TP-e7c25263](test-plan/20260809-e7c25263-go-test-layering.md) — エンジンの Go テストは nix を介さない実 FS 統合テストを主戦力とする
 
 ---
 
