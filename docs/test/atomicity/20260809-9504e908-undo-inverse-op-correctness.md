@@ -29,6 +29,9 @@ undo ジャーナルは 6 種目として `--backup` の退避戻しを持つが
 現物が無いが再作成はできる」は復元の成功であり、失敗として扱えば RISK-a1622cdd の
 「1 件の失敗が全体を道連れにする」を自ら誘発する。
 
+上位の規範は TP-deb05610（原子性の故障注入体系）と TP-e7c25263（`internal/engine/` の
+実 FS 統合レベル）。
+
 ## 対応する CASE
 
 CASE-02475ac2（`internal/engine/undo_test.go`）。

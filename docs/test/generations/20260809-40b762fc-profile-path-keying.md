@@ -37,6 +37,10 @@ profile の on-disk レイアウトを決めるパス解決層を、環境変数
 roothash 階層（`<name>` dir の親）に置かれ、`<roothash>` キーのモードでのみ生じること
 （home の `<name>` 直キーでは空。→ REQ-2aa3abbc）。
 
+上位の規範は TP-e7c25263 の「FS に一切触れずに判断する層」。`internal/paths/` の解決と
+ハッシュ化は入力が列挙可能なので、統合テストがたまたま到達する範囲に委ねず、ユニット
+レベルで table として覆う。
+
 ## 対応する CASE
 
 CASE-ff4a842e（`internal/paths/paths_test.go`）。root 解決そのもの（`rootKind` と

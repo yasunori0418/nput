@@ -29,6 +29,8 @@ run が修復だけを行う状況を作る。
 修復対象は symlink と copy の両方であること（片方だけの修復に縮退していないこと）を
 条件に含む。
 
+上位の規範は TP-e7c25263（`internal/engine/` を実 FS の tmpdir で駆動する統合レベル）。
+
 ## 対応する CASE
 
 CASE-2de3a3d8（`internal/engine/drift_test.go`）。`--backup` が同じ修復経路で発火する

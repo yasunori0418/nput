@@ -23,6 +23,8 @@ mitigates:
 この条件は full `Apply` では窓を作れないため、`BackupAction` を組み立てて `applier.backup`
 を直接駆動し、plan 済みの状態から execute までの間に退避先を作る、という形で検証する。
 
+上位の規範は TC-ed4992c0 と同じく TP-e7c25263。
+
 ## 対応する CASE
 
 CASE-ed4b32fd（`internal/engine/backup_test.go`）。

@@ -29,6 +29,8 @@ preview であることの担保。
 
 **profile 不在** — 一度も apply していない状態での `reset` は no-op でエラーにしない。
 
+上位の規範は TP-e7c25263（`internal/engine/` を実 FS の tmpdir で駆動する統合レベル）。
+
 ## 対応する CASE
 
 CASE-503c9021（`internal/engine/reset_test.go`）。`Reset` の返す `ResetResult` の構造は

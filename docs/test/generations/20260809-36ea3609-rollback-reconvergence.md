@@ -27,6 +27,8 @@ symlink 越しに store を指して EEXIST / EROFS で落ちる（→ ADR-0046�
 **root 解決** — `rootKind` から絶対 root を得る側（home は `$HOME`、`--root` 上書きは
 rootKind によらず優先）も同じ層の条件として併せて検証する。
 
+上位の規範は TP-e7c25263（`internal/engine/` を実 FS の tmpdir で駆動する統合レベル）。
+
 ## 対応する CASE
 
 CASE-364ebb9d（`internal/engine/generations_test.go`）。

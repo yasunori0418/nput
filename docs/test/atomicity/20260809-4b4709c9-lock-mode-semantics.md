@@ -30,6 +30,9 @@ mitigates:
 select で見るが、これは取りこぼしても偽陽性（block の見落とし）にしかならず、
 flaky な失敗にはならない。
 
+上位の規範は TP-deb05610 の「並行実行に対する原子性」で、競合を保持状態の模擬ではなく
+実際にロックを保持して作ることもそこが定める。
+
 ## 対応する CASE
 
 CASE-6f6fabaa（`internal/engine/lock_test.go`）。

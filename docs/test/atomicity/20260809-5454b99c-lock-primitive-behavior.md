@@ -18,6 +18,8 @@ engine から切り離した `internal/lock` パッケージ単体で、flock �
   次の取得を妨げない）
 - **blocking の待機** — blocking 取得は保持中に取得へ進まず、解放されてから取得する
 
+上位の規範は TC-4b4709c9 と同じく TP-deb05610 の「並行実行に対する原子性」。
+
 ## 対応する CASE
 
 CASE-2e675eea（`internal/lock/lock_test.go`）。

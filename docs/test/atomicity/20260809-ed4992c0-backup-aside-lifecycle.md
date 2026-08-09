@@ -34,6 +34,10 @@ discardJournal の掃除対象ではない。ユーザーのバックアップ�
 記録している兄弟 leaf は removeStale から「planning 後に drift した」と報告されない
 （親ごと 1 回の rename で去ったのは想定内の挙動であって drift ではない）。
 
+上位の規範は TP-e7c25263（`internal/engine/` を実 FS の tmpdir で駆動する統合レベル）。
+TP-deb05610 の射程は 4 つの不変条件に閉じており、退避ポリシーそのものはそちらの担当では
+ない（巻き戻し対象としての退避は TC-3b02ab58 側で TP-deb05610 の下に立つ）。
+
 ## 対応する CASE
 
 CASE-ed4b32fd（`internal/engine/backup_test.go`）。
