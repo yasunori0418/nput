@@ -111,8 +111,7 @@
               fi
 
               # 型名 → prefix。docs/model.yaml の item_types と対応させる。
-              # 別名は sara init のサブコマンド別名に揃える。ただし defect の `d` は
-              # 落とす（design を `d` と略した入力が黙って defect を引くため）。
+              # 別名は sara init のサブコマンド別名に揃える。
               # 未知の入力は prefix そのものを渡されたとみなして大文字化して通す。
               case "$1" in
                 solution | sol) prefix=SOL ;;
@@ -126,7 +125,6 @@
                 risk) prefix=RISK ;;
                 test_condition | test-condition | tc) prefix=TC ;;
                 test_case | test-case | case) prefix=CASE ;;
-                defect) prefix=D ;;
                 *) prefix=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]') ;;
               esac
 
