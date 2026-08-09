@@ -53,7 +53,7 @@ risk を `requirement` と `design` のどちらに張るかの使い分けは `
 | `engine-core` | `internal/engine/` の engine / dryrun / preflight、`internal/planner/` | TP-e7c25263 |
 | `copy` | copytree / copy、e2e `04-copy` | TP-e7c25263 / TP-229b69c0 |
 | `migration-stale` | preremove_generalization / staleremove、e2e `03-stale` | TP-e7c25263 / TP-229b69c0 |
-| `atomicity` | undo / undo_journal / backup、engine の lock + `internal/lock/` | TP-deb05610 |
+| `atomicity` | undo / undo_journal / backup、engine の lock + `internal/lock/` | TP-deb05610 / TP-e7c25263（backup の退避ポリシー）|
 | `generations` | generations / reset（engine）/ result_extensions / drift、`internal/paths/`、e2e `02-home` | TP-e7c25263 / TP-229b69c0 |
 | `cli-json` | `cmd/nput/` の全テストファイル | TP-e7c25263（CLI 層の判断）/ TP-d3000054（エンベロープ適合と payload 意味論）|
 | `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` | TP-229b69c0 / TP-0734996e / TP-e7c25263（`internal/` の Go テスト）|
