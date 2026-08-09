@@ -37,6 +37,11 @@ references:
 > §5 のそれ以外の決定（required status check に登録しない・DoD に追加しない・CI job のローカル
 > filter）は不変で、§1〜§4 も全て不変（→ ADR-0050）。
 
+> **2026-08-09 改訂注記（ADR-0051）**: 改訂対象は本 ADR **§2 の型定義表のうち defect（D）の行だけ**。
+> defect 型は廃止され、発生した欠陥は GitHub Issues（`bug` label）で管理する。テスト系統のグラフは
+> `risk → test_condition → test_case` で終端し、relation `reveals` / `is_revealed_by` も削除された。
+> §2 のそれ以外の決定と §1 / §3 / §4 / §5 は不変（→ ADR-0051）。
+
 ## 背景
 
 nput の仕様・設計・テストは `docs/spec.md`（1200 行超）/ `docs/design.md`（550 行）/ `docs/concept.md`

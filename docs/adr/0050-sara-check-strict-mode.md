@@ -24,6 +24,11 @@ references:
   §1〜§4 も全て不変
 - 起点: epic #203 の移行完了（Batch 2・2026-08-08）を受けた残論点判断（Issue #255）
 
+> **2026-08-09 改訂注記（ADR-0051）**: 改訂対象は **再検討条件のうち defect 起因のトリガーだけ**。
+> defect 型は廃止され（→ ADR-0051）、「defect item が最初に起こされた時点で strict 化と衝突する」
+> 事態は発生しなくなった。`strict_mode = true` を含む決定 1〜3 は不変で、テスト系型の工程着手時に
+> 再判断する枠組み自体も（対象が risk / test_condition / test_case の 3 型になるだけで）不変。
+
 ## 背景
 
 ADR-0048 §5 は `sara check` の CI 導入にあたり `strict_mode = false`（orphan は警告止まり）で

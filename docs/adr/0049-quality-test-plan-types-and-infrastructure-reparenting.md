@@ -22,6 +22,12 @@ revises:
   不変で、§1 / §3 / §4 / §5 も全て不変
 - 起点: epic #203 の grilling セッション（2026-08-08）で確定
 
+> **2026-08-09 改訂注記（ADR-0051）**: 改訂対象は **§1 の型テーブルのうち defect（D）の行と、
+> defect の orphan 例外の記述・再検討条件「defect の `is_revealed_by`」だけ**。defect 型は廃止され
+> （12 型 → 11 型）、発生した欠陥は GitHub Issues で管理する。再検討条件は「`is_revealed_by` を
+> 足すか」の二択ではなく型の廃止で解消された。§2 / §3 と再検討条件「risk への peer relation 追加」は
+> 不変（→ ADR-0051）。
+
 ## 背景
 
 ADR-0048 §2 は 10 型（solution / use_case / requirement / design / infrastructure / adr /
