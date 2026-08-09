@@ -4,19 +4,17 @@ type: quality
 name: "公開ドキュメントは英語を canonical とし、日本語版を対で保守する"
 derives_from:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
-depends_on:
-  - "QA-4a623664-650d-4a08-800f-691f4ea6ff91"
 specification: |
-  Documentation addressed to users outside this repository SHALL take English as its
+  Prose documentation addressed to users outside this repository SHALL take English as its
   canonical language, and a Japanese counterpart SHALL be maintained alongside it. Where a
   counterpart has not caught up, the reader SHALL be led to the canonical text rather than
-  to a missing page. Design records addressed to contributors are outside this norm and
-  SHALL NOT be required to carry an English counterpart.
+  to a missing page. Design records addressed to contributors fall outside this norm and
+  MAY be written in Japanese alone.
 specification_ja: |
-  このリポジトリの外の利用者に向けたドキュメントは、英語を canonical な言語としなければ
+  このリポジトリの外の利用者に向けた散文のドキュメントは、英語を canonical な言語としなければ
   ならず、日本語版が対で保守されなければならない。対の側が追いついていない箇所では、
   読者は欠落したページではなく canonical な文へ導かれなければならない。貢献者に向けた
-  設計記録は本規範の対象外であり、英語の対を持つことを求められてはならない。
+  設計記録は本規範の対象外であり、日本語だけで書いてもよい。
 ---
 # QA-5ecd74ba: 公開ドキュメントは英語を canonical とし、日本語版を対で保守する
 
@@ -34,9 +32,13 @@ specification_ja: |
 記録すべき判断を書く速度がそのまま落ちる。境界は「ソース・利用者向けの面は英語、設計根拠の
 ドキュメントは日本語」で引く。
 
+**対を求めるのは散文の文書に限る。** コマンド出力や `--help`・ソースコメントも英語で書くが、
+これらは日本語の対を持たない（英語のまま利用者に届く面であり、訳を並べる先が無い）。本 item が
+「対で保守する」ことを求めるのは、英語版と日本語版が別々の文書として並ぶ散文の側になる。
+
 どの文書を公開面に載せるか（掲載範囲）・ロケールの構成・フォールバックの実装は本 item の規範に
 含めない。INF-0865477b が持つ。用語の正名は QA-4a623664 が固定し、本 item はその上で言語の
-canonical 性と対の保守だけを定める。
+canonical 性と対の保守だけを定める（分界の宣言であり、依存関係ではない）。
 
 ## 出典
 

@@ -7,16 +7,19 @@ derives_from:
 depends_on:
   - "QA-a5f7f088-a459-4bb2-9674-82b1a4a52053"
 specification: |
-  A check that verifies behaviour — one whose failure means something is broken — SHALL be
-  a precondition of merging. A check that measures a trend, coverage among them, SHALL
-  report its result where it can be read and SHALL NOT gate merging on a threshold, so that
-  a change is never blocked by a figure another change moved. Detection SHALL be
-  mechanical; the judgement of what a measurement calls for SHALL rest with people.
+  A check that measures a trend, coverage among them, SHALL report its result where it can
+  be read and SHALL NOT gate merging on a threshold, so that a change is never blocked by a
+  figure another change moved. Which checks are required to pass before merging is the
+  concern of the norm that makes verification a precondition, and that question SHALL NOT
+  be answered here; what this norm fixes is that a measurement never becomes such a
+  precondition. Detection SHALL be mechanical; the judgement of what a measurement calls
+  for SHALL rest with people.
 specification_ja: |
-  振る舞いを検証するチェック（失敗が「何かが壊れている」ことを意味するもの）は、マージの
-  必須条件でなければならない。傾向を計測するチェック（カバレッジはこれにあたる）は、その
-  結果を読める場所へ報告しなければならず、閾値によってマージを塞いではならない（ある変更が、
-  別の変更が動かした数値によって塞がれることがないようにするため）。検出は機械的でなければ
+  傾向を計測するチェック（カバレッジはこれにあたる）は、その結果を読める場所へ報告しなければ
+  ならず、閾値によってマージを塞いではならない（ある変更が、別の変更が動かした数値によって
+  塞がれることがないようにするため）。どのチェックがマージ前に通ることを必須とされるかは
+  検証を必須条件とする規範の関心事であり、その問いにここで答えてはならない。本規範が固定する
+  のは、計測がそのような必須条件になることはない、ということだけである。検出は機械的でなければ
   ならず、計測が何を要求しているかの判断は人が負わなければならない。
 ---
 # QA-8c6767e4: 傾向の計測は報告に留め、マージのゲートにしない
@@ -27,16 +30,21 @@ QA-a5f7f088 が「マージ前の自動検証を必須にする」側を規範�
 **必須化しない側の境界**を定める。両方が無いと、必須化の規範が「検証と名の付くものは
 すべて塞ぐ」と読めてしまう。
 
-**判別の基準は失敗が何を意味するか**になる。振る舞いの検証は、失敗すれば製品が壊れている
-ことを意味するので塞ぐ意味がある。傾向の計測は、数値が下がっても壊れてはおらず、下がった
-こと自体の評価が状況に依存する。前者は必須、後者は報告に留める。
+**判別の基準は失敗が何を意味するか**になる。傾向の計測は、数値が下がっても何かが壊れたことを
+意味せず、下がったこと自体の評価が状況に依存する。評価が状況に依存するものを閾値で塞ぐと、
+塞いだ結果を人が毎回覆すことになり、ゲートが形骸化する。
 
-閾値ゲートを置かないのは、**数値がその変更に固有でない**ことが理由になる。カバレッジのような
-指標は他の変更がマージされるだけで動くため、閾値で塞ぐと変更の中身と無関係にマージ順が
+閾値ゲートを置かないもう一つの理由は、**数値がその変更に固有でない**ことになる。カバレッジの
+ような指標は他の変更がマージされるだけで動くため、閾値で塞ぐと変更の中身と無関係にマージ順が
 結果を決める。塞ぐ代わりに読める場所へ出し、下がったことをどう扱うかは人が判断する。
 
+**「計測でない = 必須」ではない。** 本 item が定めるのは計測を必須条件にしないことだけで、
+何を必須にするかは QA-a5f7f088 の担当になる。実際、`sara check` は壊れていることを検出する
+検証でありながら required status check にしない判断が別途置かれている（→ ADR-0050）。本 item
+の規範をその判断の否定として読んではならない。
+
 どの指標を計測するか・報告先・計測の実装は本 item の規範に含めない。`.github/workflows/` と
-対応する infrastructure item が持つ。
+INF-d1230e1f が持つ。
 
 ## 出典
 

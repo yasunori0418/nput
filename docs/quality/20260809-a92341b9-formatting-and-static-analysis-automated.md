@@ -8,15 +8,14 @@ depends_on:
   - "QA-a5f7f088-a459-4bb2-9674-82b1a4a52053"
 specification: |
   Code formatting and static analysis SHALL be among the checks that the pre-merge
-  verification runs, so that neither depends on a contributor remembering to run it
-  locally. They SHALL be declared in the same declarative check surface as the rest of the
-  verification rather than as steps written into the pipeline, so that the same check runs
-  identically in CI and on a contributor's machine.
+  verification runs, so that neither rests on a contributor remembering to run it locally.
+  A contributor SHALL be able to run the same check the verification runs, and obtain the
+  same verdict from it, without reproducing the pipeline that invokes it.
 specification_ja: |
   コード整形と静的解析は、マージ前の自動検証が実行するチェックに含まれなければならない
-  （どちらも、貢献者がローカルでの実行を忘れないことに依存してはならないため）。これらは
-  パイプラインに書かれた手順としてではなく、検証の他の部分と同じ宣言的なチェック面の上で
-  宣言されなければならない（CI でも貢献者の手元でも同一のチェックが走るようにするため）。
+  （どちらも、貢献者がローカルでの実行を覚えていることに依存しないようにするため）。貢献者は、
+  その検証が実行するのと同じチェックを、それを起動するパイプラインを再現することなく実行し、
+  同じ判定を得られなければならない。
 ---
 # QA-a92341b9: コード整形と静的解析は宣言的なチェックとして自動検証に載せる
 
@@ -28,12 +27,13 @@ specification_ja: |
 QA-a5f7f088 は「マージ前の自動検証を必須にすること」を規範化し、**検証項目の中身は委譲して
 いる**。本 item はその委譲を受けて、整形と静的解析を項目に含めることを定める。
 
-**宣言的なチェック面の上で宣言する**のが要点になる。パイプラインの手順として書くと、同じ検査を
-手元で走らせる手段がパイプラインの再現になり、CI と手元で結果がずれる余地が残る。宣言側に
-置けば、どちらで走らせても同じチェックになる。
+**手元で同じ判定を得られること**が要点になる。パイプラインの手順としてしか書かれていない検査は、
+手元で走らせる手段がパイプラインの再現になり、CI と手元で結果がずれる余地が残る。指摘された
+貢献者が同じ検査を手元で回せなければ、修正は CI の往復に頼ることになる。この性質を満たす
+実装形（宣言的なチェック定義など）は基盤の担当で、規範として固定するのは性質の側になる。
 
 対象言語ごとの整形器・解析器の選定、チェックの実装形、どのジョブで走らせるかは本 item の
-規範に含めない。ADR-0025 と `flake.nix` のチェック定義、対応する infrastructure item が持つ。
+規範に含めない。ADR-0025 と `flake.nix` のチェック定義、INF-d1230e1f が持つ。
 
 ## 出典
 

@@ -4,6 +4,8 @@ type: quality
 name: "設計判断は ADR に記録し、改訂の書き戻しと item への接続を同じ変更の中で完了させる"
 derives_from:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
+depends_on:
+  - "QA-6bf957d9-17d9-4660-92b7-ebd6eeb71a8c"
 specification: |
   A change that carries a design decision SHALL record that decision as an ADR. Where a new
   ADR revises the decision of an existing one, the back-reference note on the revised ADR
@@ -36,8 +38,8 @@ specification_ja: |
 
 接続を空のまま残さない規範は、**空を埋め忘れとして機械判定できる状態**を保つためにある。
 接続の非空性は QA-6bf957d9 の機械検証が拾うが、その検証は frontmatter しか見ない。旧 ADR
-本文の注記が書かれているかは視野の外にあり、そこは人手のレビューで守る（QA-6bf957d9 は
-その除外を明示している）。
+本文の注記が書かれているかはその帰結として視野の外にあり、そこは人手のレビューで守る
+（確認の手順は `docs/adr/README.md` のセルフチェック節が持つ）。
 
 改訂の表現形式（supersede を使わず blockquote 注記で誘導する・注記の書式・接続先の型の
 一覧）は本 item の規範に含めない。運用手順は `docs/adr/README.md` が、接続可能な型は

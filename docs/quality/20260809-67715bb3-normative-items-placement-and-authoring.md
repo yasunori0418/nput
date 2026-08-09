@@ -4,8 +4,6 @@ type: quality
 name: "規範は 1 ファイル 1 item のグラフが持ち、概要文書は索引に縮退させる"
 derives_from:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
-depends_on:
-  - "QA-6bf957d9-17d9-4660-92b7-ebd6eeb71a8c"
 specification: |
   Normative content SHALL be held by the item graph alone, one item per file, and the
   overview documents SHALL be reduced to indexes that link to those items rather than
