@@ -56,7 +56,7 @@ risk を `requirement` と `design` のどちらに張るかの使い分けは `
 | `atomicity` | undo / undo_journal / backup、engine の lock + `internal/lock/` | TP-deb05610 |
 | `generations` | generations / reset（engine）/ result_extensions / drift、`internal/paths/`、e2e `02-home` | TP-e7c25263 / TP-229b69c0 |
 | `cli-json` | `cmd/nput/` の全テストファイル | TP-e7c25263（CLI 層の判断）/ TP-d3000054（エンベロープ適合と payload 意味論）|
-| `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` | TP-229b69c0 / TP-0734996e |
+| `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` | TP-229b69c0 / TP-0734996e / TP-e7c25263（`internal/` の Go テスト）|
 
 区分外: `go-vet` / `golangci-lint` / カバレッジ計測は quality の担当。`dev/tests/sara-id.sh` は
 test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（理由は同 item）。

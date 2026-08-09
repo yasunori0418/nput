@@ -15,8 +15,8 @@ specification: |
   had already made; a failure at commit does not unwind the placements, because the
   filesystem is already consistent and unwinding would destroy it; re-running after an
   interruption converges on the intended state rather than compounding the damage; and a
-  concurrent run cannot interleave with any of the above, since the three rollback
-  invariants assume the run is the only writer. Fault injection that a privileged user
+  concurrent run cannot interleave with any of the above, since the three invariants above
+  assume the run is the only writer. Fault injection that a privileged user
   would bypass SHALL detect that condition and skip, rather than pass vacuously, and where
   a root-proof technique exists it SHOULD be preferred over one requiring the skip. For the
   fourth invariant the tests SHALL cover that a second run cannot acquire a held lock, that
@@ -34,7 +34,7 @@ specification_ja: |
   それまでに加えた変更をすべて巻き戻すこと。commit で失敗したときは配置を巻き戻さないこと
   （ファイルシステムは既に整合しており、巻き戻せばそれを壊すため）。中断後の再実行が、被害を
   重ねるのではなく意図した状態へ収束すること。そして並行する実行が上記のいずれにも割り込め
-  ないこと（巻き戻しの 3 つの不変条件は、その実行が唯一の書き手であることを前提としている
+  ないこと（上記の 3 つの不変条件は、その実行が唯一の書き手であることを前提としている
   ためである）。特権ユーザーでは迂回される故障注入は、空虚に成功するのではなくその条件を
   検出して skip しなければならず、root でも成立する手法がある場合はそちらを優先すべきである。
   4 つめの不変条件についてテストは、保持されたロックを 2 つめの実行が取得できないこと、
