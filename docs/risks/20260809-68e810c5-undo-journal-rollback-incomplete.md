@@ -40,6 +40,18 @@ journal 側の対応が必要になっている。
 
 **impact: high** — 復旧はユーザーの手作業になり、消えた実ディレクトリは復旧手段が無い。
 
+## 張り先について
+
+`docs/agents/sara-graph.md` の判別表は「undo ジャーナルの unwind が途中で失敗する」を
+`design` へ張る代表例として名指ししている。それでも本 item が `requirement` へ張るのは、
+このリポジトリでは undo ジャーナルという機構そのものが REQ-5e75aabc の `specification`
+に「インメモリ undo ジャーナルへ逆操作を 1 件記録する」と書き下ろされて要求へ昇格して
+おり、対応する design item が `docs/design/` に存在しない（REQ-5e75aabc を satisfies
+するのは DSG-836aa5cb というテスト戦略の design だけ）ため。判別表の代表例と現物の
+食い違いは、undo ジャーナルの design item を起こすか代表例を差し替えるかで別途解消する
+必要がある（本 item の範囲外）。同じ構図は RISK-3719d298（`--backup` の rename 退避 =
+ADR-0045 の設計選択）にも当てはまる。
+
 ## 緩和
 
 TC-9504e908（逆操作単体の正しさ）・TC-83fe0d4a（LIFO 順序と journal のライフサイクル）・

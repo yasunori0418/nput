@@ -1,11 +1,11 @@
 ---
 id: "TC-9504e908-a4bc-4d2d-80d3-af07264284f8"
 type: test_condition
-name: "undo の逆操作 6 種が、対応する前方操作の直前状態を単体で復元する"
+name: "undo の逆操作が、対応する前方操作の直前状態を単体で復元する"
 mitigates:
   - "RISK-68e810c5-4e68-4b25-9bc0-6b2613022b49"
 ---
-# TC-9504e908: undo の逆操作 6 種が、対応する前方操作の直前状態を単体で復元する
+# TC-9504e908: undo の逆操作が、対応する前方操作の直前状態を単体で復元する
 
 ## テスト条件
 
@@ -19,7 +19,10 @@ undo ジャーナルの各エントリ種別に対応する逆操作を、`Apply
 | removeCopy | copy のマテリアライズ | copy tree が無い状態 |
 | restoreRename | `--recopy` の rename 退避 | 退避元パスに退避前の内容 |
 | mkdir | PreRemove の Rmdir | 空ディレクトリの再作成 |
-| backup 戻し | `--backup` の rename 退避 | 退避元パスに退避前の内容（TC-ed4992c0 が担当）|
+
+undo ジャーナルは 6 種目として `--backup` の退避戻しを持つが、これは
+`restoreRename` と実装（rename で戻す case 分岐）を共有するため単体駆動のテストを
+持たず、`Apply` を通した end-to-end で覆う（TC-ed4992c0 の担当）。
 
 前方操作の対象が既に消えている場合（別プロセスに動かされた・そもそも配置に到達して
 いなかった）に逆操作がエラーにならないことも条件に含む。「消すものが無い」「unlink すべき

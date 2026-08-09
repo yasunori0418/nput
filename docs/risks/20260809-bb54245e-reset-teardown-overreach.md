@@ -42,4 +42,6 @@ level: high
 
 ## 緩和
 
-TC-06052178（reset の teardown 安全性）が緩和する。
+TC-06052178（reset の teardown 安全性）が緩和する。ただし覆えるのは engine 層まで
+（`Confirm` コールバックが false を返したときの中断）で、TTY 判定と `-y` / `--yes` の
+解釈は CLI 側の責務のため、同意ゲートの残り半分は cli-json 区分の TC が担う。

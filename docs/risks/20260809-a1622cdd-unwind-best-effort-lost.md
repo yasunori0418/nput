@@ -36,4 +36,6 @@ FS に残り、RISK-68e810c5 と同じ「部分適用の痕跡」を別経路で
 
 ## 緩和
 
-TC-83fe0d4a（unwind の best-effort 継続と全件報告）が緩和する。
+TC-83fe0d4a のうち「best-effort 継続」と「全件報告（空 journal で虚偽の件数行を出さない
+ことを含む）」の 2 条件が緩和する。同 TC の LIFO 順序と journal 破棄の条件は
+RISK-68e810c5 側の担当。

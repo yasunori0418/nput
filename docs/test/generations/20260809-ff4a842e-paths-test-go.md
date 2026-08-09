@@ -22,3 +22,7 @@ covers:
 - **キーイングの分岐** — project は `<roothash>`、home（`--root` なし）は `<name>` 直キー、
   home + `--root` 上書きは `<roothash>`、fixed root も `<roothash>`
 - **世代リンクの命名** — profile リンクに対する `profile-N-link` の形
+- **`.pending` out-link** — profileDir 内の `.pending` として解決される
+- **backref `.root`** — roothash 階層（`<name>` dir の親）の `.root` として解決される。
+  `<roothash>` キーのモード（project / home + `--root` / fixed）でのみ生じ、home の
+  `<name>` 直キーでは空になる

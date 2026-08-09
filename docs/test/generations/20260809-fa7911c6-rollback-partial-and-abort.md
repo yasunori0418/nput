@@ -36,4 +36,4 @@ apply と同じく全 conflict を stderr へ列挙してから、件数を持�
 ## 対応する CASE
 
 CASE-364ebb9d（`internal/engine/generations_test.go`）。conflict / 部分失敗時の `Result`
-の構造は CASE-2008a909 が併せて覆う。
+の構造は CASE-2008a909 も隣接して検証する。

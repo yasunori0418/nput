@@ -33,7 +33,11 @@ profile の on-disk レイアウトを決めるパス解決層を、環境変数
 **世代リンクの命名** — profile リンクに対する `profile-N-link` の形が `nix-env` の
 規約どおりで、同一ディレクトリ内の兄弟として並ぶこと。
 
+**兄弟の配置** — `.pending` out-link が profileDir 内に置かれること。backref `.root` は
+roothash 階層（`<name>` dir の親）に置かれ、`<roothash>` キーのモードでのみ生じること
+（home の `<name>` 直キーでは空。→ REQ-2aa3abbc）。
+
 ## 対応する CASE
 
 CASE-ff4a842e（`internal/paths/paths_test.go`）。root 解決そのもの（`rootKind` と
-`--root` から絶対 root を得る側）は CASE-364ebb9d が併せて覆う。
+`--root` から絶対 root を得る側）は CASE-364ebb9d も隣接して検証する。
