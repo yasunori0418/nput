@@ -3,6 +3,69 @@
 How to place items in this repo's sara knowledge graph (`docs/model.yaml`, validated by
 `sara check`). Covers the conventions that the model schema itself cannot enforce.
 
+## The type graph at a glance
+
+Every type and every primary (upstream) relation `docs/model.yaml` defines, in one figure.
+The YAML is the single source of truth; this figure is a hand-maintained reading aid, so a
+change touching `item_types` or `allowed_targets` updates it in the same commit. Nothing
+mechanical detects drift — upheld by review, like everything else in this file.
+
+```mermaid
+flowchart BT
+    SOL[solution]
+    UC[use_case]
+    REQ[requirement]
+    DSG[design]
+    QA[quality]
+    TP[test_plan]
+    INF[infrastructure]
+    ADR[adr]
+    RISK[risk]
+    TC[test_condition]
+    CASE[test_case]
+
+    UC -->|refines| SOL
+    REQ -->|derives_from| UC
+    DSG -->|satisfies| REQ
+    DSG -->|satisfies| TP
+    QA -->|derives_from| SOL
+    TP -->|derives_from| SOL
+    INF -->|satisfies| DSG
+    INF -->|satisfies| QA
+    RISK -->|threatens| REQ
+    RISK -->|threatens| DSG
+    TC -->|mitigates| RISK
+    CASE -->|covers| TC
+    ADR -.->|justifies| REQ
+    ADR -.->|justifies| DSG
+    ADR -.->|justifies| INF
+    ADR -.->|justifies| QA
+    ADR -.->|justifies| TP
+```
+
+Solid arrows point from an item to its parent side; the only roots are `solution` and
+`adr`. Dotted arrows are `justifies`, which ties the otherwise-independent `adr` root into
+the tree (one edge minimum per ADR — an ADR without one is an orphan warning). Two
+families of relations are deliberately absent from the figure: the peer `depends_on`
+(`requirement`, `design`, `quality`, `test_plan` and `infrastructure` may each depend on
+an item of their own type), and the downstream inverses (`is_refined_by`, `derives`, …),
+which mirror the primary direction one-to-one.
+
+ADR-to-ADR peer relations are drawn separately. Both correspond to a header line in the
+ADR document (see `docs/adr/README.md`):
+
+```mermaid
+flowchart LR
+    subgraph rev["ADR header 「改訂対象:」"]
+        A["adr (revising side)"] -.->|revises| B["adr (revised side)"]
+        B -.->|is_revised_by| A
+    end
+    subgraph ref["ADR header 「関連:」"]
+        C[adr] -.->|references| D[adr]
+        D -.->|is_referenced_by| C
+    end
+```
+
 ## Where a norm belongs: `requirement`, `quality` or `test_plan`
 
 Three types carry a `specification` / `specification_ja` pair and hang off the spec side of
