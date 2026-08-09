@@ -31,14 +31,14 @@ item を新設し、概要文書にはリンクを 1 行足すに留める。
 | `docs/risks/` | risk | `RISK` | requirement / design |
 | `docs/test/<対象>/` | test_condition | `TC` | risk |
 | `docs/test/<対象>/` | test_case | `CASE` | test_condition |
-| `docs/test/<対象>/` | defect | `D` | test_case |
 | `docs/adr/` | adr | `ADR` | なし（分離型）|
 
 型・関係・フィールドの定義は `docs/model.yaml` が持つ。親を持たない根は **solution と adr のみ**で、
 他の型は upstream relation を 1 本以上張る（張り忘れは `sara check` の orphan warning で出る）。
-例外は defect で、upstream relation を張る手段が無く必ず orphan warning になる（→ model.yaml 冒頭）。
+検出した欠陥（defect）は型として持たず、GitHub Issues（`bug` label）で管理する
+（→ ADR-0051。運用規約は `docs/agents/issue-tracker.md` の「Defect issues」節）。
 
-**quality（`QA`）・test_plan（`TP`）・risk（`RISK`）・テスト系（`TC` / `CASE` / `D`）は
+**quality（`QA`）・test_plan（`TP`）・risk（`RISK`）・テスト系（`TC` / `CASE`）は
 model.yaml に定義済みだが、item もディレクトリもまだ無い。** quality / test_plan は既存 item の
 移設で作られる。テスト系は工程に着手する段で `docs/risks/` と `docs/test/<対象>/` を作り、
 `<対象>` の粒度（機能単位か requirement 単位か）はその時点で決めて本節へ追記する。

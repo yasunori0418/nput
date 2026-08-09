@@ -20,3 +20,19 @@ Create a GitHub issue.
 ## When a skill says "fetch the relevant ticket"
 
 Run `gh issue view <number> --comments`.
+
+## Defect issues
+
+Defects found in the product are managed here, not in the document graph — there is no
+`defect` item type (→ ADR-0051). The graph holds norms (what should hold); a defect is an
+event, and events belong to the tracker.
+
+- **File** a defect as a GitHub issue with the `bug` label.
+- **Trace** in the issue body, when the defect was revealed by executing a test case:
+  the revealing test case (`CASE-xxxxxxxx`) and the requirement or design it traces back
+  to (`REQ-xxxxxxxx` / `DSG-xxxxxxxx`). References are one-way — items in `docs/` never
+  link back to defect issues.
+- **Feed back** before closing: ask whether a `risk` or `test_condition` was missing that
+  would have caught this defect earlier. If so, add the missing item(s) in `docs/` — this
+  shift-left loop is what keeps the risk and test analysis from decaying into a static
+  snapshot.

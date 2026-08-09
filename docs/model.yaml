@@ -8,25 +8,23 @@
 # 設計の出典: epic GitHub Issue #203（grilling 2026-07-31 / 2026-08-01 で確定）、
 # ADR-0048。
 #
-# ## 型構成（12 型）
+# ## 型構成（11 型）
 #
 # 矢印は全て親 → 子（上流 → 下流）で書く。
 #
 # 仕様の系統:       solution → use_case → requirement → design
 # 品質とテスト計画: solution → quality、solution → test_plan → design
 # 技術基盤:         quality → infrastructure、design → infrastructure
-# リスクとテスト:   requirement / design → risk → test_condition → test_case → defect
+# リスクとテスト:   requirement / design → risk → test_condition → test_case
 # 独立した根:       adr（justifies で requirement / design / infrastructure / quality /
 #                   test_plan へ必須で接続する。1 本以上 → docs/adr/README.md）
 #
 # 親を持たない根は solution と adr のみ。adr も justifies（upstream relation）を
 # 1 本以上持つため、「接続漏れ = orphan warning」は全型で成立する（→ #203・#237・#253）。
 #
-# 例外は defect で、allowed_targets が空のため upstream relation を張る手段が無い
-# （親側の test_case が downstream の reveals で接続する）。defect item は作った時点で
-# 必ず orphan warning になるため、テスト工程に着手する段で is_revealed_by（定義済みの
-# upstream relation）を defect の allowed_targets へ足すかを再検討する
-# （現時点で defect item は 0 件）。
+# 検出した欠陥（defect）は型として持たない。欠陥は規範（あるべき姿）ではなく発生した
+# 出来事であり、GitHub Issues（bug label）で管理する（→ ADR-0051。issue 本文に発見元の
+# CASE と遡及先の REQ / DSG を記載する片方向参照。運用規約は docs/agents/issue-tracker.md）。
 #
 # ## 組み込みから落とした型
 #
@@ -189,7 +187,7 @@ item_types:
 
   # ISTQB のテスト計画活動の成果物。docs/test-plan/。テストスコープ・スコープ外宣言・
   # テストレベル・テストアプローチ・テスト容易性の要求を収容する。
-  # 既存のテスト系 4 型（risk / test_condition / test_case / defect）はテスト分析以降に
+  # 既存のテスト系 3 型（risk / test_condition / test_case）はテスト分析以降に
   # 対応しており、テスト計画に対応する型が空いていた（→ #237）。
   #
   # risk の parent_types には test_plan を追加しない。risk の親は「リスクが何に対して
@@ -327,7 +325,7 @@ item_types:
         targets:
           - adr
 
-  # ---- リスクとテストの系統（risk → test_condition → test_case → defect）----
+  # ---- リスクとテストの系統（risk → test_condition → test_case）----
 
   # 満たされない懸念。docs/risks/。requirement と design の両方を脅かせる。
   # どちらへ張るかの使い分け規約は docs/agents/sara-graph.md（→ #203・#210）。
@@ -397,19 +395,6 @@ item_types:
       - relation: covers
         targets:
           - test_condition
-      - relation: reveals
-        targets:
-          - defect
-
-  # 検出した不具合。docs/test/<対象>/。
-  - id: defect
-    display_name: Defect
-    prefix: D
-    id_format: '{prefix}-{uuid}'
-    parent_types:
-      - test_case
-    fields: []
-    allowed_targets: []
 
 relations:
   # ---- 組み込み由来（そのまま使う）----
@@ -541,16 +526,4 @@ relations:
     display_name: Is covered by
     inverse: covers
     direction: downstream
-    primary: false
-
-  # test_case → defect。テストが不具合を暴く方向。
-  - id: reveals
-    display_name: Reveals
-    inverse: is_revealed_by
-    direction: downstream
-    primary: true
-  - id: is_revealed_by
-    display_name: Is revealed by
-    inverse: reveals
-    direction: upstream
     primary: false
