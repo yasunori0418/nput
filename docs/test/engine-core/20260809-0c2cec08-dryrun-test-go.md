@@ -21,5 +21,5 @@ covers:
 - **祖先移行の判断**: 自己記録 stale 祖先の移行を、実際に除去せず plan 上で判断すること
 - **実ディレクトリ移行の判断**: 実 dir が占有する target の移行判断を、除去なしで行うこと
 
-dryrun と本番 apply が同じ conflict を報告することの照合は `engine_test.go` にあり、
+dryrun と本番 apply が同数の conflict を報告することの照合は `engine_test.go` にあり、
 CASE-31fdb776 が扱う。

@@ -1,7 +1,7 @@
 ---
 id: "CASE-f3a5fee2-1981-42c3-ba5b-81b75fd7a3ad"
 type: test_case
-name: "internal/engine/preflight_test.go — out-of-store 事前検査の非 ENOENT エラー"
+name: "internal/engine/preflight_test.go — out-of-store 配置直前検査の非 ENOENT エラー"
 covers:
   - "TC-8435052a-5dcc-49e2-ac26-82f645cb6890"
 ---

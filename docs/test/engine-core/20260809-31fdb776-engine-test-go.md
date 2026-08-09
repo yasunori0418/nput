@@ -12,6 +12,7 @@ covers:
   - "TC-d160e18b-4c0c-4531-a506-e7d00d88788a"
   - "TC-b9d4ffaf-ac91-4bf1-9f27-5ea3964466ad"
   - "TC-a5eb7de3-a1a7-41ae-8fb9-c2aa374ac894"
+  - "TC-8435052a-5dcc-49e2-ac26-82f645cb6890"
 ---
 # CASE-31fdb776: engine_test.go
 
@@ -30,7 +31,7 @@ nix を介さず実 FS（`t.TempDir()`）へ apply を回す統合テスト。li
 - **root 解決**: git repo 外でのエラー、固定絶対 root の解決失敗、profile ディレクトリ作成
   失敗・backref 書き込み失敗のエラー化
 - **out-of-store**: live symlink の配置、stale 除去、リンク先不一致時の保持、marker の
-  パス不在エラー
+  リンク先が不在のときのエラー停止（dangling symlink を作らず target も残さないこと）
 - **copy 経路の呼び出し**: place-once の初回・既存保持、foreign 実ファイルの skip 警告、
   ディレクトリ再帰コピーでの内部 symlink 保存、`--recopy` の上書き（foreign 含む）
 - **conflict 報告**: 複数 conflict の全件列挙と件数を含む集約エラー、dryrun と本番 apply が
