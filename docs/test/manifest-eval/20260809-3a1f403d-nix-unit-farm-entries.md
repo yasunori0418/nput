@@ -10,8 +10,8 @@ covers:
 ## 対象
 
 `tests/nix-unit/farm-entries.nix`（TP-403c55c7 のテスト seam `nput.__internal.farmEntries` /
-`nput.__internal.anchorName` を直接叩き、`lib/manifest.nix` の anchorLines 生成式を同じ形で
-再構成して突き合わせる）
+`nput.__internal.anchorName` を直接叩き、`lib/manifest.nix` の anchorLines 生成式を同じ形に
+複製した独立のコードで突き合わせる。式は共有していないので、本体を変えてもこちらは追随しない）
 
 ## 検証内容
 

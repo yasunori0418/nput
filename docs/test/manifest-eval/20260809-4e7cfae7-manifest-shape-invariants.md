@@ -18,7 +18,8 @@ mitigates:
 - store-backed な entry が `srcKind` / `src` / `subpath` / `target` / `method` の 5 フィールド
   ちょうどであること（exact 一致で余分なキーの混入を落とす）
 - out-of-store marker を与えた entry が `srcKind = "outOfStore"` と marker の絶対パスへ
-  変換され、判別タグ `_nputMarker` が文書に漏れないこと
+  変換され、判別タグ `_nputMarker` が文書に漏れないこと。こちらも exact 一致で見るので、
+  余分なキーの混入は store-backed 側と同じく検出される
 
 **この条件の適用範囲は project root に限る**。`homeRoot` の `rootKind` と fixed root での
 絶対パス併記は評価テストに無く、`checks.hm-module` と E2E（`integration` 区分）が担当する。

@@ -17,9 +17,13 @@ helper 越しに単体で見るのは TC-311ca3b2 の担当で、検証境界が
 `entriesType` を直接 `evalModules` して見る（`normalizeManifest` を通さない）。同じ型定義が
 モジュール経路でも strict であることは、公開経路のアサートからは導けないため。
 
+**`systemRoot` の未実装拒否はこの条件に含めない**。実装（`gates.nix`）には当該アサートが
+残っているが、その決定（ADR-0013 §5）は ADR-0036 が撤回済みで、現行の規範は
+`rootKind = "system"` を正規の値とする。これは ADR-0036 が指示したテスト更新（拒否テスト →
+変換テスト）の未了であり、規範として条件化しない（→ CASE-879a93da の該当箇所も同じ扱い）。
+
 **ゲートごとの拒否**:
 
-- 未実装の root（systemRoot）
 - `method = "copy"` と out-of-store marker の組み合わせ（意図の矛盾）
 - 絶対パスの target / `..` で root の外へ出る target / `..` で src の外へ出る subpath
 - 別キーから同一 target を指す衝突

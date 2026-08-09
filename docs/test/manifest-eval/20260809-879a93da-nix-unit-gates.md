@@ -21,7 +21,8 @@ covers:
 `copy` × out-of-store と subpath の各メッセージが `(target: …)` を含むため、それらが誤って
 発火した場合にも通る。ゲートの取り違えまで検出する粒度は持っていない。
 
-- `systemRoot` を root に指定 → 未実装（`"system mode"`）
+- `systemRoot` を root に指定 → 未実装（`"system mode"`）。**このアサートは撤回済み決定の
+  残骸**（下の注記を参照）
 - `method = "copy"` と out-of-store marker の併用 → `"out-of-store"`
 - 絶対パスの target（`/etc/x`）→ `"target"`
 - `..` で root の外へ出る target（`../../etc/x`）→ `"target"`
@@ -33,6 +34,18 @@ covers:
   モジュール経路（`modules/common.nix` が共有する型）でも eval エラーになること
 
 配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。
+
+## 既知の乖離: systemRoot の拒否テスト
+
+`testSystemRootUnimplemented` は ADR-0013 §5（`root = systemRoot` は eval 時エラー）に基づく
+が、この決定は **ADR-0036 が撤回済み**で、現行の規範は `rootKind = "system"` を正規の値と
+する（REQ-37b56673。REQ-16faf428 / REQ-c5dfcae6 も同じ理由でこの拒否を規範から外している）。
+ADR-0036 は「nix-unit / namaka テスト更新（拒否テスト → 変換テスト）」を影響範囲に挙げており、
+本アサートと `lib/manifest.nix` の throwIf はその更新が未了のまま残ったもの。
+
+したがって上の列挙に残しているのは**実装の現状を写すため**であって、規範を表すためではない。
+TC-e7ff0e6d はこれを条件に含めない。テスト側の更新は本 item の対象外（`tests/**` は L1 の
+境界外）で、別途 issue として起こす。
 
 ## 出典
 
