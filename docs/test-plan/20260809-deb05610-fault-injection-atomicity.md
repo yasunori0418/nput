@@ -17,7 +17,15 @@ specification: |
   interruption converges on the intended state rather than compounding the damage. Fault
   injection that a privileged user would bypass SHALL detect that condition and skip,
   rather than pass vacuously, and where a root-proof technique exists it SHOULD be
-  preferred over one requiring the skip.
+  preferred over one requiring the skip. Atomicity against a concurrent run SHALL be
+  verified as well, since the rollback invariants above assume the run is the only writer:
+  the tests SHALL cover that a second run cannot acquire a held lock, that the lock is held
+  for the whole operation and released afterwards, that the operations which wait for it
+  do wait, that the one which declines to wait reports that it was skipped, and that this
+  outcome stays distinguishable from a failure once it has been wrapped by the layers
+  above. Contention SHALL be produced by actually holding the lock rather than by
+  simulating the held state, so that the mechanism under test is the one that runs in
+  production.
 specification_ja: |
   実行の原子性は、正常系のアサートだけでなく故障注入によって検証しなければならない。注入
   する故障はエラーを返す double ではなく実ファイルシステムの条件で誘発しなければならない
@@ -27,7 +35,13 @@ specification_ja: |
   （ファイルシステムは既に整合しており、巻き戻せばそれを壊すため）。中断後の再実行が、被害を
   重ねるのではなく意図した状態へ収束すること。特権ユーザーでは迂回される故障注入は、空虚に
   成功するのではなくその条件を検出して skip しなければならず、root でも成立する手法がある
-  場合はそちらを優先すべきである。
+  場合はそちらを優先すべきである。並行実行に対する原子性も検証しなければならない。上記の
+  巻き戻しの不変条件は、その実行が唯一の書き手であることを前提としているためである。テストは、
+  保持されたロックを 2 つめの実行が取得できないこと、ロックが操作全体にわたって保持され
+  終了後に解放されること、待つべき操作が実際に待つこと、待たない操作が skip された旨を
+  報告すること、そしてその結果が上位層に包まれたあとも失敗と区別できるままであることを
+  覆わなければならない。競合は、保持状態を模擬するのではなく実際にロックを保持して作らな
+  ければならない（テスト対象の機構を、本番で動くものと同じに保つため）。
 ---
 # TP-deb05610: 原子性は実 FS の条件で故障を誘発して不変条件ごとに検証する
 
@@ -36,13 +50,14 @@ specification_ja: |
 原子性の検証は故障注入で行い、故障はエラーを返す double ではなく実 FS の条件で誘発する。
 OS が実際に返すエラー値（EACCES / ENOTDIR / EISDIR / EINVAL）を経路に流すため。
 
-覆う不変条件は 3 つ。
+覆う不変条件は 4 つ。
 
 | 不変条件 | 内容 |
 |---|---|
 | mid-batch 失敗の巻き戻し | FS 変更バッチの途中で失敗したら、その実行が加えた変更を全て undo してから返す |
 | commit 失敗は unwind しない | commit 段の失敗では配置を巻き戻さない（FS は既に整合しており、巻き戻すと壊す）|
 | 中断後の収束 | 中断後の再実行が意図した状態へ収束する（被害を重ねない）|
+| 並行実行に対する原子性 | 上の 3 つは「その実行が唯一の書き手」を前提とするため、排他そのものも覆う |
 
 故障の誘発手法は 2 系統ある。
 
@@ -56,6 +71,12 @@ OS が実際に返すエラー値（EACCES / ENOTDIR / EISDIR / EINVAL）を経�
 成功させない）。CI が root で走る場合に被覆が消える範囲を狭めるため、root でも成立する手法を
 取れるところではそちらを採る。
 
+**並行実行に対する原子性**では、覆う点が 5 つある。保持されたロックを 2 つめの実行が取得
+できないこと、ロックが操作全体にわたって保持され終了後に解放されること、待つべき操作が
+実際に待つこと、待たない操作が skip された旨を報告すること、そしてその結果が上位層に
+包まれたあとも失敗と区別できるままであること。競合は保持状態を模擬せず実際にロックを
+保持して作る（テスト対象の機構を本番で動くものと同じに保つため）。
+
 実 FS で動かすという前提そのものは TP-e7c25263 の担当で、本 item はその上での故障注入体系を
 定める。
 
@@ -64,7 +85,16 @@ OS が実際に返すエラー値（EACCES / ENOTDIR / EISDIR / EINVAL）を経�
 ADR-0044（apply の end-to-end undo journal）が定める「実行中の FS 変更を全て巻き戻す」
 という決定を、テスト側でどう検証するかの規定。
 
-現況の実装は `internal/engine/undo_journal_test.go`（mid-batch 失敗の巻き戻し・commit
-失敗の非 unwind）・`undo_test.go`（journal の LIFO 巻き戻しと best-effort 継続）・
-`copy_test.go`（copy 系 syscall 失敗網羅）で、root 判定 skip と root-proof 手法の使い分けも
-これらのファイルのコメントが根拠を述べている。
+現況の実装は次のとおり（代表を挙げる。故障注入は engine 全域に及ぶ横断規約で、権限による
+誘発は `preflight_test.go` / `engine_test.go` / `staleremove_test.go` / `generations_test.go`
+にも分布する）。
+
+| 対象 | 実装 |
+|---|---|
+| mid-batch 失敗の巻き戻し・commit 失敗の非 unwind | `internal/engine/undo_journal_test.go` |
+| journal の LIFO 巻き戻しと best-effort 継続 | `internal/engine/undo_test.go` |
+| copy 系 syscall 失敗の網羅 | `internal/engine/copy_test.go` |
+| 排他 | `internal/lock/lock_test.go`（取得競合・解放後の再取得・待機）・`internal/engine/lock_test.go`（no-wait の skip・保持と解放・wrapping 越しの skip 判別）|
+
+手法の根拠もコメントが述べている。root 判定 skip は `undo_journal_test.go` の `blockWrite`、
+root でも成立する誘発（ENOTDIR / EISDIR / EINVAL）の選好は `copy_test.go` の冒頭コメント。
