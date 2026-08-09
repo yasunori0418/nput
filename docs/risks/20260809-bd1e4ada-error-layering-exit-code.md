@@ -6,6 +6,7 @@ threatens:
   - "REQ-9341fa5d-836e-4023-af53-cc7d273438d1"
   - "REQ-2c5a10d8-112b-4f96-947a-aba7164779c4"
   - "REQ-4cbd9a0d-9f94-4747-8881-56020dc6d5af"
+  - "REQ-b7bb09d6-74c4-44d6-905f-cb5e8383ea32"
 likelihood: medium
 impact: high
 level: high
