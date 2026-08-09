@@ -1,7 +1,7 @@
 ---
 id: "TC-d1eb1814-ac5e-4576-b092-7db4929fba43"
 type: test_condition
-name: "apply --recopy が全 copy target を無条件に更新し、上書きを退避経由で行うこと"
+name: "apply --recopy が全 copy target を無条件に src から更新すること"
 mitigates:
   - "RISK-01cf9f47-95bd-419a-863d-0d7c1f8188ba"
 ---

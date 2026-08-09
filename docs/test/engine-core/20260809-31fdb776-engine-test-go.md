@@ -33,7 +33,7 @@ nix を介さず実 FS（`t.TempDir()`）へ apply を回す統合テスト。li
   パス不在エラー
 - **copy 経路の呼び出し**: place-once の初回・既存保持、foreign 実ファイルの skip 警告、
   ディレクトリ再帰コピーでの内部 symlink 保存、`--recopy` の上書き（foreign 含む）
-- **conflict 報告**: 複数 conflict の全件列挙と件数を含む集約エラー、dryrun が報告する
-  conflict 集合と本番 apply の一致、
+- **conflict 報告**: 複数 conflict の全件列挙と件数を含む集約エラー、dryrun と本番 apply が
+  同数の conflict を報告すること、
   自己矛盾する祖先・copy 構造不一致それぞれのガイダンス、種類混在時のガイダンス対応付け
 - **その他**: `--no-wait` で lock 取得済みのときの skip、pending 除去失敗の警告化
