@@ -20,6 +20,11 @@ specification: |
   evaluation tests and everything downstream of the flake entrypoint belongs to the E2E
   harness. Safety-critical logic — conservative stale removal above all — SHALL be covered
   table-driven at the unit level in addition to whatever integration coverage reaches it.
+  The layers that decide without touching the filesystem at all — computing a plan,
+  resolving a state directory or a generation path, hashing a root — SHALL be covered at
+  the unit level as well, and SHALL NOT be left to whatever the integration tests happen to
+  reach: their inputs are enumerable in a way a filesystem's are not, so a table is both
+  cheaper and more complete there.
   The command layer SHALL be verified at this level too, and not only where it emits the
   machine-readable envelope: argument and flag handling, entrypoint discovery, template
   name validation, the confirmation policy and its non-interactive fallback, and the exit
@@ -40,7 +45,11 @@ specification_ja: |
   境界は manifest であり、`manifest.json` より上流は評価テスト、flake entrypoint より
   下流は E2E ハーネスの担当としなければならない。安全に直結するロジック——とりわけ保守的
   stale 除去——は、統合テストの被覆とは別に、ユニットレベルで table-driven に覆わなければ
-  ならない。コマンド層もこのレベルで検証しなければならず、機械可読エンベロープを emit する
+  ならない。ファイルシステムに一切触れずに判断する層——plan の算出、state ディレクトリや
+  世代パスの解決、root のハッシュ化——も同様にユニットレベルで覆わなければならず、統合
+  テストがたまたま到達する範囲に委ねてはならない。これらの入力はファイルシステムのそれと
+  違って列挙可能であり、table のほうが安上がりで網羅も効くためである。コマンド層もこの
+  レベルで検証しなければならず、機械可読エンベロープを emit する
   箇所に限ってはならない。引数とフラグの扱い、entrypoint の探索、テンプレ名の検証、確認
   ポリシーとその非対話フォールバック、複数 subject の実行が集約する終了コードは、いずれも
   配置が始まる前に決まるものであり、コマンドを一気通貫で駆動せずに到達できなければならない。
@@ -76,6 +85,11 @@ specification_ja: |
 保守的 stale 除去は、統合テストの被覆とは別にユニットレベルで table-driven に覆う。誤除去は
 ユーザーのファイルを消す不可逆な失敗であり、正常系の統合テストでは網羅できない入力空間を
 持つため。
+
+**FS に一切触れずに判断する層**（plan の算出 = `internal/planner/`、state ディレクトリ・
+世代パスの解決と root のハッシュ化 = `internal/paths/`）も同じくユニットレベルで覆い、統合
+テストがたまたま到達する範囲に委ねない。入力が FS と違って列挙可能なので、table のほうが
+安上がりで網羅も効く。
 
 **コマンド層（`cmd/nput/`）もこのレベルの対象**で、エンベロープを emit する箇所に限らない。
 配置が始まる前に決まる判断——引数・フラグの扱い、entrypoint の探索、テンプレ名の検証、確認
