@@ -6,6 +6,7 @@ covers:
   - "TC-b9d4ffaf-ac91-4bf1-9f27-5ea3964466ad"
   - "TC-76597b11-8199-4682-8f53-008e5208bd9c"
   - "TC-8a1f4b19-0ece-4057-a8bf-f9717855cade"
+  - "TC-810d661d-6d3d-4199-828f-e44adcebad5a"
 ---
 # CASE-39fbf9f0: preremove_generalization_test.go
 

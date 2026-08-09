@@ -11,6 +11,7 @@ covers:
   - "TC-d1eb1814-ac5e-4576-b092-7db4929fba43"
   - "TC-d160e18b-4c0c-4531-a506-e7d00d88788a"
   - "TC-b9d4ffaf-ac91-4bf1-9f27-5ea3964466ad"
+  - "TC-a5eb7de3-a1a7-41ae-8fb9-c2aa374ac894"
 ---
 # CASE-31fdb776: engine_test.go
 
@@ -32,6 +33,7 @@ nix を介さず実 FS（`t.TempDir()`）へ apply を回す統合テスト。li
   パス不在エラー
 - **copy 経路の呼び出し**: place-once の初回・既存保持、foreign 実ファイルの skip 警告、
   ディレクトリ再帰コピーでの内部 symlink 保存、`--recopy` の上書き（foreign 含む）
-- **conflict 報告**: 複数 conflict の全件列挙と件数を含む集約エラー、dryrun との一致、
+- **conflict 報告**: 複数 conflict の全件列挙と件数を含む集約エラー、dryrun が報告する
+  conflict 集合と本番 apply の一致、
   自己矛盾する祖先・copy 構造不一致それぞれのガイダンス、種類混在時のガイダンス対応付け
 - **その他**: `--no-wait` で lock 取得済みのときの skip、pending 除去失敗の警告化
