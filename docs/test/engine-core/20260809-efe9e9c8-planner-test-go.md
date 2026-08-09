@@ -5,6 +5,7 @@ name: "internal/planner/planner_test.go — fake FS による plan 計算の tab
 covers:
   - "TC-b329cafd-06c3-4b87-8357-229b69e5ba5c"
   - "TC-9df804ce-35ee-44a7-87b1-17935d53fab2"
+  - "TC-b9d4ffaf-ac91-4bf1-9f27-5ea3964466ad"
 ---
 # CASE-efe9e9c8: planner_test.go
 

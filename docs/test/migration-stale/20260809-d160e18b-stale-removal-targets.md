@@ -1,0 +1,15 @@
+---
+id: "TC-d160e18b-4c0c-4531-a506-e7d00d88788a"
+type: test_condition
+name: "stale 除去の対象が前世代に記録され記録先を指す symlink に限られること"
+mitigates:
+  - "RISK-e3d42a21-1f43-4ac6-835e-a5caf8d86363"
+---
+# TC-d160e18b: stale 除去の対象限定
+
+新世代の manifest から消えた entry のうち、前世代 manifest に記録されており実 FS 上でも
+記録先を指したままである symlink だけが除去されることを検証する。記録に無い foreign
+symlink・通常ファイル・実ディレクトリ・copy entry は、除去の対象から外れる。
+
+前世代 manifest が無い初回 apply で何も除去しないこと、および entries が空の manifest が
+全クリアとして正常に処理される（エラーにも警告にもならない）ことも同じ条件の下に置く。

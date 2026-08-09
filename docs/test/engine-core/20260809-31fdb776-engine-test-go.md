@@ -9,6 +9,8 @@ covers:
   - "TC-b254a5a8-7fbf-4f31-8486-3e373d66bfa7"
   - "TC-596d697f-4ba6-4ec1-b71e-8b5375806c08"
   - "TC-d1eb1814-ac5e-4576-b092-7db4929fba43"
+  - "TC-d160e18b-4c0c-4531-a506-e7d00d88788a"
+  - "TC-b9d4ffaf-ac91-4bf1-9f27-5ea3964466ad"
 ---
 # CASE-31fdb776: engine_test.go
 
