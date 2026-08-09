@@ -316,7 +316,7 @@ test_plan は requirement とは別系統で、use_case を経由せず solution
 - [TP-d3d06fe4](test-plan/20260809-d3d06fe4-eval-test-double.md) — 評価テストの store-backed な入力は固定 outPath を持つ fake flake-input で与える
 - [TP-d7da4065](test-plan/20260809-d7da4065-sara-id-contract-test.md) — sara-id はモデル定義との一致を含めて契約テストで検証する
 - [TP-deb05610](test-plan/20260809-deb05610-fault-injection-atomicity.md) — 原子性は実 FS の条件で故障を誘発して不変条件ごとに検証する
-- [TP-e7c25263](test-plan/20260809-e7c25263-go-test-layering.md) — エンジンの Go テストは nix を介さない実 FS 統合テストを主戦力とする
+- [TP-e7c25263](test-plan/20260809-e7c25263-go-test-layering.md) — エンジンとコマンド層の Go テストは nix を介さない実 FS 統合テストを主戦力とする
 
 ---
 

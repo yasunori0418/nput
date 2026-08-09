@@ -1,7 +1,7 @@
 ---
 id: "TP-e7c25263-6d2d-4a37-8275-26906889d912"
 type: test_plan
-name: "エンジンの Go テストは nix を介さない実 FS 統合テストを主戦力とする"
+name: "エンジンとコマンド層の Go テストは nix を介さない実 FS 統合テストを主戦力とする"
 derives_from:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 depends_on:
@@ -24,7 +24,9 @@ specification: |
   machine-readable envelope: argument and flag handling, entrypoint discovery, template
   name validation, the confirmation policy and its non-interactive fallback, and the exit
   code a multi-subject run aggregates are all decided before any placement happens and
-  SHALL be reachable without driving the command end to end. Those tests SHALL exercise the
+  SHALL be reachable without driving the command end to end. The manifest boundary above
+  SHALL NOT be read as excluding them: it delimits the engine, whereas the command layer is
+  a separate layer sitting upstream of the manifest. Those tests SHALL exercise the
   functions that make the decision rather than spawning the built binary, so that a case is
   a function call with arguments rather than a process whose failure has to be inferred
   from its output.
@@ -42,23 +44,29 @@ specification_ja: |
   箇所に限ってはならない。引数とフラグの扱い、entrypoint の探索、テンプレ名の検証、確認
   ポリシーとその非対話フォールバック、複数 subject の実行が集約する終了コードは、いずれも
   配置が始まる前に決まるものであり、コマンドを一気通貫で駆動せずに到達できなければならない。
-  これらのテストは、ビルドしたバイナリを起動するのではなく判断を下す関数そのものを動かさ
+  上記の manifest 境界を、これらを除外するものと読んではならない。同境界が区切るのはエンジン
+  であり、コマンド層は manifest より上流に位置する別レイヤーだからである。これらのテストは、
+  ビルドしたバイナリを起動するのではなく判断を下す関数そのものを動かさ
   なければならない（ケースを、失敗を出力から推測するほかないプロセスではなく、引数を伴う
   関数呼び出しにするため）。
 ---
-# TP-e7c25263: エンジンの Go テストは nix を介さない実 FS 統合テストを主戦力とする
+# TP-e7c25263: エンジンとコマンド層の Go テストは nix を介さない実 FS 統合テストを主戦力とする
 
 ## 仕様
 
 エンジン（Go）のテストは、`t.TempDir()` 下の実ファイルシステムに対して動く統合テストを
 主戦力とし、nix を起動しない。配置元は普通のディレクトリ（偽 source）で与える。
 
-テスト層の境界は 2 点で切る。
+**エンジンの**テスト層の境界は 2 点で切る。
 
 | 境界 | 上流 / 下流の担当 |
 |---|---|
 | `manifest.json` | 上流（`mkManifest` の評価）は nix-unit / namaka（→ TP-36e90d5d）|
 | flake entrypoint | 下流（`nix build` / `nix eval` / `nix-env --set` を含む実経路）は E2E（→ TP-229b69c0）|
+
+この 2 点はエンジン（`internal/`）に対する境界で、コマンド層には適用しない。CLI とエンジンは
+別レイヤー（→ REQ-f4d7d4ab）で、コマンド層の判断（entrypoint の探索など）は manifest より
+上流に位置するため。コマンド層の扱いは下の「コマンド層」の段が定める。
 
 ファイルシステムをインターフェースで抽象化しないのは、テスト対象そのものが FS の意味論
 （symlink / rename / unlink / 権限失敗）だから。抽象化すると double の挙動を検証すること
