@@ -13,7 +13,6 @@ threatens:
   - "REQ-16faf428-77f3-492f-b858-222c5274cbf7"
   - "REQ-5c6b07da-3d06-414d-8770-4f438234b322"
   - "REQ-99ca5381-6c53-426c-b145-7b4297c53868"
-  - "REQ-4ec3accc-8bb6-461f-9024-dcf0027849e4"
   - "REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10"
 ---
 # RISK-09df40d3: 評価時に止めるべき入力が素通りして engine 実行時まで到達する
@@ -23,9 +22,15 @@ threatens:
 `mkManifest` は `evalModules` による入力検査の単一ゲート（REQ-d1b5b3f5）で、パス安全性
 （REQ-6911eab6）・未知キーと旧名の拒否（REQ-3e446ad9）・entry のフィールドを 4 つに限ること
 （REQ-a33a11e3）・意図が矛盾する組み合わせ（REQ-16faf428）・同一 manifest 内の target 衝突
-（REQ-5c6b07da）・素の文字列 src の拒否（REQ-99ca5381）・未実装 root の拒否（REQ-4ec3accc の
-明示必須と併せた systemRoot）を全てここで止める。この検査は `modules/common.nix` が共有する
-entriesType にも効く（REQ-fc1c7ce6）。
+（REQ-5c6b07da）・素の文字列 src の拒否（REQ-99ca5381）を全てここで止める。この検査は
+`modules/common.nix` が共有する entriesType にも効く（REQ-fc1c7ce6）。
+
+**`systemRoot` の未実装拒否はここに含めない**。この決定（ADR-0013 §5）は ADR-0036 が撤回済み
+で、現行の規範は `rootKind = "system"` を正規の値とする（REQ-37b56673）。既存 REQ-16faf428 /
+REQ-c5dfcae6 も同じ理由でこの拒否を規範から外している。実装（`lib/manifest.nix` の throwIf と
+`gates.nix` の拒否テスト）に残っているのは ADR-0036 が指示した更新の未了であり、逆算元とすべき
+規範ではない。同様に、root 省略時のエラー（REQ-4ec3accc の明示必須）を見るアサートは評価
+テストに存在しないため、本 risk は REQ-4ec3accc へ `threatens` を張らない。
 
 **顕在化したときに起きること**: ゲートが緩むと、`..` や絶対パスで root の外を指す target が
 engine まで届き、意図しない場所を書き換える。タイポした旧名は黙って無視され、ユーザーは
@@ -51,4 +56,4 @@ TC-e7ff0e6d（各ゲートが評価時に `ThrownError` を投げること。主
 
 `tests/nix-unit/gates.nix` / `tests/nix-unit/escapes-base.nix` の現行実装からの逆算
 （→ Issue #273「L1〜L4」節）。各ゲートの設計判断は ADR-0008 / ADR-0010 / ADR-0013 /
-ADR-0019 / ADR-0024 が持つ。
+ADR-0019 / ADR-0024 が持つ（ADR-0013 のうち §5 は ADR-0036 が撤回済み）。
