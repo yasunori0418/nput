@@ -8,11 +8,13 @@ mitigates:
 # TC-4f315cfc: コピー失敗の伝播
 
 コピー経路の各 syscall（mkdir / open / open-file / read-write / readlink / lstat）の
-失敗がそれぞれエラーとして呼び出し元へ伝わることを検証する。エラーメッセージが失敗した操作を
-特定できることを含む（どの段で落ちたか分からないと診断できない）。
+失敗がそれぞれエラーとして呼び出し元へ伝わることを検証する。エラーメッセージによる段の特定は、
+診断上の要となる 2 経路（copy 配置時の親ディレクトリ作成・recopy の lstat）で確認し、残る段は
+伝播そのものまでを見る。
 
-失敗した entry が結果レコードへ「コピー済み」として残らないことも条件に含む。非 ENOENT の
-lstat 失敗が「target 不在」と同一視されないことは、recopy 経路で特に重要になる。
+失敗した entry が結果レコードへ「コピー済み」として残らないことも、結果を経由する 2 経路
+（copy 配置・recopy）で条件に含む。非 ENOENT の lstat 失敗が「target 不在」と同一視されない
+ことは、recopy 経路で特に重要になる。
 
-foreign な実ファイルの skip が warning として可視化されることは、engine 側の配置経路で
-検証する（`engine-core` の CASE-31fdb776 が併せて覆う）。
+foreign な実ファイルの skip が warning として可視化されることは、engine 側の配置経路で検証
+する（`engine-core` の CASE-31fdb776 が扱う。検証の所在を示すだけで relation は張らない）。

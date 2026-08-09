@@ -5,7 +5,7 @@ name: "実体が占有する target と祖先 symlink を上書きせず停止�
 mitigates:
   - "RISK-e8449214-7794-4d0d-b584-a3a152e2c1f9"
 ---
-# TC-405606f0: 実体が占有する target を上書きせず停止すること
+# TC-405606f0: 実体が占有する target と祖先 symlink での停止
 
 target に通常ファイル・実ディレクトリが在るとき、および target の祖先コンポーネントが
 symlink であるとき、engine が配置を行わず conflict として停止することを検証する。
