@@ -57,8 +57,7 @@ risk を `requirement` と `design` のどちらに張るかの使い分けは `
 | `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` |
 
 区分外: `go-vet` / `golangci-lint` / カバレッジ計測は quality の担当。`dev/tests/sara-id.sh` は
-test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（プロダクトのリスクへ
-`threatens` する構造を持たない開発基盤のため）。
+test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（理由は同 item）。
 
 **逆算階層の粒度**（既存のテスト実装から item を起こすときの単位）:
 
@@ -70,7 +69,7 @@ test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（�
 - 関係の向き: CASE -covers→ TC -mitigates→ RISK -threatens→ REQ / DSG
 
 **risk / TC / CASE は `docs/spec.md` へ索引しない**（`sara query` / `sara report` で辿る）。
-概要文書のリンク集に載せるのは requirement / quality / test_plan まで。
+`docs/spec.md` のリンク集に載せるのは requirement / quality / test_plan まで。
 
 ### ID 規約（UUIDv4 二層構成）
 
