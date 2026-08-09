@@ -301,6 +301,7 @@ item が持ち、`satisfies` で quality へ接続する。
 - [QA-58522afb](quality/20260808-58522afb-prebuilt-artifact-availability.md) — 最新 main のビルド成果物を再ビルドなしに消費できる状態を保つ
 - [QA-67715bb3](quality/20260809-67715bb3-normative-items-placement-and-authoring.md) — 規範は 1 ファイル 1 item のグラフが持ち、概要文書は索引に縮退させる
 - [QA-6bf957d9](quality/20260808-6bf957d9-document-graph-mechanically-verified.md) — ドキュメントグラフのトレーサビリティは機械的に検証する
+- [QA-87b7776a](quality/20260809-87b7776a-defects-in-tracker-graph-holds-norms.md) — 欠陥はトラッカーが持ちドキュメントグラフは規範のみを持つ。起票は分類語彙を経由する
 - [QA-a5f7f088](quality/20260808-a5f7f088-cross-platform-verification-before-merge.md) — マージ前の自動検証を必須にし、プラットフォーム差が効く層は全プラットフォームで通す
 - [QA-d028e302](quality/20260809-d028e302-automation-supply-chain-safety.md) — 自動化が取り込む実行物は不変な識別子で固定し、権限は最小に絞り、不正入力では成果物を作る前に失敗する
 
