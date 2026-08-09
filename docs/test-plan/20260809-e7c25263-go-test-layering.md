@@ -4,6 +4,10 @@ type: test_plan
 name: "エンジンの Go テストは nix を介さない実 FS 統合テストを主戦力とする"
 derives_from:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
+depends_on:
+  - "TP-36e90d5d-4524-4294-bc72-ee263bb02782"
+  - "TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9"
+  - "TP-d3000054-42d9-4bac-912a-dd3abc38d3e9"
 specification: |
   The engine SHALL be verified primarily by Go tests that run against a real filesystem
   under a temporary directory, with the source side supplied as an ordinary directory and
@@ -16,6 +20,14 @@ specification: |
   evaluation tests and everything downstream of the flake entrypoint belongs to the E2E
   harness. Safety-critical logic — conservative stale removal above all — SHALL be covered
   table-driven at the unit level in addition to whatever integration coverage reaches it.
+  The command layer SHALL be verified at this level too, and not only where it emits the
+  machine-readable envelope: argument and flag handling, entrypoint discovery, template
+  name validation, the confirmation policy and its non-interactive fallback, and the exit
+  code a multi-subject run aggregates are all decided before any placement happens and
+  SHALL be reachable without driving the command end to end. Those tests SHALL exercise the
+  functions that make the decision rather than spawning the built binary, so that a case is
+  a function call with arguments rather than a process whose failure has to be inferred
+  from its output.
 specification_ja: |
   エンジンは、一時ディレクトリ下の実ファイルシステムに対して動く Go テストを主戦力として
   検証しなければならない。配置元は普通のディレクトリで与え、経路のどこでも nix を起動して
@@ -26,7 +38,13 @@ specification_ja: |
   境界は manifest であり、`manifest.json` より上流は評価テスト、flake entrypoint より
   下流は E2E ハーネスの担当としなければならない。安全に直結するロジック——とりわけ保守的
   stale 除去——は、統合テストの被覆とは別に、ユニットレベルで table-driven に覆わなければ
-  ならない。
+  ならない。コマンド層もこのレベルで検証しなければならず、機械可読エンベロープを emit する
+  箇所に限ってはならない。引数とフラグの扱い、entrypoint の探索、テンプレ名の検証、確認
+  ポリシーとその非対話フォールバック、複数 subject の実行が集約する終了コードは、いずれも
+  配置が始まる前に決まるものであり、コマンドを一気通貫で駆動せずに到達できなければならない。
+  これらのテストは、ビルドしたバイナリを起動するのではなく判断を下す関数そのものを動かさ
+  なければならない（ケースを、失敗を出力から推測するほかないプロセスではなく、引数を伴う
+  関数呼び出しにするため）。
 ---
 # TP-e7c25263: エンジンの Go テストは nix を介さない実 FS 統合テストを主戦力とする
 
@@ -50,6 +68,13 @@ specification_ja: |
 保守的 stale 除去は、統合テストの被覆とは別にユニットレベルで table-driven に覆う。誤除去は
 ユーザーのファイルを消す不可逆な失敗であり、正常系の統合テストでは網羅できない入力空間を
 持つため。
+
+**コマンド層（`cmd/nput/`）もこのレベルの対象**で、エンベロープを emit する箇所に限らない。
+配置が始まる前に決まる判断——引数・フラグの扱い、entrypoint の探索、テンプレ名の検証、確認
+ポリシーと非対話フォールバック、複数 subject の集約終了コード——は、コマンドを一気通貫で
+駆動せずに到達する。テストはビルドしたバイナリを起動せず、判断を下す関数そのものを動かす
+（ケースを、失敗を出力から推測するほかないプロセスではなく引数を伴う関数呼び出しにするため）。
+このうちエンベロープの適合と payload の意味論だけは TP-d3000054 の担当。
 
 ## 出典
 
