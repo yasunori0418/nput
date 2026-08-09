@@ -34,10 +34,9 @@ don't skim it as an index.
 | `docs/risks/` | risk | `RISK` | What threatens a requirement or a design — **not started** |
 | `docs/test/<subject>/` | test_condition | `TC` | What a risk needs covered — **not started** |
 | `docs/test/<subject>/` | test_case | `CASE` | A concrete case under a condition — **not started** |
-| `docs/test/<subject>/` | defect | `D` | What a case revealed — **not started** |
 | `docs/adr/` | adr | `ADR` | Decisions, linked by `justifies` |
 
-The four types marked **not started** are defined in `docs/model.yaml` but have neither items nor
+The three types marked **not started** are defined in `docs/model.yaml` but have neither items nor
 directories yet; they get created when the test process is taken up, at which point the granularity
 of `<subject>` (per feature or per requirement) is decided.
 
@@ -46,8 +45,9 @@ parents `docs/model.yaml` permits: `infrastructure` may hang off a `design` as w
 `quality`, though every `INF` item satisfies a `QA` today.
 
 Every type but `solution` and `adr` hangs off at least one upstream relation, so a missing link
-shows up as an orphan warning. `defect` is the exception: it has no way to declare one, and so
-always raises the warning — see the header of `docs/model.yaml`.
+shows up as an orphan warning, with no exceptions. Defects found in the product are not graph
+items: they live in GitHub Issues under the `bug` label (→ ADR-0051; conventions in
+`docs/agents/issue-tracker.md`, "Defect issues").
 
 Start from the overview that matches the topic (spec for behaviour, design for structure, concept
 for positioning), follow its link into the item, then traverse relations for the surrounding context.
