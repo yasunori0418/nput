@@ -295,6 +295,7 @@ quality は開発プロセス・規約・ガバナンスに関する方針を持
 use_case を経由せず solution 直下に接続する。方針を実現する仕組みは `docs/infrastructure/` の
 item が持ち、`satisfies` で quality へ接続する。
 
+- [QA-030f926b](quality/20260809-030f926b-adr-decisions-recorded-and-connected.md) — 設計判断は ADR に記録し、改訂の書き戻しと item への接続を同じ変更の中で完了させる
 - [QA-0949183b](quality/20260808-0949183b-release-driven-by-source-of-truth.md) — リリースはバージョンの一次情報の変更で駆動し、手作業の工程を挟まない
 - [QA-0d42104c](quality/20260808-0d42104c-reference-docs-generated-from-source.md) — リファレンスドキュメントは記述対象のソースから生成し、生成物を持たない
 - [QA-58522afb](quality/20260808-58522afb-prebuilt-artifact-availability.md) — 最新 main のビルド成果物を再ビルドなしに消費できる状態を保つ
