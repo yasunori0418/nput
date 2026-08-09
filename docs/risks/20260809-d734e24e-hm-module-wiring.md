@@ -7,6 +7,7 @@ threatens:
   - "REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9"
   - "REQ-e1e1114b-ba07-4d57-8e04-6e30e39a5da3"
   - "REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a"
+  - "REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10"
 likelihood: medium
 impact: high
 level: high
@@ -31,7 +32,8 @@ level: high
   engine の起動時のフラグとして届かない。既定値を省略したときに既定が入らない、という形でも
   起きる
 - **config ごとの独立性の喪失** — 名前つきの config ごとに独立した profile を取れず、役割
-  分離が崩れる
+  分離が崩れる。ただし現状の hm 経路の検証（評価アサート・実 activate とも）は単一 config
+  しか通しておらず、この崩れ方だけは下流のテスト条件で受けられていない
 
 これらは評価の時点で決まるが、実際に activate するまで観測できない性質を持つ。activate を
 伴わない検証層が無ければ、統合先の実環境でしか壊れが露見しない。
