@@ -12,7 +12,6 @@ threatens:
   - "REQ-79ce0a09-f9bd-4e61-ba7f-45fb5643137b"
   - "REQ-250d936c-1df0-491d-a7af-708f38b61f33"
   - "REQ-b232ec98-af3b-41f3-a050-29d417322002"
-  - "REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4"
   - "REQ-1dcc9a33-b0f2-43e0-8310-fc4b19e68fe7"
   - "REQ-77689c68-953c-4cbb-ab31-1ac1e4f5f2fe"
 ---
@@ -29,8 +28,10 @@ threatens:
 **顕在化したときに起きること**: engine 側は不正な文書を読んで失敗するか、より悪いことに
 フィールドの欠落や順序変化を黙って受理し、意図しない配置を行う。`mkManifest` は純粋関数
 （REQ-2b0c2bb8）で FS も nix daemon も介さないため、この破れは実行するまで観測されず、
-E2E まで落ちてこないと検出できない。`method` の既定（REQ-77689c68）や defaults の適用
-（REQ-b232ec98）が変われば、世代管理下に置くつもりの entry が世代外へ回る。
+E2E まで落ちてこないと検出できない（REQ-2b0c2bb8 の純粋性そのものが脅かされるわけでは
+ないので `threatens` は張らない。検出が難しい理由としてここに書くに留める）。`method` の既定
+（REQ-77689c68）や defaults の適用（REQ-b232ec98）が変われば、世代管理下に置くつもりの entry が
+世代外へ回る。
 
 ## 評価
 
@@ -41,5 +42,11 @@ E2E まで落ちてこないと検出できない。`method` の既定（REQ-776
 
 ## 対処
 
-TC-4e7cfae7（文書構造の不変条件）・TC-d9175bb5（既定適用と決定的順序）・TC-de6514e2
-（文書全体のスナップショット回帰）で緩和する。
+TC-4e7cfae7（文書構造の不変条件）・TC-d9175bb5（既定適用と決定的順序）・TC-81be084d
+（marker の判別と src 種別への変換）・TC-de6514e2（文書全体のスナップショット回帰）で緩和する。
+
+## 出典
+
+`tests/nix-unit/structure.nix` / `defaults.nix` / `resolve-marker.nix` と
+`tests/namaka/manifest-project/expr.nix` の現行実装からの逆算（→ Issue #273「L1〜L4」節）。
+manifest 契約の設計判断は ADR-0010 / ADR-0014 が持つ。

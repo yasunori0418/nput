@@ -42,5 +42,12 @@ engine まで届き、意図しない場所を書き換える。タイポした�
 
 ## 対処
 
-TC-e7ff0e6d で緩和する。同 TC は各ゲートが `ThrownError` を投げることと、`escapesBase` の
-深さ 0 境界を内側・外側の対でアサートすることの両方を持つ。
+TC-e7ff0e6d（公開 API 経由で各ゲートが `ThrownError` を投げること）・TC-311ca3b2（private
+helper を直接叩いてパス脱出判定の深さ 0 境界を内側・外側の対で見ること）で緩和する。検証境界が
+異なるため 2 つの TC に分ける。
+
+## 出典
+
+`tests/nix-unit/gates.nix` / `tests/nix-unit/escapes-base.nix` の現行実装からの逆算
+（→ Issue #273「L1〜L4」節）。各ゲートの設計判断は ADR-0008 / ADR-0010 / ADR-0013 /
+ADR-0019 / ADR-0024 が持つ。
