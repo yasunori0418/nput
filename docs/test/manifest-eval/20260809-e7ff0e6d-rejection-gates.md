@@ -1,7 +1,7 @@
 ---
 id: "TC-e7ff0e6d-32d7-4ed6-8c2f-449dba34b2f6"
 type: test_condition
-name: "拒否すべき入力が公開 API 経由で評価時に throw することをアサートする"
+name: "拒否すべき入力が評価時に throw することをアサートする"
 mitigates:
   - "RISK-09df40d3-2752-433e-9ab0-2816fbd14969"
 ---
@@ -9,10 +9,13 @@ mitigates:
 
 ## テスト条件
 
-「この入力は評価が失敗する」を、`normalizeManifest` の公開経路（evalModules）越しに、
-エラー種別と拒否されたフィールドの名指しで直接アサートする。正常系のアサートでは、ゲートが
-外れたことを検出できないため。判定ロジックそのものを private helper 越しに見るのは
-TC-311ca3b2 の担当で、検証境界が異なる。
+「この入力は評価が失敗する」を、エラー種別と拒否されたフィールドの名指しで直接アサートする。
+正常系のアサートでは、ゲートが外れたことを検出できないため。判定ロジックそのものを private
+helper 越しに単体で見るのは TC-311ca3b2 の担当で、検証境界が異なる。
+
+主たる経路は `normalizeManifest`（evalModules）だが、型の共有を確かめる 1 件だけは
+`entriesType` を直接 `evalModules` して見る（`normalizeManifest` を通さない）。同じ型定義が
+モジュール経路でも strict であることは、公開経路のアサートからは導けないため。
 
 **ゲートごとの拒否**:
 

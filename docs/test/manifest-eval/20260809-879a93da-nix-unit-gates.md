@@ -15,8 +15,11 @@ covers:
 
 拒否されるべき入力が `ThrownError` になり、メッセージが**拒否されたフィールド（または理由の
 語）を名指しする**ことをアサートする（`expectedError.type` + `expectedError.msg` の部分一致）。
-`msg` はフィールド名の部分一致なので、同じフィールドを理由とする複数のゲートは互いに
-区別されない（下の 2 つの `"target"` がこれにあたる）。
+
+`msg` は部分一致なので、**フィールド名を本文に含む他ゲートのメッセージとも一致しうる**。
+`"target"` を期待する 2 件（絶対パス / `..` 脱出）は互いに区別されないだけでなく、
+`copy` × out-of-store と subpath の各メッセージが `(target: …)` を含むため、それらが誤って
+発火した場合にも通る。ゲートの取り違えまで検出する粒度は持っていない。
 
 - `systemRoot` を root に指定 → 未実装（`"system mode"`）
 - `method = "copy"` と out-of-store marker の併用 → `"out-of-store"`

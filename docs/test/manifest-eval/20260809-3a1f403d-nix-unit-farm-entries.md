@@ -9,7 +9,7 @@ covers:
 
 ## 対象
 
-`tests/nix-unit/farm-entries.nix`（テスト seam `nput.__internal.farmEntries` /
+`tests/nix-unit/farm-entries.nix`（TP-403c55c7 のテスト seam `nput.__internal.farmEntries` /
 `nput.__internal.anchorName` を直接叩き、`lib/manifest.nix` の anchorLines 生成式を同じ形で
 再構成して突き合わせる）
 
@@ -18,9 +18,10 @@ covers:
 - **抽出条件**: store×symlink / store×copy / out-of-store×symlink が混在する manifest を
   1 つ与え、採用されるのが store×symlink の 2 件だけであること（target 列で確認）
 - **空になる条件**: copy と out-of-store しか無い manifest では抽出結果が空リストになること
-- **アンカー名の適用**: 対象 target のアンカー名が既知の sha256 短縮 hex リテラルに一致する
-  こと。アンカー名そのものの形式・決定性・特殊文字耐性は CASE-ead15d61 の担当で、ここでは
-  farm 内で正しい target から名前が引かれることだけを見る
+- **アンカー名の固定**: 対象 target のアンカー名を `anchorName` に単独で問い、既知の sha256
+  短縮 hex リテラルに一致すること。次項の合成結果の期待値を作るための足場で、farm を経由した
+  適用そのものを見ているのは次項の方である。アンカー名の形式・決定性・特殊文字耐性は
+  CASE-ead15d61 の担当
 - **組み立て結果**: 抽出とアンカー名の合成が
   `ln -s <escapeShellArg src> "$out/<anchorName>"` を改行連結した文字列になり、**target ごとに**
   anchor 名が変わること（2 entry の `src` は同一の fake store パスなので、変わるのは
