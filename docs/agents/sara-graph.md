@@ -161,8 +161,9 @@ were replaced — if so, it is the norm.
 
 ## Where a risk attaches: `requirement` or `design`
 
-A `risk` may point at either a `requirement` or a `design` via `threatens`. The model
-permits both, so the choice is a judgement call — make it by this rule.
+A `risk` may point at a `requirement` or a `design` via `threatens`. The model permits
+both, and constrains neither the count nor the mix, so the choice is a judgement call —
+make it by this rule.
 
 > A risk attaches to `requirement` by default. Attach it to `design` only when it is a
 > risk that **would disappear if the design were replaced by an alternative** — that is, a
@@ -172,6 +173,12 @@ permits both, so the choice is a judgement call — make it by this rule.
 The test: imagine the design being swapped for a different one that satisfies the same
 requirement. If the risk goes away with it, it belongs to the design. If it survives the
 swap, it belongs to the requirement.
+
+Apply the test once per `threatens` edge, not once per risk. A risk that names several
+facets of one threat may hold edges of both kinds at once — the facets that survive the
+swap to `requirement`, the facet intrinsic to the design to `design` — and the design-side
+example below is exactly that shape. What the rule forbids is an edge whose kind the test
+does not support, not a risk that earns more than one.
 
 Examples:
 
