@@ -4,9 +4,9 @@ type: risk
 name: "空親ディレクトリの剪定が行き過ぎ、または残骸を残す"
 threatens:
   - "REQ-8409db86-a1ba-4053-86dc-588985cc1ca7"
-likelihood: medium
+likelihood: low
 impact: medium
-level: medium
+level: low
 ---
 # RISK-e659f9dd: 空親ディレクトリの剪定が行き過ぎ、または残骸を残す
 
@@ -27,6 +27,13 @@ best-effort であり、失敗したときにエラーで apply 全体を落と�
 - 非空（foreign ファイルを含む）ディレクトリを空と誤判定する
 - 多階層の空チェーンを 1 階層しか剪定せず残骸が積もる
 - 剪定失敗が致命エラーになり、成功した除去まで巻き添えで失敗扱いになる
+
+## 評価
+
+- likelihood: low — 剪定は root 境界・祖先 symlink・非空判定の 3 つの停止条件を持つ安定した
+  ロジックで、TC-810d661d がその全てを機械的に覆っている
+- impact: medium — 行き過ぎた剪定は空ディレクトリの喪失に留まり、次の apply が作り直す。
+  残骸側の失敗も配置の意味論は壊さない
 
 ## 張り先の判断
 

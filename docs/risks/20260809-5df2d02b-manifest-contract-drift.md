@@ -38,7 +38,6 @@ E2E まで落ちてこないと検出できない（REQ-2b0c2bb8 の純粋性そ
 - likelihood: medium — 契約は 1 箇所（`lib/manifest.nix`）に閉じているが、フィールド追加・
   既定値変更は評価層の通常の改修で起こりうる
 - impact: high — engine の全経路が読む唯一の契約で、破れは配置結果そのものを狂わせる
-- level: high
 
 ## 対処
 

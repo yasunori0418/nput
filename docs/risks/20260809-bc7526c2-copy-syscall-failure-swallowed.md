@@ -6,8 +6,8 @@ threatens:
   - "REQ-07c3b735-3744-4778-a640-8c6fb66f4aa7"
   - "REQ-95e97d01-5c34-44b3-bc85-9ca53472bc3d"
 likelihood: medium
-impact: medium
-level: medium
+impact: high
+level: high
 ---
 # RISK-bc7526c2: コピー中の syscall 失敗が握り潰され、中途半端な配置物と誤った成功報告が残る
 
@@ -26,6 +26,15 @@ place-once の規約どおり skip した場合も、黙って飛ばせばユー
 - 非 ENOENT の lstat 失敗が「target 不在」と同一視され、誤った分岐へ進む
 - 失敗した entry が結果へ「コピー済み」として記録される
 - foreign な実ファイルの skip が無警告で行われ、未反映に気づけない
+
+## 評価
+
+- likelihood: medium — 失敗しうる syscall が mkdir / open / read-write / readlink / lstat と
+  多岐にわたり、経路を足すたびにエラー処理の取りこぼしが入りうる。TC-4f315cfc が各段の
+  伝播と結果レコードの汚染を覆っているが、同 TC はエラーメッセージによる段の特定を診断上の
+  要となる 2 経路に限り、残る段は伝播そのものまでしか見ないと自ら断っている
+- impact: high — 握り潰しの帰結は沈黙の不整合である。不完全なツリーが残ったまま apply が
+  成功として返り、ユーザーは壊れた配置物を正常と誤認する
 
 ## 張り先の判断
 

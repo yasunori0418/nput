@@ -2,9 +2,9 @@
 id: "RISK-09df40d3-2752-433e-9ab0-2816fbd14969"
 type: risk
 name: "評価時に止めるべき入力が素通りして engine 実行時まで到達する"
-likelihood: medium
+likelihood: low
 impact: high
-level: high
+level: medium
 threatens:
   - "REQ-6911eab6-12b4-457c-9db4-d7430a9e9b3f"
   - "REQ-d1b5b3f5-10a0-400d-9f03-ba00c63d1c34"
@@ -40,10 +40,12 @@ engine まで届き、意図しない場所を書き換える。タイポした�
 
 ## 評価
 
-- likelihood: medium — 境界条件（`..` の深さ・0 ちょうど）は実装変更で崩れやすい一方、
-  ゲート自体は型定義とクロスフィールド検査に集約されている
+- likelihood: low — ゲートは型定義とクロスフィールド検査の 1 箇所に集約されており、
+  境界条件（`..` の深さ・0 ちょうど）まで含めて nix-unit が対で覆っている。本 risk が
+  扱う「止めるべき入力が素通りする」方向、すなわち throw しなくなる退行はこの検査が
+  確実に捕まえる（どのゲートが throw したかの取り違えは CASE-879a93da の部分一致では
+  区別できないが、それは素通りとは別の失敗モードで RISK-3de9753f の担当）
 - impact: high — パス安全性の破れは root 外への書き込みで、原状回復の対象にすらならない
-- level: high
 
 ## 対処
 

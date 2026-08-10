@@ -6,8 +6,8 @@ threatens:
   - "REQ-1be4d678-959c-44d7-a346-44bfd95af56e"
   - "REQ-05abce3e-9797-432b-b93f-37c55d09afde"
 likelihood: medium
-impact: medium
-level: medium
+impact: high
+level: high
 ---
 # RISK-cdcc6faf: run が返す世代観測と到達状態が実態とずれ、機械可読出力の消費側を誤らせる
 
@@ -37,8 +37,9 @@ project mode の `rollback` / `list-generations` を拒否する分岐）にあ�
 **likelihood: medium** — 値の組み立ては失敗経路ごとに分岐しており、段を増やすたびに
 どの段までを「到達済み」と数えるかの判断が要る。
 
-**impact: medium** — 誤りは表示と機械可読出力に留まり、FS を直接壊しはしない。ただし
-自動化の判断材料としては壊れている。
+**impact: high** — FS を直接壊しはしないが、誤りは沈黙の不整合として現れる。「配置した
+ことになっている target が実は配置されていない」「巻き戻したのに `Unwound` が false」は
+どちらも失敗として現れず、CI が JSON を読んで判断する運用では誤った成功判定に直結する。
 
 ## 緩和
 

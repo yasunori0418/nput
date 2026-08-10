@@ -8,9 +8,9 @@ threatens:
   - "REQ-57137302-de29-4f71-a565-034cd5de080b"
   - "REQ-059eb4d5-63fb-4f8e-b705-11b5e2ed4ae5"
   - "REQ-fa181aa6-29a2-48c3-ae07-cc1b9a3b0303"
-likelihood: medium
+likelihood: low
 impact: high
-level: high
+level: medium
 ---
 # RISK-4936a47d: --json のエンベロープが niface 規約から外れ機械可読出力の消費側が壊れる
 
@@ -35,7 +35,8 @@ level: high
 
 ## 影響
 
-消費側のパーサが壊れる。level を high とするのは、`--json` が「第 2 の契約」として宣言された
-出力面（→ REQ-a5053191）であり、破壊が nput の外側へ直接漏れるため。ただし発生確率を
-medium に留めるのは、niface の適合チェッカを Go テスト・E2E の双方に置いており、逸脱の大半が
-機械的に捕まる構造になっているため（→ TP-d3000054）。
+消費側のパーサが壊れる。impact を high とするのは、破れが沈黙の不整合として現れるため。
+nput 自身は正常終了したまま不正な文書を渡し、とくに item id の導出則のずれはパースエラーに
+すらならず値だけが他実装と食い違う。likelihood を low に留めるのは、niface の適合チェッカを
+Go テスト・E2E の双方に置いており、逸脱の大半が機械的に捕まる構造になっているため
+（→ TP-d3000054）。

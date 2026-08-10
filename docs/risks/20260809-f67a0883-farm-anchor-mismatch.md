@@ -33,7 +33,6 @@ symlink farm は GC アンカー専用で、アンカーは store-backed な sym
 - likelihood: medium — 抽出条件は method × srcKind の組み合わせで分岐し、条件の追加・変更で
   取りこぼしが起こりうる
 - impact: high — アンカーの欠落は前世代の store パス回収 = ロールバック不能を招く
-- level: high
 
 ## 対処
 

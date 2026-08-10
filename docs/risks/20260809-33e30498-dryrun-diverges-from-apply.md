@@ -26,6 +26,17 @@ conflict / change が本番 apply の結果と一致することである。ど�
 - dryrun が報告した conflict と本番 apply が検出する conflict が食い違う
 - conflict を検出しても終了コードが 0 のままで、CI のゲートとして機能しない
 
+## 評価
+
+- likelihood: medium — TC-a5eb7de3 が副作用の不在と conflict 件数の一致を覆っているが、
+  dryrun は本番 apply と同じ経路を分岐で共有するため、apply 側に段を足すたびに
+  「dryrun でも走ってしまう」形の混入が起こりうる。加えて同 TC は照合が件数までで
+  「どの target が conflict になったか」の集合一致は見ていないことを自ら残余として挙げて
+  おり、「想定する失敗」4 点目の終了コードは RISK-bd1e4ada 側が持つ
+- impact: high — 副作用側の破れは沈黙の不整合になる。確認だけのつもりの実行が profile を
+  作る・flock を取るといった変化は成功時に表面化せず、並行実行や read-only 環境で初めて
+  露見する
+
 ## 張り先の判断
 
 2 本とも requirement へ張る。「dryrun は読み取り専用で conflict 時に非ゼロ終了する」は
