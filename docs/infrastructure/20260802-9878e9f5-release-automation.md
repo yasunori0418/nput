@@ -24,7 +24,7 @@ Go バイナリへは nix build の `ldflags`（`-X`）で埋め込む。単一�
 | workflow | トリガ | 内容 |
 |---|---|---|
 | `bump-version.yml` | `workflow_dispatch` | バージョン文字列を入力に取り、非 main ブランチ上で `VERSION` を書き換えてコミット・push する |
-| `release.yml` | `push: main` + `VERSION` の `paths` | `VERSION` を読み、`softprops/action-gh-release`（バージョン pin）でタグ `vX.Y.Z` 作成 + リリースノート自動生成 + GitHub Release 作成 |
+| `release.yml` | `push: main` + `VERSION` の `paths` | `VERSION` を読み、`softprops/action-gh-release`（SHA pin・版名はコメント併記）でタグ `vX.Y.Z` 作成 + リリースノート自動生成 + GitHub Release 作成 |
 
 マージゲート（INF-8b97573f）が効くのは **bump PR の側**で、`release.yml` 自体は main への push 後に
 走るため required check の対象外。「bump PR のマージがリリースを駆動する」形が main 直コミット
@@ -50,10 +50,10 @@ GitHub Release 作成しか行わず、いずれも contents 以外のスコー�
 | `release.yml` | `VERSION` の先頭 1 行（空白除去後） | タグ / Release を作る前 |
 
 どちらも semver（`X.Y.Z`）への正規表現一致で判定し、外れれば `::error::` を出して即 fail
-する。`release.yml` 側は前段のゲート（マージゲート INF-8b97573f・flake check）が `VERSION`
-の内容妥当性までは保証しないため、ここで独立に検証する必要がある。空文字や改行を含む値を
-通すと `v` だけのタグ・改行入りタグ・`GITHUB_OUTPUT` への複数行注入になり、誤ったリリースが
-外へ出てしまう。fail させる方が事後の調査も回復も容易になる。
+する。`release.yml` 側は前段のゲートが `VERSION` の内容妥当性までは保証しない（上記のとおり
+main への push 後に走るため required check の対象外）ため、ここで独立に検証する必要がある。
+空文字や改行を含む値を通すと `v` だけのタグ・改行入りタグ・`GITHUB_OUTPUT` への複数行注入に
+なり、誤ったリリースが外へ出てしまう。fail させる方が事後の調査も回復も容易になる。
 
 ## 成果物
 
@@ -63,4 +63,6 @@ GitHub Release 作成しか行わず、いずれも contents 以外のスコー�
 
 ## 出典
 
-ADR-0042（リリースを bump PR 起点で自動化する）。
+ADR-0042（リリースを bump PR 起点で自動化する）。「権限と入力検証」節は ADR の決定では
+なく、`bump-version.yml` / `release.yml` が実運用してきた規範を Issue #291 で本 item へ
+書き起こしたもの。
