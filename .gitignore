@@ -31,7 +31,9 @@ result-*
 
 # ---- Project ----
 .agents/
-.claude/skills/*
+# `/*`（中身のみ）だと .claude/skills 自体が symlink のとき（worktrunk の
+# symlink-ignored hook や nput のディレクトリ配置）untracked に出るため、パスごと ignore する
+.claude/skills
 
 # nput ドッグフーディング配置物（nput apply default で生成・→ Issue #7）
 /.nput-example/
