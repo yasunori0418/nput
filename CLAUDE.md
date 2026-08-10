@@ -38,11 +38,40 @@ item を新設し、概要文書にはリンクを 1 行足すに留める。
 検出した欠陥（defect）は型として持たず、GitHub Issues（`bug` label）で管理する
 （→ ADR-0051。運用規約は `docs/agents/issue-tracker.md` の「Defect issues」節）。
 
-**quality（`QA`）・test_plan（`TP`）・risk（`RISK`）・テスト系（`TC` / `CASE`）は
-model.yaml に定義済みだが、item もディレクトリもまだ無い。** quality / test_plan は既存 item の
-移設で作られる。テスト系は工程に着手する段で `docs/risks/` と `docs/test/<対象>/` を作り、
-`<対象>` の粒度（機能単位か requirement 単位か）はその時点で決めて本節へ追記する。
 risk を `requirement` と `design` のどちらに張るかの使い分けは `docs/agents/sara-graph.md`。
+
+### テスト系 item の粒度（`docs/risks/` と `docs/test/<対象>/`）
+
+`docs/test/<対象>/` の `<対象>` は**機能単位の 8 区分**。requirement 単位は 130 超の REQ との
+1:N が錯綜するため採らない（→ Issue #273 の決定事項）。
+
+右端は各区分の CASE の上に立つ test_plan（逆算の起点。複数あるものは担当が分属する）。
+
+| `<対象>` | 含むテスト資産 | 上位の test_plan |
+|---|---|---|
+| `manifest-eval` | nix-unit 全 7（structure / defaults / gates / escapes-base / anchor-name / resolve-marker / farm-entries）+ namaka manifest-project | TP-36e90d5d / TP-d3d06fe4 / TP-403c55c7 |
+| `engine-core` | `internal/engine/` の engine / dryrun / preflight、`internal/planner/` | TP-e7c25263 |
+| `copy` | copytree / copy、e2e `04-copy` | TP-e7c25263 / TP-229b69c0 |
+| `migration-stale` | preremove_generalization / staleremove、e2e `03-stale` | TP-e7c25263 / TP-229b69c0 |
+| `atomicity` | undo / undo_journal / backup、engine の lock + `internal/lock/` | TP-deb05610 / TP-e7c25263（backup の退避ポリシー）|
+| `generations` | generations / reset（engine）/ result_extensions / drift、`internal/paths/`、e2e `02-home` | TP-e7c25263（`internal/paths/` の純ロジックを含む）/ TP-229b69c0 |
+| `cli-json` | `cmd/nput/` の全テストファイル | TP-e7c25263（CLI 層の判断）/ TP-d3000054（エンベロープ適合と payload 意味論）|
+| `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` | TP-229b69c0 / TP-0734996e / TP-e7c25263（`internal/` の Go テスト）|
+
+区分外: `go-vet` / `golangci-lint` / カバレッジ計測は quality の担当。`dev/tests/sara-id.sh` は
+test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（理由は同 item）。
+
+**逆算階層の粒度**（既存のテスト実装から item を起こすときの単位）:
+
+- **CASE** = テストファイル / e2e シナリオ / flake check 単位。本文に対象ファイルパスと
+  主な検証内容（テスト関数のテーマ列挙）を書く。テスト関数単位には割らない
+- **TC** = 検証テーマ単位（対象あたり数件）。同じ不変条件・観点を検証する CASE 群を束ねる
+- **RISK** = TC を束ねる脅威単位（対象あたり 2〜5 件）。「このテーマが壊れると何が起きるか」を
+  requirement / design への `threatens` で表す
+- 関係の向き: CASE -covers→ TC -mitigates→ RISK -threatens→ REQ / DSG
+
+**risk / TC / CASE は `docs/spec.md` へ索引しない**（`sara query` / `sara report` で辿る）。
+`docs/spec.md` のリンク集に載せるのは requirement / quality / test_plan まで。
 
 ### ID 規約（UUIDv4 二層構成）
 
