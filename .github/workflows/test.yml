@@ -90,8 +90,10 @@ jobs:
     # cycles) plus the sara-id numbering contract test. Non-required check with
     # no threshold gate, same policy as go-coverage: it is NOT registered as a
     # required status check and is NOT part of the DoD, so a failure reports on
-    # the PR without blocking merge. Making it strict / required is deferred
-    # until the migration completes (→ ADR-0048, epic #203).
+    # the PR without blocking merge. The check itself runs strict
+    # (strict_mode = true in sara.toml, all warnings are errors) since the
+    # epic #203 migration completed; staying non-required is a recorded
+    # decision, not a deferral (→ ADR-0050).
     #
     # The `changes` job is not reused here: its filter targets nix/Go sources,
     # whereas this check is most relevant on docs-only PRs. A job-local filter
