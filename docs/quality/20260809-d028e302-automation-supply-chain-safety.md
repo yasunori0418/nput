@@ -39,11 +39,16 @@ CI と自動化は、このリポジトリの変更なしに振る舞いが変�
 製品側にも依存の固定（REQ-637599dc）と不正入力での早期失敗（REQ-774cef80）の規範があるが、
 それらは利用者が触れる振る舞いを縛るもので、系統が異なる。固定の方式・権限の具体値・検証の
 実装形は本 item の規範に含めない。規範は横断で立て、実現手段は workflow ごとの
-infrastructure item が分担する。外部 action の固定は INF-d1230e1f が持ち（`setup-nix` 経由の
-固定は同 action を使う他の workflow にも及ぶ）、リリース系 2 workflow（`bump-version.yml` /
-`release.yml`）の権限配分と入力検証は INF-9878e9f5 が持つ。権限配分については
-`test.yml` / `cachix-push.yml` が `permissions` を明示しておらず、規範に対する未充足として
-残る（規範としては本 item が全 workflow を縛る）。
+infrastructure item が分担する。CI パイプラインが参照する外部 action の固定は
+INF-d1230e1f が、リリース系 2 workflow（`bump-version.yml` / `release.yml`）の権限配分と
+入力検証は INF-9878e9f5 が持つ。
+
+規範は全 workflow を縛るので、現状は次の 2 点が未充足として残る。いずれも
+`.github/workflows/` 側の変更を伴うため、item を張り替えるだけでは解消しない。
+
+- `test.yml` の `sara` ジョブと `cachix-push.yml` が直書きする外部 action の固定を、
+  規範として引き受ける infrastructure item が無い（実装としては SHA で固定されている）
+- `test.yml` / `cachix-push.yml` が `permissions` を明示せず、既定の広い権限を継承している
 
 ## 出典
 
