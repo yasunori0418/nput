@@ -295,11 +295,20 @@ quality は開発プロセス・規約・ガバナンスに関する方針を持
 use_case を経由せず solution 直下に接続する。方針を実現する仕組みは `docs/infrastructure/` の
 item が持ち、`satisfies` で quality へ接続する。
 
+- [QA-030f926b](quality/20260809-030f926b-adr-decisions-recorded-and-connected.md) — 設計判断は ADR に記録し、改訂の書き戻しと item への接続を同じ変更の中で完了させる
 - [QA-0949183b](quality/20260808-0949183b-release-driven-by-source-of-truth.md) — リリースはバージョンの一次情報の変更で駆動し、手作業の工程を挟まない
 - [QA-0d42104c](quality/20260808-0d42104c-reference-docs-generated-from-source.md) — リファレンスドキュメントは記述対象のソースから生成し、生成物を持たない
+- [QA-4a623664](quality/20260809-4a623664-glossary-fixes-canonical-terms.md) — 用語の正名は glossary が固定し、執筆はそれに従う
 - [QA-58522afb](quality/20260808-58522afb-prebuilt-artifact-availability.md) — 最新 main のビルド成果物を再ビルドなしに消費できる状態を保つ
+- [QA-5ecd74ba](quality/20260809-5ecd74ba-public-docs-english-canonical.md) — 公開ドキュメントは英語を canonical とし、日本語版を対で保守する
+- [QA-67715bb3](quality/20260809-67715bb3-normative-items-placement-and-authoring.md) — 規範は 1 ファイル 1 item のグラフが持ち、概要文書は索引に縮退させる
 - [QA-6bf957d9](quality/20260808-6bf957d9-document-graph-mechanically-verified.md) — ドキュメントグラフのトレーサビリティは機械的に検証する
+- [QA-87b7776a](quality/20260809-87b7776a-defects-in-tracker-graph-holds-norms.md) — 欠陥はトラッカーが持ちドキュメントグラフは規範のみを持つ。起票は分類語彙を経由する
+- [QA-8c6767e4](quality/20260809-8c6767e4-measurement-reports-without-gating.md) — 傾向の計測は報告に留め、マージのゲートにしない
+- [QA-9b5ccfce](quality/20260809-9b5ccfce-dod-single-machine-parsable-document.md) — 完成の定義は単一の機械パース可能な文書で持ち、項目数を上限で縛る
 - [QA-a5f7f088](quality/20260808-a5f7f088-cross-platform-verification-before-merge.md) — マージ前の自動検証を必須にし、プラットフォーム差が効く層は全プラットフォームで通す
+- [QA-a92341b9](quality/20260809-a92341b9-formatting-and-static-analysis-automated.md) — コード整形と静的解析を自動検証に載せ、同じ判定を手元でも得られるようにする
+- [QA-d028e302](quality/20260809-d028e302-automation-supply-chain-safety.md) — 自動化が取り込む実行物は不変な識別子で固定し、権限は最小に絞り、不正入力では成果物を作る前に失敗する
 
 ---
 
