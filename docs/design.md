@@ -15,6 +15,8 @@
 >   二重管理になり、改訂時に片方だけ古くなる。**例外は「設計目標」の表**で、これは設計判断を
 >   評価する軸の横断ビューであり、対応する item を持たないため本文に置く。各目標がどう
 >   満たされるかは requirement / design item が持ち、表には書かない
+> - design / infrastructure item を足したら本文書のリンク集にも足す。逆に本文書へ設計を
+>   書き足さない
 > - 「何を満たすべきか」は requirement の領分で本文書は扱わない（→ `docs/spec.md`）
 > - item を横断して検索・追跡するには `sara query`（→ `docs/agents/domain.md`）を使う
 > - item の `## 出典` は本文書の現行章立てを指さない。原文の読み方を含め `docs/spec.md` の
