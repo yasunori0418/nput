@@ -190,6 +190,41 @@ Risks are where test conditions hang from (`test_condition --mitigates--> risk`)
 misplacing a risk misplaces the tests that cover it. A requirement-level risk parked under
 one design leaves the other designs looking untested for a concern they share.
 
+## How a risk is scored: `likelihood`, `impact` and `level`
+
+`docs/model.yaml` requires all three on every `risk` and constrains each to
+`high` / `medium` / `low`, but the enum alone says nothing about how to choose a value.
+Left unstated, parallel lanes invent their own scales and the corpus stops ranking
+anything — which is the same reason the `specification` and `threatens` conventions live
+in this file. The rules below fix the scale; `level` is then derived, not judged.
+
+### `likelihood` — how easily a regression that realises the threat gets in
+
+Judge it as "how often the code in question changes" × "how far the existing verification
+gates would miss the regression". Code that changes frequently and sits in a blind spot of
+the test suite is `high`; stable code already covered by a mechanical check is `low`.
+
+### `impact` — how recoverable it is once realised
+
+| Value | What is at stake |
+|---|---|
+| `high` | Destroys the user's environment or real data, or leaves a silent inconsistency. |
+| `medium` | Misbehaves, but a re-run or a rebuild recovers it. |
+| `low` | Confined to development; never reaches the shipped artifact. |
+
+### `level` — derived from the two, never judged by hand
+
+| `likelihood` \ `impact` | `high` | `medium` | `low` |
+|---|---|---|---|
+| **`high`** | `high` | `high` | `medium` |
+| **`medium`** | `high` | `medium` | `low` |
+| **`low`** | `medium` | `low` | `low` |
+
+Nothing mechanical checks the derivation — `sara check` validates the enum, not the
+relation between the three fields — so it is upheld by review like the rest of this file.
+A `level` that does not match the cell is a defect in the item, not a considered override:
+if the matrix feels wrong for an item, the mis-scored field is `likelihood` or `impact`.
+
 ## How an item states its norm: `specification` / `specification_ja`
 
 The three types of the section above — `requirement`, `quality` and `test_plan` — each
