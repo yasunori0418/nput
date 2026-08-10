@@ -6,9 +6,9 @@ threatens:
   - "REQ-84e3c717-adf5-4ff3-b0db-d039b82ef19c"
   - "REQ-0bd55dfc-b28c-4ad2-ad50-bb1f76b2246c"
   - "REQ-a8a923ad-07fb-4582-b90a-07a6e0c41baa"
-likelihood: medium
+likelihood: low
 impact: medium
-level: medium
+level: low
 ---
 # RISK-ffb5100d: コピー結果が src と構造・属性で食い違い、配置物が使えなくなる
 
@@ -28,6 +28,14 @@ copy の src は nix store の read-only なツリーであり、そのまま複
 - src 内の symlink を deref し、リンク構造を失う
 - ネストしたディレクトリ・空ディレクトリが再現されない
 - out-of-store marker が live symlink にならず、src 側の変更が反映されない
+
+## 評価
+
+- likelihood: low — 忠実性の規範は copytree の 1 箇所に閉じており、TC-b1b8c163（構造・mode・
+  symlink の再現と owner-write 付与）と TC-cf1b44ec（out-of-store marker の live 性）が
+  機械的に覆っている
+- impact: medium — 配置物が使えない状態は目に見える形で現れ、規範どおりに直したうえでの
+  再 apply で回復できる
 
 ## 張り先の判断
 

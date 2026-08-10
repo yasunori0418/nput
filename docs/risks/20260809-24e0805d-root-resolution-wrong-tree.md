@@ -6,9 +6,9 @@ threatens:
   - "REQ-9cb26ffd-071e-4c68-a6fc-faac6373b75e"
   - "REQ-6506bc82-d1e1-4dbf-8c57-d5d1babf218a"
   - "REQ-8d965ca2-f8fd-44a4-87f3-94e850e9f85b"
-likelihood: medium
+likelihood: low
 impact: high
-level: high
+level: medium
 ---
 # RISK-24e0805d: root 解決を誤り、意図しないディレクトリツリーへ配置する
 
@@ -27,6 +27,16 @@ git から root を解決できないときに engine 実行時ではなく評�
 - git repo 外での apply が停止せず、任意のディレクトリを root に採る
 - home mode の root 供給元が層ごとに揃わず、HM 経由と CLI 経由で配置先が分岐する
 - profile ディレクトリの作成・backref 書き込みの失敗が握り潰され、逆引き不能な状態で配置が進む
+
+## 評価
+
+- likelihood: low — 解決規則はモードごとに 1 箇所へ集約されており、TC-b254a5a8 が成功経路と
+  失敗経路（git repo 外での停止・profile 準備の失敗）の双方を機械的に覆っている。ただし
+  同 TC は「想定する失敗」3 点目（home mode の root 供給元が層ごとに揃わない）を
+  `integration` 区分へ明示的に委ねており、engine が受け取った root を使い切るところまでが
+  射程になる。この 1 点は残余だが、engine 層の解決規則そのものが崩れる経路ではない
+- impact: high — 誤った root への配置はユーザー環境の任意の場所へ書き込むことであり、
+  どこへ撒いたかが記録に残らない以上、原状回復の手立てが無い
 
 ## 張り先の判断
 

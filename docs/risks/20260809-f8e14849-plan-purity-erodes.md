@@ -6,8 +6,8 @@ threatens:
   - "DSG-8b96869c-842e-4f78-8ff7-df1f1d6c1a68"
   - "REQ-c5dfcae6-6094-4850-99e5-bf14530bc60a"
 likelihood: medium
-impact: medium
-level: medium
+impact: high
+level: high
 ---
 # RISK-f8e14849: plan と engine が乖離し、table-driven テストが実挙動を保証しなくなる
 
@@ -27,6 +27,17 @@ engine が独自に分類をやり直せば table のケースが増えても実
 - engine が plan を無視した独自判断で配置し、planner のテストが実挙動を担保しなくなる
 - 未知の method が plan 計算を素通りし、engine 側で未定義の振る舞いになる
 - 実体の不整合の検出が評価時へ漏れる／評価時に検出すべき設定の誤りが engine まで届く
+
+## 評価
+
+- likelihood: medium — TC-b329cafd が「plan の計算が実 FS を触らない」ことを fake FS の
+  table-driven で覆っている。ただし層分割の維持は個々のアサートではなく実装の書き方に
+  依存し、engine 側へ判断を足す変更で少しずつ崩れうる
+- impact: high — 乖離の帰結は「テストは緑だが本番は壊れている」という検証の空洞化であり、
+  規約が沈黙の不整合として名指しする形そのもの（何も検査していないのに成功を報告する検証
+  ゲート）に当たる。開発内に留まることは失われた検出力を告知してくれないので、confinement
+  の側では判定しない。実際の破れは分類を担う他の risk（RISK-e8449214 等）として現れるが、
+  そのテストが本来の検出力を失っていること自体は誰も知らせない
 
 ## 張り先の判断
 

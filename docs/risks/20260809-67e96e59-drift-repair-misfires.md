@@ -5,7 +5,7 @@ name: "世代スキップと lstat ドリフト修復が誤発火し、世代が
 threatens:
   - "REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0"
 likelihood: high
-impact: medium
+impact: high
 level: high
 ---
 # RISK-67e96e59: 世代スキップと lstat ドリフト修復が誤発火し、世代が無限増殖するかユーザーの編集を潰す
@@ -37,8 +37,10 @@ project mode では、新しい link farm derivation が前世代と同一なら
 **likelihood: high** — 発火頻度が極めて高い経路（シェル再入のたび）で、判定の入力が
 derivation の同一性と FS の実測という 2 系統に分かれている。
 
-**impact: medium** — 世代の無限増殖は disk と一覧の劣化に留まり、編集の上書きは copy
-entry に限られる。ただしどちらもユーザーの日常操作の中で静かに進行する。
+**impact: high** — どの方向の誤りも沈黙の不整合として現れる。copy entry の編集はシェル
+再入のたびに黙って上書きされ（copy は世代管理外なのでロールバックでも戻せない）、修復し
+損ねた symlink は設定が効かない状態を黙って続ける。世代の無限増殖も含め、ユーザーの日常
+操作の中で静かに進行し、気づく契機が無い。
 
 ## 緩和
 
