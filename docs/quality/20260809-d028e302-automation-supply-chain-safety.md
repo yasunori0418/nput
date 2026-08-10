@@ -39,11 +39,11 @@ CI と自動化は、このリポジトリの変更なしに振る舞いが変�
 製品側にも依存の固定（REQ-637599dc）と不正入力での早期失敗（REQ-774cef80）の規範があるが、
 それらは利用者が触れる振る舞いを縛るもので、系統が異なる。固定の方式・権限の具体値・検証の
 実装形は本 item の規範に含めない。規範は横断で立て、実現手段は workflow ごとの
-infrastructure item が分担する。CI パイプラインの外部 action 固定は INF-d1230e1f が持ち、
-リリース系 2 workflow（`bump-version.yml` / `release.yml`）の権限配分と入力検証は
-INF-9878e9f5 が持つ。`test.yml` の `sara` ジョブ（INF-659b139d）と `cachix-push.yml`
-（INF-af33c5a1）は、外部 action 固定・権限配分のいずれについても本 item を satisfy する
-記述を現状持たない（規範としては本 item が全 workflow を縛る）。
+infrastructure item が分担する。外部 action の固定は INF-d1230e1f が持ち（`setup-nix` 経由の
+固定は同 action を使う他の workflow にも及ぶ）、リリース系 2 workflow（`bump-version.yml` /
+`release.yml`）の権限配分と入力検証は INF-9878e9f5 が持つ。権限配分については
+`test.yml` / `cachix-push.yml` が `permissions` を明示しておらず、規範に対する未充足として
+残る（規範としては本 item が全 workflow を縛る）。
 
 ## 出典
 
