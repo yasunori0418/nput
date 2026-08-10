@@ -161,8 +161,9 @@ were replaced — if so, it is the norm.
 
 ## Where a risk attaches: `requirement` or `design`
 
-A `risk` may point at either a `requirement` or a `design` via `threatens`. The model
-permits both, so the choice is a judgement call — make it by this rule.
+A `risk` may point at a `requirement` or a `design` via `threatens`. The model permits
+both, and constrains neither the count nor the mix, so the choice is a judgement call —
+make it by this rule.
 
 > A risk attaches to `requirement` by default. Attach it to `design` only when it is a
 > risk that **would disappear if the design were replaced by an alternative** — that is, a
@@ -173,11 +174,17 @@ The test: imagine the design being swapped for a different one that satisfies th
 requirement. If the risk goes away with it, it belongs to the design. If it survives the
 swap, it belongs to the requirement.
 
+Apply the test once per `threatens` edge, not once per risk. A risk that names several
+facets of one threat may hold edges of both kinds at once — the facets that survive the
+swap to `requirement`, the facet intrinsic to the design to `design` — and the design-side
+example below is exactly that shape. What the rule forbids is an edge whose kind the test
+does not support, not a risk that earns more than one.
+
 Examples:
 
 | Risk | Attaches to | Why |
 |---|---|---|
-| The unwind of the undo journal fails partway through | `design` | The undo journal is one design for "leave no trace on failure". Replace it with another (e.g. staging into a temp tree and renaming into place) and this particular failure mode is gone. |
+| The semantics of root resolution and placement diverge per entrypoint form (`RISK-e916f742` → `DSG-92f54490`) | `design` | Confining the legacy branch to the attr path assembly is one design for "one implementation across entrypoint forms". Replace it — e.g. write each entrypoint's nix invocation out separately — and this particular divergence is gone. |
 | `apply` leaves traces on the filesystem when it fails | `requirement` | This is the requirement itself being broken. Every design has to answer for it; no change of design makes the concern go away. |
 
 Attaching a design-specific risk to the requirement loses the information that the risk is
@@ -189,6 +196,53 @@ from every other design that has the same exposure.
 Risks are where test conditions hang from (`test_condition --mitigates--> risk`), so
 misplacing a risk misplaces the tests that cover it. A requirement-level risk parked under
 one design leaves the other designs looking untested for a concern they share.
+
+## How a risk is scored: `likelihood`, `impact` and `level`
+
+`docs/model.yaml` requires all three on every `risk` and constrains each to
+`high` / `medium` / `low`, but the enum alone says nothing about how to choose a value.
+Left unstated, parallel lanes invent their own scales and the corpus stops ranking
+anything — which is the same reason the `specification` and `threatens` conventions live
+in this file. The rules below fix the scale; `level` is then derived, not judged.
+
+### `likelihood` — how easily a regression that realises the threat gets in
+
+Judge it as "how often the code in question changes" × "how far the existing verification
+gates would miss the regression". Code that changes frequently and sits in a blind spot of
+the test suite is `high`; stable code already covered by a mechanical check is `low`.
+
+### `impact` — how recoverable it is once realised
+
+| Value | What is at stake |
+|---|---|
+| `high` | Destroys the user's environment or real data, or leaves a silent inconsistency. |
+| `medium` | Misbehaves, but a re-run or a rebuild recovers it. |
+| `low` | Confined to development; never reaches the shipped artifact. |
+
+Read the rows top-down and take the first that fits: a threat that stays inside development
+but passes silently — a verification gate that reports success while checking nothing — is
+`high` on the silent-inconsistency clause, not `low` on the confinement clause. What makes
+it `high` is that nothing announces the loss, and confinement to development does not
+supply the announcement.
+
+### `level` — derived from the two, never judged by hand
+
+| `likelihood` \ `impact` | `high` | `medium` | `low` |
+|---|---|---|---|
+| **`high`** | `high` | `high` | `medium` |
+| **`medium`** | `high` | `medium` | `low` |
+| **`low`** | `medium` | `low` | `low` |
+
+Nothing mechanical checks the derivation today — `sara check` validates the enum, not the
+relation between the three fields — so it is upheld by review like the rest of this file.
+Unlike the rest of this file, though, it need not stay that way: the rule is a pure mapping
+over three frontmatter fields with no prose to interpret, so it is the one convention here
+that a script can decide outright. Reviewing it by eye is the weakest form of the check,
+and a repository-level check in the shape of `dev/tests/sara-id.sh` would replace it
+wholesale. Until such a check exists, verify the cell when touching any of the three fields.
+
+A `level` that does not match the cell is a defect in the item, not a considered override:
+if the matrix feels wrong for an item, the mis-scored field is `likelihood` or `impact`.
 
 ## How an item states its norm: `specification` / `specification_ja`
 
