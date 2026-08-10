@@ -177,7 +177,7 @@ Examples:
 
 | Risk | Attaches to | Why |
 |---|---|---|
-| The unwind of the undo journal fails partway through | `design` | The undo journal is one design for "leave no trace on failure". Replace it with another (e.g. staging into a temp tree and renaming into place) and this particular failure mode is gone. |
+| The semantics of root resolution and placement diverge per entrypoint form (`RISK-e916f742` → `DSG-92f54490`) | `design` | Confining the legacy branch to the attr path assembly is one design for "one implementation across entrypoint forms". Replace it — e.g. write each entrypoint's nix invocation out separately — and this particular divergence is gone. |
 | `apply` leaves traces on the filesystem when it fails | `requirement` | This is the requirement itself being broken. Every design has to answer for it; no change of design makes the concern go away. |
 
 Attaching a design-specific risk to the requirement loses the information that the risk is
