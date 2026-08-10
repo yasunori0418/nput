@@ -23,8 +23,14 @@ engine（`internal/`）は **Go ユニットテスト + tmpdir 統合テスト**
   一致する。REQ-b74a118a の通り engine は stdlib-only で、その仕事は
   `manifest.json` を入力に FS を操作することに尽きる。nix を実際に走らせなくても
   engine の全経路を踏める（実 nix の一気通貫は DSG-2947b4a5 の E2E が担う）。
-  FS をモックしないのは、symlink・パーミッション・親ディレクトリといった
-  検証対象がモックでは再現しきれないため
+  **FS をモックしないのは FS の意味論を実行する層**（`internal/engine/` の symlink 生成・
+  unlink・rename・copy）**に限った方針**で、symlink・パーミッション・親ディレクトリと
+  いった検証対象がモックでは再現しきれないため。**分類判定に閉じる層**
+  （`internal/planner/`）**はこの対象外**で、fake FS を差し込んだ table-driven で覆う。
+  planner が判定するのは「前世代の記録 × 現状の実体」の分類であって FS の意味論
+  そのものではないため、プローブ（Lstat / Readlink / ReadDir）を差し替えても
+  検証対象は失われない（→ DSG-8b96869c の層分割・TP-e7c25263 の「FS に一切触れずに
+  判断する層」）
 - **stale 除去に重点を置く**のは、そこが**壊れたときの被害が非対称**だからである。
   REQ-16aef46b が定める不変条件（前世代の記録通りを指す symlink のみ消し、通常ファイル・
   非管理 link には触れず、copy target は消さない）が破れると**ユーザーの実ファイルが
