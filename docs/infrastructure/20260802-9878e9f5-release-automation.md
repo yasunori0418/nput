@@ -39,8 +39,8 @@ CHANGELOG.md はコミットしない。
 
 両 workflow とも `permissions` を workflow 段で **`contents: write` 単独**に絞る。
 `bump-version.yml` は `VERSION` の書き換えコミットと push、`release.yml` はタグ作成と
-GitHub Release 作成しか行わず、いずれも contents 以外のスコープを要さない。既定の
-広い権限を継承させず、workflow ごとに必要分だけを明示する。
+GitHub Release 作成・その結果の参照しか行わず、いずれも contents 以外のスコープを要さない。
+既定の広い権限を継承させず、workflow ごとに必要分だけを明示する。
 
 バージョン入力の検証は、**成果物を作る前**に置く。
 
@@ -52,8 +52,9 @@ GitHub Release 作成しか行わず、いずれも contents 以外のスコー�
 どちらも semver（`X.Y.Z`）への正規表現一致で判定し、外れれば `::error::` を出して即 fail
 する。`release.yml` 側は前段のゲートが `VERSION` の内容妥当性までは保証しない（上記のとおり
 main への push 後に走るため required check の対象外）ため、ここで独立に検証する必要がある。
-空文字や改行を含む値を通すと `v` だけのタグ・改行入りタグ・`GITHUB_OUTPUT` への複数行注入に
-なり、誤ったリリースが外へ出てしまう。fail させる方が事後の調査も回復も容易になる。
+`release.yml` で空文字や改行を含む値を通すと `v` だけのタグ・改行入りタグ・`GITHUB_OUTPUT`
+への複数行注入になり、誤ったリリースが外へ出てしまう。fail させる方が事後の調査も回復も
+容易になる。
 
 ## 成果物
 
