@@ -212,6 +212,12 @@ the test suite is `high`; stable code already covered by a mechanical check is `
 | `medium` | Misbehaves, but a re-run or a rebuild recovers it. |
 | `low` | Confined to development; never reaches the shipped artifact. |
 
+Read the rows top-down and take the first that fits: a threat that stays inside development
+but passes silently — a verification gate that reports success while checking nothing — is
+`high` on the silent-inconsistency clause, not `low` on the confinement clause. What makes
+it `high` is that nothing announces the loss, and confinement to development does not
+supply the announcement.
+
 ### `level` — derived from the two, never judged by hand
 
 | `likelihood` \ `impact` | `high` | `medium` | `low` |
@@ -220,8 +226,14 @@ the test suite is `high`; stable code already covered by a mechanical check is `
 | **`medium`** | `high` | `medium` | `low` |
 | **`low`** | `medium` | `low` | `low` |
 
-Nothing mechanical checks the derivation — `sara check` validates the enum, not the
+Nothing mechanical checks the derivation today — `sara check` validates the enum, not the
 relation between the three fields — so it is upheld by review like the rest of this file.
+Unlike the rest of this file, though, it need not stay that way: the rule is a pure mapping
+over three frontmatter fields with no prose to interpret, so it is the one convention here
+that a script can decide outright. Reviewing it by eye is the weakest form of the check,
+and a repository-level check in the shape of `dev/tests/sara-id.sh` would replace it
+wholesale. Until such a check exists, verify the cell when touching any of the three fields.
+
 A `level` that does not match the cell is a defect in the item, not a considered override:
 if the matrix feels wrong for an item, the mis-scored field is `likelihood` or `impact`.
 
