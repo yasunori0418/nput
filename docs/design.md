@@ -97,6 +97,7 @@ nput 自身の flake outputs は packages / templates / 各モジュール / fla
 実行時に前世代 manifest と diff して配置・stale 除去・profile swap を行う（→ ADR-0002, ADR-0006）。
 
 - [DSG-0b94308c](design/20260802-0b94308c-cleanup-from-home-manager.md) — 配置と cleanup のアルゴリズムは home-manager の linkGeneration / cleanup を範として Go で再実装する
+- [DSG-8b96869c](design/20260810-8b96869c-planner-engine-split.md) — 配置ロジックを plan を計算する planner と FS 意味論を実行する engine に分け、dryrun と apply が同一の plan を共有する
 
 `lib` の API・`entries` スキーマ・`manifest.json` の内容・CLI の実行モデルは仕様（requirement）の
 領分（→ `docs/spec.md`「lib API」「entries スキーマ仕様」「manifest.json スキーマ」「CLI 仕様」）。
