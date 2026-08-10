@@ -6,6 +6,7 @@ depends_on:
   - "INF-8b97573f-d4d6-4abf-85e2-d859afbd96c6"
 satisfies:
   - "QA-0949183b-7ef0-4cae-b88f-3ad361576b63"
+  - "QA-d028e302-8262-428c-9030-98d46b4b0cd3"
 ---
 # INF-9878e9f5: リリース自動化（VERSION ファイル起点の bump PR・自動タグ・自動リリースノート）
 
@@ -33,6 +34,26 @@ Go バイナリへは nix build の `ldflags`（`-X`）で埋め込む。単一�
 
 リリースノートは GitHub 標準の自動生成に任せる（Conventional Commits の履歴がそのまま読める）。
 CHANGELOG.md はコミットしない。
+
+## 権限と入力検証
+
+両 workflow とも `permissions` を workflow 段で **`contents: write` 単独**に絞る。
+`bump-version.yml` は `VERSION` の書き換えコミットと push、`release.yml` はタグ作成と
+GitHub Release 作成しか行わず、いずれも contents 以外のスコープを要さない。既定の
+広い権限を継承させず、workflow ごとに必要分だけを明示する。
+
+バージョン入力の検証は、**成果物を作る前**に置く。
+
+| workflow | 検証対象 | 失敗させる位置 |
+|---|---|---|
+| `bump-version.yml` | `workflow_dispatch` の version 入力 | `VERSION` を書き換える前 |
+| `release.yml` | `VERSION` の先頭 1 行（空白除去後） | タグ / Release を作る前 |
+
+どちらも semver（`X.Y.Z`）への正規表現一致で判定し、外れれば `::error::` を出して即 fail
+する。`release.yml` 側は前段のゲート（マージゲート INF-8b97573f・flake check）が `VERSION`
+の内容妥当性までは保証しないため、ここで独立に検証する必要がある。空文字や改行を含む値を
+通すと `v` だけのタグ・改行入りタグ・`GITHUB_OUTPUT` への複数行注入になり、誤ったリリースが
+外へ出てしまう。fail させる方が事後の調査も回復も容易になる。
 
 ## 成果物
 
