@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -36,6 +37,12 @@ func TestLoadValid(t *testing.T) {
 	if m.Root.RootKind != RootKindProject {
 		t.Errorf("rootKind = %q, want project", m.Root.RootKind)
 	}
+	// project omits the path in the manifest, so it decodes to the empty string.
+	// This fixes the decoded shape only; rejecting a project document that does carry
+	// a path is not implemented and therefore not asserted here (→ REQ-dd10d820).
+	if m.Root.Root != "" {
+		t.Errorf("project root = %q, want empty", m.Root.Root)
+	}
 	if len(m.Entries) != 1 {
 		t.Fatalf("entries = %d, want 1", len(m.Entries))
 	}
@@ -54,6 +61,69 @@ func TestLoadRejectsNewerSchema(t *testing.T) {
 	// The sentinel must be detectable via errors.Is so the CLI can add skew guidance (→ docs/spec.md).
 	if !errors.Is(err, ErrSchemaVersionUnsupported) {
 		t.Errorf("error should wrap ErrSchemaVersionUnsupported, got %v", err)
+	}
+}
+
+// Both edges of the lower bound. The valid edge sits next to the invalid ones so that
+// moving the bound in validate() breaks a case here rather than passing unnoticed.
+// The upper bound is a separate concern and belongs to TestLoadRejectsNewerSchema.
+func TestLoadSchemaVersionBoundary(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		version string
+		wantErr bool
+	}{
+		{"negative", "-1", true},
+		{"zero", "0", true},
+		{"lowest accepted", "1", false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := writeManifest(t, `{ "schemaVersion": `+tt.version+`, "root": { "rootKind": "project" }, "entries": [] }`)
+			_, err := Load(dir)
+			if !tt.wantErr {
+				if err != nil {
+					t.Fatalf("schemaVersion %s should be accepted, got %v", tt.version, err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error for schemaVersion %s, got nil", tt.version)
+			}
+			// Pin the rejection to the below-minimum check rather than any other failure.
+			if !strings.Contains(err.Error(), "is invalid") {
+				t.Errorf("error should report an invalid schemaVersion, got %v", err)
+			}
+			// Below the minimum is a broken document, not version skew, so it must not wrap
+			// the skew sentinel — otherwise the CLI emits a misleading "flake and CLI differ"
+			// hint for it (→ TC-172548ea, cmd/nput: ErrSchemaVersionUnsupported branch).
+			if errors.Is(err, ErrSchemaVersionUnsupported) {
+				t.Errorf("error should not wrap ErrSchemaVersionUnsupported, got %v", err)
+			}
+		})
+	}
+}
+
+// A missing root object decodes to the zero value, so it reaches the very same
+// emptiness check as an explicitly empty rootKind. Both spellings are pinned to
+// document that no separate guard covers the missing key (→ TC-172548ea).
+func TestLoadRejectsRootKindEmptiedByEitherSpelling(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		doc  string
+	}{
+		{"explicitly empty", `{ "schemaVersion": 1, "root": { "rootKind": "" }, "entries": [] }`},
+		{"root object omitted", `{ "schemaVersion": 1, "entries": [] }`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Load(writeManifest(t, tt.doc))
+			if err == nil {
+				t.Fatal("expected error for empty rootKind, got nil")
+			}
+			// Pin the rejection to the rootKind check, not to decoding or any later guard.
+			if !strings.Contains(err.Error(), "root.rootKind") {
+				t.Errorf("error should report an empty root.rootKind, got %v", err)
+			}
+		})
 	}
 }
 
