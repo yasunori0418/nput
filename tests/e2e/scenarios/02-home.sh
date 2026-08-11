@@ -164,20 +164,36 @@ run_json 0 "$ENV_GENS_ALL" list-generations --all
 # proj が混ざっても落ちる（select + length では値が誤っていても件数が変わらず恒真になりうる）。
 assert_json "$ENV_GENS_ALL" "results は home mode の home だけ（proj は roothash 階層なので除外）" \
 	'[.results[].subject.name] == ["home"]'
+# 以降は上の等式で results が home 1 件だと固定済みなので、添字ではなく名前で引き続ける
+# （N が増えたときに黙って別 config を見に行かない）。
 assert_json "$ENV_GENS_ALL" "home の info.generations は名指し列挙と同じ 2 世代（current は世代 1）" \
 	'first(.results[] | select(.subject.name == "home")).result.info as $i
 	 | ($i.generations | length) == 2
 	 and ([$i.generations[] | select(.current) | .number] == [1])'
-assert_json "$ENV_GENS_ALL" "items=[]・generation スロット無し・status=success・dryRun=false" \
-	'.results[0].result.items == [] and (.results[0] | has("generation") | not)
-	 and .status == "success" and .dryRun == false'
+assert_json "$ENV_GENS_ALL" "home は items=[]・generation スロット無し・status=success" \
+	'first(.results[] | select(.subject.name == "home"))
+	 | .result.items == [] and (has("generation") | not) and .status == "success"'
+assert_json "$ENV_GENS_ALL" "集約 status=success・dryRun=false" \
+	'.status == "success" and .dryRun == false'
 
 e2e_step "list-generations --all は読み取り専用（profile も世代も配置も動かない）"
 # 「読み取り専用」を profile リンク先・世代の本数・配置の 3 点で見る。--json 経路は既に通した
 # ので、ここは既定（テキスト）経路で実行して両方の出力経路が状態を変えないことを固定する。
 ALL_PROFILE_BEFORE="$(readlink "$PROFILE")"
 ALL_GENS_BEFORE="$(gens_count)"
-nput list-generations --all >/dev/null
+ALL_TEXT="$(nput list-generations --all)"
+# テキスト経路は per-config ヘッダ `# <name>` を持つ独自の分岐（--json 経路は印字しない）。
+# 陽性対照と除外を JSON 経路だけで見ると、この分岐が proj を出力する退行を拾えない。
+if printf '%s\n' "$ALL_TEXT" | grep -qx '# home'; then
+	e2e_pass "テキスト経路も home のヘッダを出す"
+else
+	e2e_fail "テキスト経路に '# home' が無い: '$ALL_TEXT'"
+fi
+if printf '%s\n' "$ALL_TEXT" | grep -q 'proj'; then
+	e2e_fail "テキスト経路に proj が漏れた: '$ALL_TEXT'"
+else
+	e2e_pass "テキスト経路も proj を出さない"
+fi
 assert_symlink "$PROFILE" "$ALL_PROFILE_BEFORE"
 ALL_GENS_AFTER="$(gens_count)"
 if [ "$ALL_GENS_AFTER" -eq "$ALL_GENS_BEFORE" ]; then
