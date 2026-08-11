@@ -226,7 +226,13 @@ jobs:
 
       # On push / workflow_dispatch this step is skipped and `relevant` stays
       # empty, which the guards below treat as "run". On pull_request it decides
-      # whether this PR touches generation.
+      # whether this PR touches anything the table is generated from.
+      #
+      # Covers the generator's real inputs, not just its implementation: CASE
+      # frontmatter and the test assets `--full` walks feed the output, and
+      # docs/model.yaml defines the type names the `sara report matrix` jq
+      # filters select on — renaming a display name would silently empty the
+      # TC / RISK columns. Kept in step with the sara job's filter above.
       - name: Detect generation-relevant changes
         id: filter
         if: github.event_name == 'pull_request'
@@ -240,6 +246,13 @@ jobs:
               - 'dev/flake.nix'
               - 'dev/flake.lock'
               - '.github/workflows/test.yml'
+              - 'docs/test/**'
+              - 'docs/risks/**'
+              - 'docs/model.yaml'
+              - 'sara.toml'
+              - '**/*_test.go'
+              - 'tests/**'
+              - 'flake.nix'
 
       - name: Setup Nix
         if: steps.filter.outputs.relevant != 'false'
