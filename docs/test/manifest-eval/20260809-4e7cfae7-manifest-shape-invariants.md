@@ -21,9 +21,10 @@ mitigates:
   変換され、判別タグ `_nputMarker` が文書に漏れないこと。こちらも exact 一致で見るので、
   余分なキーの混入は store-backed 側と同じく検出される
 
-**この条件の適用範囲は project root に限る**。`homeRoot` の `rootKind` と fixed root での
-絶対パス併記は評価テストに無く、`checks.hm-module` と E2E（`integration` 区分）が担当する。
-ここを「全 root 種別を見ている」と読ませないために範囲を明示する。
+**この条件の適用範囲は project root に限る**。fixed root での絶対パス併記は TC-f9e927d0 が
+持ち、`homeRoot` の `rootKind` を実際の HM 統合で見る分は `checks.hm-module` と E2E
+（`integration` 区分）が担当する。ここを「全 root 種別を見ている」と読ませないために
+範囲を明示する。
 
 スナップショット（TC-de6514e2）とは役割が重ならない。役割分担の規範は TP-36e90d5d が持つ。
 

@@ -41,12 +41,16 @@ E2E まで落ちてこないと検出できない（REQ-2b0c2bb8 の純粋性そ
 
 ## 対処
 
-TC-4e7cfae7（文書構造の不変条件）・TC-d9175bb5（既定適用と決定的順序）・TC-81be084d
-（marker の判別と src 種別への変換）・TC-de6514e2（文書全体のスナップショット回帰）で緩和する。
+TC-4e7cfae7（文書構造の不変条件）・TC-f9e927d0（fixed root の絶対パス併記）・TC-d9175bb5
+（既定適用と決定的順序）・TC-81be084d（marker の判別と src 種別への変換）・TC-de6514e2
+（文書全体のスナップショット回帰）で緩和する。
 
-**本区分の TC 群では緩和しきれない残余**が 2 つある。第一に、REQ-dd10d820 のうち fixed root で
-絶対パスを併記する側は評価テストに無く、TC-4e7cfae7 が見るのは project root 分だけである
-（`homeRoot` の `rootKind` は `checks.hm-module`、fixed root はどの区分も現状カバーしていない）。
+REQ-dd10d820 は project root の否定側を TC-4e7cfae7、fixed root の肯定側を TC-f9e927d0 が
+見るので、評価層の分は両側が揃っている（→ Issue #288）。
+
+**本区分の TC 群では緩和しきれない残余**が 2 つある。第一に、`homeRoot` の `rootKind` を
+実際の HM 統合で確かめる側は評価テストに無く、`checks.hm-module`（`integration` 区分）の
+担当になる（評価層では TC-f9e927d0 が「marker は fixed へ倒れない」ことまでを見る）。
 第二に、REQ-250d936c / REQ-79ce0a09 は発行側と engine の受理側の双方を規範に含むが、本 risk が
 射程に持つのは評価層が発行する側だけで、engine が新しい `schemaVersion` を拒否する側は
 `cli-json` / `integration` 区分の担当になる。
