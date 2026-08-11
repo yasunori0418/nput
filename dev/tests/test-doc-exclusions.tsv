@@ -19,3 +19,4 @@ checks.treefmt	フォーマッタ検査（treefmt-nix が自動生成）。quali
 checks.namaka	namaka アグリゲータ。leaf の tests/namaka/<name>/ を CASE が持つ
 checks.nix-unit	nix-unit アグリゲータ。leaf の tests/nix-unit/*.nix を CASE が持つ
 dev:checks.sara-id	sara-id の採番契約。TP-d7da4065 のみを持ち TC / CASE へ展開しない
+dev:checks.test-doc-map	CASE ⇔ テストコード対応の契約テスト自身。自分を CASE で覆うと循環する

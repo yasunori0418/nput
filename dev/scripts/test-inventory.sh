@@ -28,46 +28,59 @@
 
 set -uo pipefail
 
+# shellcheck source=dev/scripts/lib-testdoc.sh
+. "$(dirname "$0")/lib-testdoc.sh"
+
 usage() {
   cat >&2 <<'EOF'
-usage: test-inventory.sh (--static | --full)
+usage: test-inventory.sh (--static | --full | --module-generated-checks)
 
   --static  ファイル粒度で列挙する（fd / glob のみ。go test も nix eval も呼ばない）
   --full    テスト名粒度で列挙する（go test -json + nix eval を呼ぶため重い）
+  --module-generated-checks
+            flakeModule 由来（flake ファイルに定義行を持たない）check だけを列挙する。
+            契約テストが flake ⟷ 静的リストの grep 突合から除くために使う
 
 出力は TSV。詳細はスクリプト冒頭のコメントを参照。
 EOF
 }
 
-case "${1-}" in
+# 引数個数は mode 判定より先に見る（`--help extra` も `--static extra` も同じく exit 2）。
+if [ "$#" -ne 1 ]; then
+  usage
+  exit 2
+fi
+
+case "$1" in
   -h | --help)
     usage
     exit 0
     ;;
   --static) mode=static ;;
   --full) mode=full ;;
+  --module-generated-checks) mode=module-generated-checks ;;
   *)
     usage
     exit 2
     ;;
 esac
 
-if [ "$#" -ne 1 ]; then
-  usage
-  exit 2
-fi
-
 # 走査はリポジトリルート基準で行う（dev/ 等から叩いても同じ結果を出す）。
-repo_root=$(git rev-parse --show-toplevel 2>/dev/null || printf '.')
-cd "$repo_root" || exit 1
+cd "$(testdoc_repo_root)" || exit 1
 
 # flake check の静的リスト。`nix eval` を避けるため列挙を持つ（--static が毎 PR で
 # 回る契約テストの入力であり、flake 評価を挟むと sara ジョブに nix ビルドが要る）。
 #
-# ここは flake.nix / dev/flake.nix の checks 定義と手で揃える契約。CI の path filter が
-# flake.nix を含むため、check を増減して当リストを更新し忘れると契約テストが落ちる
-# （除外リストにも CASE にも無い check が現れる / 消えた check の CASE が残る）。
-# treefmt は treefmt-nix flakeModule が自動生成する。
+# ここは flake.nix / dev/flake.nix の checks 定義と揃える契約で、その突合は
+# dev/tests/test-doc-map.sh の §5 が機械的に行う（flake ファイルから `checks.<name> =`
+# の定義名を grep して当リストと集合比較する）。**この突合が無いと片側更新漏れは
+# 検知できない**: check を flake へ足して当リストへ足し忘れると、その check は列挙に
+# 現れないので順方向・逆方向のどちらも触れず黙って緑になる（実際に踏んだ →
+# review 2026-08-11）。逆向き（リストに残った消えた check）も、対応する CASE / 除外行が
+# 一緒に残っていれば通ってしまう。
+#
+# MODULE_GENERATED_CHECKS は flakeModule が生成し flake ファイルに定義行を持たないため
+# grep 突合の対象外にする。こちらは手で揃えるほか手段が無い。
 FLAKE_CHECKS=(
   checks.go-vet
   checks.golangci-lint
@@ -77,6 +90,15 @@ FLAKE_CHECKS=(
   checks.nput
   checks.treefmt
   dev:checks.sara-id
+  dev:checks.test-doc-map
+)
+
+# flakeModule 由来（flake ファイルに `checks.<name> =` の定義行が無い）check。
+# nix-unit は nix-unit の flakeModule、treefmt は treefmt-nix の flakeModule が生む。
+# 契約テストの §5 はこの 2 件を grep 突合から除く。
+MODULE_GENERATED_CHECKS=(
+  checks.nix-unit
+  checks.treefmt
 )
 
 # --- 列挙（ファイル粒度） ----------------------------------------------------
@@ -93,10 +115,11 @@ list_nix_unit_files() {
 
 # namaka はスナップショット実体（tests/namaka/_snapshots/）と expr.nix が対になるため、
 # CASE の粒度はディレクトリ（末尾スラッシュ）。`_` 始まりの内部ディレクトリは除く。
+# 除外は find の -name で行う（basename だけを見る）。`grep -v '/_'` はパス中のどの位置の
+# `/_` にも当たるため、走査基点が変わると意図より広く落とす。
 list_namaka_dirs() {
-  find tests/namaka -mindepth 1 -maxdepth 1 -type d 2>/dev/null |
+  find tests/namaka -mindepth 1 -maxdepth 1 -type d -not -name '_*' 2>/dev/null |
     sed 's|^\./||' |
-    grep -v '/_' |
     sed 's|$|/|'
 }
 
@@ -112,6 +135,11 @@ emit_static() {
   printf '%s\tflake-check\n' "${FLAKE_CHECKS[@]}"
 }
 
+if [ "$mode" = module-generated-checks ]; then
+  printf '%s\n' "${MODULE_GENERATED_CHECKS[@]}" | LC_ALL=C sort
+  exit 0
+fi
+
 if [ "$mode" = static ]; then
   emit_static | LC_ALL=C sort
   exit 0
@@ -119,25 +147,41 @@ fi
 
 # --- 列挙（テスト名粒度・--full のみ） ---------------------------------------
 
-for cmd in go nix jq; do
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "test-inventory.sh: --full は $cmd を要する（nix develop ./dev から実行する）" >&2
-    exit 1
-  fi
-done
+require_commands "test-inventory.sh --full（nix develop ./dev から実行する）" go nix jq || exit 1
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
 # Go: 実行ベースでテスト名を採る（サブテスト込み）。`go test -json` の run イベントを
-# 集め、`Test` を取り出す。ビルド失敗・テスト失敗でも run イベントは出るため、
-# 終了コードは見ない（列挙が目的で合否判定ではない）。
-go test -json ./... 2>/dev/null |
-  jq -r 'select(.Action == "run" and .Test != null) | .Test' |
+# 集め、`Test` を取り出す。テスト失敗でも run イベントは出るため終了コードは見ない
+# （列挙が目的で合否判定ではない）。
+#
+# ただしビルド失敗は別扱いにする。ビルドできなかったパッケージは run イベントを 1 つも
+# 出さないので、他パッケージが成功していれば全体は非空のまま**一部だけ静かに欠ける**。
+# 欠けた対応表を artifact として出すより、列挙が不完全であることを報告して落とす。
+go test -json ./... 2>/dev/null > "$work/go-json"
+
+jq -r 'select(.Action == "run" and .Test != null) | .Test' "$work/go-json" |
   LC_ALL=C sort -u > "$work/go-names"
 
 if [ ! -s "$work/go-names" ]; then
   echo "test-inventory.sh: go test -json からテスト名を採れなかった" >&2
+  exit 1
+fi
+
+# ビルド失敗の検出。go test は失敗パッケージへ Action=fail を出し、ビルドエラー本文は
+# output イベントとして流れる。テスト自体の fail と区別するため、run イベントを 1 つも
+# 持たないまま fail したパッケージだけを拾う。
+jq -r 'select(.Action == "run" and .Package != null) | .Package' "$work/go-json" |
+  LC_ALL=C sort -u > "$work/go-ran-packages"
+jq -r 'select(.Action == "fail" and .Package != null and .Test == null) | .Package' "$work/go-json" |
+  LC_ALL=C sort -u > "$work/go-failed-packages"
+
+unbuilt=$(LC_ALL=C comm -13 "$work/go-ran-packages" "$work/go-failed-packages")
+if [ -n "$unbuilt" ]; then
+  echo "test-inventory.sh: テストを 1 件も走らせずに失敗したパッケージがある（ビルド失敗の疑い）:" >&2
+  printf '  %s\n' "$unbuilt" >&2
+  echo "test-inventory.sh: 列挙が不完全なので中断する（go build ./... で原因を確認する）" >&2
   exit 1
 fi
 
