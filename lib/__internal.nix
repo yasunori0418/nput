@@ -65,8 +65,7 @@ let
   farmEntries = lib: entries: lib.filter (e: e.srcKind == "store" && e.method == "symlink") entries;
 
   # Shell lines that place the GC anchors of the symlink farm, one per farm entry (→ ADR-0016).
-  # Takes the already-filtered farm entries (see farmEntries). Kept here rather than inline in
-  # mkManifest so the unit tests assert the real expression instead of a copy of it (→ #289).
+  # Takes the already-filtered farm entries (see farmEntries).
   anchorLines =
     lib: entries:
     lib.concatMapStringsSep "\n" (

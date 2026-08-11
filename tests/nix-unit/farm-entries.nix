@@ -1,6 +1,7 @@
 # nix-unit: symlink farm のアンカー対象抽出（`__internal.farmEntries`）と GC アンカー名
-# （`__internal.anchorName`）・アンカー配置シェルの生成（`__internal.anchorLines`）を
-# アサートする（→ ADR-0016, ADR-0019, #58, #71, #75, #289）。
+# （`__internal.anchorName`）・アンカー配置シェルの生成（`__internal.anchorLines`）、および
+# それらを mkManifest が builder へ埋める配線をアサートする
+# （→ ADR-0016, ADR-0019, #58, #71, #75, #289）。
 #
 # farmEntries は store-backed かつ method = symlink のエントリのみをアンカー対象とする。copy /
 # out-of-store はアンカーを持たない（copy は世代外・置き切り、out-of-store はストア非依存）。
@@ -34,6 +35,24 @@ let
   };
 
   farm = nput.__internal.farmEntries lib mixed.entries;
+
+  # 配線検証用の fake pkgs。mkManifest が pkgs から使うのは lib / writeText / runCommandLocal の
+  # 3 つだけなので、後 2 者を「引数をそのまま持ち帰る」double に差し替えると、derivation を
+  # 組まずに builder スクリプト本文を純評価で取り出せる（src の fake flake-input double と同じ
+  # イディオム）。実ビルドによる検証は評価テストの枠を超えるため採らない（→ #289）。
+  fakePkgs = {
+    inherit lib;
+    writeText = name: _text: "/nix/store/fake-${name}";
+    runCommandLocal = _name: _attrs: script: { builder = script; };
+  };
+
+  builderOf =
+    entries:
+    (nput.mkManifest {
+      pkgs = fakePkgs;
+      root = nput.projectRoot;
+      inherit entries;
+    }).builder;
 in
 {
   # farmEntries は store×symlink のみを採用し、copy / out-of-store を除外する（→ ADR-0016）。
@@ -117,22 +136,47 @@ in
     expected = "";
   };
 
-  # ---- farm への配線（生成式は共有し、「何が入力に流れるか」だけを見る）------------------
-  # mkManifest は pkgs を要るのでここでは組めない。代わりに manifest.nix と同じ経路
-  # （normalizeManifest → farmEntries → anchorLines）を辿り、アンカー行の入力が混在 manifest
-  # の全 entry ではなく farm 対象だけであることを見る。期待値は同じ生成式を「独立に選んだ対象
-  # entry 列」へ適用して組むので、生成式を変えれば両辺が揃って動き（回帰検知は上の単体テストの
-  # 担当）、ここでは選抜の誤りだけが落ちる。
-  testAnchorLinesWiredToFarmEntries = {
-    expr = nput.__internal.anchorLines lib farm;
-    expected = nput.__internal.anchorLines lib (
-      lib.filter (
-        e:
-        lib.elem e.target [
-          ".config/sym"
-          ".config/sym2"
-        ]
-      ) mixed.entries
-    );
+  # ---- farm derivation への配線（mkManifest の builder に何が埋まるかを見る）--------------
+  # mkManifest が builder へ埋めるアンカー行が、生成式へ farm 対象**だけ**を通した結果である
+  # こと。fake pkgs 経由で builder 本文を取り出し、manifest.json のコピーに続いてアンカー行が
+  # 並ぶ全体を突き合わせる。期待値のアンカー行は共有式で組むので、生成式を変えれば両辺が揃って
+  # 動き（内容の正しさは上の単体テストが固定する）、ここで落ちるのは配線の誤り
+  # （フィルタ漏れ・生成結果の埋め込み忘れ・順序の崩れ）だけである。
+  testBuilderEmbedsAnchorLinesForFarmEntriesOnly = {
+    expr = builderOf {
+      ".config/copy" = {
+        src = fakeSrc;
+        method = "copy";
+      };
+      ".config/out" = {
+        src = nput.mkOutOfStoreSymlink "/home/me/dotfiles/x";
+      };
+      ".config/sym" = {
+        src = fakeSrc;
+      };
+      ".config/sym2" = {
+        src = fakeSrc;
+      };
+    };
+    expected = ''
+      mkdir -p "$out"
+      cp /nix/store/fake-manifest.json "$out/manifest.json"
+      ${nput.__internal.anchorLines lib farm}
+    '';
+  };
+
+  # アンカー対象が皆無でも builder は manifest.json のコピーまでを行う（アンカー行は無し）。
+  testBuilderHasNoAnchorLinesWhenNoFarmEntries = {
+    expr = builderOf {
+      ".config/copy" = {
+        src = fakeSrc;
+        method = "copy";
+      };
+    };
+    expected = ''
+      mkdir -p "$out"
+      cp /nix/store/fake-manifest.json "$out/manifest.json"
+
+    '';
   };
 }
