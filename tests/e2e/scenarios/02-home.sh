@@ -31,12 +31,12 @@ $(e2e_flake_inputs)
 EOF
 }
 
-# 世代の本数を数える。nput 自体の失敗は素通りさせて（コマンド置換の終了コードとして呼び出し側の
-# 代入を set -e で落とす）、0 件で非ゼロ終了する grep だけを守る。0 件は「本数が壊れた」観測として
-# アサートで報告したいので、数え上げの失敗と混ぜない。
+# 世代の本数を数える。nput 自体の失敗は非ゼロで返し（末尾の `|| true` が関数の終了コードを
+# 決めてしまうため、取得の失敗はその場で return する）、呼び出し側のコマンド置換代入を set -e で
+# 落とす。0 件で非ゼロ終了する grep だけを守り、0 件は「本数が壊れた」観測としてアサートへ渡す。
 gens_count() {
 	local out
-	out="$(nput list-generations home)"
+	out="$(nput list-generations home)" || return 1
 	printf '%s\n' "$out" | grep -c . || true
 }
 
@@ -139,6 +139,13 @@ e2e_step "nput reset --json --yes: FS のみを撤去し profile / 世代は動�
 # manifest 由来（記録された真実）。rollback で世代 1 に戻った後なので .cfg/a が在庫になる。
 PROFILE_BEFORE="$(readlink "$PROFILE")"
 GENS_BEFORE="$(gens_count)"
+# 前後一致の基準そのものが壊れていないこと（直前の list-generations --json の length == 2 と同じ数を
+# 非 JSON 経路でも観測できること）を先に固定する。
+if [ "$GENS_BEFORE" -eq 2 ]; then
+	e2e_pass "reset 前の世代は 2 件"
+else
+	e2e_fail "reset 前の世代が 2 件でない: $GENS_BEFORE"
+fi
 ENV_RESET="$E2E_WORK/reset.json"
 run_json 0 "$ENV_RESET" reset home --yes
 assert_absent "$HOME/.cfg/a"
