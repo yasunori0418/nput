@@ -5,8 +5,15 @@
 # 集約ファイル・flake.nix の編集が不要になる（flake.nix の `import ./tests/nix-unit.nix
 # { lib, nput }` シグネチャは不変）。テスト名はファイル横断で一意であること（`//` は後勝ち）。
 # 一意性は規約に留めず、マージ前の重複検査で機械的に強制する（→ TP-36e90d5d, RISK-3de9753f）。
+#
+# 本ファイルはディレクトリ列挙（readDir）だけを担い、検査を含むマージ自体は
+# `tests/nix-unit-lib.nix` の `mergeTests` が持つ。ダミー入力で検査自身を検証できる
+# ようにするための分離で、その leaf テストは `tests/nix-unit/aggregator-merge.nix`
+# （→ Issue #308）。
 { lib, nput }:
 let
+  inherit (import ./nix-unit-lib.nix { inherit lib; }) mergeTests;
+
   dir = ./nix-unit;
   testFiles = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".nix" name) (
     builtins.readDir dir
@@ -16,26 +23,5 @@ let
     file = name;
     tests = import (dir + "/${name}") { inherit lib nput; };
   }) testFiles;
-
-  # テスト名 -> それを定義しているファイル名のリスト。名前だけを見るので、
-  # 衝突が無ければ各テストの値（expr / expected）は評価しない。
-  ownersByTest = lib.zipAttrs (map (m: lib.mapAttrs (_testName: _: m.file) m.tests) modules);
-
-  collisions = lib.filterAttrs (_testName: owners: lib.length owners > 1) ownersByTest;
-
-  collisionReport = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (
-      testName: owners: "  - ${testName}: ${lib.concatStringsSep ", " owners}"
-    ) collisions
-  );
-
-  merged = lib.foldl' (acc: m: acc // m.tests) { } modules;
 in
-if collisions == { } then
-  merged
-else
-  throw ''
-    tests/nix-unit: テスト名がファイル横断で衝突しています（`//` の後勝ちマージで
-    片方のアサートが実行されないまま緑になります）。ファイル固有の接頭辞を付けて
-    一意にしてください（→ TP-36e90d5d）。
-    ${collisionReport}''
+mergeTests modules
