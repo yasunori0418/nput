@@ -39,7 +39,7 @@ func TestLoadValid(t *testing.T) {
 	}
 	// project omits the path in the manifest, so it decodes to the empty string.
 	// This fixes the decoded shape only; rejecting a project document that does carry
-	// a path is not implemented and therefore not asserted here (→ REQ-dd10d820).
+	// a path is asserted in TestLoadRootPathAllowedOnlyForFixed (→ REQ-dd10d820).
 	if m.Root.Root != "" {
 		t.Errorf("project root = %q, want empty", m.Root.Root)
 	}
@@ -137,6 +137,61 @@ func TestLoadRejectsUnknownField(t *testing.T) {
 func TestLoadMissingFile(t *testing.T) {
 	if _, err := Load(t.TempDir()); err == nil {
 		t.Fatal("expected error for missing manifest.json, got nil")
+	}
+}
+
+// The kinds the engine resolves at runtime must not carry a path. A document that
+// spells one out is not merely redundant: the engine ignores it and places under the
+// resolved base instead, so the difference never surfaces (→ REQ-dd10d820, TC-172548ea).
+//
+// Both sides of the kind × path-presence table are covered so that narrowing the guard
+// to the kind alone — dropping the path-presence half — breaks a case here.
+//
+// Every accepting row states what this layer does not judge, not that the document is
+// usable end to end. A fixed document without a path is stopped by the engine's root
+// resolution, and a system document is rejected by the engine and by the Nix side while
+// that kind remains unimplemented. Both still pass here because neither verdict is this
+// layer's to make.
+func TestLoadRootPathAllowedOnlyForFixed(t *testing.T) {
+	// An empty path means the key is left out. Spelling it as "root": "" would decode to
+	// the same empty string, so the two spellings cannot be told apart afterwards and one
+	// row per kind suffices — unlike rootKind, where the omitted object reaches the check
+	// through a separate default-value path and is pinned on its own.
+	for _, tt := range []struct {
+		name    string
+		kind    string
+		path    string
+		wantErr bool
+	}{
+		{"project with path", RootKindProject, "/should/be/ignored", true},
+		{"home with path", RootKindHome, "/should/be/ignored", true},
+		{"system with path", RootKindSystem, "/should/be/ignored", true},
+		{"project without path", RootKindProject, "", false},
+		{"home without path", RootKindHome, "", false},
+		{"system without path", RootKindSystem, "", false},
+		{"fixed with path", RootKindFixed, "/opt/x", false},
+		{"fixed without path", RootKindFixed, "", false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			root := `{ "rootKind": "` + tt.kind + `" }`
+			if tt.path != "" {
+				root = `{ "rootKind": "` + tt.kind + `", "root": "` + tt.path + `" }`
+			}
+			_, err := Load(writeManifest(t, `{ "schemaVersion": 1, "root": `+root+`, "entries": [] }`))
+			if !tt.wantErr {
+				if err != nil {
+					t.Fatalf("rootKind %q with root %q should be accepted, got %v", tt.kind, tt.path, err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error for rootKind %q carrying a path, got nil", tt.kind)
+			}
+			// Pin the rejection to this check, not to decoding or any other guard.
+			if !strings.Contains(err.Error(), "root.root must be omitted") {
+				t.Errorf("error should report that root.root must be omitted, got %v", err)
+			}
+		})
 	}
 }
 
