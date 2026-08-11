@@ -276,6 +276,18 @@ jobs:
         if: steps.filter.outputs.relevant != 'false'
         run: nix develop ./dev -c dev/scripts/test-doc-matrix.sh test-doc-matrix.md
 
+      # GITHUB_STEP_SUMMARY discards the entire step summary past 1 MiB, so an
+      # oversized table falls back to a pointer at the artifact instead of
+      # silently vanishing.
+      - name: Publish correspondence table to job summary
+        if: steps.filter.outputs.relevant != 'false'
+        run: |
+          if [ "$(stat -c%s test-doc-matrix.md)" -lt 1000000 ]; then
+            cat test-doc-matrix.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'test-doc-matrix.md exceeds the 1 MiB step-summary limit; download the `test-doc-matrix` artifact instead.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload correspondence table
         if: steps.filter.outputs.relevant != 'false'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
