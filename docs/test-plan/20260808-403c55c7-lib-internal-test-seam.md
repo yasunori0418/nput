@@ -28,8 +28,10 @@ issues:
 
 - 目的は評価テストから内部関数を直接叩けるようにすること。
 - 安定 API ではないため、後方互換の保証対象に含めない。
-- 列挙は seam の実内容を追跡する。helper を足したら本 item の 3 箇所（`specification` /
-  `specification_ja` / 本節）も揃えて更新する（→ Issue #289 で `anchorLines` を追加）。
+- 列挙は seam の実内容を追跡する。唯一の SSOT は `lib/__internal.nix` の export で、helper を
+  足したらそれを写している 5 箇所——本 item の 3 箇所（`specification` / `specification_ja` /
+  本節）と `lib/default.nix` / `lib/manifest.nix` のコメント——を揃えて更新する。機械照合は
+  無いので追随漏れはレビューで拾う（→ Issue #289 で `anchorLines` を追加）。
 
 ## 出典
 
