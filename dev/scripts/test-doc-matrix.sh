@@ -190,9 +190,16 @@ fi
 # --- 生成 --------------------------------------------------------------------
 
 emit_header() {
-  local asset_total case_total
+  local asset_total case_total trailing_note=""
   asset_total=$(wc -l < "$work/assets")
   case_total=$(wc -l < "$work/cases")
+
+  # 異常系の節はヘッダから索引する。CASE 総数には dangling も含むため、本体の行数と
+  # 合わない理由をヘッダ側から辿れないと読み手が迷う。
+  if [ -s "$work/dangling-cases" ]; then
+    trailing_note=$(printf -- '- 実在しない資産を指す CASE が %d 件ある。末尾の「実在しない資産を指す CASE」を参照\n' \
+      "$(wc -l < "$work/dangling-cases")")
+  fi
 
   cat <<EOF
 # テストコード ⇔ テストドキュメント対応表
@@ -204,7 +211,7 @@ emit_header() {
 - 区分（セクション）は CASE の置き場所 \`docs/test/<区分>/\` 由来
 - ID は散文用の省略形（\`<PREFIX>-<前方 8 文字>\`）。フル ID は各 item の frontmatter を参照
 - CASE を持たない資産は末尾の「CASE を持たないテスト資産」を参照
-
+${trailing_note}
 EOF
 }
 
@@ -298,7 +305,13 @@ emit_dangling() {
   printf '| CASE | target |\n'
   printf '| --- | --- |\n'
   while IFS=$'\t' read -r file target; do
-    printf '| `%s` | `%s` |\n' "$file" "$target"
+    # 「(target 空)」は人間向けの注記なのでバッククォートで囲まない
+    # （コードリテラルとして描画されると実在する値に見える）。
+    if [ "$target" = "(target 空)" ]; then
+      printf '| `%s` | %s |\n' "$file" "$target"
+    else
+      printf '| `%s` | `%s` |\n' "$file" "$target"
+    fi
   done < "$work/dangling-cases"
   printf '\n'
 }

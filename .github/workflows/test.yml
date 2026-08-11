@@ -259,6 +259,9 @@ jobs:
               - 'go.mod'
               - 'go.sum'
               - 'lib/**'
+              # nix-unit の名前採取は getFlake → inputs.nixpkgs.lib を経由するので、
+              # root の lock bump も eval の挙動を変えうる（dev/flake.lock と同じ論拠）.
+              - 'flake.lock'
 
       - name: Setup Nix
         if: steps.filter.outputs.relevant != 'false'
