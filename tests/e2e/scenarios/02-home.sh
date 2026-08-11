@@ -31,6 +31,15 @@ $(e2e_flake_inputs)
 EOF
 }
 
+# 世代の本数を数える。nput 自体の失敗は素通りさせて（コマンド置換の終了コードとして呼び出し側の
+# 代入を set -e で落とす）、0 件で非ゼロ終了する grep だけを守る。0 件は「本数が壊れた」観測として
+# アサートで報告したいので、数え上げの失敗と混ぜない。
+gens_count() {
+	local out
+	out="$(nput list-generations home)"
+	printf '%s\n' "$out" | grep -c . || true
+}
+
 cd "$PROJ"
 write_flake ".cfg/a" "a"
 git init -q
@@ -129,9 +138,7 @@ e2e_step "nput reset --json --yes: FS のみを撤去し profile / 世代は動�
 # 撤去対象は config（この時点の flake は .cfg/b を宣言している）ではなく、profile が指す世代の
 # manifest 由来（記録された真実）。rollback で世代 1 に戻った後なので .cfg/a が在庫になる。
 PROFILE_BEFORE="$(readlink "$PROFILE")"
-# grep -c は 0 件で非ゼロ終了するため、set -e 下では代入がそのままシナリオを落とす。
-# 0 件は「本数が壊れた」観測としてアサートで報告したいので、0 を返させる。
-GENS_BEFORE="$(nput list-generations home | grep -c . || true)"
+GENS_BEFORE="$(gens_count)"
 ENV_RESET="$E2E_WORK/reset.json"
 run_json 0 "$ENV_RESET" reset home --yes
 assert_absent "$HOME/.cfg/a"
@@ -148,7 +155,7 @@ assert_json "$ENV_RESET" "status=success・dryRun=false・command=reset" \
 	'.status == "success" and .dryRun == false and .command == "reset"'
 # profile の非遷移: リンク先（現行世代）と世代の本数がどちらも reset 前後で変わらない。
 assert_symlink "$PROFILE" "$PROFILE_BEFORE"
-GENS_AFTER="$(nput list-generations home | grep -c . || true)"
+GENS_AFTER="$(gens_count)"
 if [ "$GENS_AFTER" -eq "$GENS_BEFORE" ]; then
 	e2e_pass "reset 後も世代の本数が変わらない（$GENS_BEFORE 件）"
 else
