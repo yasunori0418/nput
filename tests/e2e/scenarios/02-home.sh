@@ -92,6 +92,9 @@ else
 fi
 
 e2e_step "nput rollback --json で前世代（entry a）へ復帰（RunE → emit の実経路・→ issue #285）"
+# 既定契約（--json 無し）の rollback はここでは通さない。前世代へ戻す実行はこのシナリオでは
+# 一度しか成立せず（世代 1 からは戻せない）、旧版も出力は何もアサートしていなかったため、
+# 一度きりの実行はエンベロープ検証のある --json 側へ寄せる。
 ENV_ROLLBACK="$E2E_WORK/rollback.json"
 run_json 0 "$ENV_ROLLBACK" rollback home
 assert_symlink "$HOME/.cfg/a"
@@ -122,6 +125,10 @@ assert_json "$ENV_GENS" "items=[]・generation スロット無し・dryRun=false
 	'.results[0].result.items == [] and (.results[0] | has("generation") | not) and .dryRun == false'
 
 e2e_step "nput reset --json --yes: FS のみを撤去し profile / 世代は動かない（→ issue #285）"
+# 撤去対象は config（この時点の flake は .cfg/b を宣言している）ではなく、profile が指す世代の
+# manifest 由来（記録された真実）。rollback で世代 1 に戻った後なので .cfg/a が在庫になる。
+PROFILE_BEFORE="$(readlink "$PROFILE")"
+GENS_BEFORE="$(nput list-generations home | grep -c .)"
 ENV_RESET="$E2E_WORK/reset.json"
 run_json 0 "$ENV_RESET" reset home --yes
 assert_absent "$HOME/.cfg/a"
@@ -136,11 +143,13 @@ assert_json "$ENV_RESET" "generation スロットを持たない（FS のみの�
 	'.results[0] | has("generation") | not'
 assert_json "$ENV_RESET" "status=success・dryRun=false・command=reset" \
 	'.status == "success" and .dryRun == false and .command == "reset"'
-assert_symlink "$PROFILE"
-if [ "$(nput list-generations home | grep -c .)" -ge 2 ]; then
-	e2e_pass "reset 後も世代は 2 つ以上残る（profile は不変）"
+# profile の非遷移: リンク先（現行世代）と世代の本数がどちらも reset 前後で変わらない。
+assert_symlink "$PROFILE" "$PROFILE_BEFORE"
+GENS_AFTER="$(nput list-generations home | grep -c .)"
+if [ "$GENS_AFTER" -eq "$GENS_BEFORE" ]; then
+	e2e_pass "reset 後も世代の本数が変わらない（$GENS_BEFORE 件）"
 else
-	e2e_fail "reset が世代を減らしてはいけない"
+	e2e_fail "reset が世代の本数を動かしてはいけない: $GENS_BEFORE → $GENS_AFTER"
 fi
 
 e2e_finish
