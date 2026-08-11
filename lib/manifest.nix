@@ -10,8 +10,9 @@
 # Minimal scope of this slice: root = projectRoot only / src = store-backed symlink entries of path/set only
 # (→ Issue #5). Types and throwIf are defined in full form, anticipating future slices (home / copy / out-of-store).
 #
-# Private helpers (escapesBase / pathChecks / anchorName / resolveEntry / farmEntries) live in
-# ./__internal.nix so they stay unit-test reachable via `nput.__internal.<name>` (→ #71).
+# Private helpers (escapesBase / pathChecks / anchorName / resolveEntry / farmEntries /
+# anchorLines) live in ./__internal.nix so they stay unit-test reachable via
+# `nput.__internal.<name>` (→ #71, #289).
 let
   internal = import ./__internal.nix;
 
@@ -108,9 +109,7 @@ let
       # out-of-store / copy have no farm anchor (copy is out-of-generation, place-once, and independent of the store).
       farmEntries = internal.farmEntries lib norm.entries;
 
-      anchorLines = lib.concatMapStringsSep "\n" (
-        e: "ln -s ${lib.escapeShellArg e.src} \"$out/${internal.anchorName lib e.target}\""
-      ) farmEntries;
+      anchorLines = internal.anchorLines lib farmEntries;
     in
     # The derivation contains manifest.json (the engine's input contract) + a symlink farm to the store src (GC anchors) (→ ADR-0006).
     pkgs.runCommandLocal "nput-manifest"

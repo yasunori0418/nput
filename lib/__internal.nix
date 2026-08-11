@@ -63,6 +63,15 @@ let
   # Farm anchors are limited to entries that are "store-backed and method = symlink" (→ ADR-0016, ADR-0019).
   # out-of-store / copy have no farm anchor (copy is out-of-generation, place-once, and independent of the store).
   farmEntries = lib: entries: lib.filter (e: e.srcKind == "store" && e.method == "symlink") entries;
+
+  # Shell lines that place the GC anchors of the symlink farm, one per farm entry (→ ADR-0016).
+  # Takes the already-filtered farm entries (see farmEntries). Kept here rather than inline in
+  # mkManifest so the unit tests assert the real expression instead of a copy of it (→ #289).
+  anchorLines =
+    lib: entries:
+    lib.concatMapStringsSep "\n" (
+      e: "ln -s ${lib.escapeShellArg e.src} \"$out/${anchorName lib e.target}\""
+    ) entries;
 in
 {
   inherit
@@ -71,5 +80,6 @@ in
     anchorName
     resolveEntry
     farmEntries
+    anchorLines
     ;
 }
