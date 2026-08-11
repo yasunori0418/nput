@@ -257,11 +257,53 @@
                 touch "$out"
               '';
 
+          # テストコード ⇔ CASE 対応の契約テスト（dev/tests/test-doc-map.sh）。
+          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
+          #
+          # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
+          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
+          #   PR での退行検知を担保する（flake-check job はルート flake が対象なので
+          #   この派生は CI では回らない）
+          #
+          # テストは docs/ と実際のテスト資産（cmd/ internal/ tests/）の両方を走査する。
+          # サンドボックスに作業ツリーは無く、テスト側の git ルート解決も効かないため、
+          # ルート flake の store path（inputs.root。dev/flake.nix の path:../ 入力）を
+          # 書き込み可能な場所へ複製し、その中で走らせる。dev/ 配下のスクリプト・
+          # データファイルは store の dev flake 側から重ねる（ルート flake の store path は
+          # dev/ を含むが、そちらは編集中の内容と一致しない可能性がある）。
+          checks.test-doc-map =
+            pkgs.runCommandLocal "test-doc-map"
+              {
+                nativeBuildInputs = [
+                  pkgs.yq-go
+                  pkgs.git
+                  pkgs.coreutils
+                  pkgs.gnused
+                  pkgs.gnugrep
+                  pkgs.diffutils
+                  pkgs.findutils
+                ];
+              }
+              ''
+                cp -r ${inputs.root} repo
+                chmod -R u+w repo
+                rm -rf repo/dev/scripts repo/dev/tests
+                mkdir -p repo/dev
+                cp -r ${./scripts} repo/dev/scripts
+                cp -r ${./tests} repo/dev/tests
+                chmod -R u+w repo/dev
+                cd repo
+                # テスト側の走査基点はカレントへフォールバックする（git 管理外のため）。
+                bash dev/tests/test-doc-map.sh
+                touch "$out"
+              '';
+
           # CI の sara check 専用シェル。default devShell は nput のビルドと
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
           # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
           # yasunori0418.cachix.org から引くだけで済む。
-          # CI からは sara check と dev/tests/sara-id.sh の両方をこのシェルで実行する。
+          # CI からは sara check・dev/tests/sara-id.sh・dev/tests/test-doc-map.sh を
+          # このシェルで実行する。
           devShells.sara = pkgs.mkShell {
             packages = [
               inputs'.nur.packages.sara
@@ -272,6 +314,10 @@
               pkgs.git
               pkgs.gnused
               pkgs.coreutils
+              # dev/tests/test-doc-map.sh が CASE frontmatter の target を読むのに使う。
+              # yq-go（mikefarah/yq v4）。nixpkgs の `yq` は python-yq（別実装・別構文）
+              # なので取り違えないこと。テスト側も実装を確認して落とす。
+              pkgs.yq-go
             ];
             env.TERM = "dumb";
           };
