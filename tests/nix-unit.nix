@@ -17,20 +17,17 @@ let
     tests = import (dir + "/${name}") { inherit lib nput; };
   }) testFiles;
 
-  # テスト名 -> それを定義しているファイル名のリスト。
-  ownersByTest = lib.foldl' (
-    acc: m:
-    acc
-    // lib.mapAttrs (
-      testName: _: (acc.${testName} or [ ]) ++ [ m.file ]
-    ) m.tests
-  ) { } modules;
+  # テスト名 -> それを定義しているファイル名のリスト。名前だけを見るので、
+  # 衝突が無ければ各テストの値（expr / expected）は評価しない。
+  ownersByTest = lib.zipAttrs (map (m: lib.mapAttrs (_testName: _: m.file) m.tests) modules);
 
   collisions = lib.filterAttrs (_testName: owners: lib.length owners > 1) ownersByTest;
 
-  collisionReport = lib.concatMapStringsSep "\n" (
-    testName: "  - ${testName}: ${lib.concatStringsSep ", " collisions.${testName}}"
-  ) (lib.attrNames collisions);
+  collisionReport = lib.concatStringsSep "\n" (
+    lib.mapAttrsToList (
+      testName: owners: "  - ${testName}: ${lib.concatStringsSep ", " owners}"
+    ) collisions
+  );
 
   merged = lib.foldl' (acc: m: acc // m.tests) { } modules;
 in
