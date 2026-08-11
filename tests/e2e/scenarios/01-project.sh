@@ -219,4 +219,29 @@ run_json 0 "$ENV_ALL_EMPTY" apply --all --home-root
 assert_json "$ENV_ALL_EMPTY" "results:[]・status=success（N=0 でも同一形状）" \
 	'.results == [] and .status == "success"'
 
+# 世代を公開するコマンドは home mode 限定（→ REQ-05abce3e・issue #284）。拒否は evalRoot で
+# rootKind を解決した後に効くため、実 nix を通る経路でしか観測できない。エラーは exit 1 の
+# 一般エラーで、stderr に home mode 限定である旨を含む（利用者が config の root を疑える）。
+for _CMD in rollback list-generations; do
+	e2e_step "$_CMD は project mode で拒否（exit 1 + home mode 限定の説明・→ issue #284）"
+	REJECT_ERR="$E2E_WORK/reject-$_CMD.err"
+	REJECT_CODE=0
+	nput "$_CMD" docs >"$E2E_WORK/reject-$_CMD.out" 2>"$REJECT_ERR" || REJECT_CODE=$?
+	if [ "$REJECT_CODE" -eq 1 ]; then
+		e2e_pass "exit 1: nput $_CMD docs"
+	else
+		e2e_fail "exit $REJECT_CODE (期待 1): nput $_CMD docs"
+	fi
+	if grep -qF "home mode only" "$REJECT_ERR"; then
+		e2e_pass "stderr が home mode 限定を説明する"
+	else
+		e2e_fail "stderr に home mode 限定の説明が無い: $(cat "$REJECT_ERR")"
+	fi
+	if grep -qF 'rootKind="project"' "$REJECT_ERR"; then
+		e2e_pass "stderr が拒否された rootKind を示す"
+	else
+		e2e_fail "stderr に rootKind が無い: $(cat "$REJECT_ERR")"
+	fi
+done
+
 e2e_finish
