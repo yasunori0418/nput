@@ -22,10 +22,14 @@ apply を重ねる。
 - **rollback の往復** — `rollback` が前世代の配置状態（旧 entry あり・新 entry なし）へ
   戻す
 - **成功時沈黙** — 既定では配置レポートを出さず、`-v` で出す（→ ADR-0031）
+- **撤去の非遷移** — `reset` は配置を撤去するが profile リンクと世代の本数は動かさない
+  （FS のみの撤去 → REQ-31f2882e）
 - **`--json` の世代観測** — `apply --dryrun --json` の generation が before == after
   （非 null）を運び、`list-generations --json` が `{number, date, current}` の 2 世代を
   返し、current が rollback 先の 1 世代だけであること。`items` は空で generation スロットを
-  持たず `dryRun` が false であること（→ issue #132）
+  持たず `dryRun` が false であること（→ issue #132）。`rollback --json` は generation が
+  後退する向きの遷移を運び、`reset --json` は generation スロット自体を持たないこと
+  （→ issue #285）
 
 ## 対応する CASE
 
