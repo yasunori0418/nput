@@ -181,18 +181,23 @@ e2e_step "list-generations --all は読み取り専用（profile も世代も配
 # ので、ここは既定（テキスト）経路で実行して両方の出力経路が状態を変えないことを固定する。
 ALL_PROFILE_BEFORE="$(readlink "$PROFILE")"
 ALL_GENS_BEFORE="$(gens_count)"
-ALL_TEXT="$(nput list-generations --all)"
+ALL_TEXT_CODE=0
+ALL_TEXT="$(nput list-generations --all)" || ALL_TEXT_CODE=$?
+if [ "$ALL_TEXT_CODE" -eq 0 ]; then
+	e2e_pass "exit 0: nput list-generations --all（テキスト経路）"
+else
+	e2e_fail "exit $ALL_TEXT_CODE (期待 0): nput list-generations --all"
+fi
 # テキスト経路は per-config ヘッダ `# <name>` を持つ独自の分岐（--json 経路は印字しない）。
 # 陽性対照と除外を JSON 経路だけで見ると、この分岐が proj を出力する退行を拾えない。
-if printf '%s\n' "$ALL_TEXT" | grep -qx '# home'; then
-	e2e_pass "テキスト経路も home のヘッダを出す"
+# ヘッダ行の集合そのものを比較するので、home が落ちても proj が混ざっても落ちる（JSON 側の
+# `[.results[].subject.name] == ["home"]` と同じ粒度。部分文字列一致だと config 名が
+# 増えたときに誤検知・見逃しの両方を起こす）。
+ALL_HEADERS="$(printf '%s\n' "$ALL_TEXT" | grep '^# ' || true)"
+if [ "$ALL_HEADERS" = "# home" ]; then
+	e2e_pass "テキスト経路のヘッダも home だけ（proj は現れない）"
 else
-	e2e_fail "テキスト経路に '# home' が無い: '$ALL_TEXT'"
-fi
-if printf '%s\n' "$ALL_TEXT" | grep -q 'proj'; then
-	e2e_fail "テキスト経路に proj が漏れた: '$ALL_TEXT'"
-else
-	e2e_pass "テキスト経路も proj を出さない"
+	e2e_fail "テキスト経路のヘッダが '# home' だけでない: '$ALL_HEADERS'"
 fi
 assert_symlink "$PROFILE" "$ALL_PROFILE_BEFORE"
 ALL_GENS_AFTER="$(gens_count)"
