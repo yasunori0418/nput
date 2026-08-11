@@ -87,18 +87,18 @@ jobs:
 
   sara:
     # Knowledge-graph validation of docs/ (broken references, duplicate IDs,
-    # cycles) plus the sara-id numbering contract test. Non-required check with
-    # no threshold gate, same policy as go-coverage: it is NOT registered as a
-    # required status check and is NOT part of the DoD, so a failure reports on
-    # the PR without blocking merge. The check itself runs strict
-    # (strict_mode = true in sara.toml, all warnings are errors) since the
-    # epic #203 migration completed; staying non-required is a recorded
-    # decision, not a deferral (→ ADR-0050).
+    # cycles) plus two contract tests: sara-id's numbering and test-doc-map's
+    # test-code ⇔ CASE mapping. Non-required check with no threshold gate, same
+    # policy as go-coverage: it is NOT registered as a required status check and
+    # is NOT part of the DoD, so a failure reports on the PR without blocking
+    # merge. The check itself runs strict (strict_mode = true in sara.toml, all
+    # warnings are errors) since the epic #203 migration completed; staying
+    # non-required is a recorded decision, not a deferral (→ ADR-0050).
     #
-    # The `changes` job is not reused here: its filter targets nix/Go sources,
-    # whereas this check is most relevant on docs-only PRs. A job-local filter
-    # covers the inputs that actually matter instead, so unrelated PRs skip the
-    # nix setup entirely.
+    # The `changes` job is not reused here: its filter targets nix/Go sources
+    # broadly, whereas this job needs docs plus the specific test assets
+    # test-doc-map enumerates. A job-local filter covers exactly those inputs
+    # instead, so unrelated PRs skip the nix setup entirely.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -123,7 +123,17 @@ jobs:
               # execution environment.
               - 'dev/flake.lock'
               - 'dev/tests/**'
+              - 'dev/scripts/**'
               - '.github/workflows/test.yml'
+              # The test assets the test-doc-map contract test enumerates.
+              # Without these, adding or renaming a test file without updating
+              # its CASE would skip the job entirely and the drift would merge
+              # unnoticed — which is the whole point of the check (→ #304).
+              - '**/*_test.go'
+              - 'tests/**'
+              # Defines the flake checks the contract test matches against its
+              # static list (`checks.hm-module` and friends).
+              - 'flake.nix'
 
       - name: Setup Nix
         if: steps.filter.outputs.relevant != 'false'
@@ -145,6 +155,15 @@ jobs:
       - name: Run sara-id contract test
         if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c dev/tests/sara-id.sh
+
+      # The test-code ⇔ CASE mapping contract (→ #304). Purely static: it reads
+      # the file-level inventory and CASE frontmatter only, so it needs nothing
+      # beyond this devShell. Wired the same way as sara-id above — also exposed
+      # as `checks.test-doc-map` for local `nix flake check ./dev`, which CI's
+      # root-flake flake-check never reaches.
+      - name: Run test-doc-map contract test
+        if: steps.filter.outputs.relevant != 'false'
+        run: nix develop '.?dir=dev#sara' -c dev/tests/test-doc-map.sh
 
   e2e:
     needs: changes
