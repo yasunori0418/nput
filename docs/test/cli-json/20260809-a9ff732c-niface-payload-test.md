@@ -2,6 +2,7 @@
 id: "CASE-a9ff732c-af30-4f13-862d-92e3074d390d"
 type: test_case
 name: "niface_payload_test.go — engine 結果からペイロードへの写像"
+target: "cmd/nput/niface_payload_test.go"
 covers:
   - "TC-cf8189c4-d680-4d7e-bcd3-810543762c50"
   - "TC-71fdbbfb-cf81-4aba-8254-59d7cb45d5ab"

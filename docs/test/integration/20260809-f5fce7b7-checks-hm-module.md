@@ -2,6 +2,7 @@
 id: "CASE-f5fce7b7-9780-4c8e-bf6b-f3e4b7b3bb3d"
 type: test_case
 name: "checks.hm-module — activation の配線を評価アサートで検証する flake check"
+target: "checks.hm-module"
 covers:
   - "TC-5a72b00e-2c03-4703-acdc-33cffb6fa994"
 ---

@@ -2,6 +2,7 @@
 id: "CASE-4179dcb2-f199-4469-ae87-0927ece06e65"
 type: test_case
 name: "manifest_test.go — v1 の復元と版・未知フィールドの拒否"
+target: "internal/manifest/manifest_test.go"
 covers:
   - "TC-172548ea-154a-4e22-a169-8252a43e3781"
 ---

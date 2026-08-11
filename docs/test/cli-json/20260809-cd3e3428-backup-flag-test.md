@@ -2,6 +2,7 @@
 id: "CASE-cd3e3428-3fe0-4d33-a64c-1931ac11d07d"
 type: test_case
 name: "backup_flag_test.go — 値を省略できるフラグが位置引数を飲み込まない"
+target: "cmd/nput/backup_flag_test.go"
 covers:
   - "TC-0c7281f8-cffc-4a53-8fe0-f52d9ea6bd12"
 ---

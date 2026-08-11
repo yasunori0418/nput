@@ -2,13 +2,16 @@
 id: "CASE-dcd5e7e4-9190-4b13-9521-9b8801ec85fb"
 type: test_case
 name: "internal/engine/copy_test.go — コピー経路の syscall 失敗注入"
+target: "internal/engine/copy_test.go"
 covers:
   - "TC-4f315cfc-446c-4c3f-8dc9-c36b10073e9d"
   - "TC-d1eb1814-ac5e-4576-b092-7db4929fba43"
 ---
 # CASE-dcd5e7e4: copy_test.go
 
-対象: `internal/engine/copy_test.go`
+## 対象
+
+`internal/engine/copy_test.go`
 
 コピー経路の各 syscall を実 FS の状態（通常ファイルで経路を塞いで ENOTDIR を誘発する・
 ディレクトリを読み取り元にする等、root でも成立する条件）で失敗させ、エラーが伝播することを

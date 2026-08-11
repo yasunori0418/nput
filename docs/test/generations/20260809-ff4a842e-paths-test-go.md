@@ -2,6 +2,7 @@
 id: "CASE-ff4a842e-dd25-4c75-82ef-185507781d02"
 type: test_case
 name: "paths_test.go — state 基底の解決・roothash の性質・profileDir キーイング・世代リンク名と兄弟パス"
+target: "internal/paths/paths_test.go"
 covers:
   - "TC-40b762fc-3b48-471c-b495-c5ffe1f584b5"
 ---

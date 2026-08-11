@@ -2,6 +2,7 @@
 id: "CASE-aa967f9a-8020-44f8-b45f-57244711e1b5"
 type: test_case
 name: "gitutil_test.go — toplevel 解決の一意性とリポジトリ外・git 不在の失敗"
+target: "internal/gitutil/gitutil_test.go"
 covers:
   - "TC-ec0bded4-c4bc-4a61-a2b5-0b652134b223"
 ---

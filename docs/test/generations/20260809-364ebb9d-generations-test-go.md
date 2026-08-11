@@ -2,6 +2,7 @@
 id: "CASE-364ebb9d-b9f8-4c79-8509-8bbf31e73698"
 type: test_case
 name: "generations_test.go — 世代一覧パース・rollback の再収束と失敗経路・root 解決"
+target: "internal/engine/generations_test.go"
 covers:
   - "TC-746cb5b9-fe27-4d09-a51d-eb03d56a93a7"
   - "TC-36ea3609-d52e-42d4-975c-40fb89b23919"

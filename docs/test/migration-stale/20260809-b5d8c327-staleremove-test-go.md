@@ -2,6 +2,7 @@
 id: "CASE-b5d8c327-1f52-4566-98d3-22216d609d94"
 type: test_case
 name: "internal/engine/staleremove_test.go — drift 再検証と空親剪定"
+target: "internal/engine/staleremove_test.go"
 covers:
   - "TC-8a1f4b19-0ece-4057-a8bf-f9717855cade"
   - "TC-810d661d-6d3d-4199-828f-e44adcebad5a"
@@ -9,7 +10,9 @@ covers:
 ---
 # CASE-b5d8c327: staleremove_test.go
 
-対象: `internal/engine/staleremove_test.go`
+## 対象
+
+`internal/engine/staleremove_test.go`
 
 `removeStale` / `preRemove` を Apply パイプラインを通さず直接駆動し、実 tmpdir 上で drift の
 同値類と剪定の境界を確認する。除去アクションは記録上の dest と実 FS 上の target を独立に

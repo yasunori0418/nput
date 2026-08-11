@@ -2,6 +2,7 @@
 id: "CASE-36b5b61a-f40e-4bd5-97d9-f2b0c9284a72"
 type: test_case
 name: "nix-unit: escapes-base.nix — `..` 深さ判定の境界網羅"
+target: "tests/nix-unit/escapes-base.nix"
 covers:
   - "TC-311ca3b2-d6d1-4712-9e2a-9027941d3527"
 ---

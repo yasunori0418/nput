@@ -2,6 +2,7 @@
 id: "CASE-2de3a3d8-3b67-485a-8ddf-a97dd182af23"
 type: test_case
 name: "drift_test.go — 世代スキップの発火条件と lstat ドリフト修復の対象範囲"
+target: "internal/engine/drift_test.go"
 covers:
   - "TC-765858b6-d596-4428-b4da-5d432944a714"
   - "TC-1ee7a729-5629-4c92-b02a-4f6e11c0b57d"

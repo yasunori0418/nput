@@ -2,6 +2,7 @@
 id: "CASE-7fb33044-b68c-4518-bd93-b258072235ee"
 type: test_case
 name: "namaka: manifest-project — manifest 文書全体のスナップショット回帰"
+target: "tests/namaka/manifest-project/"
 covers:
   - "TC-de6514e2-9105-45a6-a5b9-d474911a401b"
 ---

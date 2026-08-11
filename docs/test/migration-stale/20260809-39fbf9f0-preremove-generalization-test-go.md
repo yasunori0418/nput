@@ -2,6 +2,7 @@
 id: "CASE-39fbf9f0-ddd6-4d57-9c77-00b4f3eae488"
 type: test_case
 name: "internal/engine/preremove_generalization_test.go — レイアウト移行と method 変更"
+target: "internal/engine/preremove_generalization_test.go"
 covers:
   - "TC-b9d4ffaf-ac91-4bf1-9f27-5ea3964466ad"
   - "TC-76597b11-8199-4682-8f53-008e5208bd9c"
@@ -10,7 +11,9 @@ covers:
 ---
 # CASE-39fbf9f0: preremove_generalization_test.go
 
-対象: `internal/engine/preremove_generalization_test.go`
+## 対象
+
+`internal/engine/preremove_generalization_test.go`
 
 配置前除去の適用範囲が「自己記録の stale な祖先 symlink」から「配置 target を占有する自己記録
 stale な FS オブジェクト全般」へ一般化されたこと（実ディレクトリ全体・method 変更）を、
