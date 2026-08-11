@@ -39,7 +39,7 @@ func TestLoadValid(t *testing.T) {
 	}
 	// project omits the path in the manifest, so it decodes to the empty string.
 	// This fixes the decoded shape only; rejecting a project document that does carry
-	// a path is not implemented and therefore not asserted here (→ REQ-dd10d820).
+	// a path is asserted in TestLoadRejectsRuntimeResolvedRootWithPath (→ REQ-dd10d820).
 	if m.Root.Root != "" {
 		t.Errorf("project root = %q, want empty", m.Root.Root)
 	}
@@ -137,6 +137,25 @@ func TestLoadRejectsUnknownField(t *testing.T) {
 func TestLoadMissingFile(t *testing.T) {
 	if _, err := Load(t.TempDir()); err == nil {
 		t.Fatal("expected error for missing manifest.json, got nil")
+	}
+}
+
+// The kinds the engine resolves at runtime must not carry a path. A document that
+// spells one out is not merely redundant: the engine ignores it and places under the
+// resolved base instead, so the difference never surfaces (→ REQ-dd10d820, TC-172548ea).
+func TestLoadRejectsRuntimeResolvedRootWithPath(t *testing.T) {
+	for _, kind := range []string{RootKindProject, RootKindHome, RootKindSystem} {
+		t.Run(kind, func(t *testing.T) {
+			dir := writeManifest(t, `{ "schemaVersion": 1, "root": { "rootKind": "`+kind+`", "root": "/opt/x" }, "entries": [] }`)
+			_, err := Load(dir)
+			if err == nil {
+				t.Fatalf("expected error for rootKind %q carrying a path, got nil", kind)
+			}
+			// Pin the rejection to this check, not to decoding or any other guard.
+			if !strings.Contains(err.Error(), "root.root must be omitted") {
+				t.Errorf("error should report that root.root must be omitted, got %v", err)
+			}
+		})
 	}
 }
 
