@@ -1,7 +1,7 @@
 ---
 id: "TC-f9e927d0-8e10-4b8e-9870-5b5486949af6"
 type: test_condition
-name: "fixed root で rootKind が fixed になり評価時確定の絶対パスを併記する"
+name: "fixed root で rootKind が fixed になり絶対パスを併記する（home marker が倒れないことを含む）"
 mitigates:
   - "RISK-5df2d02b-e5d4-40eb-86ad-e8bc96e4c34d"
 ---
@@ -19,7 +19,8 @@ mitigates:
   （exact 一致で見るので余分なキーの混入は落ちる）
 - root 種別を fixed にしても entry の正規化結果は変わらないこと
 - root marker（`homeRoot`）は fixed へ倒れず絶対パスも持たないこと。fixed 判定が
-  marker 側へ誤って広がらないことの担保
+  marker 側へ誤って広がらないことの担保で、exact 一致で見るため REQ-dd10d820 の home 側
+  （`rootKind = "home"` で `root` フィールドを持たない）の形もここが担保する
 
 **この条件は REQ-dd10d820 の肯定側（fixed）を持つ**。同じ REQ の否定側のうち project root
 分は TC-4e7cfae7 が持ち、`homeRoot` を実際の HM 統合で見る分は `checks.hm-module`

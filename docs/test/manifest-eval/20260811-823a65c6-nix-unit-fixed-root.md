@@ -26,8 +26,8 @@ covers:
 - 別の絶対パスでも同じ形になる（特定の値に依存した通り方をしない）
 - 同じ entries を fixed root と project root へ与えたときの正規化結果が一致する
   （既定値そのものは CASE-59de34d4 が持つので、ここは同値比較で独立性だけを見る）
-- `homeRoot` marker を渡した場合は `{ rootKind = "home"; }` で、fixed へ倒れず
-  絶対パスも持たない
+- `homeRoot` marker を渡した場合は `{ rootKind = "home"; }` に exact 一致し、fixed へ
+  倒れず絶対パスも持たない（`root` フィールドの不在まで見る）
 
 project root の否定側（固定 root を持たない）は CASE-7a6c4957 が持つ。本 CASE はその対に
 なる肯定側で、両者で REQ-dd10d820 の評価層分を挟む（→ TC-f9e927d0）。
