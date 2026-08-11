@@ -106,11 +106,12 @@ assert_json "$ENV_ROLLBACK" "items は復帰先 .cfg/a と撤去元 .cfg/b を�
 	'[.results[0].result.items[] | .info.target] | sort == [".cfg/a", ".cfg/b"]'
 assert_json "$ENV_ROLLBACK" "items は全て success（failed / skipped を含まない）" \
 	'.results[0].result.items | all(.status == "success")'
-assert_json "$ENV_ROLLBACK" "changes は .cfg/a の add と .cfg/b の remove の 2 件だけ" \
+assert_json "$ENV_ROLLBACK" "changes は .cfg/a の add と .cfg/b の remove（どちらも可逆）2 件だけ" \
 	'.results[0].result as $r
 	 | ($r.items | map({key: .id, value: .info.target}) | from_entries) as $t
-	 | [$r.changes[] | {kind, target: $t[.itemId]}]
-	 | sort_by(.target) == [{kind: "add", target: ".cfg/a"}, {kind: "remove", target: ".cfg/b"}]'
+	 | [$r.changes[] | {kind, reversible, target: $t[.itemId]}]
+	 | sort_by(.target) == [{kind: "add", reversible: true, target: ".cfg/a"},
+	                        {kind: "remove", reversible: true, target: ".cfg/b"}]'
 assert_json "$ENV_ROLLBACK" "status=success・dryRun=false・command=rollback" \
 	'.status == "success" and .dryRun == false and .command == "rollback"'
 
@@ -128,7 +129,9 @@ e2e_step "nput reset --json --yes: FS のみを撤去し profile / 世代は動�
 # 撤去対象は config（この時点の flake は .cfg/b を宣言している）ではなく、profile が指す世代の
 # manifest 由来（記録された真実）。rollback で世代 1 に戻った後なので .cfg/a が在庫になる。
 PROFILE_BEFORE="$(readlink "$PROFILE")"
-GENS_BEFORE="$(nput list-generations home | grep -c .)"
+# grep -c は 0 件で非ゼロ終了するため、set -e 下では代入がそのままシナリオを落とす。
+# 0 件は「本数が壊れた」観測としてアサートで報告したいので、0 を返させる。
+GENS_BEFORE="$(nput list-generations home | grep -c . || true)"
 ENV_RESET="$E2E_WORK/reset.json"
 run_json 0 "$ENV_RESET" reset home --yes
 assert_absent "$HOME/.cfg/a"
@@ -145,7 +148,7 @@ assert_json "$ENV_RESET" "status=success・dryRun=false・command=reset" \
 	'.status == "success" and .dryRun == false and .command == "reset"'
 # profile の非遷移: リンク先（現行世代）と世代の本数がどちらも reset 前後で変わらない。
 assert_symlink "$PROFILE" "$PROFILE_BEFORE"
-GENS_AFTER="$(nput list-generations home | grep -c .)"
+GENS_AFTER="$(nput list-generations home | grep -c . || true)"
 if [ "$GENS_AFTER" -eq "$GENS_BEFORE" ]; then
 	e2e_pass "reset 後も世代の本数が変わらない（$GENS_BEFORE 件）"
 else
