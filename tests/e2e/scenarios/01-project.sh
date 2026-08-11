@@ -263,8 +263,8 @@ fi
 
 # 拒否した実行のあとも docs の配置が保たれていることの sanity check。project mode は
 # generation skip で世代を 1 つしか持たないため、これは「rollback が engine へ到達しない」
-# ことまでは示さない（到達しても最古世代として止まる）。到達の検知は世代を複数持つ
-# home mode の担当。
+# ことまでは示さない（到達しても最古世代として止まる）。到達の検知には世代を複数持つ
+# 配置が要る（→ TC-f304d682 の残件）。
 e2e_step "拒否のあとも docs の配置は変わらない"
 assert_symlink "$TARGET" "$BEFORE_TARGET"
 
