@@ -16,16 +16,19 @@ on:
   pull_request:
   # Only `test-doc-matrix` consumes this trigger: the correspondence table is
   # generated from merged state and uploaded as an artifact (→ #304). Every
-  # other job stays PR-only via an explicit `github.event_name != 'push'`
-  # guard — the `changes` job treats any non-pull_request event as "run", so
-  # without those guards a main push would newly fire flake-check / go-coverage
-  # / e2e, which this trigger is not meant to change.
+  # other job carries a job-level `github.event_name != 'push'` guard — the
+  # `changes` job treats any non-pull_request event as "run", so without them a
+  # main push would newly fire flake-check / go-coverage / e2e / sara, which
+  # this trigger is not meant to change.
   push:
     branches:
       - main
 
 jobs:
   changes:
+    # Every consumer skips on push, so detection would only book a runner to
+    # produce an output nobody reads.
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     outputs:
       run: ${{ steps.detect.outputs.run }}
@@ -43,6 +46,12 @@ jobs:
     # never be reported and merge would stay blocked forever. Gate at step
     # level instead: the job (and its matrix legs) always run and always
     # report, but do nothing when there's nothing relevant to check.
+    #
+    # `push` is the exception: that constraint is specific to pull_request
+    # (required contexts are only evaluated there), so a job-level guard is
+    # safe and avoids booking three runners — macOS included — to check out
+    # and exit. Only `test-doc-matrix` consumes the push trigger.
+    if: github.event_name != 'push'
     strategy:
       fail-fast: false
       matrix:
@@ -58,13 +67,13 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup Nix
-        if: needs.changes.outputs.run == 'true' && github.event_name != 'push'
+        if: needs.changes.outputs.run == 'true'
         uses: ./.github/actions/setup-nix
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Run nix flake check
-        if: needs.changes.outputs.run == 'true' && github.event_name != 'push'
+        if: needs.changes.outputs.run == 'true'
         run: nix flake check -L
 
   go-coverage:
@@ -108,17 +117,20 @@ jobs:
     # broadly, whereas this job needs docs plus the specific test assets
     # test-doc-map enumerates. A job-local filter covers exactly those inputs
     # instead, so unrelated PRs skip the nix setup entirely.
+    #
+    # Not a required context, so a job-level `push` guard costs nothing (see
+    # flake-check) — only `test-doc-matrix` serves that trigger.
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       # Scoped to what this job actually exercises: the documents sara scans,
       # its config, the sara-id / test-doc-map implementations, the test assets
-      # test-doc-map enumerates, and this workflow. On non-pull_request events
-      # the step is skipped and `relevant` stays empty, which the guards below
-      # treat as "run" (except on push, which only test-doc-matrix serves) —
-      # the event/filter decision lives in a single expression per step rather
-      # than being restated in a shell step.
+      # test-doc-map enumerates, and this workflow. On workflow_dispatch the
+      # step is skipped and `relevant` stays empty, which the guards below
+      # treat as "run" — the event/filter decision lives in a single expression
+      # per step rather than being restated in a shell step.
       - name: Detect sara-relevant changes
         id: filter
         if: github.event_name == 'pull_request'
@@ -147,7 +159,7 @@ jobs:
               - 'flake.nix'
 
       - name: Setup Nix
-        if: steps.filter.outputs.relevant != 'false' && github.event_name != 'push'
+        if: steps.filter.outputs.relevant != 'false'
         uses: ./.github/actions/setup-nix
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
@@ -157,14 +169,14 @@ jobs:
       # exactly this reason → 2c9f9fa). The dedicated `sara` devShell avoids
       # building nput and running the dogfood shellHook.
       - name: Run sara check
-        if: steps.filter.outputs.relevant != 'false' && github.event_name != 'push'
+        if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c sara check
 
       # The numbering contract for sara-id (UUIDv4 two-tier IDs). Also exposed
       # as `checks.sara-id` for `nix flake check ./dev`, but that never runs in
       # CI because flake-check targets the root flake — hence this explicit step.
       - name: Run sara-id contract test
-        if: steps.filter.outputs.relevant != 'false' && github.event_name != 'push'
+        if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c dev/tests/sara-id.sh
 
       # The test-code ⇔ CASE mapping contract (→ #304). Purely static: it reads
@@ -173,7 +185,7 @@ jobs:
       # as `checks.test-doc-map` for local `nix flake check ./dev`, which CI's
       # root-flake flake-check never reaches.
       - name: Run test-doc-map contract test
-        if: steps.filter.outputs.relevant != 'false' && github.event_name != 'push'
+        if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c dev/tests/test-doc-map.sh
 
   e2e:
@@ -200,17 +212,37 @@ jobs:
     # a generated file tracked alongside its sources drifts, and reviewing its
     # diff adds nothing the contract test does not already enforce.
     #
-    # Runs on main push and workflow_dispatch only — not per PR. Unlike the
-    # test-doc-map contract test (purely static, every PR), generation needs the
-    # `--full` inventory, which runs `go test -json` over the whole module and
-    # evaluates each nix-unit file. That cost buys a document nobody reads
-    # mid-review, so it is paid once per merge instead.
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # Not run on every PR. Unlike the test-doc-map contract test (purely static),
+    # generation needs the `--full` inventory, which runs `go test -json` over the
+    # whole module and evaluates each nix-unit file. That cost buys a document
+    # nobody reads mid-review, so main push and workflow_dispatch pay it instead.
+    #
+    # The exception is a PR that touches generation itself: the step-level filter
+    # below runs the job when the scripts or their data files change, so a broken
+    # generator fails on its own PR rather than after landing on main.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      # On push / workflow_dispatch this step is skipped and `relevant` stays
+      # empty, which the guards below treat as "run". On pull_request it decides
+      # whether this PR touches generation.
+      - name: Detect generation-relevant changes
+        id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v4.0.1
+        with:
+          filters: |
+            relevant:
+              - 'dev/scripts/**'
+              - 'dev/tests/test-categories.tsv'
+              - 'dev/tests/test-doc-exclusions.tsv'
+              - 'dev/flake.nix'
+              - 'dev/flake.lock'
+              - '.github/workflows/test.yml'
+
       - name: Setup Nix
+        if: steps.filter.outputs.relevant != 'false'
         uses: ./.github/actions/setup-nix
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
@@ -219,9 +251,11 @@ jobs:
       # sara together. Its shellHook dogfoods `nput apply skills`, which is
       # harmless here (it places into the checkout and is allowed to no-op).
       - name: Generate correspondence table
+        if: steps.filter.outputs.relevant != 'false'
         run: nix develop ./dev -c dev/scripts/test-doc-matrix.sh test-doc-matrix.md
 
       - name: Upload correspondence table
+        if: steps.filter.outputs.relevant != 'false'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-doc-matrix
