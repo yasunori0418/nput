@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -65,10 +64,9 @@ func TestLoadRejectsNewerSchema(t *testing.T) {
 	}
 }
 
-// The lowest schemaVersion the engine accepts. Pinning the valid edge next to the
-// invalid ones keeps the boundary visible if SchemaVersion is ever raised.
-const minSchemaVersion = 1
-
+// Both edges of the lower bound. The valid edge sits next to the invalid ones so that
+// moving the bound in validate() breaks a case here rather than passing unnoticed.
+// The upper bound is a separate concern and belongs to TestLoadRejectsNewerSchema.
 func TestLoadSchemaVersionBoundary(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -77,7 +75,7 @@ func TestLoadSchemaVersionBoundary(t *testing.T) {
 	}{
 		{"negative", "-1", true},
 		{"zero", "0", true},
-		{"minimum", strconv.Itoa(minSchemaVersion), false},
+		{"lowest accepted", "1", false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := writeManifest(t, `{ "schemaVersion": `+tt.version+`, "root": { "rootKind": "project" }, "entries": [] }`)
