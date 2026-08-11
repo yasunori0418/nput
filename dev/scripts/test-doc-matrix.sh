@@ -38,27 +38,16 @@ fi
 
 out=${1-}
 
-for cmd in yq jq git sara; do
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "test-doc-matrix.sh: $cmd が要る（nix develop ./dev から実行する）" >&2
-    exit 1
-  fi
-done
+# shellcheck source=dev/scripts/lib-testdoc.sh
+. "$(dirname "$0")/lib-testdoc.sh"
 
-# yq は mikefarah/yq（Go 実装・v4）を前提にする。ambient PATH の python-yq（v2/v3 系）を
-# 拾うと構文違いで黙って空を返し、CASE 0 件の対応表が出る（実際に踏んだ）。
-if ! yq --version 2>&1 | grep -q 'mikefarah\|version v4'; then
-  echo "test-doc-matrix.sh: mikefarah/yq v4 が要る（実際: $(yq --version 2>&1)）" >&2
-  exit 1
-fi
+require_commands "test-doc-matrix.sh（nix develop ./dev から実行する）" yq jq git sara || exit 1
+require_yq_go test-doc-matrix.sh || exit 1
 
-repo_root=$(git rev-parse --show-toplevel 2>/dev/null || printf '.')
-cd "$repo_root" || exit 1
+cd "$(testdoc_repo_root)" || exit 1
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-
-read_tsv() { grep -v '^[[:space:]]*#' "$1" | grep -v '^[[:space:]]*$'; }
 
 # --- 入力の収集 --------------------------------------------------------------
 
@@ -72,21 +61,26 @@ sara report matrix --format json > "$work/matrix.json" 2>/dev/null || {
   exit 1
 }
 
-# CASE: <target>\t<CASE フル ID>\t<name>
+# CASE: <target>\t<CASE フル ID>\t<name>\t<区分>
+#
+# 1 ファイル 1 回の yq で 4 列すべてを採る。区分は置き場所（docs/test/<区分>/）から
+# 導けるので yq には要らない。ループを 2 本に割ると同じ入力に対する grep 条件が
+# 2 箇所へ散り、片方だけ変えたときに両者の集合がずれる。
 : > "$work/cases"
 while IFS= read -r file; do
-  yq --front-matter=extract -r \
-    '[(.target // ""), (.id // ""), (.name // "")] | @tsv' "$file" 2>/dev/null |
-    awk -F'\t' -v OFS='\t' '{ print $1, $2, $3 }' >> "$work/cases"
+  category=$(printf '%s\n' "$file" | cut -d/ -f3)
+  if ! row=$(yq --front-matter=extract -r \
+    '[(.target // ""), (.id // ""), (.name // "")] | @tsv' "$file" 2>/dev/null); then
+    echo "test-doc-matrix.sh: 警告: $file の frontmatter を読めなかった（対応表から落ちる）" >&2
+    continue
+  fi
+  printf '%s\t%s\n' "$row" "$category" >> "$work/cases"
 done < <(grep -rl '^type: test_case' docs/test/ | LC_ALL=C sort)
 
-# CASE の区分（置き場所 docs/test/<区分>/ 由来）: <CASE フル ID>\t<区分>
-: > "$work/case-categories"
-while IFS= read -r file; do
-  id=$(yq --front-matter=extract -r '.id // ""' "$file" 2>/dev/null)
-  category=$(printf '%s\n' "$file" | cut -d/ -f3)
-  printf '%s\t%s\n' "$id" "$category" >> "$work/case-categories"
-done < <(grep -rl '^type: test_case' docs/test/ | LC_ALL=C sort)
+if [ ! -s "$work/cases" ]; then
+  echo "test-doc-matrix.sh: CASE を 1 件も読めなかった" >&2
+  exit 1
+fi
 
 # CASE → TC: <CASE フル ID>\t<TC フル ID>\t<TC name>
 jq -r '
@@ -110,13 +104,17 @@ jq -r '
 
 # --- 部品 --------------------------------------------------------------------
 
-# フル ID → 散文用の省略形（<PREFIX>-<前方 8 文字>）。
+# フル ID → 散文用の省略形（<PREFIX>-<前方 8 文字>）。形式に合わない入力（空文字・
+# 8 文字 hex でない ID）はそのまま通すと空のコードスパンとして表に出て不整合が見えないため、
+# 目に付く形へ置き換える。
 short_id() {
-  printf '%s\n' "$1" | sed -E 's/^([A-Z]+)-([0-9a-f]{8}).*/\1-\2/'
+  local id=$1
+  if [[ "$id" =~ ^[A-Z]+-[0-9a-f]{8} ]]; then
+    printf '%s\n' "$id" | sed -E 's/^([A-Z]+)-([0-9a-f]{8}).*/\1-\2/'
+  else
+    printf '(ID 不正: %s)\n' "${id:-空}"
+  fi
 }
-
-lookup_case() { awk -F'\t' -v t="$1" '$1 == t { print $2 "\t" $3 }' "$work/cases"; }
-lookup_category() { awk -F'\t' -v id="$1" '$1 == id { print $2 }' "$work/case-categories"; }
 
 # セル内で使う <br> 区切りの箇条書き（Markdown の表はセル内改行を許さない）。
 join_br() { paste -sd'@' - | sed 's/@/<br>/g'; }
@@ -153,11 +151,28 @@ names_block() {
   printf '\n</details>\n'
 }
 
+# --- 行の事前計算 ------------------------------------------------------------
+#
+# 区分 × 資産の対応を 1 度だけ計算して両セクション（表・テスト名内訳）が共有する。
+# 区分ごとに資産を走査して都度 lookup すると、同じフィルタ条件が 2 箇所に散って
+# 片方だけ直したときに対象集合がずれ、awk のフルスキャンも資産数 × 区分数だけ走る。
+#
+# $work/asset-rows: <区分>\t<資産>\t<CASE フル ID>\t<CASE name>
+# $work/assets:     資産の一意リスト（inventory 由来）
+cut -f1 "$work/inventory" | LC_ALL=C sort -u > "$work/assets"
+
+# cases（<target>\t<id>\t<name>\t<区分>）を資産側から引ける形へ並べ替える。
+# inventory に無い target（CASE 側のリネーム追従漏れ）は落とし、下の未分類検査で拾う。
+awk -F'\t' -v OFS='\t' '
+  NR == FNR { asset[$1] = 1; next }
+  $1 in asset { print $4, $1, $2, $3 }
+' "$work/assets" "$work/cases" | LC_ALL=C sort > "$work/asset-rows"
+
 # --- 生成 --------------------------------------------------------------------
 
-emit() {
+emit_header() {
   local asset_total case_total
-  asset_total=$(cut -f1 "$work/inventory" | LC_ALL=C sort -u | wc -l)
+  asset_total=$(wc -l < "$work/assets")
   case_total=$(wc -l < "$work/cases")
 
   cat <<EOF
@@ -172,63 +187,47 @@ emit() {
 - CASE を持たない資産は末尾の「CASE を持たないテスト資産」を参照
 
 EOF
+}
 
-  # 区分ごとのセクション（順序は test-categories.tsv の記載順）。
-  while IFS=$'\t' read -r category description; do
-    printf '## %s\n\n%s\n\n' "$category" "$description"
+# 区分 1 つ分の対応表。行が無ければその旨を書く。
+emit_category_table() {
+  local category=$1 description=$2
+  printf '## %s\n\n%s\n\n' "$category" "$description"
 
-    # この区分に属する資産（= 区分内の CASE の target）を列挙する。
-    local rows=0
-    local buffer="$work/section"
-    : > "$buffer"
+  if ! awk -F'\t' -v c="$category" '$1 == c { found = 1 } END { exit !found }' "$work/asset-rows"; then
+    printf '（この区分に対応する CASE が無い）\n\n'
+    return
+  fi
 
-    while IFS=$'\t' read -r asset _type _name; do
-      local case_row case_id case_name
-      case_row=$(lookup_case "$asset")
-      [ -z "$case_row" ] && continue
-      case_id=${case_row%%$'\t'*}
-      case_name=${case_row#*$'\t'}
-      [ "$(lookup_category "$case_id")" = "$category" ] || continue
+  printf '| テスト資産 | CASE | covers する TC | 上流 RISK |\n'
+  printf '| --- | --- | --- | --- |\n'
+  awk -F'\t' -v c="$category" -v OFS='\t' '$1 == c { print $2, $3, $4 }' "$work/asset-rows" |
+    while IFS=$'\t' read -r asset case_id case_name; do
+      printf '| `%s` | `%s` %s | %s | %s |\n' \
+        "$asset" "$(short_id "$case_id")" "$case_name" \
+        "$(tc_cell "$case_id")" "$(risk_cell "$case_id")"
+    done
+  printf '\n'
+}
 
-      {
-        printf '| `%s` | `%s` %s | %s | %s |\n' \
-          "$asset" "$(short_id "$case_id")" "$case_name" \
-          "$(tc_cell "$case_id")" "$(risk_cell "$case_id")"
-      } >> "$buffer"
-      rows=$((rows + 1))
-    done < <(LC_ALL=C sort -u -t$'\t' -k1,1 "$work/inventory")
-
-    if [ "$rows" -eq 0 ]; then
-      printf '（この区分に対応する CASE が無い）\n\n'
-      continue
+# 区分 1 つ分のテスト名内訳（表のセルに収まらないため表の後に続けて置く）。
+emit_category_names() {
+  local category=$1
+  local emitted=0
+  while IFS= read -r asset; do
+    local block
+    block=$(names_block "$asset")
+    [ -z "$block" ] && continue
+    if [ "$emitted" -eq 0 ]; then
+      printf '### %s のテスト名内訳\n\n' "$category"
+      emitted=1
     fi
+    printf '**`%s`**\n\n%s\n\n' "$asset" "$block"
+  done < <(awk -F'\t' -v c="$category" '$1 == c { print $2 }' "$work/asset-rows")
+}
 
-    printf '| テスト資産 | CASE | covers する TC | 上流 RISK |\n'
-    printf '| --- | --- | --- | --- |\n'
-    cat "$buffer"
-    printf '\n'
-
-    # テスト名の内訳（表のセルに収まらないため区分ごとに続けて置く）。
-    local emitted_names=0
-    while IFS= read -r asset; do
-      local case_row case_id
-      case_row=$(lookup_case "$asset")
-      [ -z "$case_row" ] && continue
-      case_id=${case_row%%$'\t'*}
-      [ "$(lookup_category "$case_id")" = "$category" ] || continue
-
-      local block
-      block=$(names_block "$asset")
-      [ -z "$block" ] && continue
-      if [ "$emitted_names" -eq 0 ]; then
-        printf '### %s のテスト名内訳\n\n' "$category"
-        emitted_names=1
-      fi
-      printf '**`%s`**\n\n%s\n\n' "$asset" "$block"
-    done < <(cut -f1 "$work/inventory" | LC_ALL=C sort -u)
-  done < <(read_tsv dev/tests/test-categories.tsv)
-
-  # 除外リスト。CASE を持たないことが意図的な資産。
+# 除外リスト。CASE を持たないことが意図的な資産。
+emit_exclusions() {
   printf '## CASE を持たないテスト資産\n\n'
   printf 'dev/tests/test-doc-exclusions.tsv（契約テストの逆方向除外リスト）の内容。\n\n'
   printf '| テスト資産 | 除外理由 |\n'
@@ -237,6 +236,46 @@ EOF
     while IFS=$'\t' read -r asset reason; do
       printf '| `%s` | %s |\n' "$asset" "$reason"
     done
+  printf '\n'
+}
+
+# CASE も除外行も持たない資産。契約テストが本来落とす状態だが、sara ジョブは required
+# status check ではない（→ ADR-0050）ため FAIL のまま main へ入りうる。対応表が「全資産を
+# 映す」成果物である以上、黙って落とさず節として明示し stderr へも警告する。
+emit_unclassified() {
+  cut -f2 "$work/asset-rows" | LC_ALL=C sort -u > "$work/covered"
+  read_tsv dev/tests/test-doc-exclusions.tsv | cut -f1 | LC_ALL=C sort -u > "$work/excluded"
+
+  local unclassified
+  unclassified=$(LC_ALL=C comm -23 "$work/assets" <(LC_ALL=C sort -u "$work/covered" "$work/excluded"))
+
+  if [ -z "$unclassified" ]; then
+    return
+  fi
+
+  echo "test-doc-matrix.sh: 警告: CASE も除外行も持たない資産がある（対応表の「未分類」節を参照）:" >&2
+  printf '  %s\n' "$unclassified" >&2
+
+  printf '## 未分類のテスト資産\n\n'
+  printf 'CASE も除外行も持たない資産。dev/tests/test-doc-map.sh が落とすべき状態で、\n'
+  printf 'CASE を起こすか dev/tests/test-doc-exclusions.tsv へ除外理由を書く。\n\n'
+  printf '| テスト資産 |\n'
+  printf '| --- |\n'
+  printf '%s\n' "$unclassified" | sed 's/^/| `/; s/$/` |/'
+  printf '\n'
+}
+
+emit() {
+  emit_header
+
+  # 区分ごとのセクション（順序は test-categories.tsv の記載順）。
+  while IFS=$'\t' read -r category description; do
+    emit_category_table "$category" "$description"
+    emit_category_names "$category"
+  done < <(read_tsv dev/tests/test-categories.tsv)
+
+  emit_exclusions
+  emit_unclassified
 }
 
 if [ -n "$out" ]; then
