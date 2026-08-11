@@ -145,7 +145,7 @@ in
     expected = ''ln -s '/nix/store/x y & z' "$out/029f105e76667554409c2422b0f61f1c"'';
   };
 
-  # アンカー対象が皆無なら空文字列（埋め込み先には空行だけが残る）。
+  # アンカー対象が皆無なら空文字列（埋め込み後の整形がどうなるかはここでは見ない）。
   testAnchorLinesEmptyWhenNoEntries = {
     expr = nput.__internal.anchorLines lib [ ];
     expected = "";
