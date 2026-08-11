@@ -150,11 +150,14 @@ e2e_step "project mode の proj を apply（--all の除外検証に実体を与
 # profile リンクが無い。--all はこの構造差だけで除外するので、除外対象を disk 上に実在させる。
 nput apply proj
 assert_symlink "$PROJ/.nput-out/proj"
-PROJ_HASHDIR="$(find "$XDG_STATE_HOME/nix/profiles/nput" -mindepth 2 -maxdepth 2 -type d -name proj -print -quit)"
-if [ -n "$PROJ_HASHDIR" ] && [ -L "$PROJ_HASHDIR/profile" ]; then
-	e2e_pass "proj の profile が roothash 階層に実在する: ${PROJ_HASHDIR#"$XDG_STATE_HOME/"}"
+# 前提は「roothash 階層（base/<roothash>/proj）に profile がある」こと。名前だけを頼りに
+# 1 件目を黙って採ると、想定外の配置が増えてもガードが素通りする。profile リンクごと glob して
+# 一意に 1 件だけ当たることを確かめる。
+PROJ_PROFILES=("$XDG_STATE_HOME"/nix/profiles/nput/*/proj/profile)
+if [ "${#PROJ_PROFILES[@]}" -eq 1 ] && [ -L "${PROJ_PROFILES[0]}" ]; then
+	e2e_pass "proj の profile が roothash 階層に一意に実在する: ${PROJ_PROFILES[0]#"$XDG_STATE_HOME/"}"
 else
-	e2e_fail "proj の profile が roothash 階層に見つからない（除外検証の前提が崩れる）"
+	e2e_fail "proj の profile が roothash 階層に一意に無い（除外検証の前提が崩れる）: ${PROJ_PROFILES[*]}"
 fi
 
 e2e_step "list-generations --all --json: home mode の config だけを列挙する（→ issue #312）"
@@ -197,7 +200,16 @@ ALL_HEADERS="$(printf '%s\n' "$ALL_TEXT" | grep '^# ' || true)"
 if [ "$ALL_HEADERS" = "# home" ]; then
 	e2e_pass "テキスト経路のヘッダも home だけ（proj は現れない）"
 else
-	e2e_fail "テキスト経路のヘッダが '# home' だけでない: '$ALL_HEADERS'"
+	e2e_fail "テキスト経路のヘッダが '# home' だけでない: '$ALL_HEADERS'（全体: '$ALL_TEXT'）"
+fi
+# ヘッダだけを見ると、世代本体の印字が丸ごと抑止される退行を拾えない（printGenerations は
+# flagJSON で全印字を握る単一ゲートなので、--all のテキスト経路だけが黙る事故が起こりうる）。
+# 本体行の数を JSON 側で固定済みの世代数と突き合わせる。
+ALL_ROWS="$(printf '%s\n' "$ALL_TEXT" | grep -c '^[0-9]' || true)"
+if [ "$ALL_ROWS" -eq "$ALL_GENS_BEFORE" ]; then
+	e2e_pass "テキスト経路も世代本体を $ALL_GENS_BEFORE 行出す"
+else
+	e2e_fail "テキスト経路の世代行が $ALL_GENS_BEFORE 行でない: $ALL_ROWS 行（全体: '$ALL_TEXT'）"
 fi
 assert_symlink "$PROFILE" "$ALL_PROFILE_BEFORE"
 ALL_GENS_AFTER="$(gens_count)"
