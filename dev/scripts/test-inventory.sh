@@ -169,9 +169,9 @@ if [ ! -s "$work/go-names" ]; then
   exit 1
 fi
 
-# ビルド失敗の検出。go test は失敗パッケージへ Action=fail を出し、ビルドエラー本文は
-# output イベントとして流れる。テスト自体の fail と区別するため、run イベントを 1 つも
-# 持たないまま fail したパッケージだけを拾う。
+# 列挙が不完全になる失敗の検出。テストを 1 件も走らせずに fail したパッケージを拾う。
+# ビルド失敗のほか TestMain / init の異常終了も同じ形（Action=fail・Test=null・run
+# イベント無し）で出るため、診断は両義に留める（どちらでも列挙は欠ける）。
 jq -r 'select(.Action == "run" and .Package != null) | .Package' "$work/go-json" |
   LC_ALL=C sort -u > "$work/go-ran-packages"
 jq -r 'select(.Action == "fail" and .Package != null and .Test == null) | .Package' "$work/go-json" |
@@ -179,9 +179,10 @@ jq -r 'select(.Action == "fail" and .Package != null and .Test == null) | .Packa
 
 unbuilt=$(LC_ALL=C comm -13 "$work/go-ran-packages" "$work/go-failed-packages")
 if [ -n "$unbuilt" ]; then
-  echo "test-inventory.sh: テストを 1 件も走らせずに失敗したパッケージがある（ビルド失敗の疑い）:" >&2
+  echo "test-inventory.sh: テストを 1 件も走らせずに失敗したパッケージがある" >&2
+  echo "  （ビルド失敗、または TestMain / init の異常終了）:" >&2
   printf '  %s\n' "$unbuilt" >&2
-  echo "test-inventory.sh: 列挙が不完全なので中断する（go build ./... で原因を確認する）" >&2
+  echo "test-inventory.sh: 列挙が不完全なので中断する（go test <パッケージ> で原因を確認する）" >&2
   exit 1
 fi
 

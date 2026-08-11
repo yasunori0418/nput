@@ -13,7 +13,8 @@
 #       除外リストが実在する資産だけを挙げている
 #   5.  静的リストの健全性 — test-inventory.sh の FLAKE_CHECKS が flake ファイルの
 #       checks 定義と一致する（片側更新漏れの検出）
-#   6.  自己検証 — 合成フィクスチャで §1〜§3 のアサーションが期待どおり FAIL する
+#   6.  自己検証 — §1〜§3 が呼ぶ judge_* 関数そのものを合成フィクスチャへ当て、
+#       違反なしで真・違反ありで偽の両側へ倒れることを確かめる
 #
 # ## 純静的であること
 #
@@ -102,62 +103,99 @@ fi
 
 read_tsv "$exclusions_tsv" | cut -f1 | LC_ALL=C sort > "$work/exclusions"
 
+# --- 判定（§1〜§3 の本体。§6 が同じ関数を合成フィクスチャで叩く） --------------
+#
+# 判定を関数へ切り出して §1〜§3 と §6 の双方から呼ぶ。§6 が判定を再実装すると
+# 「アサーションが常に真を返す退行」を検知できない（プリミティブの動作確認になるだけで、
+# §1 の条件を `if false` へ差し替えても緑のまま通る → review 2 周目で実証された）。
+#
+# 各関数は診断行を stdout へ出し、違反があれば 1 を返す。呼び出し側が pass / fault へ
+# 振り分ける。ファイルパスを引数で受けるので、実データでも合成フィクスチャでも同じ経路。
+
+# 順方向: case_targets（<ファイル>\t<target>）の target が assets に在るか。
+# $3 は診断メッセージ用の除外リストパス（案内文にのみ使う）。
+judge_forward() {
+  local case_targets=$1 assets=$2
+  local violated=0 file target
+  while IFS=$'\t' read -r file target; do
+    if [ -z "$target" ]; then
+      echo "順方向: $file に target が無い（docs/model.yaml で required なので sara check も落ちる）"
+      violated=1
+      continue
+    fi
+    if ! grep -qxF "$target" "$assets"; then
+      echo "順方向: $file の target '$target' に対応するテスト資産が無い（リネーム / 削除の追従漏れ）"
+      violated=1
+    fi
+  done < "$case_targets"
+  return "$violated"
+}
+
+# 逆方向: assets の各要素が covered か exclusions のどちらかに在るか。
+judge_reverse() {
+  local assets=$1 covered=$2 exclusions=$3 exclusions_hint=${4:-$3}
+  local violated=0 asset
+  while IFS= read -r asset; do
+    if grep -qxF "$asset" "$covered"; then
+      continue
+    fi
+    if grep -qxF "$asset" "$exclusions"; then
+      continue
+    fi
+    echo "逆方向: テスト資産 '$asset' に CASE が無い（CASE を起こすか $exclusions_hint へ除外理由付きで追加する）"
+    violated=1
+  done < "$assets"
+  return "$violated"
+}
+
+# 1:1: case_targets の target に重複が無いか。
+judge_unique() {
+  local case_targets=$1
+  local dups target owners
+  dups=$(cut -f2 "$case_targets" | grep -v '^$' | LC_ALL=C sort | uniq -d)
+  if [ -z "$dups" ]; then
+    return 0
+  fi
+  while IFS= read -r target; do
+    owners=$(awk -F'\t' -v t="$target" '$2 == t { printf "%s ", $1 }' "$case_targets")
+    echo "1:1 違反: '$target' に複数の CASE が張られている（$owners）"
+  done <<< "$dups"
+  return 1
+}
+
+# 判定関数を実データへ当て、診断行を fault へ流す。
+run_judge() {
+  local ok_message=$1
+  shift
+  local diagnostics
+  if diagnostics=$("$@"); then
+    pass "$ok_message"
+    return 0
+  fi
+  while IFS= read -r line; do
+    [ -n "$line" ] && fault "$line"
+  done <<< "$diagnostics"
+  return 1
+}
+
 # --- 1. 順方向（CASE の target が実在する） ----------------------------------
 
-missing_target=0
-dangling=0
-while IFS=$'\t' read -r file target; do
-  if [ -z "$target" ]; then
-    fault "順方向: $file に target が無い（docs/model.yaml で required なので sara check も落ちる）"
-    missing_target=1
-    continue
-  fi
-  if ! grep -qxF "$target" "$work/assets"; then
-    fault "順方向: $file の target '$target' に対応するテスト資産が無い（リネーム / 削除の追従漏れ）"
-    dangling=1
-  fi
-done < "$work/case-targets"
-
-if [ "$missing_target" -eq 0 ]; then
-  pass "全 CASE が target を持つ"
-fi
-if [ "$dangling" -eq 0 ]; then
-  pass "全 CASE の target が実在するテスト資産を指す"
-fi
+run_judge "全 CASE の target が実在するテスト資産を指す" \
+  judge_forward "$work/case-targets" "$work/assets"
 
 # --- 2. 逆方向（全テスト資産に CASE がある） ---------------------------------
 
 cut -f2 "$work/case-targets" | grep -v '^$' | LC_ALL=C sort -u > "$work/covered"
 
-uncovered=0
-while IFS= read -r asset; do
-  if grep -qxF "$asset" "$work/covered"; then
-    continue
-  fi
-  if grep -qxF "$asset" "$work/exclusions"; then
-    continue
-  fi
-  fault "逆方向: テスト資産 '$asset' に CASE が無い（CASE を起こすか $exclusions_tsv へ除外理由付きで追加する）"
-  uncovered=1
-done < "$work/assets"
-
-if [ "$uncovered" -eq 0 ]; then
-  pass "全テスト資産に CASE がある（除外リストを除く）"
-fi
+run_judge "全テスト資産に CASE がある（除外リストを除く）" \
+  judge_reverse "$work/assets" "$work/covered" "$work/exclusions" "$exclusions_tsv"
 
 # --- 3. 1:1 一意性 -----------------------------------------------------------
 
 # 順方向の 1:1（1 CASE = 1 target）は frontmatter が単一 text であることで型に担保
 # されている（!list text ではない）。ここで見るのは逆方向の重複だけ。
-dup_targets=$(cut -f2 "$work/case-targets" | grep -v '^$' | LC_ALL=C sort | uniq -d)
-if [ -z "$dup_targets" ]; then
-  pass "1 テスト資産に張られた CASE は高々 1 件（1:1）"
-else
-  while IFS= read -r target; do
-    owners=$(awk -F'\t' -v t="$target" '$2 == t { printf "%s ", $1 }' "$work/case-targets")
-    fault "1:1 違反: '$target' に複数の CASE が張られている（$owners）"
-  done <<< "$dup_targets"
-fi
+run_judge "1 テスト資産に張られた CASE は高々 1 件（1:1）" \
+  judge_unique "$work/case-targets"
 
 # --- 4. データファイルの健全性 -----------------------------------------------
 
@@ -221,13 +259,16 @@ fi
 # 黙って緑になる（実際に踏んだ）。sara-id.sh §6b が prefix マップを model.yaml と
 # 突合するのと同じ発想で、flake ファイルの定義行を grep して集合比較する。
 
-# 静的リストから flake check の識別子を採る。`dev:` 接頭辞で flake ファイルを振り分ける。
-bash "$inventory_sh" --static |
-  awk -F'\t' '$2 == "flake-check" { print $1 }' |
+# 静的リストの flake check 識別子。冒頭で保存した --static の出力から採る
+# （再実行すると終了ステータスの扱いが冒頭と二重になる）。
+awk -F'\t' '$2 == "flake-check" { print $1 }' "$work/inventory" |
   LC_ALL=C sort > "$work/listed-checks"
 
 # flakeModule 生成分（flake ファイルに定義行が無い）は grep 突合の対象外。
-bash "$inventory_sh" --module-generated-checks | LC_ALL=C sort > "$work/module-checks"
+bash "$inventory_sh" --module-generated-checks | LC_ALL=C sort > "$work/module-checks" || {
+  echo "test-doc-map.sh: $inventory_sh --module-generated-checks が失敗した" >&2
+  exit 1
+}
 
 # flake ファイル側の定義。`checks.<name> =` の行から名前を採る。
 extract_checks() {
@@ -246,7 +287,13 @@ else
   # 静的リスト（module 生成分を除く）⟷ flake の定義。
   LC_ALL=C comm -23 "$work/listed-checks" "$work/module-checks" > "$work/listed-hand"
 
-  only_flake=$(LC_ALL=C comm -13 "$work/listed-hand" "$work/defined-checks" | tr '\n' ' ')
+  # module 生成分は only_flake から除く。除かないと「flake に在るが FLAKE_CHECKS に無い
+  # → 追加せよ」と出るが、実際は既に FLAKE_CHECKS に在るので指示に従っても直らない
+  # （正しい診断は下の wrongly_module 側が出す）。
+  LC_ALL=C comm -13 "$work/listed-hand" "$work/defined-checks" |
+    LC_ALL=C comm -23 - "$work/module-checks" > "$work/only-flake"
+
+  only_flake=$(tr '\n' ' ' < "$work/only-flake")
   only_list=$(LC_ALL=C comm -23 "$work/listed-hand" "$work/defined-checks" | tr '\n' ' ')
 
   if [ -z "$only_flake" ] && [ -z "$only_list" ]; then
@@ -268,47 +315,102 @@ else
   fi
 fi
 
-# --- 6. 自己検証（アサーションが本当に落ちるか） -----------------------------
-
-# §1〜§3 は「今のリポジトリが正しい」ことだけを見るため、アサーションが誤って常に真を
-# 返す退行が起きても緑のまま通る。合成フィクスチャで各判定ロジックが期待どおり FAIL 側へ
-# 倒れることを確かめる（リポジトリの実ファイルには一切触らない）。
+# --- 6. 自己検証（判定関数が両側へ倒れるか） ---------------------------------
 #
-# ここで検証するのは判定の骨（grep -qxF による集合演算・uniq -d による重複検出）で、
-# §1〜§3 が使っているものと同じ手段を同じ向きで叩く。
+# §1〜§3 は「今のリポジトリが正しい」ことだけを見るため、判定が誤って常に真を返す退行が
+# 起きても緑のまま通る。ここでは §1〜§3 が実際に呼んでいる judge_* 関数そのものを、
+# 合成フィクスチャ（$work/self/ 配下・リポジトリの実ファイルには触らない）へ当てて、
+# 違反なしで真・違反ありで偽の**両側へ**倒れることを確かめる。
+#
+# 判定を §6 内で再実装してはいけない。再実装すると grep / uniq の動作確認になるだけで、
+# §1 の条件を `if false` へ差し替えても緑のまま通る（2 周目のレビューで実証された）。
+
+self=$work/self
+mkdir -p "$self"
+
+# 違反のないフィクスチャ。
+printf 'a_test.go\nb_test.go\n' > "$self/assets-ok"
+printf 'CASE-a.md\ta_test.go\nCASE-b.md\tb_test.go\n' > "$self/case-targets-ok"
+printf 'a_test.go\nb_test.go\n' > "$self/covered-ok"
+printf '\n' > "$self/exclusions-empty"
+
+# 違反のあるフィクスチャ。判定内の分岐ごとに 1 つずつ用意する。1 つのフィクスチャで
+# 複数の分岐を同時に踏ませると、片方の分岐が死んでももう片方が違反を返して緑になり、
+# 「常に真になる退行」を取りこぼす（実際に踏んだ）。
+# 順方向 (a): 実在しない target を指す。
+printf 'CASE-a.md\tgone_test.go\n' > "$self/case-targets-dangling"
+# 順方向 (b): target が空。
+printf 'CASE-b.md\t\n' > "$self/case-targets-empty"
+# 逆方向: covered にも exclusions にも無い資産。
+printf 'a_test.go\nc_test.go\n' > "$self/assets-uncovered"
+# 逆方向: 除外リストだけで消える資産（除外経路の単独検証用）。
+printf 'c_test.go\n' > "$self/assets-c-only"
+# 1:1: 同じ target を 2 CASE が張る。
+printf 'CASE-a.md\ta_test.go\nCASE-b.md\ta_test.go\n' > "$self/case-targets-dup"
 
 self_fail=0
 
-# 順方向: 実在しない target が assets に無いと判定されること。
-if grep -qxF 'internal/does/not/exist_test.go' "$work/assets"; then
-  fault "自己検証: 実在しない target が資産として在ると判定された"
-  self_fail=1
-fi
+# 期待どおりに真（違反なし）を返すか。
+expect_judge_pass() {
+  local label=$1
+  shift
+  if ! "$@" >/dev/null; then
+    fault "自己検証: $label — 違反のないフィクスチャで偽を返した（判定が過剰）"
+    self_fail=1
+  fi
+}
 
-# 逆方向: 除外にも CASE にも無い架空の資産が未カバーと判定されること。
-if grep -qxF 'internal/phantom/phantom_test.go' "$work/covered" ||
-  grep -qxF 'internal/phantom/phantom_test.go' "$work/exclusions"; then
-  fault "自己検証: 架空の資産がカバー済み / 除外済みと判定された"
-  self_fail=1
-fi
+# 期待どおりに偽（違反あり）を返し、診断行を出すか。
+expect_judge_fail() {
+  local label=$1
+  shift
+  local diagnostics
+  if diagnostics=$("$@"); then
+    fault "自己検証: $label — 違反のあるフィクスチャで真を返した（判定が常に真になる退行）"
+    self_fail=1
+  elif [ -z "$diagnostics" ]; then
+    fault "自己検証: $label — 偽を返したが診断行が空（失敗の原因が報告されない）"
+    self_fail=1
+  fi
+}
 
-# 1:1: 同じ target を 2 度並べたら uniq -d が拾うこと。
-synthetic_dup=$(printf 'a\na\nb\n' | LC_ALL=C sort | uniq -d)
-if [ "$synthetic_dup" != "a" ]; then
-  fault "自己検証: 重複検出（uniq -d）が機能していない（実際: $synthetic_dup）"
-  self_fail=1
-fi
+expect_judge_pass "judge_forward" \
+  judge_forward "$self/case-targets-ok" "$self/assets-ok"
+expect_judge_fail "judge_forward（実在しない target）" \
+  judge_forward "$self/case-targets-dangling" "$self/assets-ok"
+# target が空の分岐は下の grep 分岐と重なる（空文字は assets にも無いので、この分岐が
+# 死んでも違反自体は報告される。失われるのは「target が無い」という具体的な診断だけ）。
+# よってこのアサーションは分岐の生死ではなく、空 target が違反として扱われることを固定する。
+expect_judge_fail "judge_forward（target が空）" \
+  judge_forward "$self/case-targets-empty" "$self/assets-ok"
 
-# 入力の非空性: 検査対象の 3 集合が空だと全アサーションが空虚に真になる。
-for name in assets covered exclusions; do
+# 逆方向は「covered に在る」「exclusions に在る」の 2 経路で違反を消す。両経路を
+# それぞれ単独で確かめる（片方が死んでももう片方が拾って緑になるのを防ぐ）。
+expect_judge_pass "judge_reverse（covered 経路）" \
+  judge_reverse "$self/assets-ok" "$self/covered-ok" "$self/exclusions-empty"
+printf 'c_test.go\n' > "$self/exclusions-c"
+printf '\n' > "$self/covered-empty"
+expect_judge_pass "judge_reverse（除外リスト経路）" \
+  judge_reverse "$self/assets-c-only" "$self/covered-empty" "$self/exclusions-c"
+expect_judge_fail "judge_reverse（どちらにも無い）" \
+  judge_reverse "$self/assets-uncovered" "$self/covered-ok" "$self/exclusions-empty"
+
+expect_judge_pass "judge_unique" \
+  judge_unique "$self/case-targets-ok"
+expect_judge_fail "judge_unique" \
+  judge_unique "$self/case-targets-dup"
+
+# 実データ側の入力の非空性。assets / covered が空だと §1〜§3 が空虚に真になる
+# （exclusions は空でも §2 が単に厳しく判定するだけなので、ここには含めない）。
+for name in assets covered case-targets; do
   if [ ! -s "$work/$name" ]; then
-    fault "自己検証: $name が空（アサーションが空虚に真になる）"
+    fault "自己検証: $name が空（§1〜§3 が空虚に真になる）"
     self_fail=1
   fi
 done
 
 if [ "$self_fail" -eq 0 ]; then
-  pass "自己検証: 判定ロジックが合成フィクスチャで期待どおり倒れる"
+  pass "自己検証: judge_* が合成フィクスチャで真偽の両側へ倒れる"
 fi
 
 # --- 結果 -------------------------------------------------------------------
