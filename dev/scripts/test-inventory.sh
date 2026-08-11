@@ -213,7 +213,11 @@ while IFS= read -r name; do
 done < "$work/go-names" > "$work/go-rows"
 
 # nix-unit: per-file の attrNames。アグリゲータ（tests/nix-unit.nix）は各ファイルを
-# `{ lib, nput }` で import して `//` マージするだけなので、同じシグネチャで直接呼ぶ。
+# `{ lib, nput }` で import し、マージ前にファイル横断の名前衝突を検査してから
+# `//` マージする（→ Issue #287）。ここが要るのは per-file の名前一覧だけなので、
+# 検査を経ずに同じシグネチャで leaf を直接呼ぶ。衝突の検出は評価時に
+# `nix flake check` の checks.nix-unit が担い、ここでは二重に持たない
+# （bash / nix の二重実装はドリフトする → Issue #308）。
 # getFlake のため --impure が要る（--full は対応表生成専用なので許容する）。
 : > "$work/nix-unit-rows"
 while IFS= read -r file; do
