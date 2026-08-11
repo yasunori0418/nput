@@ -110,13 +110,28 @@ in
     expected = { };
   };
 
-  # 1 ファイルだけなら owners は必ず長さ 1 で、衝突しようがない
-  # （`length owners > 1` の境界の下側。同名を定義しうるのは 2 ファイル以上から）。
-  testAggregatorMergeSingleModule = {
-    expr = mergeTests [ (builtins.head disjoint) ];
+  # 1 ファイルだけなら owners は必ず長さ 1 で、テストを何件持っていても衝突しない
+  # （`length owners > 1` の境界の下側。同名を定義しうるのは 2 ファイル以上からで、
+  # 1 ファイル内は attrset なので同名を書くこと自体ができない）。判定を件数ではなく
+  # ファイル数で見ていることの担保なので、`disjoint` とは独立したフィクスチャを使い、
+  # テスト件数を衝突ケース（1 ファイルあたり 1〜2 件）より多く積む。
+  testAggregatorMergeSingleModuleManyTests = {
+    expr = mergeTests [
+      {
+        file = "solo.nix";
+        tests = {
+          testSoloOne = 1;
+          testSoloTwo = 2;
+          testSoloThree = 3;
+          testSoloFour = 4;
+        };
+      }
+    ];
     expected = {
-      testAlphaOne = 1;
-      testAlphaTwo = 2;
+      testSoloOne = 1;
+      testSoloTwo = 2;
+      testSoloThree = 3;
+      testSoloFour = 4;
     };
   };
 
