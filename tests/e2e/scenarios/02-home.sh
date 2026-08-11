@@ -13,6 +13,9 @@ echo "AAA" >"$PROJ/srcrepo/a/file"
 echo "BBB" >"$PROJ/srcrepo/b/file"
 
 # target / subpath を引数に取り fixture flake を書き出す（世代ごとに entry を入れ替える）。
+# 第 2 config の proj は projectRoot（apply するのは `--all` の除外検証に入る直前だけ）。
+# home mode の home と同居させることで、`list-generations --all` の除外が「元から空」ではなく
+# 「除外が効いた」ものであることを観測できるようにする（→ issue #312）。
 write_flake() {
 	local target="$1" sub="$2"
 	cat >"$PROJ/flake.nix" <<EOF
@@ -24,6 +27,11 @@ $(e2e_flake_inputs)
         pkgs = nixpkgs.legacyPackages.\${system};
         root = nput.lib.homeRoot;
         entries."$target" = { src = ./srcrepo; subpath = "$sub"; };
+      };
+      proj = nput.lib.mkManifest {
+        pkgs = nixpkgs.legacyPackages.\${system};
+        root = nput.lib.projectRoot;
+        entries.".nput-out/proj" = { src = ./srcrepo; subpath = "$sub"; };
       };
     });
   };
@@ -133,6 +141,52 @@ assert_json "$ENV_GENS" "current は rollback 先の 1 世代だけ" \
 	'[.results[0].result.info.generations[] | select(.current)] | map(.number) == [1]'
 assert_json "$ENV_GENS" "items=[]・generation スロット無し・dryRun=false" \
 	'.results[0].result.items == [] and (.results[0] | has("generation") | not) and .dryRun == false'
+
+# ここから `list-generations --all`（→ REQ-05abce3e 第 3 文・issue #312）。除外の検証は home mode の
+# config が実在する配置でしか意味を持たない（project mode だけの環境では「除外が効いた」と
+# 「元から空」を区別できない）ため、home の profile が既に 2 世代を持つこの位置に置く。
+e2e_step "project mode の proj を apply（--all の除外検証に実体を与える）"
+# proj の profileDir は <state>/nix/profiles/nput/<roothash>/proj で、<roothash> の直下には
+# profile リンクが無い。--all はこの構造差だけで除外するので、除外対象を disk 上に実在させる。
+nput apply proj
+assert_symlink "$PROJ/.nput-out/proj"
+PROJ_HASHDIR="$(find "$XDG_STATE_HOME/nix/profiles/nput" -mindepth 2 -maxdepth 2 -type d -name proj -print -quit)"
+if [ -n "$PROJ_HASHDIR" ] && [ -L "$PROJ_HASHDIR/profile" ]; then
+	e2e_pass "proj の profile が roothash 階層に実在する: ${PROJ_HASHDIR#"$XDG_STATE_HOME/"}"
+else
+	e2e_fail "proj の profile が roothash 階層に見つからない（除外検証の前提が崩れる）"
+fi
+
+e2e_step "list-generations --all --json: home mode の config だけを列挙する（→ issue #312）"
+ENV_GENS_ALL="$E2E_WORK/list-generations-all.json"
+run_json 0 "$ENV_GENS_ALL" list-generations --all
+# 陽性対照と除外を 1 つの等式で固定する。subject 名の集合そのものを見るので、home が落ちても
+# proj が混ざっても落ちる（select + length では値が誤っていても件数が変わらず恒真になりうる）。
+assert_json "$ENV_GENS_ALL" "results は home mode の home だけ（proj は roothash 階層なので除外）" \
+	'[.results[].subject.name] == ["home"]'
+assert_json "$ENV_GENS_ALL" "home の info.generations は名指し列挙と同じ 2 世代（current は世代 1）" \
+	'first(.results[] | select(.subject.name == "home")).result.info as $i
+	 | ($i.generations | length) == 2
+	 and ([$i.generations[] | select(.current) | .number] == [1])'
+assert_json "$ENV_GENS_ALL" "items=[]・generation スロット無し・status=success・dryRun=false" \
+	'.results[0].result.items == [] and (.results[0] | has("generation") | not)
+	 and .status == "success" and .dryRun == false'
+
+e2e_step "list-generations --all は読み取り専用（profile も世代も配置も動かない）"
+# 「読み取り専用」を profile リンク先・世代の本数・配置の 3 点で見る。--json 経路は既に通した
+# ので、ここは既定（テキスト）経路で実行して両方の出力経路が状態を変えないことを固定する。
+ALL_PROFILE_BEFORE="$(readlink "$PROFILE")"
+ALL_GENS_BEFORE="$(gens_count)"
+nput list-generations --all >/dev/null
+assert_symlink "$PROFILE" "$ALL_PROFILE_BEFORE"
+ALL_GENS_AFTER="$(gens_count)"
+if [ "$ALL_GENS_AFTER" -eq "$ALL_GENS_BEFORE" ]; then
+	e2e_pass "--all のあとも世代の本数が変わらない（$ALL_GENS_BEFORE 件）"
+else
+	e2e_fail "--all が世代の本数を動かしてはいけない: $ALL_GENS_BEFORE → $ALL_GENS_AFTER"
+fi
+assert_symlink "$HOME/.cfg/a"
+assert_file_eq "$HOME/.cfg/a/file" "AAA"
 
 e2e_step "nput reset --json --yes: FS のみを撤去し profile / 世代は動かない（→ issue #285）"
 # 撤去対象は config（この時点の flake は .cfg/b を宣言している）ではなく、profile が指す世代の
