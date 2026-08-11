@@ -45,8 +45,14 @@ in
   };
 
   # 渡した文字列がそのまま写ることを別のパスでも確かめる（特定の値に依存した通り方を避ける）。
+  # entries は上と同条件に揃え、差分がパス値の 1 軸だけになるようにする。
   testFixedRootPathVerbatim = {
-    expr = (norm "/opt/nput" { }).root;
+    expr =
+      (norm "/opt/nput" {
+        ".config/foo" = {
+          src = fakeSrc;
+        };
+      }).root;
     expected = {
       rootKind = "fixed";
       root = "/opt/nput";

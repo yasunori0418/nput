@@ -23,7 +23,8 @@ covers:
 - `root.root` に渡した絶対パスがそのまま写る
 - `root` オブジェクトが `{ rootKind = "fixed"; root = <絶対パス>; }` に exact 一致
   （余分なキーが残れば落ちる）
-- 別の絶対パスでも同じ形になる（特定の値に依存した通り方をしない）
+- 別の絶対パスでも同じ形になる（特定の値に依存した通り方をしない）。entries は同条件に
+  揃え、差分がパス値の 1 軸だけになるようにする
 - 同じ entries を fixed root と project root へ与えたときの正規化結果が一致する
   （既定値そのものは CASE-59de34d4 が持つので、ここは同値比較で独立性だけを見る）
 - `homeRoot` marker を渡した場合は `{ rootKind = "home"; }` に exact 一致し、fixed へ

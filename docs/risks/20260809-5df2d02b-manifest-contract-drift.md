@@ -48,7 +48,7 @@ TC-4e7cfae7（文書構造の不変条件）・TC-f9e927d0（fixed root の絶�
 REQ-dd10d820 は project root の否定側を TC-4e7cfae7、fixed root の肯定側を TC-f9e927d0 が
 見るので、評価層の分は両側が揃っている（→ Issue #288）。
 
-**本区分の TC 群では緩和しきれない残余**が 4 つある。
+**本区分の TC 群では緩和しきれない残余**が 5 つある。
 
 第一に、`fixed` の `root` が実際に絶対パスであることを強制する検査がそもそも実装に無い。
 `rootType` は marker でない文字列をすべて受理し（`lib.isString` のみ）、`normalizeManifest` は
@@ -67,11 +67,20 @@ REQ 側に無い（REQ-dd10d820 / REQ-37b56673 は「絶対パス」と述べる
 第三に、`rootKind = "system"` は REQ-dd10d820 が定める 4 値の 1 つで、ADR-0036（採用）が
 ADR-0013 §5 の throw を撤回して manifest v1 の正規値にすると決めているが、実装は依然
 `normalizeManifest` の assertion で `system` を弾く。評価層で `{ rootKind = "system"; }` が
-発行される側を見るテストは存在せず、TC-e7ff0e6d（拒否ゲート）が見ているのは throw する
-現状の側である。ADR-0036 が指示した実装更新が済むまでの残余で、更新時にはゲート側のテストと合わせて
-組み替える必要がある。
+発行される側を見るテストは存在しない。throw する現状を写すアサート
+（`testSystemRootUnimplemented`）は CASE-879a93da に残っているが、TC-e7ff0e6d は撤回済み決定の
+残骸としてこれを条件に含めておらず、RISK-09df40d3 も同じ理由で規範から外している。つまり
+`system` は規範側にも条件側にも所在を持たない。ADR-0036 が指示した実装更新が済むまでの残余で、
+更新時にはゲート側のテストと合わせて組み替える必要がある。
 
-第四に、REQ-250d936c / REQ-79ce0a09 は発行側と engine の受理側の双方を規範に含むが、本 risk が
+第四に、`fixed` の絶対パスが `mkManifest` の `passthru.root`（REQ-2f9205ee）へ写る側は
+derivation 層の担当で、本区分の TC 群は見ない（TC-f9e927d0 が射程外と宣言している）。この
+分岐は fixed のときだけ通り、CLI が build 前に `nix eval` で読む経路（`cli-json` 区分）の
+入力になるが、現状どの risk も残余として引き取っておらず、CASE も無い。評価層が出す文書の
+形とは別物なので本 risk の射程には入れず、`cli-json` 区分側で拾うべき穴としてここに記録する
+に留める。
+
+第五に、REQ-250d936c / REQ-79ce0a09 は発行側と engine の受理側の双方を規範に含むが、本 risk が
 射程に持つのは評価層が発行する側だけで、engine が新しい `schemaVersion` を拒否する側は
 `cli-json` / `integration` 区分の担当になる。
 
