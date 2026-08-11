@@ -101,9 +101,12 @@ func (m *Manifest) validate() error {
 		return fmt.Errorf("root.rootKind is empty")
 	}
 	// Only fixed carries a path; the other kinds are resolved at runtime, so a path
-	// spelled out beside them would be silently ignored (→ REQ-dd10d820).
+	// spelled out beside them would be silently ignored (→ REQ-dd10d820). An unknown
+	// kind reaches this check too, so the message states the fixed-only rule without
+	// implying that the kind itself is valid — that verdict belongs to the engine's
+	// root resolution.
 	if m.Root.RootKind != RootKindFixed && m.Root.Root != "" {
-		return fmt.Errorf("root.root must be omitted for rootKind %q (only %q carries a path)", m.Root.RootKind, RootKindFixed)
+		return fmt.Errorf("root.root must be omitted: it is only allowed when rootKind is %q, got %q", RootKindFixed, m.Root.RootKind)
 	}
 	return nil
 }
