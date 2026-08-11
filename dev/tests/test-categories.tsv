@@ -1,0 +1,22 @@
+# テスト資産の 8 区分（docs/test/<対象>/ のディレクトリ名）の正本。
+#
+# この表が「どの区分が存在するか」と「対応表でどの順に並べるか」の SSOT
+# （→ Issue #304、epic #283）。CLAUDE.md の 8 区分表は読み物としての要約で、
+# 規範はこちら。区分を増減するときはここと docs/test/ のディレクトリを揃える。
+#
+# **個々のテスト資産がどの区分に属するかはこの表では持たない**。区分は CASE
+# ファイルの置き場所（docs/test/<区分>/）から導く。パス prefix では決まらない
+# （internal/engine/*_test.go は 5 区分・tests/e2e/scenarios/* は 4 区分へ割れる）
+# ため、prefix 表を持つと CASE の置き場所との二重管理になる。
+#
+# 形式: <区分>\t<説明>
+# 行頭 # はコメント、空行は無視。列の区切りはタブ 1 個。
+# 区分の並び順 = 対応表のセクション順（この表の記載順）。
+manifest-eval	nix-unit 全 7 + namaka manifest-project（manifest の純評価）
+engine-core	internal/engine の engine / dryrun / preflight、internal/planner
+copy	copytree / copy、e2e 04-copy
+migration-stale	preremove_generalization / staleremove、e2e 03-stale
+atomicity	undo / undo_journal / backup、engine の lock + internal/lock
+generations	generations / reset / result_extensions / drift、internal/paths、e2e 02-home
+cli-json	cmd/nput/ の全テストファイル
+integration	checks.hm-module、e2e 01/05/06/07、internal/gitutil、internal/manifest

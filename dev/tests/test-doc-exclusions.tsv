@@ -1,0 +1,21 @@
+# 逆方向の照合（テスト資産 → CASE）から除外するテスト資産の正本。
+#
+# 契約テスト（dev/tests/test-doc-map.sh）は「全テスト資産に CASE がある」ことを
+# 検証するが、CASE を持たないことが意図的な資産をここへ列挙する
+# （→ Issue #304、epic #283）。
+#
+# 形式: <資産識別子>\t<除外理由>
+# 行頭 # はコメント、空行は無視。列の区切りはタブ 1 個。
+# 資産識別子の正準表記は CASE frontmatter の target と同じ 2 規則
+# （実在するファイルはリポジトリ相対パス / flake check は checks.<name>）。
+#
+# ここに載せるのは「テスト資産として列挙されるが CASE を持たない」ものだけ。
+# そもそも inventory が列挙しないもの（go-coverage = quality 担当のカバレッジ計測で
+# check として存在しない、等）は列挙不要。
+checks.go-vet	静的解析（ビルド健全性）。テスト資産ではなく quality の担当
+checks.golangci-lint	静的 lint。テスト資産ではなく quality の担当
+checks.nput	buildGoModule のビルド + go test 実行。個々の *_test.go を CASE が持つ
+checks.treefmt	フォーマッタ検査（treefmt-nix が自動生成）。quality の担当
+checks.namaka	namaka アグリゲータ。leaf の tests/namaka/<name>/ を CASE が持つ
+checks.nix-unit	nix-unit アグリゲータ。leaf の tests/nix-unit/*.nix を CASE が持つ
+dev:checks.sara-id	sara-id の採番契約。TP-d7da4065 のみを持ち TC / CASE へ展開しない
