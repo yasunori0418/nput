@@ -57,6 +57,42 @@ func TestLoadRejectsNewerSchema(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsBelowMinimumSchema(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		version string
+	}{
+		{"zero", "0"},
+		{"negative", "-1"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := writeManifest(t, `{ "schemaVersion": `+tt.version+`, "root": { "rootKind": "project" }, "entries": [] }`)
+			_, err := Load(dir)
+			if err == nil {
+				t.Fatalf("expected error for schemaVersion %s, got nil", tt.version)
+			}
+			// Below the minimum is not version skew, so it must not wrap the skew sentinel (→ ADR-0006).
+			if errors.Is(err, ErrSchemaVersionUnsupported) {
+				t.Errorf("error should not wrap ErrSchemaVersionUnsupported, got %v", err)
+			}
+		})
+	}
+}
+
+func TestLoadRejectsEmptyRootKind(t *testing.T) {
+	dir := writeManifest(t, `{ "schemaVersion": 1, "root": { "rootKind": "" }, "entries": [] }`)
+	if _, err := Load(dir); err == nil {
+		t.Fatal("expected error for empty rootKind, got nil")
+	}
+}
+
+func TestLoadRejectsMissingRoot(t *testing.T) {
+	dir := writeManifest(t, `{ "schemaVersion": 1, "entries": [] }`)
+	if _, err := Load(dir); err == nil {
+		t.Fatal("expected error for missing root, got nil")
+	}
+}
+
 func TestLoadRejectsUnknownField(t *testing.T) {
 	dir := writeManifest(t, `{ "schemaVersion": 1, "root": { "rootKind": "project" }, "entries": [], "bogus": true }`)
 	if _, err := Load(dir); err == nil {
