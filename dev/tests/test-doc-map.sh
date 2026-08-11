@@ -13,8 +13,8 @@
 #       除外リストが実在する資産だけを挙げている
 #   5.  静的リストの健全性 — test-inventory.sh の FLAKE_CHECKS が flake ファイルの
 #       checks 定義と一致する（片側更新漏れの検出）
-#   6.  自己検証 — §1〜§3 が呼ぶ judge_* 関数そのものを合成フィクスチャへ当て、
-#       違反なしで真・違反ありで偽の両側へ倒れることを確かめる
+#   6.  自己検証 — §1〜§3 が呼ぶ judge_* と、その結果を pass / fault へ振り分ける
+#       run_judge を合成フィクスチャへ当て、期待どおりに振る舞うことを確かめる
 #
 # ## 純静的であること
 #
@@ -68,6 +68,11 @@ bash "$inventory_sh" --static > "$work/inventory" || {
   exit 1
 }
 cut -f1 "$work/inventory" | LC_ALL=C sort > "$work/assets"
+
+# 逆方向（§2）の走査対象。§4 の stale 除外検査も同じ変数を読み、「除外リストは走査対象の
+# 部分集合である」という同じ契約を両者が共有することを配線で示す（契約そのものの検査は
+# judge_reverse 内で行う。そちらが引数配線の取り違えを検知する → 4 周目のレビュー）。
+reverse_scan=$work/assets
 
 if [ ! -s "$work/assets" ]; then
   echo "test-doc-map.sh: テスト資産を 1 件も列挙できなかった" >&2
@@ -130,14 +135,26 @@ judge_forward() {
   return "$violated"
 }
 
-# 逆方向: assets の各要素が covered か exclusions のどちらかに在るか。
-# 第 1 引数は「走査対象」、第 2・第 3 は「そこに在れば違反を消す集合」。取り違えると
-# covered ⊆ assets が常に成り立つため判定が永久に緑になるので、実データ経路の配線を
-# §6 が別途固定する（→ 3 周目のレビュー）。
+# 逆方向: scan_target の各要素が covered か exclusions のどちらかに在るか。
+# 第 1 引数は「走査対象」、第 2・第 3 は「そこに在れば違反を消す集合」。
 # 第 4 引数は診断メッセージに載せる除外リストのパス（案内文にのみ使う）。
 judge_reverse() {
   local scan_target=$1 covered=$2 exclusions=$3 exclusions_hint=${4:-$3}
   local violated=0 asset
+
+  # 引数配線の自己防衛。免除集合（covered / exclusions）は走査対象の部分集合でなければ
+  # 意味を成さない（走査対象に居ない要素を免除しても効かない）。走査対象と免除集合を
+  # 取り違えると判定は恒常 green へ縮退し、データの性質を見るアサーションでは恒真に
+  # なって検知できない（→ 4 周目のレビューで実証）。契約を関数内で主張すれば、
+  # 取り違えは縮退ではなく違反として現れる。
+  local stray
+  stray=$(LC_ALL=C comm -23 <(LC_ALL=C sort -u "$covered" "$exclusions") \
+    <(LC_ALL=C sort -u "$scan_target"))
+  if [ -n "$stray" ]; then
+    echo "逆方向: 免除集合が走査対象の部分集合でない（引数配線の誤り。走査対象に無い: $(printf '%s' "$stray" | tr '\n' ' ')）"
+    return 1
+  fi
+
   while IFS= read -r asset; do
     if grep -qxF "$asset" "$covered"; then
       continue
@@ -201,7 +218,7 @@ run_judge "全 CASE の target が実在するテスト資産を指す" \
 cut -f2 "$work/case-targets" | grep -v '^$' | LC_ALL=C sort -u > "$work/covered"
 
 run_judge "全テスト資産に CASE がある（除外リストを除く）" \
-  judge_reverse "$work/assets" "$work/covered" "$work/exclusions" "$exclusions_tsv"
+  judge_reverse "$reverse_scan" "$work/covered" "$work/exclusions" "$exclusions_tsv"
 
 # --- 3. 1:1 一意性 -----------------------------------------------------------
 
@@ -238,7 +255,7 @@ fi
 # 同名の資産を後で追加したときに CASE 無しのまま黙って通る。
 stale_exclusion=0
 while IFS= read -r asset; do
-  if ! grep -qxF "$asset" "$work/assets"; then
+  if ! grep -qxF "$asset" "$reverse_scan"; then
     fault "除外リストの '$asset' は列挙されるテスト資産に無い（stale な除外）"
     stale_exclusion=1
   fi
@@ -368,8 +385,11 @@ printf 'CASE-a.md\tgone_test.go\n' > "$self/case-targets-dangling"
 # 分岐の生死が見えない）。
 printf 'CASE-b.md\t\n' > "$self/case-targets-empty"
 printf '\na_test.go\n' > "$self/assets-with-empty"
-# 逆方向: covered にも exclusions にも無い資産。
+# 逆方向: covered にも exclusions にも無い資産（c_test.go）。免除集合は走査対象の
+# 部分集合に保つ（そうしないと judge_reverse の部分集合契約が先に発火して、
+# 意図した未カバー判定の分岐を踏まない）。
 printf 'a_test.go\nc_test.go\n' > "$self/assets-uncovered"
+printf 'a_test.go\n' > "$self/covered-subset"
 # 逆方向: 除外リストだけで消える資産（除外経路の単独検証用）。
 printf 'c_test.go\n' > "$self/assets-c-only"
 # 1:1: 同じ target を 2 CASE が張る。
@@ -419,7 +439,17 @@ printf 'c_test.go\n' > "$self/exclusions-c"
 expect_judge_pass "judge_reverse（除外リスト経路）" \
   judge_reverse "$self/assets-c-only" "$self/covered-empty" "$self/exclusions-c"
 expect_judge_fail "judge_reverse（どちらにも無い）" \
-  judge_reverse "$self/assets-uncovered" "$self/covered-ok" "$self/exclusions-empty"
+  judge_reverse "$self/assets-uncovered" "$self/covered-subset" "$self/exclusions-empty"
+# 部分集合契約。走査対象に無い要素を免除集合が含む配線（引数の取り違えがこの形になる）で
+# 落ちること。診断が未カバー判定ではなく配線の誤りを指すことも固定する。
+expect_judge_fail "judge_reverse（走査対象と免除集合の取り違え）" \
+  judge_reverse "$self/covered-ok" "$self/assets-uncovered" "$self/exclusions-c"
+
+wiring_diagnostic=$(judge_reverse "$self/covered-ok" "$self/assets-uncovered" "$self/exclusions-c")
+if ! printf '%s' "$wiring_diagnostic" | grep -q '引数配線の誤り'; then
+  fault "自己検証: judge_reverse（部分集合契約）— 配線の誤りを指す診断が出ない（実際: ${wiring_diagnostic:-空}）"
+  self_fail=1
+fi
 
 expect_judge_pass "judge_unique" \
   judge_unique "$self/case-targets-ok"
@@ -443,12 +473,12 @@ probe_run_judge() {
   run_judge "probe" "$@" >/dev/null 2>&1
   local status=$?
 
-  # 呼び出し側へ戻す前に本来の実装を復帰させる。
-  unset -f pass fault
   printf '%d\t%d\t%d\n' "$pass_count" "$fault_count" "$status"
 }
 
-# run_judge は関数定義を上書きするため、サブシェルで走らせて本体へ漏らさない。
+# probe_run_judge は pass / fault を差し替えるため、必ずコマンド置換（サブシェル）で
+# 呼ぶ。本体の定義はサブシェル内でしか隠れないので、終了と同時に元へ戻る。直接呼ぶと
+# 以降の pass / fault が失われ、アサーションが黙って出力から消える。
 probe_ok=$(probe_run_judge judge_always_ok)
 probe_violation=$(probe_run_judge judge_always_violates)
 probe_silent=$(probe_run_judge judge_violates_silently)
@@ -471,14 +501,6 @@ check_probe "違反なし" "$probe_ok" 1 0 0
 check_probe "違反あり" "$probe_violation" 0 1 1
 # 違反ありだが診断行が空 → 黙って通さず fault へ倒す。
 check_probe "違反ありで診断が空" "$probe_silent" 0 1 1
-
-# 実データ経路の引数配線。judge_reverse の走査対象と免除集合を取り違えると、
-# covered ⊆ assets が常に成り立つため判定が永久に緑になる（縮退が矛盾として現れない）。
-# 「covered は assets の部分集合である」を前提として明示し、取り違えを検出可能にする。
-if [ -n "$(LC_ALL=C comm -23 "$work/covered" "$work/assets")" ]; then
-  fault "自己検証: covered ⊄ assets（§2 の引数配線が取り違えられている可能性がある）"
-  self_fail=1
-fi
 
 # 実データ側の入力の非空性。assets / covered が空だと §1〜§3 が空虚に真になる
 # （exclusions は空でも §2 が単に厳しく判定するだけなので、ここには含めない）。

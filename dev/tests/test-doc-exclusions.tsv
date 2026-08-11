@@ -10,8 +10,11 @@
 # （実在するファイルはリポジトリ相対パス / flake check は checks.<name>）。
 #
 # ここに載せるのは「テスト資産として列挙されるが CASE を持たない」ものだけ。
-# そもそも inventory が列挙しないもの（go-coverage = quality 担当のカバレッジ計測で
-# check として存在しない、等）は列挙不要。
+# そもそも inventory が列挙しないものは列挙不要:
+#   - go-coverage（quality 担当のカバレッジ計測。flake check として存在しない）
+#   - dev/scripts/*.sh（inventory / 対応表生成の実装。テスト資産ではなく道具）
+#   - dev/tests/*.sh 自体（契約テストの実装。flake check 経由の dev:checks.* として
+#     列挙されるぶんは下に載っている）
 checks.go-vet	静的解析（ビルド健全性）。テスト資産ではなく quality の担当
 checks.golangci-lint	静的 lint。テスト資産ではなく quality の担当
 checks.nput	buildGoModule のビルド + go test 実行。個々の *_test.go を CASE が持つ
