@@ -145,15 +145,23 @@ func TestLoadMissingFile(t *testing.T) {
 // resolved base instead, so the difference never surfaces (→ REQ-dd10d820, TC-172548ea).
 //
 // Both sides of the kind × path-presence table are covered so that narrowing the guard
-// to the kind alone — dropping the path-presence half — breaks a case here. The fixed
-// rows also pin where the responsibility sits: a fixed document without a path passes
-// this layer and is stopped by the engine's root resolution instead.
+// to the kind alone — dropping the path-presence half — breaks a case here.
+//
+// Every accepting row states what this layer does not judge, not that the document is
+// usable end to end. A fixed document without a path is stopped by the engine's root
+// resolution, and a system document is rejected by the engine and by the Nix side while
+// that kind remains unimplemented. Both still pass here because neither verdict is this
+// layer's to make.
 func TestLoadRootPathAllowedOnlyForFixed(t *testing.T) {
+	// An empty path means the key is left out. Spelling it as "root": "" would decode to
+	// the same empty string, so the two spellings cannot be told apart afterwards and one
+	// row per kind suffices — unlike rootKind, where the omitted object reaches the check
+	// through a separate default-value path and is pinned on its own.
 	for _, tt := range []struct {
-		name      string
-		kind      string
-		path      string
-		wantError bool
+		name    string
+		kind    string
+		path    string
+		wantErr bool
 	}{
 		{"project with path", RootKindProject, "/should/be/ignored", true},
 		{"home with path", RootKindHome, "/should/be/ignored", true},
@@ -170,7 +178,7 @@ func TestLoadRootPathAllowedOnlyForFixed(t *testing.T) {
 				root = `{ "rootKind": "` + tt.kind + `", "root": "` + tt.path + `" }`
 			}
 			_, err := Load(writeManifest(t, `{ "schemaVersion": 1, "root": `+root+`, "entries": [] }`))
-			if !tt.wantError {
+			if !tt.wantErr {
 				if err != nil {
 					t.Fatalf("rootKind %q with root %q should be accepted, got %v", tt.kind, tt.path, err)
 				}
