@@ -250,9 +250,15 @@ jobs:
               - 'docs/risks/**'
               - 'docs/model.yaml'
               - 'sara.toml'
-              - '**/*_test.go'
               - 'tests/**'
               - 'flake.nix'
+              # `--full` runs `go test -json ./...` and evaluates each nix-unit
+              # file, so generation also depends on non-test Go sources and on
+              # lib/ — a build break or an eval break there degrades the table.
+              - '**/*.go'
+              - 'go.mod'
+              - 'go.sum'
+              - 'lib/**'
 
       - name: Setup Nix
         if: steps.filter.outputs.relevant != 'false'
