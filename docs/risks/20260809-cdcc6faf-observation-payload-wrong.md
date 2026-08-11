@@ -31,7 +31,8 @@ false」「到達しなかった entry が一覧から消える」といった�
 project mode の `rollback` / `list-generations` を拒否する分岐）にあり、engine 層の
 観測値が nil を正しく運ぶところまでが TC-1d19aebc / TC-527b5034 の守備範囲になる。
 非公開の強制そのものは、入口の評価で root の種別を解決した後にしか効かないため、実際に
-評価を通す e2e で TC-f304d682 が持つ。
+評価を通す e2e で TC-f304d682 が持つ。ただし同 TC が覆うのは project mode を名指した
+拒否までで、fixed root と全件列挙からの除外は同 TC が残件として挙げている。
 
 ## 実現性
 
@@ -45,5 +46,7 @@ project mode の `rollback` / `list-generations` を拒否する分岐）にあ�
 ## 緩和
 
 TC-1d19aebc（実行結果の観測フィールドと到達状態の分割）と TC-527b5034（e2e での
-`--json` 観測）が緩和する。世代の公開／非公開の強制は TC-f304d682（project mode では
-世代を公開するコマンドが拒否され理由が利用者へ届く）が緩和する。
+`--json` 観測）が緩和する。世代の公開／非公開の強制のうち、名指しした project mode の
+config に対する拒否は TC-f304d682（project mode では世代を公開するコマンドが拒否され
+理由が利用者へ届く）が緩和する。全 config を対象とする列挙からの除外は未被覆で、
+Issue #312 で追跡する。

@@ -221,10 +221,10 @@ assert_json "$ENV_ALL_EMPTY" "results:[]・status=success（N=0 でも同一形�
 
 # 世代を公開するコマンドは home mode 限定（→ REQ-05abce3e・issue #284）。拒否は evalRoot で
 # rootKind を解決した後に効くため、実 nix を通る経路でしか観測できない。エラーは exit 1 の
-# 一般エラーで、stderr に home mode 限定である旨を含む（利用者が config の root を疑える）。
+# 一般エラーで、stderr に home mode を要する旨を含む（利用者が config の root を疑える）。
 BEFORE_TARGET="$(readlink "$TARGET")"
 for cmd in rollback list-generations; do
-	e2e_step "$cmd は project mode で拒否（exit 1 + home mode 限定の説明・→ issue #284）"
+	e2e_step "$cmd は project mode で拒否（exit 1 + home mode を要する旨と rootKind・→ issue #284）"
 	reject_err="$E2E_WORK/reject-$cmd.err"
 	reject_out="$E2E_WORK/reject-$cmd.out"
 	reject_code=0
@@ -234,27 +234,32 @@ for cmd in rollback list-generations; do
 	else
 		e2e_fail "exit $reject_code (期待 1): nput $cmd docs"
 	fi
-	# 文言そのものではなく「home mode を要する」ことと「判断に使った rootKind」の 2 情報が
-	# 届くかを見る。system mode 追加でモード名が増える改訂が控える（→ ADR-0036）ので、
-	# 受理する語をモード名 + only の形へ広げず home mode の出現に閉じる。
-	if grep -q 'home mode' "$reject_err" && grep -q 'rootKind=' "$reject_err"; then
-		e2e_pass "stderr が home mode 限定と拒否された rootKind を伝える"
+	# home mode を要する旨は文言に閉じず語の出現で見る（system mode の追加でモード名が
+	# 増える改訂が控える・→ ADR-0036）。一方 rootKind の値表現はその改訂の対象外なので、
+	# 判断に使った種別は値ごと固定する（rollback のメッセージは末尾に "project / fixed do
+	# not expose generations" という静的な文言を持ち、値に依らず project の語を含むため、
+	# 語の出現だけを見ると恒真になる）。
+	if grep -q 'home mode' "$reject_err"; then
+		e2e_pass "stderr が home mode を要する旨を伝える"
 	else
-		e2e_fail "stderr の説明が不足: $(cat "$reject_err")"
+		e2e_fail "stderr に home mode の説明が無い: $(cat "$reject_err")"
 	fi
-	if grep -qF 'project' "$reject_err"; then
-		e2e_pass "stderr が拒否された root の種別を名指す"
+	if grep -qF 'rootKind="project"' "$reject_err"; then
+		e2e_pass "stderr が拒否に使った rootKind の値を示す"
 	else
-		e2e_fail "stderr に root の種別が無い: $(cat "$reject_err")"
-	fi
-	# 拒否した以上、世代の情報を stdout へ 1 バイトも出さない（拒否分岐が printGenerations の
-	# 後段へずれれば一覧が漏れる。exit code と stderr だけでは検知できない）。
-	if [ ! -s "$reject_out" ]; then
-		e2e_pass "stdout へ世代を出さない"
-	else
-		e2e_fail "stdout へ出力があった: $(cat "$reject_out")"
+		e2e_fail "stderr に rootKind の値が無い: $(cat "$reject_err")"
 	fi
 done
+
+# 一覧の出力先は stdout（→ ADR-0023）。拒否した以上そこへ 1 バイトも出さない。拒否分岐が
+# printGenerations の後段へずれれば一覧が漏れるが、exit code と stderr だけでは検知できない。
+# rollback は元々 stdout へ何も書かないので、この観点は list-generations だけが持つ。
+e2e_step "拒否した list-generations は stdout へ世代を出さない"
+if [ ! -s "$E2E_WORK/reject-list-generations.out" ]; then
+	e2e_pass "stdout へ世代を出さない"
+else
+	e2e_fail "stdout へ出力があった: $(cat "$E2E_WORK/reject-list-generations.out")"
+fi
 
 # 拒否した実行のあとも docs の配置が保たれていることの sanity check。project mode は
 # generation skip で世代を 1 つしか持たないため、これは「rollback が engine へ到達しない」
