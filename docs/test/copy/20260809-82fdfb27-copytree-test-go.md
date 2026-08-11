@@ -2,12 +2,15 @@
 id: "CASE-82fdfb27-0bea-4833-b5e9-5f9e142a08df"
 type: test_case
 name: "internal/engine/copytree_test.go — 再帰コピーの構造・mode・symlink 再現"
+target: "internal/engine/copytree_test.go"
 covers:
   - "TC-b1b8c163-9d37-47ee-9838-7168569df03a"
 ---
 # CASE-82fdfb27: copytree_test.go
 
-対象: `internal/engine/copytree_test.go`
+## 対象
+
+`internal/engine/copytree_test.go`
 
 コピーのプリミティブ（`copyTree` / `copyFile` / `copySymlink`）を実 tmpdir に対して直接
 呼び、結果のツリーを lstat / readlink で確認する。engine の配置経路を通さないため、

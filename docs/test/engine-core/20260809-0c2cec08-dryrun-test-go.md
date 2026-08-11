@@ -2,12 +2,15 @@
 id: "CASE-0c2cec08-db65-427c-9480-ac0dcacc8d31"
 type: test_case
 name: "internal/engine/dryrun_test.go — dryrun の無副作用と除去なしの移行判断"
+target: "internal/engine/dryrun_test.go"
 covers:
   - "TC-a5eb7de3-a1a7-41ae-8fb9-c2aa374ac894"
 ---
 # CASE-0c2cec08: dryrun_test.go
 
-対象: `internal/engine/dryrun_test.go`
+## 対象
+
+`internal/engine/dryrun_test.go`
 
 `apply --dryrun` 相当の呼び出しが実 FS へ何も残さないこと、および事前除去を伴う分類でも
 除去を実行せずに判断へ至ることを実 tmpdir で確認する。

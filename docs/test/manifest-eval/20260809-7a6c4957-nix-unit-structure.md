@@ -2,6 +2,7 @@
 id: "CASE-7a6c4957-9365-4490-b48f-9725f42162f2"
 type: test_case
 name: "nix-unit: structure.nix — manifest 構造の不変条件"
+target: "tests/nix-unit/structure.nix"
 covers:
   - "TC-4e7cfae7-72bc-4af6-a1f5-1ead7db564b1"
 ---

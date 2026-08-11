@@ -2,6 +2,7 @@
 id: "CASE-154af597-df3e-49fb-a96b-b4f371dfcc63"
 type: test_case
 name: "undo_journal_test.go — 実 FS 故障注入による end-to-end 巻き戻しと commit 失敗の非対称性"
+target: "internal/engine/undo_journal_test.go"
 covers:
   - "TC-3b02ab58-5bfb-4ae7-9ac1-c69e2ece2722"
   - "TC-e048211f-0844-4446-9957-fb444c1da4e5"

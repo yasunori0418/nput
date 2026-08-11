@@ -2,6 +2,7 @@
 id: "CASE-0c9d41d1-33fd-4982-aed9-fa575a56ee01"
 type: test_case
 name: "nix-unit: resolve-marker.nix — src 解決と marker 判別述語"
+target: "tests/nix-unit/resolve-marker.nix"
 covers:
   - "TC-81be084d-709f-481b-9b61-5d2d11c317a0"
 ---

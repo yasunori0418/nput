@@ -390,7 +390,27 @@ item_types:
     id_format: '{prefix}-{uuid}'
     parent_types:
       - test_condition
-    fields: []
+    fields:
+      # CASE が対応するテスト資産の識別子。テストコード ⇔ CASE の対応を機械照合可能に
+      # するための正準表記で、規範はここ（frontmatter）にある。本文の「## 対象」節は
+      # 人間向けの補足で、契約テスト（dev/tests/test-doc-map.sh）は照合しない
+      # （→ Issue #304、epic #283）。
+      #
+      # 正準形は 2 規則のみ:
+      #   - ファイルが実在するもの → リポジトリ相対パス
+      #     （Go = internal/engine/engine_test.go、nix-unit = tests/nix-unit/structure.nix、
+      #     e2e = tests/e2e/scenarios/03-stale.sh、
+      #     namaka = tests/namaka/manifest-project/〔末尾スラッシュ〕）
+      #   - flake check → checks.hm-module 形式（checks. 接頭辞）
+      #
+      # 単一値（!list text ではない）。粒度規約「CASE = テストファイル / シナリオ /
+      # check 単位」を型で表し、CASE ⟷ テスト資産の 1:1 を契約テストで強制する
+      # （緩める変更は容易だが逆は 47 件の掃引が要るため、厳しい側へ倒した決定）。
+      - name: target
+        display_name: Target
+        field_type: text
+        required: true
+        placeholder: internal/engine/engine_test.go
     allowed_targets:
       - relation: covers
         targets:

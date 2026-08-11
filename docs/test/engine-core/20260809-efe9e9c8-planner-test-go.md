@@ -2,6 +2,7 @@
 id: "CASE-efe9e9c8-cc0a-4b1b-bf2b-aa1d15428252"
 type: test_case
 name: "internal/planner/planner_test.go — fake FS による plan 計算の table-driven 網羅"
+target: "internal/planner/planner_test.go"
 covers:
   - "TC-b329cafd-06c3-4b87-8357-229b69e5ba5c"
   - "TC-9df804ce-35ee-44a7-87b1-17935d53fab2"
@@ -11,7 +12,9 @@ covers:
 ---
 # CASE-efe9e9c8: planner_test.go
 
-対象: `internal/planner/planner_test.go`
+## 対象
+
+`internal/planner/planner_test.go`
 
 plan 計算を fake FS（`Lstat` / `Readlink` / `ReadDir` を差し替えたマップ）に対して回す
 table-driven テスト。実 FS へ触らずに分類の全パターンを列挙できることが、この CASE の存在

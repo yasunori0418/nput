@@ -2,6 +2,7 @@
 id: "CASE-879a93da-d22f-4397-84da-3544f8249af1"
 type: test_case
 name: "nix-unit: gates.nix — 評価時に throw する検査ゲート群"
+target: "tests/nix-unit/gates.nix"
 covers:
   - "TC-e7ff0e6d-32d7-4ed6-8c2f-449dba34b2f6"
 ---

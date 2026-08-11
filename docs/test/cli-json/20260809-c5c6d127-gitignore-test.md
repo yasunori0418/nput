@@ -2,6 +2,7 @@
 id: "CASE-c5c6d127-c227-4f01-9a5d-fc09e7412175"
 type: test_case
 name: "gitignore_test.go — パス正規化と列挙結果の info 表現"
+target: "cmd/nput/gitignore_test.go"
 covers:
   - "TC-4e0a14d6-342c-448b-964b-b8e87520e89b"
   - "TC-1a46da17-1812-431b-966f-ec8dffd315ae"

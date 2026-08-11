@@ -2,6 +2,7 @@
 id: "CASE-6f6fabaa-ae1e-4af5-962e-087a9064f85d"
 type: test_case
 name: "engine/lock_test.go — 公開 API 越しのロック取得モード・保持区間・sentinel 同一性"
+target: "internal/engine/lock_test.go"
 covers:
   - "TC-4b4709c9-1b7a-42f0-8430-62a26ead4eff"
 ---

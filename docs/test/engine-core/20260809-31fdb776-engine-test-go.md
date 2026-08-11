@@ -2,6 +2,7 @@
 id: "CASE-31fdb776-9650-4ff9-97f6-45d56b2e7177"
 type: test_case
 name: "internal/engine/engine_test.go — 実 tmpdir に対する apply の統合テスト"
+target: "internal/engine/engine_test.go"
 covers:
   - "TC-9df804ce-35ee-44a7-87b1-17935d53fab2"
   - "TC-405606f0-3ac8-4cc2-998e-d4759a62a171"
@@ -16,7 +17,9 @@ covers:
 ---
 # CASE-31fdb776: engine_test.go
 
-対象: `internal/engine/engine_test.go`
+## 対象
+
+`internal/engine/engine_test.go`
 
 nix を介さず実 FS（`t.TempDir()`）へ apply を回す統合テスト。link farm と manifest を
 テスト側で組み立て、配置結果を実 FS のプローブで確認する。

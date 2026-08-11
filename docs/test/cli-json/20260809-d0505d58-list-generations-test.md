@@ -2,6 +2,7 @@
 id: "CASE-d0505d58-ef48-4fe2-ab7c-77002109d1c4"
 type: test_case
 name: "list-generations_test.go — 世代一覧の info 表現と二重エンコードの禁止"
+target: "cmd/nput/list-generations_test.go"
 covers:
   - "TC-4e0a14d6-342c-448b-964b-b8e87520e89b"
   - "TC-cf8189c4-d680-4d7e-bcd3-810543762c50"
