@@ -61,11 +61,11 @@ sara report matrix --format json > "$work/matrix.json" 2>/dev/null || {
   exit 1
 }
 
-# CASE: <target>\t<CASE フル ID>\t<name>\t<区分>
+# CASE: <target>\t<CASE フル ID>\t<name>\t<区分>\t<ファイルパス>
 #
-# 1 ファイル 1 回の yq で 4 列すべてを採る。区分は置き場所（docs/test/<区分>/）から
-# 導けるので yq には要らない。ループを 2 本に割ると同じ入力に対する grep 条件が
-# 2 箇所へ散り、片方だけ変えたときに両者の集合がずれる。
+# 1 ファイル 1 回の yq で frontmatter の 3 列を採る。区分とファイルパスは置き場所
+# （docs/test/<区分>/…）から導けるので yq には要らない。ループを 2 本に割ると同じ入力に
+# 対する grep 条件が 2 箇所へ散り、片方だけ変えたときに両者の集合がずれる。
 : > "$work/cases"
 while IFS= read -r file; do
   category=$(printf '%s\n' "$file" | cut -d/ -f3)
@@ -74,7 +74,7 @@ while IFS= read -r file; do
     echo "test-doc-matrix.sh: 警告: $file の frontmatter を読めなかった（対応表から落ちる）" >&2
     continue
   fi
-  printf '%s\t%s\n' "$row" "$category" >> "$work/cases"
+  printf '%s\t%s\t%s\n' "$row" "$category" "$file" >> "$work/cases"
 done < <(grep -rl '^type: test_case' docs/test/ | LC_ALL=C sort)
 
 if [ ! -s "$work/cases" ]; then
@@ -163,7 +163,7 @@ names_block() {
 # $work/assets:     資産の一意リスト（inventory 由来）
 cut -f1 "$work/inventory" | LC_ALL=C sort -u > "$work/assets"
 
-# cases（<target>\t<id>\t<name>\t<区分>）を資産側から引ける形へ並べ替える。
+# cases（<target>\t<id>\t<name>\t<区分>\t<ファイル>）を資産側から引ける形へ並べ替える。
 awk -F'\t' -v OFS='\t' '
   NR == FNR { asset[$1] = 1; next }
   $1 in asset { print $4, $1, $2, $3 }
@@ -171,16 +171,20 @@ awk -F'\t' -v OFS='\t' '
 
 # inventory に無い target を指す CASE（リネーム / 削除の追従漏れ）は上の join で落ちる。
 # 「未分類」節はこれを拾わない（あちらは資産側から見た CASE 無し）。落ちた CASE が対応表の
-# どこにも現れないまま無警告になるのを避けるため、ここで別途 stderr へ出す
-# （test-doc-map.sh §1 が本来落とすが、sara ジョブは required check ではない → ADR-0050）。
-dangling_cases=$(awk -F'\t' '
+# どこにも現れないまま無警告になるのを避けるため、stderr へ警告し末尾の節にも載せる
+# （test-doc-map.sh §1 が本来落とすが、sara ジョブは required check ではない → ADR-0050。
+# 未分類節と同じ扱いに揃える）。
+#
+# 診断は CASE のフル ID ではなくファイルパスで出す（追従漏れを直す人が開く対象）。
+# target が空の CASE もここに落ちるので、空は別表記にして調査先を曖昧にしない。
+awk -F'\t' -v OFS='\t' '
   NR == FNR { asset[$1] = 1; next }
-  !($1 in asset) { print $2 " → " $1 }
-' "$work/assets" "$work/cases")
+  !($1 in asset) { print $5, ($1 == "" ? "(target 空)" : $1) }
+' "$work/assets" "$work/cases" > "$work/dangling-cases"
 
-if [ -n "$dangling_cases" ]; then
-  echo "test-doc-matrix.sh: 警告: 実在しない資産を指す CASE がある（対応表から落ちる）:" >&2
-  printf '  %s\n' "$dangling_cases" >&2
+if [ -s "$work/dangling-cases" ]; then
+  echo "test-doc-matrix.sh: 警告: 実在しない資産を指す CASE がある（対応表の「実在しない資産を指す CASE」節を参照）:" >&2
+  sed 's/^/  /; s/\t/ → /' "$work/dangling-cases" >&2
 fi
 
 # --- 生成 --------------------------------------------------------------------
@@ -269,7 +273,7 @@ emit_unclassified() {
   fi
 
   echo "test-doc-matrix.sh: 警告: CASE も除外行も持たない資産がある（対応表の「未分類」節を参照）:" >&2
-  printf '  %s\n' "$unclassified" >&2
+  printf '%s\n' "$unclassified" | sed 's/^/  /' >&2
 
   printf '## 未分類のテスト資産\n\n'
   printf 'CASE も除外行も持たない資産。dev/tests/test-doc-map.sh が落とすべき状態で、\n'
@@ -277,6 +281,25 @@ emit_unclassified() {
   printf '| テスト資産 |\n'
   printf '| --- |\n'
   printf '%s\n' "$unclassified" | sed 's/^/| `/; s/$/` |/'
+  printf '\n'
+}
+
+# 実在しない資産を指す CASE。上の join で対応表の本体から落ちるため、成果物側にも節を
+# 出す（stderr 警告だけだと artifact を読む人には落ちた CASE が見えず、ヘッダの件数と
+# 本体の行数が合わない理由が分からない）。未分類節と同じ扱い。
+emit_dangling() {
+  if [ ! -s "$work/dangling-cases" ]; then
+    return
+  fi
+
+  printf '## 実在しない資産を指す CASE\n\n'
+  printf 'target が inventory に無い CASE。リネーム / 削除の追従漏れで、対応表の本体からは\n'
+  printf '落ちている。dev/tests/test-doc-map.sh §1 が落とすべき状態。\n\n'
+  printf '| CASE | target |\n'
+  printf '| --- | --- |\n'
+  while IFS=$'\t' read -r file target; do
+    printf '| `%s` | `%s` |\n' "$file" "$target"
+  done < "$work/dangling-cases"
   printf '\n'
 }
 
@@ -291,6 +314,7 @@ emit() {
 
   emit_exclusions
   emit_unclassified
+  emit_dangling
 }
 
 if [ -n "$out" ]; then
