@@ -26,7 +26,9 @@ covers:
   変換され、`method` は既定の `"symlink"`
 - out-of-store entry に判別タグ `_nputMarker` が漏れていないことを単独でも明示アサート
 
-検証するのは project root のみ。他の root 種別は評価テストの対象外（→ TC-4e7cfae7）。
+本 CASE が検証するのは project root のみ（→ TC-4e7cfae7）。fixed root の絶対パス併記と
+`homeRoot` marker の評価層での扱いは CASE-823a65c6（→ TC-f9e927d0）、HM 統合での
+`homeRoot` は `checks.hm-module`（`integration` 区分）が担当する。
 配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。
 
 ## 出典

@@ -41,13 +41,47 @@ E2E まで落ちてこないと検出できない（REQ-2b0c2bb8 の純粋性そ
 
 ## 対処
 
-TC-4e7cfae7（文書構造の不変条件）・TC-d9175bb5（既定適用と決定的順序）・TC-81be084d
-（marker の判別と src 種別への変換）・TC-de6514e2（文書全体のスナップショット回帰）で緩和する。
+TC-4e7cfae7（文書構造の不変条件）・TC-f9e927d0（fixed root の絶対パス併記）・TC-d9175bb5
+（既定適用と決定的順序）・TC-81be084d（marker の判別と src 種別への変換）・TC-de6514e2
+（文書全体のスナップショット回帰）で緩和する。
 
-**本区分の TC 群では緩和しきれない残余**が 2 つある。第一に、REQ-dd10d820 のうち fixed root で
-絶対パスを併記する側は評価テストに無く、TC-4e7cfae7 が見るのは project root 分だけである
-（`homeRoot` の `rootKind` は `checks.hm-module`、fixed root はどの区分も現状カバーしていない）。
-第二に、REQ-250d936c / REQ-79ce0a09 は発行側と engine の受理側の双方を規範に含むが、本 risk が
+REQ-dd10d820 は project root の否定側を TC-4e7cfae7、fixed root の肯定側を TC-f9e927d0 が
+見るので、評価層の分は両側が揃っている（→ Issue #288）。
+
+**本区分の TC 群では緩和しきれない残余**が 5 つある。
+
+第一に、`fixed` の `root` が実際に絶対パスであることを強制する検査がそもそも実装に無い。
+`rootType` は marker でない文字列をすべて受理し（`lib.isString` のみ）、`normalizeManifest` は
+それを無検査で `rootKind = "fixed"` へ倒すため、相対パス文字列も fixed として通る。
+TC-f9e927d0 は常に絶対パスを渡すので、この穴は評価テストでも塞がらない。拒否する規範が
+REQ 側に無い（REQ-dd10d820 / REQ-37b56673 は「絶対パス」と述べるが gate を要求していない）
+ので、仕様の未決事項として残余に置く。
+
+第二に、`homeRoot` を HM 統合の配線として確かめる側は評価層の担当外で、`checks.hm-module`
+（`integration` 区分）が持つ。ただし REQ-dd10d820 の home 側そのもの——`rootKind = "home"` で
+`root` フィールドを持たないこと——は TC-f9e927d0 が exact 一致で担保済みで、
+`checks.hm-module` の grep（`"rootKind":"home"` の部分一致）は余分なフィールドの混入を
+検出しない。`integration` 区分が見るのは「HM モジュールが root に home を pin する配線」であり、
+文書の形そのものではない。
+
+第三に、`rootKind = "system"` は REQ-dd10d820 が定める 4 値の 1 つで、ADR-0036（採用）が
+ADR-0013 §5 の throw を撤回して manifest v1 の正規値にすると決めているが、実装は依然
+`normalizeManifest` の assertion で `system` を弾く。評価層で `{ rootKind = "system"; }` が
+発行される側を見るテストは存在しない。throw する現状を写すアサート
+（`testSystemRootUnimplemented`）は CASE-879a93da に残っているが、TC-e7ff0e6d は撤回済み決定の
+残骸としてこれを条件に含めておらず、RISK-09df40d3 も同じ理由で規範から外している。つまり
+`system` は規範側にも条件側にも所在を持たない。ADR-0036 が指示した実装更新が済むまでの残余で、
+更新時にはゲート側のテストと合わせて組み替える必要がある。
+
+第四に、`fixed` の絶対パスが `mkManifest` の `passthru.root`（REQ-2f9205ee）へ写る側は
+derivation 層の担当で、本区分の TC 群は見ない（TC-f9e927d0 が射程外と宣言している）。この
+分岐は fixed のときだけ通り、CLI が build 前に `nix eval` で読む経路（`cli-json` 区分）の
+入力になるが、現状どの risk も残余として引き取っておらず、CASE も無い。評価層が出す文書の
+形とは別物なので本 risk の射程には入れず、`cli-json` 区分側で拾うべき穴としてここに記録する
+に留める。解消は、同区分に passthru を threatens する risk を立てて残余を移送した時点。
+それまでは本 risk が仮の置き場になる。
+
+第五に、REQ-250d936c / REQ-79ce0a09 は発行側と engine の受理側の双方を規範に含むが、本 risk が
 射程に持つのは評価層が発行する側だけで、engine が新しい `schemaVersion` を拒否する側は
 `cli-json` / `integration` 区分の担当になる。
 
