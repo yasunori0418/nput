@@ -147,12 +147,18 @@ judge_reverse() {
   # 取り違えると判定は恒常 green へ縮退し、データの性質を見るアサーションでは恒真に
   # なって検知できない（→ 4 周目のレビューで実証）。契約を関数内で主張すれば、
   # 取り違えは縮退ではなく違反として現れる。
+  #
+  # ただし **early return しない**。covered は CASE の target 由来なので、テスト資産の
+  # リネーム / 削除に CASE が追従していないと（＝配線が正しくても）データ起因で
+  # 非部分集合になる。抜けると (1) 診断が存在しない配線バグを指し (2) 同じ PR に入った
+  # 未カバー資産が 1 件も報告されない（→ 5 周目のレビューで実証）。違反として記録した
+  # うえで走査は続け、両方の診断を出す。
   local stray
   stray=$(LC_ALL=C comm -23 <(LC_ALL=C sort -u "$covered" "$exclusions") \
     <(LC_ALL=C sort -u "$scan_target"))
   if [ -n "$stray" ]; then
-    echo "逆方向: 免除集合が走査対象の部分集合でない（引数配線の誤り。走査対象に無い: $(printf '%s' "$stray" | tr '\n' ' ')）"
-    return 1
+    echo "逆方向: 免除集合が走査対象の部分集合でない（引数配線の誤り、または CASE / 除外リストが走査対象へ追従していない。走査対象に無い: $(printf '%s' "$stray" | tr '\n' ' ')）"
+    violated=1
   fi
 
   while IFS= read -r asset; do
