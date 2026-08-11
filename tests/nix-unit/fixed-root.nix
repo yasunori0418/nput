@@ -63,6 +63,8 @@ in
   # ここは project root との同値比較で独立性だけを主張する（期待値を写すと既定値の
   # 知識が二重管理になる）。真偽値へは畳まない（畳むと落ちたとき `expected: true /
   # got: false` しか出ず、どのフィールドがずれたか分からない）。
+  # 現行の resolveEntry は root を取らないのでこの結合は構造的に起こり得ず、entry の
+  # 解決へ root を渡す設計変更が入ったときに初めて働く回帰網である。
   testFixedRootEntryUnaffected = {
     expr = fixed.entries;
     expected =

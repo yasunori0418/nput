@@ -78,7 +78,8 @@ derivation 層の担当で、本区分の TC 群は見ない（TC-f9e927d0 が�
 分岐は fixed のときだけ通り、CLI が build 前に `nix eval` で読む経路（`cli-json` 区分）の
 入力になるが、現状どの risk も残余として引き取っておらず、CASE も無い。評価層が出す文書の
 形とは別物なので本 risk の射程には入れず、`cli-json` 区分側で拾うべき穴としてここに記録する
-に留める。
+に留める。解消は、同区分に passthru を threatens する risk を立てて残余を移送した時点。
+それまでは本 risk が仮の置き場になる。
 
 第五に、REQ-250d936c / REQ-79ce0a09 は発行側と engine の受理側の双方を規範に含むが、本 risk が
 射程に持つのは評価層が発行する側だけで、engine が新しい `schemaVersion` を拒否する側は
