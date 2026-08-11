@@ -254,11 +254,12 @@ done
 # 一覧の出力先は stdout（→ ADR-0023）。拒否した以上そこへ 1 バイトも出さない。拒否分岐が
 # printGenerations の後段へずれれば一覧が漏れるが、exit code と stderr だけでは検知できない。
 # rollback は元々 stdout へ何も書かないので、この観点は list-generations だけが持つ。
+LG_REJECT_OUT="$E2E_WORK/reject-list-generations.out"
 e2e_step "拒否した list-generations は stdout へ世代を出さない"
-if [ ! -s "$E2E_WORK/reject-list-generations.out" ]; then
+if [ ! -s "$LG_REJECT_OUT" ]; then
 	e2e_pass "stdout へ世代を出さない"
 else
-	e2e_fail "stdout へ出力があった: $(cat "$E2E_WORK/reject-list-generations.out")"
+	e2e_fail "stdout へ出力があった: $(cat "$LG_REJECT_OUT")"
 fi
 
 # 拒否した実行のあとも docs の配置が保たれていることの sanity check。project mode は
