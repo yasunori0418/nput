@@ -36,6 +36,10 @@ func TestLoadValid(t *testing.T) {
 	if m.Root.RootKind != RootKindProject {
 		t.Errorf("rootKind = %q, want project", m.Root.RootKind)
 	}
+	// project is resolved at runtime, so it must carry no path (→ docs/spec.md).
+	if m.Root.Root != "" {
+		t.Errorf("project root = %q, want empty", m.Root.Root)
+	}
 	if len(m.Entries) != 1 {
 		t.Fatalf("entries = %d, want 1", len(m.Entries))
 	}
