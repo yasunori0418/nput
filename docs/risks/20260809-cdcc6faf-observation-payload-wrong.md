@@ -28,9 +28,10 @@ false」「到達しなかった entry が一覧から消える」といった�
 返せば、消費側は「世代 0 へ戻った」「世代が進んだ」と読む。project mode が世代をユーザーへ
 公開しない（`rollback` / `list-generations` を出さない → REQ-05abce3e）という区別も、
 観測値が漏れ出せば崩れる。ただしその公開／非公開の強制は CLI 側（`rootKind` を見て
-project mode の `rollback` / `list-generations` を拒否する分岐）にあり、本区分の
-テスト資産には検証経路が無い。engine 層の観測値が nil を正しく運ぶところまでが下の TC の
-守備範囲で、非公開の強制そのものは cli-json 区分の担当になる。
+project mode の `rollback` / `list-generations` を拒否する分岐）にあり、engine 層の
+観測値が nil を正しく運ぶところまでが TC-1d19aebc / TC-527b5034 の守備範囲になる。
+非公開の強制そのものは、入口の評価で root の種別を解決した後にしか効かないため、実際に
+評価を通す e2e で TC-f304d682 が持つ。
 
 ## 実現性
 
@@ -44,4 +45,5 @@ project mode の `rollback` / `list-generations` を拒否する分岐）にあ�
 ## 緩和
 
 TC-1d19aebc（実行結果の観測フィールドと到達状態の分割）と TC-527b5034（e2e での
-`--json` 観測）が緩和する。
+`--json` 観測）が緩和する。世代の公開／非公開の強制は TC-f304d682（project mode では
+世代を公開するコマンドが拒否され理由が利用者へ届く）が緩和する。
