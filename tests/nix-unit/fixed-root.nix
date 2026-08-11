@@ -53,16 +53,17 @@ in
     };
   };
 
-  # fixed root でも entry の正規化は root 種別に依らず同じ形になる。
+  # entry の正規化は root 種別に依らない。既定値そのものは defaults.nix が持つので、
+  # ここは project root との同値比較で独立性だけを主張する（期待値を写すと既定値の
+  # 知識が二重管理になる）。
   testFixedRootEntryUnaffected = {
-    expr = builtins.head fixed.entries;
-    expected = {
-      srcKind = "store";
-      src = "/nix/store/00000000000000000000000000000000-fake-src";
-      subpath = ".";
-      target = ".config/foo";
-      method = "symlink";
-    };
+    expr =
+      fixed.entries == (norm nput.projectRoot {
+        ".config/foo" = {
+          src = fakeSrc;
+        };
+      }).entries;
+    expected = true;
   };
 
   # 対になる否定側の再確認: homeRoot marker は fixed にならず絶対パスも持たない

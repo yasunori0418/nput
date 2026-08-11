@@ -24,7 +24,8 @@ covers:
 - `root` オブジェクトが `{ rootKind = "fixed"; root = <絶対パス>; }` に exact 一致
   （余分なキーが残れば落ちる）
 - 別の絶対パスでも同じ形になる（特定の値に依存した通り方をしない）
-- fixed root でも store-backed entry の正規化結果は project root のときと同じ形
+- 同じ entries を fixed root と project root へ与えたときの正規化結果が一致する
+  （既定値そのものは CASE-59de34d4 が持つので、ここは同値比較で独立性だけを見る）
 - `homeRoot` marker を渡した場合は `{ rootKind = "home"; }` で、fixed へ倒れず
   絶対パスも持たない
 
