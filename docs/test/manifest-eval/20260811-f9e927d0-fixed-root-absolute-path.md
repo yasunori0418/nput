@@ -25,6 +25,12 @@ mitigates:
 分は TC-4e7cfae7 が持ち、`homeRoot` を実際の HM 統合で見る分は `checks.hm-module`
 （`integration` 区分）が担当する。
 
+射程は `normalizeManifest` が返す文書に限る。同じ絶対パスが `mkManifest` の
+`passthru.root`（CLI が build 前に `nix eval` で読む経路・REQ-2f9205ee）へ写る側は
+derivation 層の話で、本条件は見ない。fixed root で絶対パスを渡しても相対パスを渡しても
+`rootKind = "fixed"` になる（絶対性を強制する検査が実装に無い）点も本条件の射程外で、
+RISK-5df2d02b の残余として記録する。
+
 ## 覆う CASE
 
 - CASE-823a65c6（`tests/nix-unit/fixed-root.nix`）
