@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # home mode: 仮 $HOME（+ XDG_STATE_HOME）で apply → $HOME 配下配置 + profile 世代コミットを確認し、
-# 世代をまたいで（entry 入替）`nput rollback` で前世代の配置へ復帰することをアサート。
+# 世代をまたいで（entry 入替）`nput rollback` で前世代の配置へ復帰し、最後に `nput reset` が
+# FS のみを撤去して profile / 世代を動かさないことをアサート。世代を戻す実行と撤去する実行は
+# `--json` のエンベロープも実コマンド経路で検証する（→ issue #285）。
 set -euo pipefail
 source "$(dirname "$0")/../lib.sh"
 e2e_isolate
@@ -98,7 +100,9 @@ assert_absent "$HOME/.cfg/b"
 assert_json "$ENV_ROLLBACK" "generation が 2 → 1 の遷移を運ぶ" \
 	'.results[0].generation | .before == 2 and .after == 1'
 assert_json "$ENV_ROLLBACK" "items は復帰先 .cfg/a と撤去元 .cfg/b を全在庫として運ぶ" \
-	'[.results[0].result.items[] | select(.status == "success") | .info.target] | sort == [".cfg/a", ".cfg/b"]'
+	'[.results[0].result.items[] | .info.target] | sort == [".cfg/a", ".cfg/b"]'
+assert_json "$ENV_ROLLBACK" "items は全て success（failed / skipped を含まない）" \
+	'.results[0].result.items | all(.status == "success")'
 assert_json "$ENV_ROLLBACK" "changes は .cfg/a の add と .cfg/b の remove の 2 件だけ" \
 	'.results[0].result as $r
 	 | ($r.items | map({key: .id, value: .info.target}) | from_entries) as $t
@@ -121,8 +125,8 @@ e2e_step "nput reset --json --yes: FS のみを撤去し profile / 世代は動�
 ENV_RESET="$E2E_WORK/reset.json"
 run_json 0 "$ENV_RESET" reset home --yes
 assert_absent "$HOME/.cfg/a"
-assert_json "$ENV_RESET" "items は撤去対象の entry（.cfg/a）" \
-	'[.results[0].result.items[] | .info.target] == [".cfg/a"]'
+assert_json "$ENV_RESET" "items は撤去対象の entry（.cfg/a）で status は success" \
+	'.results[0].result.items | map({target: .info.target, status}) == [{target: ".cfg/a", status: "success"}]'
 assert_json "$ENV_RESET" "changes は .cfg/a の remove（symlink なので可逆）1 件だけ" \
 	'.results[0].result as $r
 	 | ($r.items | map({key: .id, value: .info.target}) | from_entries) as $t
