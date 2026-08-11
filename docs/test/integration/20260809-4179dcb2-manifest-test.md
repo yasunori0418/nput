@@ -1,12 +1,12 @@
 ---
 id: "CASE-4179dcb2-f199-4469-ae87-0927ece06e65"
 type: test_case
-name: "manifest_test.go — v1 の復元と版の境界・未知フィールド・空の root 種別の拒否"
+name: "manifest_test.go — v1 の復元と版の境界・未知フィールド・root 種別の拒否"
 target: "internal/manifest/manifest_test.go"
 covers:
   - "TC-172548ea-154a-4e22-a169-8252a43e3781"
 ---
-# CASE-4179dcb2: manifest_test.go — v1 の復元と版の境界・未知フィールド・空の root 種別の拒否
+# CASE-4179dcb2: manifest_test.go — v1 の復元と版の境界・未知フィールド・root 種別の拒否
 
 ## 対象
 
@@ -25,6 +25,8 @@ covers:
   ことまで見る
 - 未知のキーを黙って無視せず拒否すること
 - 評価時に絶対パスが決まる root の種別がパスを持つこと
+- 実行時に解決する root の種別（project / home / system）がパスを併記した文書を拒否すること。
+  3 種それぞれに fixture を持ち、いずれもパスを併記した綴りで拒否されることを確かめる
 - root の種別が空である文書を拒否すること。root オブジェクトを省いた書き方も、既定値を経て
   同じ検査へ落ちることを確かめる
 - 文書が存在しないときに失敗すること
@@ -34,8 +36,3 @@ covers:
 キーと文書の不在の拒否は、失敗すること自体しか見ていない。
 
 一時ディレクトリへ文書を直接書き出す fixture 方式で、nix も外部プロセスも起動しない。
-
-> 実行時に解決する root の種別（project / home / system）がパスを持たないことは覆っていない。
-> `project` については復元した値が空であることを見ているが、これは文書がパスを省いた場合の
-> 復元結果を固定するもので、パスを併記した文書の拒否ではない（拒否は未実装）。`home` /
-> `system` は fixture 自体を持たない。
