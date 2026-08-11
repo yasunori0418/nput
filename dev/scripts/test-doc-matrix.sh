@@ -109,8 +109,10 @@ jq -r '
 # 目に付く形へ置き換える。
 short_id() {
   local id=$1
-  if [[ "$id" =~ ^[A-Z]+-[0-9a-f]{8} ]]; then
-    printf '%s\n' "$id" | sed -E 's/^([A-Z]+)-([0-9a-f]{8}).*/\1-\2/'
+  # 正準形の知識を 1 箇所に留めるため、判定と切り出しを同じ正規表現で行う
+  # （BASH_REMATCH の捕獲を使う。sed と二重に書くと片方だけ変える事故が起きる）。
+  if [[ "$id" =~ ^([A-Z]+)-([0-9a-f]{8}) ]]; then
+    printf '%s-%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
   else
     printf '(ID 不正: %s)\n' "${id:-空}"
   fi
@@ -162,11 +164,24 @@ names_block() {
 cut -f1 "$work/inventory" | LC_ALL=C sort -u > "$work/assets"
 
 # cases（<target>\t<id>\t<name>\t<区分>）を資産側から引ける形へ並べ替える。
-# inventory に無い target（CASE 側のリネーム追従漏れ）は落とし、下の未分類検査で拾う。
 awk -F'\t' -v OFS='\t' '
   NR == FNR { asset[$1] = 1; next }
   $1 in asset { print $4, $1, $2, $3 }
 ' "$work/assets" "$work/cases" | LC_ALL=C sort > "$work/asset-rows"
+
+# inventory に無い target を指す CASE（リネーム / 削除の追従漏れ）は上の join で落ちる。
+# 「未分類」節はこれを拾わない（あちらは資産側から見た CASE 無し）。落ちた CASE が対応表の
+# どこにも現れないまま無警告になるのを避けるため、ここで別途 stderr へ出す
+# （test-doc-map.sh §1 が本来落とすが、sara ジョブは required check ではない → ADR-0050）。
+dangling_cases=$(awk -F'\t' '
+  NR == FNR { asset[$1] = 1; next }
+  !($1 in asset) { print $2 " → " $1 }
+' "$work/assets" "$work/cases")
+
+if [ -n "$dangling_cases" ]; then
+  echo "test-doc-matrix.sh: 警告: 実在しない資産を指す CASE がある（対応表から落ちる）:" >&2
+  printf '  %s\n' "$dangling_cases" >&2
+fi
 
 # --- 生成 --------------------------------------------------------------------
 
