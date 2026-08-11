@@ -14,6 +14,15 @@ on:
   # nix/Go/CI files change" optimisation is preserved either way
   # (→ ADR-0027 §2, ADR-0030).
   pull_request:
+  # Only `test-doc-matrix` consumes this trigger: the correspondence table is
+  # generated from merged state and uploaded as an artifact (→ #304). Every
+  # other job stays PR-only via an explicit `github.event_name != 'push'`
+  # guard — the `changes` job treats any non-pull_request event as "run", so
+  # without those guards a main push would newly fire flake-check / go-coverage
+  # / e2e, which this trigger is not meant to change.
+  push:
+    branches:
+      - main
 
 jobs:
   changes:
@@ -49,18 +58,18 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup Nix
-        if: needs.changes.outputs.run == 'true'
+        if: needs.changes.outputs.run == 'true' && github.event_name != 'push'
         uses: ./.github/actions/setup-nix
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Run nix flake check
-        if: needs.changes.outputs.run == 'true'
+        if: needs.changes.outputs.run == 'true' && github.event_name != 'push'
         run: nix flake check -L
 
   go-coverage:
     needs: changes
-    if: needs.changes.outputs.run == 'true'
+    if: needs.changes.outputs.run == 'true' && github.event_name != 'push'
     # buildGoModule の checkPhase が出力する coverprofile / func レポートを成果物（$out）から取り出し、
     # Job Summary に表示する（計測・表示のみ。閾値ゲートは持たない → 他テスト追加 PR とのマージ順依存回避）。
     # $out 同梱なので cachix の cache hit でも決定論的に同じレポートを参照できる。
@@ -104,10 +113,12 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       # Scoped to what this job actually exercises: the documents sara scans,
-      # its config, the sara-id implementation, and this workflow. On
-      # non-pull_request events the step is skipped and `relevant` stays empty,
-      # which the guard below treats as "run" — the event/filter decision lives
-      # in a single expression rather than being restated in a shell step.
+      # its config, the sara-id / test-doc-map implementations, the test assets
+      # test-doc-map enumerates, and this workflow. On non-pull_request events
+      # the step is skipped and `relevant` stays empty, which the guards below
+      # treat as "run" (except on push, which only test-doc-matrix serves) —
+      # the event/filter decision lives in a single expression per step rather
+      # than being restated in a shell step.
       - name: Detect sara-relevant changes
         id: filter
         if: github.event_name == 'pull_request'
@@ -136,7 +147,7 @@ jobs:
               - 'flake.nix'
 
       - name: Setup Nix
-        if: steps.filter.outputs.relevant != 'false'
+        if: steps.filter.outputs.relevant != 'false' && github.event_name != 'push'
         uses: ./.github/actions/setup-nix
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
@@ -146,14 +157,14 @@ jobs:
       # exactly this reason → 2c9f9fa). The dedicated `sara` devShell avoids
       # building nput and running the dogfood shellHook.
       - name: Run sara check
-        if: steps.filter.outputs.relevant != 'false'
+        if: steps.filter.outputs.relevant != 'false' && github.event_name != 'push'
         run: nix develop '.?dir=dev#sara' -c sara check
 
       # The numbering contract for sara-id (UUIDv4 two-tier IDs). Also exposed
       # as `checks.sara-id` for `nix flake check ./dev`, but that never runs in
       # CI because flake-check targets the root flake — hence this explicit step.
       - name: Run sara-id contract test
-        if: steps.filter.outputs.relevant != 'false'
+        if: steps.filter.outputs.relevant != 'false' && github.event_name != 'push'
         run: nix develop '.?dir=dev#sara' -c dev/tests/sara-id.sh
 
       # The test-code ⇔ CASE mapping contract (→ #304). Purely static: it reads
@@ -162,12 +173,12 @@ jobs:
       # as `checks.test-doc-map` for local `nix flake check ./dev`, which CI's
       # root-flake flake-check never reaches.
       - name: Run test-doc-map contract test
-        if: steps.filter.outputs.relevant != 'false'
+        if: steps.filter.outputs.relevant != 'false' && github.event_name != 'push'
         run: nix develop '.?dir=dev#sara' -c dev/tests/test-doc-map.sh
 
   e2e:
     needs: changes
-    if: needs.changes.outputs.run == 'true'
+    if: needs.changes.outputs.run == 'true' && github.event_name != 'push'
     # Non-NixOS (ubuntu-latest) E2E. Verifies the "works as long as nix is present"
     # claim with real nix (→ ADR-0012). Runs tests/e2e/run.sh inside the ci devShell
     # (nput / git / jq / coreutils).
@@ -182,3 +193,37 @@ jobs:
 
       - name: Run E2E harness
         run: nix develop '.?dir=dev#ci' -c tests/e2e/run.sh
+
+  test-doc-matrix:
+    # Generates the test-code ⇔ CASE ⇔ TC ⇔ RISK correspondence table and uploads
+    # it as an artifact (→ #304). Deliberately NOT committed to the repository:
+    # a generated file tracked alongside its sources drifts, and reviewing its
+    # diff adds nothing the contract test does not already enforce.
+    #
+    # Runs on main push and workflow_dispatch only — not per PR. Unlike the
+    # test-doc-map contract test (purely static, every PR), generation needs the
+    # `--full` inventory, which runs `go test -json` over the whole module and
+    # evaluates each nix-unit file. That cost buys a document nobody reads
+    # mid-review, so it is paid once per merge instead.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
+        with:
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      # The default dev devShell, not `sara`: generation needs go + jq + yq-go +
+      # sara together. Its shellHook dogfoods `nput apply skills`, which is
+      # harmless here (it places into the checkout and is allowed to no-op).
+      - name: Generate correspondence table
+        run: nix develop ./dev -c dev/scripts/test-doc-matrix.sh test-doc-matrix.md
+
+      - name: Upload correspondence table
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-doc-matrix
+          path: test-doc-matrix.md
+          if-no-files-found: error
