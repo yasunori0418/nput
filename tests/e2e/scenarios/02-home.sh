@@ -3,6 +3,8 @@
 # 世代をまたいで（entry 入替）`nput rollback` で前世代の配置へ復帰し、最後に `nput reset` が
 # FS のみを撤去して profile / 世代を動かさないことをアサート。世代を戻す実行と撤去する実行は
 # `--json` のエンベロープも実コマンド経路で検証する（→ issue #285）。
+# 併せて projectRoot の第 2 config を同居させ、`list-generations --all` が home mode の config
+# だけを列挙し（陽性対照と除外）読み取り専用であることを両出力経路で見る（→ issue #312）。
 set -euo pipefail
 source "$(dirname "$0")/../lib.sh"
 e2e_isolate
@@ -153,14 +155,18 @@ assert_symlink "$PROJ/.nput-out/proj"
 # 前提は「roothash 階層（base/<roothash>/proj）に profile がある」こと。名前だけを頼りに
 # 1 件目を黙って採ると、想定外の配置が増えてもガードが素通りする。profile リンクごと glob して
 # 一意に 1 件だけ当たることを確かめる。
-PROJ_PROFILES=("$XDG_STATE_HOME"/nix/profiles/nput/*/proj/profile)
-if [ "${#PROJ_PROFILES[@]}" -eq 1 ] && [ -L "${PROJ_PROFILES[0]}" ]; then
-	e2e_pass "proj の profile が roothash 階層に一意に実在する: ${PROJ_PROFILES[0]#"$XDG_STATE_HOME/"}"
+PROJ_CONFIG_PROFILES=("$XDG_STATE_HOME"/nix/profiles/nput/*/proj/profile)
+if [ "${#PROJ_CONFIG_PROFILES[@]}" -eq 1 ] && [ -L "${PROJ_CONFIG_PROFILES[0]}" ]; then
+	e2e_pass "proj の profile が roothash 階層に一意に実在する: ${PROJ_CONFIG_PROFILES[0]#"$XDG_STATE_HOME/"}"
 else
-	e2e_fail "proj の profile が roothash 階層に一意に無い（除外検証の前提が崩れる）: ${#PROJ_PROFILES[@]} 件 = ${PROJ_PROFILES[*]}"
+	e2e_fail "proj の profile が roothash 階層に一意に無い（除外検証の前提が崩れる）: ${#PROJ_CONFIG_PROFILES[@]} 件 = ${PROJ_CONFIG_PROFILES[*]}"
 fi
 
 e2e_step "list-generations --all --json: home mode の config だけを列挙する（→ issue #312）"
+# 読み取り専用の前後比較はここから始める（両方の出力経路をまたいで挟む）。--json 実行より後で
+# 取ると、テキスト経路しか挟めず --json 経路が profile を動かす退行を素通りさせる。
+ALL_PROFILE_BEFORE="$(readlink "$PROFILE")"
+ALL_GENS_BEFORE="$(gens_count)"
 ENV_GENS_ALL="$E2E_WORK/list-generations-all.json"
 run_json 0 "$ENV_GENS_ALL" list-generations --all
 # 陽性対照と除外を 1 つの等式で固定する。subject 名の集合そのものを見るので、home が落ちても
@@ -180,10 +186,8 @@ assert_json "$ENV_GENS_ALL" "集約 status=success・dryRun=false" \
 	'.status == "success" and .dryRun == false'
 
 e2e_step "list-generations --all は読み取り専用（profile も世代も配置も動かない）"
-# 「読み取り専用」を profile リンク先・世代の本数・配置の 3 点で見る。--json 経路は既に通した
-# ので、ここは既定（テキスト）経路で実行して両方の出力経路が状態を変えないことを固定する。
-ALL_PROFILE_BEFORE="$(readlink "$PROFILE")"
-ALL_GENS_BEFORE="$(gens_count)"
+# 「読み取り専用」を profile リンク先・世代の本数・配置の 3 点で見る。前後比較の始点は --json
+# 実行の前（上）で取ってあるので、ここで既定（テキスト）経路も通せば両方の出力経路を挟める。
 ALL_TEXT_CODE=0
 ALL_TEXT="$(nput list-generations --all)" || ALL_TEXT_CODE=$?
 if [ "$ALL_TEXT_CODE" -eq 0 ]; then
