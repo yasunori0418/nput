@@ -200,6 +200,12 @@
               # uuidgen -r の供給元（util-linux）は sara-id の runtimeInputs で
               # wrapper の PATH に前置されるため、devShell 側には載せない。
               sara-id
+              # dev/tests/test-doc-map.sh・dev/scripts/test-doc-matrix.sh が CASE
+              # frontmatter を読むのに使う yq-go（mikefarah/yq v4）。載せないと
+              # ambient PATH の python-yq（別実装・別構文）を拾って黙って空を返す。
+              yq-go
+              # test-doc-matrix.sh が sara report matrix --format json を整形するのに使う。
+              jq
               go
               gopls
               # ローカルでカバレッジ計測する coverage ツール（go test -coverprofile + go tool cover）。
