@@ -181,7 +181,7 @@ unbuilt=$(LC_ALL=C comm -13 "$work/go-ran-packages" "$work/go-failed-packages")
 if [ -n "$unbuilt" ]; then
   echo "test-inventory.sh: テストを 1 件も走らせずに失敗したパッケージがある" >&2
   echo "  （ビルド失敗、または TestMain / init の異常終了）:" >&2
-  printf '  %s\n' "$unbuilt" >&2
+  printf '%s\n' "$unbuilt" | sed 's/^/  /' >&2
   echo "test-inventory.sh: 列挙が不完全なので中断する（go test <パッケージ> で原因を確認する）" >&2
   exit 1
 fi
