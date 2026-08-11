@@ -11,9 +11,9 @@ covers:
 ## 対象
 
 `tests/nix-unit/farm-entries.nix`（TP-403c55c7 のテスト seam `nput.__internal.farmEntries` /
-`nput.__internal.anchorName` / `nput.__internal.anchorLines` を直接叩く。anchorLines は
-`lib/manifest.nix` が `mkManifest` から呼ぶ生成式そのもので、テスト側に複製は持たない
-→ Issue #289）
+`nput.__internal.anchorName` / `nput.__internal.anchorLines` を直接叩き、加えて `mkManifest` の
+builder への配線を fake pkgs 経由で見る。anchorLines は `lib/manifest.nix` が `mkManifest` から
+呼ぶ生成式そのもので、テスト側に複製は持たない → Issue #289）
 
 ## 検証内容
 
@@ -29,12 +29,17 @@ covers:
   改行連結され **target ごとに** anchor 名が変わること（2 entry の `src` は同一の fake store
   パスなので変わるのは anchor 側だけである）、空白・記号を含む `src` が `escapeShellArg` で
   quote されること、エントリが空なら空文字列になること
-- **farm への配線**: 混在 manifest を `normalizeManifest` → `farmEntries` → `anchorLines` の
-  経路へ通し、生成の入力が全 entry ではなく farm 対象の 2 件だけであること。期待値は同じ
-  `anchorLines` を独立に選んだ対象 target 列へ適用して組むので、生成式を変えれば両辺が揃って
-  動き、ここで落ちるのは抽出と生成の繋ぎ違いだけである（内容の正しさは前項が固定する）
+- **farm derivation への配線**: 混在 manifest を `mkManifest` へ与え、その builder スクリプト
+  本文が `mkdir` → `manifest.json` のコピー → アンカー行の順で組まれ、アンカー行が farm 対象の
+  2 件だけから成ること。copy / out-of-store しか無い manifest では builder にアンカー行が
+  現れないこと。期待するアンカー行は同じ `anchorLines` で組むので、生成式を変えれば両辺が
+  揃って動き、ここで落ちるのは配線の誤り（フィルタ漏れ・埋め込み忘れ・順序の崩れ）だけである
+  （内容の正しさは前項が固定する）
 
-配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。
+`src` の配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。配線検証の `pkgs` も
+同じイディオムで、`mkManifest` が使う `writeText` / `runCommandLocal` を引数を持ち帰る double へ
+差し替えて builder 本文を純評価で取り出す（derivation の実ビルドは評価テストの枠を超えるため
+採らない → Issue #289）。
 
 ## 出典
 

@@ -39,10 +39,11 @@ symlink farm は GC アンカー専用で、アンカーは store-backed な sym
 TC-1d69350e（アンカー対象の抽出と farm の組み立て）・TC-a6a14739（アンカー名の形式と決定性）で
 緩和する。
 
-ただし本区分が見るのは抽出条件とアンカー名までで、**REQ-60e6b49c の「返り値が symlink farm を
-含む store オブジェクトである」ことそのものは残余**として残る。TC-1d69350e は derivation を
-組み立てず生成式を再構成した文字列を比較するため、farm derivation の実体は評価テストの射程外に
-あり、`integration` 区分の E2E が担当する。
+ただし本区分が見るのは抽出条件とアンカー名、および derivation の builder スクリプトへの配線
+までで、**REQ-60e6b49c の「返り値が symlink farm を含む store オブジェクトである」ことそのもの
+は残余**として残る。TC-1d69350e は fake な pkgs 越しに builder 本文を取り出すだけで実ビルドは
+行わないため、配置後の farm derivation の実体は評価テストの射程外にあり、`integration` 区分の
+E2E が担当する（→ Issue #289）。
 
 ## 出典
 
