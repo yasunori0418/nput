@@ -6,27 +6,32 @@ derives_from:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 specification: |
   `lib.__internal` SHALL expose the private helpers (`escapesBase` / `pathChecks` /
-  `anchorName` / `resolveEntry` / `farmEntries`) as a test seam for nix-unit and namaka.
-  It SHALL NOT be a stable API and SHALL NOT be covered by backward-compatibility
-  guarantees.
+  `anchorName` / `resolveEntry` / `farmEntries` / `anchorLines`) as a test seam for
+  nix-unit and namaka. It SHALL NOT be a stable API and SHALL NOT be covered by
+  backward-compatibility guarantees.
 specification_ja: |
   `lib.__internal` は private helper（`escapesBase` / `pathChecks` / `anchorName` /
-  `resolveEntry` / `farmEntries`）を nix-unit / namaka のテスト seam として公開する
-  内部 API でなければならない。これは安定 API であってはならず、後方互換の保証対象に
-  含めてはならない。
+  `resolveEntry` / `farmEntries` / `anchorLines`）を nix-unit / namaka のテスト seam
+  として公開する内部 API でなければならない。これは安定 API であってはならず、後方互換の
+  保証対象に含めてはならない。
 issues:
   - "#71"
+  - "#289"
 ---
 # TP-403c55c7: lib.__internal は private helper のテスト seam として公開する
 
 ## 仕様
 
 `lib.__internal` は private helper（`escapesBase` / `pathChecks` / `anchorName` /
-`resolveEntry` / `farmEntries`）を nix-unit / namaka のテスト seam として公開する
-内部 API で、安定 API ではない。
+`resolveEntry` / `farmEntries` / `anchorLines`）を nix-unit / namaka のテスト seam として
+公開する内部 API で、安定 API ではない。
 
 - 目的は評価テストから内部関数を直接叩けるようにすること。
 - 安定 API ではないため、後方互換の保証対象に含めない。
+- 列挙は seam の実内容を追跡する。唯一の SSOT は `lib/__internal.nix` の export で、helper を
+  足したらそれを写している 5 箇所——本 item の 3 箇所（`specification` / `specification_ja` /
+  本節）と `lib/default.nix` / `lib/manifest.nix` のコメント——を揃えて更新する。機械照合は
+  無いので追随漏れはレビューで拾う（→ Issue #289 で `anchorLines` を追加）。
 
 ## 出典
 

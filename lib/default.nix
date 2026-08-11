@@ -9,8 +9,9 @@ let
   manifest = import ./manifest.nix;
 in
 {
-  # Private helpers (escapesBase / pathChecks / anchorName / resolveEntry / farmEntries) exposed
-  # solely as a unit-test seam (→ #71). NOT a stable public API; the `__internal` name marks intent.
+  # Private helpers (escapesBase / pathChecks / anchorName / resolveEntry / farmEntries /
+  # anchorLines) exposed solely as a unit-test seam (→ #71, #289). NOT a stable public API;
+  # the `__internal` name marks intent.
   # Each helper takes nixpkgs.lib explicitly (the nput lib attrset is unparameterized).
   __internal = import ./__internal.nix;
 
