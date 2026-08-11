@@ -45,6 +45,15 @@ risk を `requirement` と `design` のどちらに張るかの使い分けは `
 `docs/test/<対象>/` の `<対象>` は**機能単位の 8 区分**。requirement 単位は 130 超の REQ との
 1:N が錯綜するため採らない（→ Issue #273 の決定事項）。
 
+**区分の一覧と並び順の規範は `dev/tests/test-categories.tsv`**（機械可読・契約テストと対応表
+生成が共用する SSOT → Issue #304）。下の表はそれに test_plan 列を添えた読み物で、区分を
+増減するときはデータファイル・`docs/test/` のディレクトリ・この表の 3 つを揃える
+（前 2 つのずれは `dev/tests/test-doc-map.sh` が検出する）。
+
+個々のテスト資産がどの区分に属するかは**どの表でも持たない**。CASE ファイルの置き場所
+（`docs/test/<区分>/`）から導く。パス prefix では決まらない（`internal/engine/*_test.go` は
+5 区分・`tests/e2e/scenarios/*` は 4 区分へ割れる）ため、prefix 表を持つと二重管理になる。
+
 右端は各区分の CASE の上に立つ test_plan（逆算の起点。複数あるものは担当が分属する）。
 
 | `<対象>` | 含むテスト資産 | 上位の test_plan |
@@ -59,12 +68,16 @@ risk を `requirement` と `design` のどちらに張るかの使い分けは `
 | `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` | TP-229b69c0 / TP-0734996e / TP-e7c25263（`internal/` の Go テスト）|
 
 区分外: `go-vet` / `golangci-lint` / カバレッジ計測は quality の担当。`dev/tests/sara-id.sh` は
-test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（理由は同 item）。
+test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（理由は同 item）。**CASE を
+持たないテスト資産の規範は `dev/tests/test-doc-exclusions.tsv`**（除外理由付き。ここに無い
+資産が CASE 無しで現れると契約テストが落ちる）。
 
 **逆算階層の粒度**（既存のテスト実装から item を起こすときの単位）:
 
-- **CASE** = テストファイル / e2e シナリオ / flake check 単位。本文に対象ファイルパスと
-  主な検証内容（テスト関数のテーマ列挙）を書く。テスト関数単位には割らない
+- **CASE** = テストファイル / e2e シナリオ / flake check 単位。frontmatter の `target`
+  （必須・単一値）に対象を正準表記で書き、本文の `## 対象` 節に人間向けの補足を書く。
+  主な検証内容（テスト関数のテーマ列挙）も本文へ。テスト関数単位には割らない。
+  CASE ⟷ テスト資産の 1:1 は `dev/tests/test-doc-map.sh` が強制する
 - **TC** = 検証テーマ単位（対象あたり数件）。同じ不変条件・観点を検証する CASE 群を束ねる
 - **RISK** = TC を束ねる脅威単位（対象あたり 2〜5 件）。「このテーマが壊れると何が起きるか」を
   requirement / design への `threatens` で表す
@@ -119,6 +132,11 @@ nix flake check          # 評価エラー・型チェック
 nix build .#<package>    # パッケージビルド
 nix run .#<script>       # activation スクリプト実行
 nix develop ./dev --command sara check   # ドキュメントグラフの検証
+
+# テストコード ⇔ CASE 対応（→ Issue #304）
+nix develop '.?dir=dev#sara' -c dev/tests/test-doc-map.sh   # 契約テスト（純静的・毎 PR で回る）
+nix develop ./dev -c dev/scripts/test-inventory.sh --static # テスト資産の列挙（ファイル粒度）
+nix develop ./dev -c dev/scripts/test-doc-matrix.sh out.md  # 対応表の生成（重い・CI は main push）
 ```
 
 ## 規約
