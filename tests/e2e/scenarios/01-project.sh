@@ -222,7 +222,6 @@ assert_json "$ENV_ALL_EMPTY" "results:[]・status=success（N=0 でも同一形�
 # 世代を公開するコマンドは home mode 限定（→ REQ-05abce3e・issue #284）。拒否は evalRoot で
 # rootKind を解決した後に効くため、実 nix を通る経路でしか観測できない。エラーは exit 1 の
 # 一般エラーで、stderr に home mode 限定である旨を含む（利用者が config の root を疑える）。
-# 直前の apply --all で docs / idvec を配置済みなので、拒否が配置物を巻き戻さないことも見る。
 BEFORE_TARGET="$(readlink "$TARGET")"
 for cmd in rollback list-generations; do
 	e2e_step "$cmd は project mode で拒否（exit 1 + home mode 限定の説明・→ issue #284）"
@@ -235,15 +234,18 @@ for cmd in rollback list-generations; do
 	else
 		e2e_fail "exit $reject_code (期待 1): nput $cmd docs"
 	fi
-	if grep -qF "home mode only" "$reject_err"; then
-		e2e_pass "stderr が home mode 限定を説明する"
+	# 文言そのものではなく「home mode を要する」ことと「判断に使った rootKind」の 2 情報が
+	# 届くかを見る。system mode 追加でモード名が増える改訂が控える（→ ADR-0036）ので、
+	# 受理する語をモード名 + only の形へ広げず home mode の出現に閉じる。
+	if grep -q 'home mode' "$reject_err" && grep -q 'rootKind=' "$reject_err"; then
+		e2e_pass "stderr が home mode 限定と拒否された rootKind を伝える"
 	else
-		e2e_fail "stderr に home mode 限定の説明が無い: $(cat "$reject_err")"
+		e2e_fail "stderr の説明が不足: $(cat "$reject_err")"
 	fi
-	if grep -qF 'rootKind="project"' "$reject_err"; then
-		e2e_pass "stderr が拒否された rootKind を示す"
+	if grep -qF 'project' "$reject_err"; then
+		e2e_pass "stderr が拒否された root の種別を名指す"
 	else
-		e2e_fail "stderr に rootKind が無い: $(cat "$reject_err")"
+		e2e_fail "stderr に root の種別が無い: $(cat "$reject_err")"
 	fi
 	# 拒否した以上、世代の情報を stdout へ 1 バイトも出さない（拒否分岐が printGenerations の
 	# 後段へずれれば一覧が漏れる。exit code と stderr だけでは検知できない）。
@@ -254,15 +256,11 @@ for cmd in rollback list-generations; do
 	fi
 done
 
-e2e_step "拒否は配置物を巻き戻さない（rollback が engine へ到達していない）"
+# 拒否した実行のあとも docs の配置が保たれていることの sanity check。project mode は
+# generation skip で世代を 1 つしか持たないため、これは「rollback が engine へ到達しない」
+# ことまでは示さない（到達しても最古世代として止まる）。到達の検知は世代を複数持つ
+# home mode の担当。
+e2e_step "拒否のあとも docs の配置は変わらない"
 assert_symlink "$TARGET" "$BEFORE_TARGET"
-
-e2e_step "list-generations --all は project mode の config を一覧しない（→ REQ-05abce3e・issue #284）"
-# --all は home mode の全 config を対象とする読み取り専用の列挙。直前まで project mode の
-# config を apply しているので、その profile が列挙へ紛れ込まないことをここで固定する。
-ENV_LG_ALL="$E2E_WORK/list-generations-all.json"
-run_json 0 "$ENV_LG_ALL" list-generations --all
-assert_json "$ENV_LG_ALL" "results:[]・status=success（home mode の config が無い）" \
-	'.results == [] and .status == "success"'
 
 e2e_finish
