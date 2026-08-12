@@ -25,8 +25,9 @@ git から root を解決できないときに engine 実行時ではなく評�
 
 - project mode で git toplevel ではなく CWD を root に採り、リポジトリ外へ配置する
 - git repo 外での apply が停止せず、任意のディレクトリを root に採る
-- `fixed` で root パスを省いた manifest が停止せず、root 未決のまま配置へ進む
-  （manifest 層は意図的に受理するため、この形の失敗は engine 側にしか現れない）
+- `fixed` で root パスを省いた文書を受理したまま停止せず、root 未決で配置へ進む
+  （契約の消費側は受理の段でこれを止めないため、この形の失敗は root 解決の側にしか現れない。
+  `fixed` の root そのものへ検査を課す規範が REQ 側に無いことは RISK-5df2d02b が残余に置く）
 - home mode の root 供給元が層ごとに揃わず、HM 経由と CLI 経由で配置先が分岐する
 - profile ディレクトリの作成・backref 書き込みの失敗が握り潰され、逆引き不能な状態で配置が進む
 
