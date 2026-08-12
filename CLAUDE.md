@@ -58,7 +58,7 @@ risk を `requirement` と `design` のどちらに張るかの使い分けは `
 
 | `<対象>` | 含むテスト資産 | 上位の test_plan |
 |---|---|---|
-| `manifest-eval` | nix-unit 全 7（structure / defaults / gates / escapes-base / anchor-name / resolve-marker / farm-entries）+ namaka manifest-project | TP-36e90d5d / TP-d3d06fe4 / TP-403c55c7 |
+| `manifest-eval` | `tests/nix-unit/` と `tests/namaka/` 配下の全テスト | TP-36e90d5d / TP-d3d06fe4 / TP-403c55c7 |
 | `engine-core` | `internal/engine/` の engine / dryrun / preflight、`internal/planner/` | TP-e7c25263 |
 | `copy` | copytree / copy、e2e `04-copy` | TP-e7c25263 / TP-229b69c0 |
 | `migration-stale` | preremove_generalization / staleremove、e2e `03-stale` | TP-e7c25263 / TP-229b69c0 |
