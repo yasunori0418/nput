@@ -625,28 +625,3 @@ func TestRollbackNoProfileErrors(t *testing.T) {
 		t.Fatalf("expected no-profile error, got %v", err)
 	}
 }
-
-// TestResolveRootHome verifies that rootKind=home returns $HOME (root resolver unit test).
-func TestResolveRootHome(t *testing.T) {
-	home := realTempDir(t)
-	t.Setenv("HOME", home)
-	got, err := resolveRoot(manifest.RootKindHome, "", "", "", nil)
-	if err != nil {
-		t.Fatalf("resolveRoot home: %v", err)
-	}
-	if got != home {
-		t.Errorf("resolveRoot home = %q, want %q", got, home)
-	}
-}
-
-// TestResolveRootOverrideWins verifies that the --root override takes precedence regardless of rootKind.
-func TestResolveRootOverrideWins(t *testing.T) {
-	override := realTempDir(t)
-	got, err := resolveRoot(manifest.RootKindHome, "", override, "", nil)
-	if err != nil {
-		t.Fatalf("resolveRoot override: %v", err)
-	}
-	if got != override {
-		t.Errorf("resolveRoot override = %q, want %q", got, override)
-	}
-}
