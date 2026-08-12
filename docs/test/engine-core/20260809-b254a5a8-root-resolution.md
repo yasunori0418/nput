@@ -9,7 +9,7 @@ mitigates:
 
 project mode の root が git toplevel から解決されること、git repo の外で実行したときに
 engine 実行時に停止すること、および root 解決に失敗したときに配置へ進まないことを検証する。
-`fixed` で root パスを省いた manifest を engine が拒否することも同じ条件の射程に含む。
+`fixed` で root パスが無いときに engine が拒否することも同じ条件の射程に含む。
 
 profile ディレクトリの作成・backref 書き込みの失敗が握り潰されずエラーとして表面化することも
 同じ条件の下に置く。これらが黙って失敗すると、配置は進むのに逆引きできない profile が残る。
