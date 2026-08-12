@@ -1019,6 +1019,26 @@ func TestResolveRootOverrideWins(t *testing.T) {
 	}
 }
 
+// TestResolveRootOverrideRelative pins that a relative --root override is absolutized
+// against the cwd. TestResolveRootOverrideWins above only ever passes absolute paths, for
+// which filepath.Abs merely cleans the input without consulting os.Getwd — so the
+// relative → absolute conversion itself goes unexercised there and an implementation
+// shrunk to `return rootOverride, nil` would still pass. Chdir'ing into a real temp dir
+// makes the expected result computable as filepath.Join(cwd, rel).
+func TestResolveRootOverrideRelative(t *testing.T) {
+	cwd := realTempDir(t)
+	t.Chdir(cwd)
+
+	const rel = "sub/dir"
+	got, err := resolveRoot(manifest.RootKindHome, "", rel, "", nil)
+	if err != nil {
+		t.Fatalf("resolveRoot relative override: %v", err)
+	}
+	if want := filepath.Join(cwd, rel); got != want {
+		t.Errorf("resolveRoot relative override = %q, want %q", got, want)
+	}
+}
+
 // TestResolveRootFixedWithoutPath pins the fixed-root rejection when no path is given.
 // The manifest layer intentionally accepts a `fixed` root document that omits the path
 // (→ CASE-4179dcb2 / TC-172548ea), so this branch is the only place the invalid pair is

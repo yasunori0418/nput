@@ -24,9 +24,11 @@ covers:
 nix を介さず実 FS（`t.TempDir()`）へ apply を回す統合テスト。link farm と manifest を
 テスト側で組み立て、配置結果を実 FS のプローブで確認する。
 
-`resolveRoot` を直接叩く純引数テストだけは例外で、分岐網羅を 1 ファイルで追えるよう
-generations_test.go 側からもここへ集約した（→ issue #328）。cwd を壊して `os.Getwd` を
-失敗させる固定 root の Abs 失敗のみ、FS 誘発型として後段のセクションに残る。
+`resolveRoot` を直接叩くテストだけは例外で、分岐網羅を 1 ファイルで追えるよう
+generations_test.go 側からもここへ集約した（→ issue #328）。多くは純引数だが、cwd を
+入力に取る経路（相対パスの絶対化）は実ディレクトリへ `t.Chdir` して期待値を定める。
+cwd を壊して `os.Getwd` を失敗させる固定 root の Abs 失敗のみ、FS 誘発型として後段の
+セクションに残る。
 
 ## 主な検証内容
 
@@ -37,7 +39,8 @@ generations_test.go 側からもここへ集約した（→ issue #328）。cwd 
 - **stale 除去との接続**: 記録済み entry の除去、foreign を残すこと
 - **root 解決**: `rootKind=home` が `$HOME` を返すこと、`--root` 上書きが rootKind に
   よらず優先されること（未決（`""`）・未知の値と組んでも拒否されず override の絶対パスが
-  返る）、git repo 外でのエラー、固定絶対 root の解決失敗、`fixed` でパスを省いた
+  返る）、相対 override が cwd 起点で絶対化されて返ること、git repo 外でのエラー、
+  固定絶対 root の解決失敗、`fixed` でパスを省いた
   ときの拒否（エラー本文一致。manifest 層が受理する組み合わせを engine が止める責務
   → CASE-4179dcb2 / TC-172548ea）、rootKind 未決（`""`）と未知の値の拒否（いずれも
   エラー本文一致。未知の値は `%q` のクォートまで含めて固定する。`systemRoot` は system
