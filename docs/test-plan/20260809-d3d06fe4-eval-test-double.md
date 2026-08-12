@@ -49,11 +49,11 @@ specification_ja: |
 
 ## 出典
 
-現況の実装が横断的に採っているイディオムの明文化。`tests/nix-unit/` の各ファイル
-（structure / defaults / gates / resolve-marker / farm-entries）・`tests/namaka/
-manifest-project/expr.nix`・`flake.nix` の `checks.hm-module` がいずれも同形の double を
-使い、各所のコメントが「store hash 揺れを避ける」「srcType の store-backed 判定
-（`? outPath`）を通る正当な test double」と理由を述べている。
+現況の実装が横断的に採っているイディオムの明文化。`tests/nix-unit/` のうち store-backed な
+配置元を入力に要する各ファイル・`tests/namaka/manifest-project/expr.nix`・`flake.nix` の
+`checks.hm-module` がいずれも同形の double を使い、各所のコメントが「store hash 揺れを
+避ける」「srcType の store-backed 判定（`? outPath`）を通る正当な test double」と理由を
+述べている（配置元を入力に要さない純関数のテストは対象外）。
 
 > 本 item は個別のテストが何を検証するかではなく、評価レベルのテストが入力をどう用意するかの
 > 横断規約を定める。`checks.hm-module` が同じ double を使う位置づけは TP-0734996e の担当。
