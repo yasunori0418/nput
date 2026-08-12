@@ -12,7 +12,7 @@
 # 形式: <区分>\t<説明>
 # 行頭 # はコメント、空行は無視。列の区切りはタブ 1 個。
 # 区分の並び順 = 対応表のセクション順（この表の記載順）。
-manifest-eval	nix-unit 全 7 + namaka manifest-project（manifest の純評価）
+manifest-eval	tests/nix-unit 配下の全テスト + namaka manifest-project（manifest の純評価）
 engine-core	internal/engine の engine / dryrun / preflight、internal/planner
 copy	copytree / copy、e2e 04-copy
 migration-stale	preremove_generalization / staleremove、e2e 03-stale
