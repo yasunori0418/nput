@@ -24,8 +24,8 @@ b が再配置され、a は据え置かれる。ポインタ移動は FS 収束
 symlink 越しに store を指して EEXIST / EROFS で落ちる（→ ADR-0046、issue #173）。
 収束後に当該パスが実ディレクトリへ戻っていることを確認する。
 
-**root 解決** — `rootKind` から絶対 root を得る側（home は `$HOME`、`--root` 上書きは
-rootKind によらず優先）も同じ層の条件として併せて検証する。
+`rootKind` から絶対 root を得る側は本条件の担当から外れる。root 解決そのものは
+TC-b254a5a8（engine-core）へ一本化した（→ issue #328）。
 
 上位の規範は TP-e7c25263（`internal/engine/` を実 FS の tmpdir で駆動する統合レベル）。
 
