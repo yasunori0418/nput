@@ -74,6 +74,7 @@ Issue #287 以降「一意性は規約に留めず、マージ前の重複検査
 要請の記述に留まらず強制の宣言も持つ（検査の実体は `tests/nix-unit-lib.nix` の `mergeTests`。
 → Issue #308）。
 
-現況は nix-unit 9 ファイル（structure / defaults / gates / escapes-base / anchor-name /
-resolve-marker / farm-entries / fixed-root / aggregator-merge）+ namaka スナップショット
-1 件（manifest-project）。
+この分担を実装しているテスト資産は `tests/nix-unit/` と `tests/namaka/` 配下の全テスト
+（manifest-eval 区分）。件数と leaf 名はここに書き下さない——leaf を足すたびにずれる
+スナップショットになるため（→ Issue #321 / #324）。現時点の一覧は列挙で得る
+（`dev/scripts/test-inventory.sh --static`）。
