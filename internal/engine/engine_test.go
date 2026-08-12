@@ -992,6 +992,44 @@ func TestResolveRootFixedWithoutPath(t *testing.T) {
 	}
 }
 
+// TestResolveRootInvalidKinds pins the remaining rejection branches of resolveRoot:
+// the undetermined rootKind ("" — reached when neither eval prefetch nor a manifest
+// supplied one) and any unknown value (the default arm). Both messages are asserted
+// verbatim because they are the only signal the caller gets; the unknown case is
+// formatted with %q, so the expectation carries the quotes as well.
+// RootKindSystem is deliberately left out: its rejection is a placeholder for the
+// unimplemented system mode and will be replaced along with the implementation
+// (→ #129 / #139 / #140), so pinning it now would only pin something scheduled to go.
+func TestResolveRootInvalidKinds(t *testing.T) {
+	tests := []struct {
+		name     string
+		rootKind string
+		want     string
+	}{
+		{
+			name:     "undetermined",
+			rootKind: "",
+			want:     "nput: rootKind is undetermined (eval prefetch or a manifest is required)",
+		},
+		{
+			name:     "unknown",
+			rootKind: "bogus",
+			want:     `nput: unknown rootKind: "bogus"`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := resolveRoot(tt.rootKind, "", "", "", nil)
+			if err == nil {
+				t.Fatalf("expected an error for rootKind=%q, got nil", tt.rootKind)
+			}
+			if err.Error() != tt.want {
+				t.Errorf("error = %q, want %q", err.Error(), tt.want)
+			}
+		})
+	}
+}
+
 // --- error-path coverage (engine.go:262-264, 359, 369-382) ------------------
 // These exercise the under-covered failure branches of resolveRoot (fixed-root
 // Abs), ensureProfileDir (mkdir / backref write), and cleanupPending (warn-only
