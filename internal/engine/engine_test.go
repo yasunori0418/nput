@@ -984,6 +984,20 @@ func TestApplyRecopyForeignFileOverwrites(t *testing.T) {
 // ENOTEMPTY), not permission bits, so they reproduce under root as well and need
 // no os.Geteuid()==0 skip guard.
 
+// TestResolveRootFixedWithoutPath pins the fixed-root rejection when no path is given.
+// The manifest layer intentionally accepts a `fixed` root document that omits the path
+// (→ CASE-4179dcb2 / TC-172548ea), so this branch is the only place the invalid pair is
+// refused; the exact message is asserted because those items name it as engine's duty.
+func TestResolveRootFixedWithoutPath(t *testing.T) {
+	_, err := resolveRoot(manifest.RootKindFixed, "", "", "", nil)
+	if err == nil {
+		t.Fatal("expected an error for rootKind=fixed without a root path, got nil")
+	}
+	if want := "nput: rootKind=fixed but no root path provided"; err.Error() != want {
+		t.Errorf("error = %q, want %q", err.Error(), want)
+	}
+}
+
 // TestResolveRootFixedAbsFailure covers engine.go:359 (filepath.Abs(fixedRoot)).
 // filepath.Abs only errors when the path is relative and os.Getwd fails, which is
 // inherently environment-dependent: we induce it by chdir'ing into a directory and
