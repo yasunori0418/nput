@@ -18,8 +18,9 @@ covers:
 世代リンクと profile を手で組み立ててから駆動する統合テスト。
 `ListGenerations` / `SwitchGeneration` は関数として差し替える。
 
-`resolveRoot` の純引数テストは分岐網羅を 1 ファイルで追えるよう engine_test.go へ集約した
-（→ CASE-31fdb776 / TC-b254a5a8、issue #328）。
+`resolveRoot` を直接叩くテストは分岐網羅を 1 ファイルで追えるよう engine_test.go へ集約した
+（集約先の集合は多くが純引数だが、cwd を入力に取る経路も含む。
+→ CASE-31fdb776 / TC-b254a5a8、issue #328）。
 
 ## 検証内容
 
