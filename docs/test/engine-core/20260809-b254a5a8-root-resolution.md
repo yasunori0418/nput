@@ -11,7 +11,8 @@ project mode の root が git toplevel から解決されること、git repo �
 engine 実行時に停止すること、および root 解決に失敗したときに配置へ進まないことを検証する。
 `fixed` で root パスが無いときに engine が拒否することも同じ条件の射程に含む。
 成功経路も同じ条件の下に置く。`rootKind=home` が `$HOME` を絶対 root として返すこと、
-`--root` 上書きが rootKind によらず優先されることを見る。
+`--root` 上書きが rootKind によらず優先されること、相対で与えた override が cwd 起点で
+絶対化されて返ることを見る。
 
 profile ディレクトリの作成・backref 書き込みの失敗が握り潰されずエラーとして表面化することも
 同じ条件の下に置く。これらが黙って失敗すると、配置は進むのに逆引きできない profile が残る。
