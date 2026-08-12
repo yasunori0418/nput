@@ -74,7 +74,7 @@ Issue #287 以降「一意性は規約に留めず、マージ前の重複検査
 要請の記述に留まらず強制の宣言も持つ（検査の実体は `tests/nix-unit-lib.nix` の `mergeTests`。
 → Issue #308）。
 
-この分担を実装しているテスト資産は `tests/nix-unit/` と `tests/namaka/` 配下の全テスト
-（manifest-eval 区分）。件数と leaf 名はここに書き下さない——leaf を足すたびにずれる
-スナップショットになるため（→ Issue #321 / #324）。現時点の一覧は列挙で得る
-（`dev/scripts/test-inventory.sh --static`）。
+この分担を実装しているテスト資産は `tests/nix-unit/` と `tests/namaka/` 配下の全テスト。
+件数と leaf 名はここでは集合参照に留めている（leaf を足すたびにずれるスナップショットに
+なるため。→ Issue #321 / #324）。現時点の一覧は列挙で得る
+（`dev/scripts/test-inventory.sh --static` の種別列 `nix-unit` / `namaka` の行）。
