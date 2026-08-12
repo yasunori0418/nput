@@ -24,9 +24,11 @@ covers:
 nix を介さず実 FS（`t.TempDir()`）へ apply を回す統合テスト。link farm と manifest を
 テスト側で組み立て、配置結果を実 FS のプローブで確認する。
 
-`resolveRoot` を直接叩く純引数テストだけは例外で、分岐網羅を 1 ファイルで追えるよう
-generations_test.go 側からもここへ集約した（→ issue #328）。cwd を壊して `os.Getwd` を
-失敗させる固定 root の Abs 失敗のみ、FS 誘発型として後段のセクションに残る。
+`resolveRoot` を直接叩くテストだけは例外で、分岐網羅を 1 ファイルで追えるよう
+generations_test.go 側からもここへ集約した（→ issue #328）。多くは純引数だが、cwd を
+入力に取る経路（相対パスの絶対化）は実ディレクトリへ `t.Chdir` して期待値を定める。
+cwd を壊して `os.Getwd` を失敗させる固定 root の Abs 失敗のみ、FS 誘発型として後段の
+セクションに残る。
 
 ## 主な検証内容
 
