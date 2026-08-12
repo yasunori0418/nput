@@ -24,6 +24,10 @@ covers:
 nix を介さず実 FS（`t.TempDir()`）へ apply を回す統合テスト。link farm と manifest を
 テスト側で組み立て、配置結果を実 FS のプローブで確認する。
 
+`resolveRoot` を直接叩く純引数テストだけは例外で、分岐網羅を 1 ファイルで追えるよう
+generations_test.go 側からもここへ集約した（→ issue #328）。cwd を壊して `os.Getwd` を
+失敗させる固定 root の Abs 失敗のみ、FS 誘発型として後段のセクションに残る。
+
 ## 主な検証内容
 
 - **初回配置と subpath**: project mode の初回配置、`subpath = "."` の配置
@@ -31,7 +35,8 @@ nix を介さず実 FS（`t.TempDir()`）へ apply を回す統合テスト。li
 - **上書き拒否**: target の通常ファイル占有でエラー停止、祖先 symlink でエラー停止、
   祖先が自己記録 stale のときのみ移行（copy 子を含む）
 - **stale 除去との接続**: 記録済み entry の除去、foreign を残すこと
-- **root 解決**: git repo 外でのエラー、固定絶対 root の解決失敗、`fixed` でパスを省いた
+- **root 解決**: `rootKind=home` が `$HOME` を返すこと、`--root` 上書きが rootKind に
+  よらず優先されること、git repo 外でのエラー、固定絶対 root の解決失敗、`fixed` でパスを省いた
   ときの拒否（エラー本文一致。manifest 層が受理する組み合わせを engine が止める責務
   → CASE-4179dcb2 / TC-172548ea）、rootKind 未決（`""`）と未知の値の拒否（いずれも
   エラー本文一致。未知の値は `%q` のクォートまで含めて固定する。`systemRoot` は system
