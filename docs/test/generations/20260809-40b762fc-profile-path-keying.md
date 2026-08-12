@@ -44,4 +44,4 @@ roothash 階層（`<name>` dir の親）に置かれ、`<roothash>` キーのモ
 ## 対応する CASE
 
 CASE-ff4a842e（`internal/paths/paths_test.go`）。root 解決そのもの（`rootKind` と
-`--root` から絶対 root を得る側）は CASE-364ebb9d も隣接して検証する。
+`--root` から絶対 root を得る側）は CASE-31fdb776 も隣接して検証する。
