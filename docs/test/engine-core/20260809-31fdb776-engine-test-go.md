@@ -36,7 +36,8 @@ generations_test.go 側からもここへ集約した（→ issue #328）。cwd 
   祖先が自己記録 stale のときのみ移行（copy 子を含む）
 - **stale 除去との接続**: 記録済み entry の除去、foreign を残すこと
 - **root 解決**: `rootKind=home` が `$HOME` を返すこと、`--root` 上書きが rootKind に
-  よらず優先されること、git repo 外でのエラー、固定絶対 root の解決失敗、`fixed` でパスを省いた
+  よらず優先されること（未決（`""`）・未知の値と組んでも拒否されず override の絶対パスが
+  返る）、git repo 外でのエラー、固定絶対 root の解決失敗、`fixed` でパスを省いた
   ときの拒否（エラー本文一致。manifest 層が受理する組み合わせを engine が止める責務
   → CASE-4179dcb2 / TC-172548ea）、rootKind 未決（`""`）と未知の値の拒否（いずれも
   エラー本文一致。未知の値は `%q` のクォートまで含めて固定する。`systemRoot` は system

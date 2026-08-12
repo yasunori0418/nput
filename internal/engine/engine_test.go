@@ -991,14 +991,31 @@ func TestResolveRootHome(t *testing.T) {
 }
 
 // TestResolveRootOverrideWins verifies that the --root override takes precedence regardless of rootKind.
+// The invalid kinds are covered here as well: resolveRoot returns on the override before it ever
+// reaches the switch, so an undetermined ("") or unknown rootKind must not turn into the rejection
+// TestResolveRootInvalidKinds pins. That precedence is the documented contract of `--root`
+// (→ resolveRoot's doc comment), and pinning it keeps a later reordering of the switch from
+// regressing the pair into an error.
 func TestResolveRootOverrideWins(t *testing.T) {
-	override := realTempDir(t)
-	got, err := resolveRoot(manifest.RootKindHome, "", override, "", nil)
-	if err != nil {
-		t.Fatalf("resolveRoot override: %v", err)
+	tests := []struct {
+		name     string
+		rootKind string
+	}{
+		{name: "home", rootKind: manifest.RootKindHome},
+		{name: "undetermined", rootKind: ""},
+		{name: "unknown", rootKind: "bogus"},
 	}
-	if got != override {
-		t.Errorf("resolveRoot override = %q, want %q", got, override)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			override := realTempDir(t)
+			got, err := resolveRoot(tt.rootKind, "", override, "", nil)
+			if err != nil {
+				t.Fatalf("resolveRoot override (rootKind=%q): %v", tt.rootKind, err)
+			}
+			if got != override {
+				t.Errorf("resolveRoot override (rootKind=%q) = %q, want %q", tt.rootKind, got, override)
+			}
+		})
 	}
 }
 
