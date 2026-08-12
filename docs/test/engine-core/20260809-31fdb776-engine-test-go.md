@@ -31,8 +31,10 @@ nix を介さず実 FS（`t.TempDir()`）へ apply を回す統合テスト。li
 - **上書き拒否**: target の通常ファイル占有でエラー停止、祖先 symlink でエラー停止、
   祖先が自己記録 stale のときのみ移行（copy 子を含む）
 - **stale 除去との接続**: 記録済み entry の除去、foreign を残すこと
-- **root 解決**: git repo 外でのエラー、固定絶対 root の解決失敗、profile ディレクトリ作成
-  失敗・backref 書き込み失敗のエラー化
+- **root 解決**: git repo 外でのエラー、固定絶対 root の解決失敗、`fixed` でパスを省いた
+  ときの拒否（エラー本文一致。manifest 層が受理する組み合わせを engine が止める責務
+  → CASE-4179dcb2 / TC-172548ea）、profile ディレクトリ作成失敗・backref 書き込み失敗の
+  エラー化
 - **out-of-store**: live symlink の配置、stale 除去、リンク先不一致時の保持、marker の
   リンク先が不在のときのエラー停止（dangling symlink を作らず target も残さないこと）
 - **copy 経路の呼び出し**: place-once の初回・既存保持、foreign 実ファイルの skip 警告、
