@@ -30,6 +30,10 @@ apply を重ねる。
   持たず `dryRun` が false であること（→ issue #132）。`rollback --json` は generation が
   後退する向きの遷移を運び、`reset --json` は generation スロット自体を持たないこと
   （→ issue #285）
+- **`--all` の読み取り専用** — 全 config を対象とする列挙が観測に留まり、profile の
+  リンク先・世代の本数・`$HOME` 配下の配置のいずれも動かさないこと（→ REQ-05abce3e の
+  `SHALL be read-only`）。JSON 経路とテキスト経路は印字の分岐が別なので、両経路を
+  またいだ前後比較で見る
 
 ## 対応する CASE
 
