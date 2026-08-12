@@ -977,6 +977,31 @@ func TestApplyRecopyForeignFileOverwrites(t *testing.T) {
 	}
 }
 
+// TestResolveRootHome verifies that rootKind=home returns $HOME (root resolver unit test).
+func TestResolveRootHome(t *testing.T) {
+	home := realTempDir(t)
+	t.Setenv("HOME", home)
+	got, err := resolveRoot(manifest.RootKindHome, "", "", "", nil)
+	if err != nil {
+		t.Fatalf("resolveRoot home: %v", err)
+	}
+	if got != home {
+		t.Errorf("resolveRoot home = %q, want %q", got, home)
+	}
+}
+
+// TestResolveRootOverrideWins verifies that the --root override takes precedence regardless of rootKind.
+func TestResolveRootOverrideWins(t *testing.T) {
+	override := realTempDir(t)
+	got, err := resolveRoot(manifest.RootKindHome, "", override, "", nil)
+	if err != nil {
+		t.Fatalf("resolveRoot override: %v", err)
+	}
+	if got != override {
+		t.Errorf("resolveRoot override = %q, want %q", got, override)
+	}
+}
+
 // TestResolveRootFixedWithoutPath pins the fixed-root rejection when no path is given.
 // The manifest layer intentionally accepts a `fixed` root document that omits the path
 // (→ CASE-4179dcb2 / TC-172548ea), so this branch is the only place the invalid pair is

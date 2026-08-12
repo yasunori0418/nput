@@ -1,22 +1,25 @@
 ---
 id: "CASE-364ebb9d-b9f8-4c79-8509-8bbf31e73698"
 type: test_case
-name: "generations_test.go — 世代一覧パース・rollback の再収束と失敗経路・root 解決"
+name: "generations_test.go — 世代一覧パース・rollback の再収束と失敗経路"
 target: "internal/engine/generations_test.go"
 covers:
   - "TC-746cb5b9-fe27-4d09-a51d-eb03d56a93a7"
   - "TC-36ea3609-d52e-42d4-975c-40fb89b23919"
   - "TC-fa7911c6-7347-47ff-b121-bec53562c063"
 ---
-# CASE-364ebb9d: generations_test.go — 世代一覧パース・rollback の再収束と失敗経路・root 解決
+# CASE-364ebb9d: generations_test.go — 世代一覧パース・rollback の再収束と失敗経路
 
 ## 対象
 
 `internal/engine/generations_test.go`
 
-世代一覧のパースと root 解決はテキスト / 引数に対するユニットテスト、`Rollback` は
-tmpdir 上の実 FS へ世代リンクと profile を手で組み立ててから駆動する統合テスト。
+世代一覧のパースはテキストに対するユニットテスト、`Rollback` は tmpdir 上の実 FS へ
+世代リンクと profile を手で組み立ててから駆動する統合テスト。
 `ListGenerations` / `SwitchGeneration` は関数として差し替える。
+
+`resolveRoot` の純引数テストは分岐網羅を 1 ファイルで追えるよう engine_test.go へ集約した
+（→ CASE-31fdb776 / TC-b254a5a8、issue #328）。
 
 ## 検証内容
 
@@ -44,8 +47,3 @@ tmpdir 上の実 FS へ世代リンクと profile を手で組み立ててから
 - 前世代が無い（最古世代）・profile が無い（未 apply）はエラーで停止する
 - 戻り先の target が複数 foreign 実体で塞がれているとき、全 conflict を stderr へ
   列挙してから件数付きの集約エラーを返す（→ issue #176）
-
-**root 解決**（TC-36ea3609）
-
-- `rootKind=home` は `$HOME` を返す
-- `--root` 上書きは rootKind によらず優先される
