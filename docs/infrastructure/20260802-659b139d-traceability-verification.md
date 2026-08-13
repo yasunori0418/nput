@@ -17,7 +17,7 @@ satisfies:
 
 | 部品 | 役割 |
 |---|---|
-| `docs/model.yaml` | カスタムスキーマ。10 型と relation を定義し、sara の組み込みモデルを全面置換する |
+| `docs/model.yaml` | カスタムスキーマ。11 型と relation を定義し、sara の組み込みモデルを全面置換する |
 | `sara.toml` | リポジトリ設定 |
 | `sara` ジョブ | `test.yml` 内の 1 ジョブ。`sara check` で broken reference / duplicate ID / cycles を検出し、同じジョブで契約テスト 3 件を実行する |
 | `dev/tests/sara-id.sh` | 採番契約。`sara-id` の出力形式・重複時の再生成・prefix マップと `docs/model.yaml` の一致を検証する |
