@@ -215,15 +215,25 @@ the test suite is `high`; stable code already covered by a mechanical check is `
 
 | Value | What is at stake |
 |---|---|
-| `high` | Destroys the user's environment or real data, or leaves a silent inconsistency. |
-| `medium` | Misbehaves, but a re-run or a rebuild recovers it. |
+| `high` | Destroys the user's environment or real data, or cannot be recovered by a re-run or a rebuild once noticed. |
+| `medium` | Misbehaves — silently or not — but a re-run or a rebuild recovers it once noticed. |
 | `low` | Confined to development; never reaches the shipped artifact. |
 
-Read the rows top-down and take the first that fits: a threat that stays inside development
-but passes silently — a verification gate that reports success while checking nothing — is
-`high` on the silent-inconsistency clause, not `low` on the confinement clause. What makes
-it `high` is that nothing announces the loss, and confinement to development does not
-supply the announcement.
+This axis asks one question only: **how recoverable is it once someone notices?** Whether
+anyone *would* notice is deliberately not scored (→ ADR-0052). Silence is real and worth
+recording, but nearly every threat in nput is silent — placement drifts without announcing
+itself — so scoring it saturates the scale and ranks nothing. Say it in the item's prose
+instead, where it stays legible without pretending to sort the corpus. The `medium` row
+spells out "silently or not" for the same reason: an earlier version of this scale sent
+every silent threat to `high`, and that reading must not survive by habit.
+
+Read the rows top-down and take the first that fits. A risk that a **verification gate
+silently stops verifying** — a suite that reports success while checking nothing — inherits
+the impact of the regression that gate was meant to catch. Do not drop it to `low` because
+the gate itself lives inside development: what is lost is not the gate but the protection
+it gave, and that protection is worth exactly what it guarded. So a gate over a path-safety
+check inherits `high`, while a gate over a contract whose breakage a corrected re-run
+repairs inherits `medium`.
 
 ### `level` — derived from the two, never judged by hand
 
