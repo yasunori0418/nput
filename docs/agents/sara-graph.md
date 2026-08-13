@@ -216,7 +216,7 @@ the test suite is `high`; stable code already covered by a mechanical check is `
 | Value | What is at stake |
 |---|---|
 | `high` | Destroys the user's environment or real data, or cannot be recovered by a re-run or a rebuild once noticed. |
-| `medium` | Misbehaves — silently or not — but a re-run or a rebuild recovers it once noticed. |
+| `medium` | The shipped artifact misbehaves — silently or not — but a re-run or a rebuild recovers it once noticed. |
 | `low` | Confined to development; never reaches the shipped artifact. |
 
 This axis asks one question only: **how recoverable is it once someone notices?** Whether
@@ -227,13 +227,26 @@ instead, where it stays legible without pretending to sort the corpus. The `medi
 spells out "silently or not" for the same reason: an earlier version of this scale sent
 every silent threat to `high`, and that reading must not survive by habit.
 
-Read the rows top-down and take the first that fits. A risk that a **verification gate
-silently stops verifying** — a suite that reports success while checking nothing — inherits
-the impact of the regression that gate was meant to catch. Do not drop it to `low` because
-the gate itself lives inside development: what is lost is not the gate but the protection
-it gave, and that protection is worth exactly what it guarded. So a gate over a path-safety
-check inherits `high`, while a gate over a contract whose breakage a corrected re-run
-repairs inherits `medium`.
+Read the rows top-down and take the first that fits. The rows are disjoint by their subject:
+`high` and `medium` are about what the user meets, `low` about what never leaves the repo.
+A threat confined to development is therefore `low` and not `medium`, with one exception —
+the inheritance rule below.
+
+**A risk with several failure directions takes the heaviest one.** Judge each direction
+against the rows and score the risk by the direction that lands highest; say so in the
+prose, so a later reader does not mistake the lighter directions for the whole. Averaging
+them, or scoring by the most likely direction, loses exactly the case the risk exists to
+warn about.
+
+**A verification gate that silently stops verifying inherits what it guarded.** A suite that
+reports success while checking nothing is confined to development, so the `low` row would
+take it; do not let it. What is lost is not the gate but the protection it gave, and that
+protection is worth exactly what it guarded — score the risk as the regression the gate was
+meant to catch. Name the inheritance source in the item's prose, and prefer naming the
+`risk` that holds the regression over describing it, so that a later re-scoring of the
+source is traceable to everything that inherits from it. Where the gate guards several
+regressions, the heaviest-direction rule applies to the sources too: a suite covering both
+a path-safety gate (`high`) and a document-shape contract (`medium`) inherits `high`.
 
 ### `level` — derived from the two, never judged by hand
 
