@@ -314,16 +314,20 @@
           checks.risk-matrix =
             pkgs.runCommandLocal "risk-matrix"
               {
-                # テストが走査する risk item の正本。サンドボックスにはリポジトリの
+                # テストが読む正本 2 つ。走査対象の risk item と、マトリクス突合
+                # （テスト §1）が読む level 表の在り処。サンドボックスにはリポジトリの
                 # 作業ツリーが無く、テスト側の git ルート解決も効かないため nix から
                 # store path を渡す（checks.sara-id の SARA_MODEL_YAML と同じ手法）。
                 # devShell / CI 経路は cwd がリポジトリルートなのでテスト側の解決に任せる。
                 RISK_DOCS_DIR = ../docs/risks;
+                SARA_GRAPH_MD = ../docs/agents/sara-graph.md;
                 nativeBuildInputs = [
                   pkgs.coreutils
                   pkgs.findutils
-                  # 走査基点の解決に使う（サンドボックスでは失敗してカレントへ落ちるが、
-                  # コマンド自体が無いと診断不能な失敗になる）。
+                  pkgs.gawk
+                  # 走査基点の解決に使う。この経路では両方の環境変数が先に解決するので
+                  # 実際には使われないが、`git` が無いと `git rev-parse` が
+                  # command not found となり診断が濁る。
                   pkgs.git
                   # frontmatter の抽出に使う。stdenv 既定でも PATH に載るが、暗黙依存に
                   # すると実行条件の違うサンドボックスで踏み抜くため明示する。
