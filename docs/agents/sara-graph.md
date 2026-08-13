@@ -215,7 +215,7 @@ the test suite is `high`; stable code already covered by a mechanical check is `
 
 | Value | What is at stake |
 |---|---|
-| `high` | Destroys the user's environment or real data, or cannot be recovered by a re-run or a rebuild once noticed. |
+| `high` | Reaches the user and destroys their environment or real data, or leaves them with something no re-run or rebuild recovers once noticed. |
 | `medium` | The shipped artifact misbehaves — silently or not — but a re-run or a rebuild recovers it once noticed. |
 | `low` | Confined to development; never reaches the shipped artifact. |
 
@@ -237,6 +237,11 @@ against the rows and score the risk by the direction that lands highest; say so 
 prose, so a later reader does not mistake the lighter directions for the whole. Averaging
 them, or scoring by the most likely direction, loses exactly the case the risk exists to
 warn about.
+
+A direction may be left out of that judgement only when **another risk explicitly holds it
+as its own** — check the sibling item and cite it. Without that check, a heavy direction can
+be delegated to a risk whose scope does not in fact reach it, and the weight drops out of
+the corpus entirely: neither item scores it.
 
 **A verification gate that silently stops verifying inherits what it guarded.** A suite that
 reports success while checking nothing is confined to development, so the `low` row would
