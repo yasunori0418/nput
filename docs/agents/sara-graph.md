@@ -227,6 +227,12 @@ supply the announcement.
 
 ### `level` — derived from the two, never judged by hand
 
+**The source of truth is `dev/tests/risk-matrix.tsv`**, which lists the nine cells in
+machine-readable form. The table below is a reading aid — the same relationship the data
+file holds, laid out for the eye. A change to the derivation edits the TSV and this table in
+the same commit (the same arrangement `dev/tests/test-categories.tsv` has with the
+eight-category table in `CLAUDE.md`).
+
 | `likelihood` \ `impact` | `high` | `medium` | `low` |
 |---|---|---|---|
 | **`high`** | `high` | `high` | `medium` |
@@ -234,13 +240,11 @@ supply the announcement.
 | **`low`** | `medium` | `low` | `low` |
 
 Unlike the rest of this file, this rule is not upheld by review: `dev/tests/risk-matrix.sh`
-checks it mechanically over every item in `docs/risks/`, wired into `checks.risk-matrix`
-for `nix flake check ./dev` and into the CI `sara` job (→ #303). `sara check` validates the
-enum of each field but never the relation between the three, which is the gap that test
-fills. It is the one convention here a script can decide outright — a pure mapping over
-three frontmatter fields with no prose to interpret. The matrix above is the source of
-truth and the test transcribes its nine cells, so a change to the table updates both in the
-same commit.
+reads the TSV and checks every item in `docs/risks/` against it, wired into
+`checks.risk-matrix` for `nix flake check ./dev` and into the CI `sara` job (→ #303).
+`sara check` validates the enum of each field but never the relation between the three,
+which is the gap that test fills. It is the one convention here a script can decide
+outright — a pure mapping over three frontmatter fields with no prose to interpret.
 
 A `level` that does not match the cell is a defect in the item, not a considered override:
 if the matrix feels wrong for an item, the mis-scored field is `likelihood` or `impact`.

@@ -314,25 +314,25 @@
           checks.risk-matrix =
             pkgs.runCommandLocal "risk-matrix"
               {
-                # テストが読む正本 2 つ。走査対象の risk item と、マトリクス突合
-                # （テスト §1）が読む level 表の在り処。サンドボックスにはリポジトリの
+                # テストが走査する risk item の在り処。サンドボックスにはリポジトリの
                 # 作業ツリーが無く、テスト側の git ルート解決も効かないため nix から
                 # store path を渡す（checks.sara-id の SARA_MODEL_YAML と同じ手法）。
                 # devShell / CI 経路は cwd がリポジトリルートなのでテスト側の解決に任せる。
+                # マトリクスの正本（dev/tests/risk-matrix.tsv）は下で dev/ の木ごと
+                # 配置するので、テストがスクリプト基準で解決する。
                 RISK_DOCS_DIR = ../docs/risks;
-                SARA_GRAPH_MD = ../docs/agents/sara-graph.md;
                 nativeBuildInputs = [
                   pkgs.coreutils
                   pkgs.findutils
-                  pkgs.gawk
-                  # 走査基点の解決に使う。この経路では両方の環境変数が先に解決するので
+                  # 走査基点の解決に使う。この経路では RISK_DOCS_DIR が先に解決するので
                   # 実際には使われないが、`git` が無いと `git rev-parse` が
                   # command not found となり診断が濁る。
                   pkgs.git
                   # frontmatter の読み取りに使う（mikefarah/yq v4）。テスト側も
                   # require_yq_go で実装を確認して落とす。
                   pkgs.yq-go
-                  # lib-testdoc.sh の require_yq_go が yq --version を grep する。
+                  # lib-testdoc.sh が使う（read_tsv のコメント除去・require_yq_go の
+                  # yq --version 判定）。
                   pkgs.gnugrep
                 ];
               }

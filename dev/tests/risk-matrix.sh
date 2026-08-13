@@ -5,15 +5,15 @@
 #   nix develop '.?dir=dev#sara' -c dev/tests/risk-matrix.sh   # devShell / CI から直接
 #   nix flake check ./dev                                       # checks.risk-matrix 経由
 #
-# 検証対象。番号は下の節見出しに対応する:
-#   1.  下の LEVEL_MATRIX が docs/agents/sara-graph.md の level 表と一致する（契約テスト）
-#   2.  docs/risks/*.md 全件で、frontmatter の level が likelihood × impact の
-#       マトリクス導出と一致する
+# 検証対象:
+#   docs/risks/*.md 全件で、frontmatter の level が likelihood × impact の
+#   マトリクス導出（dev/tests/risk-matrix.tsv）と一致する。
 #
-# §1 が要るのは、コーパスが 9 セルのうち一部しか踏まないため。実測（2026-08-13）で
-# 32 件が踏むのは 5 セルだけで、残り 4 セルの転記を誤っても §2 は全件緑のまま通る。
-# 表の正本は散文側にあるので、その 3 行を読んで突き合わせる（sara-id.sh §6b が
-# docs/model.yaml と dev/flake.nix を突合するのと同じ構図）。
+# マトリクスの正本は dev/tests/risk-matrix.tsv（機械可読）。docs/agents/sara-graph.md の
+# level 表は読み物としての要約で、規範は TSV 側にある（test-categories.tsv と CLAUDE.md の
+# 8 区分表と同じ構図）。当初は 9 セルをスクリプトへ直書きし、sara-graph.md の Markdown
+# テーブルを awk で解析して突き合わせていたが、その処理がスクリプトの複雑さの大半を
+# 占めたため正本を TSV へ移して廃止した（→ PR #352）。
 #
 # フィールドの存在・enum 妥当性（high / medium / low のいずれか）は docs/model.yaml が
 # 宣言し `sara check` が検証する担当なので、ここでは重複させない。ここが見るのは
@@ -50,147 +50,68 @@ fault() {
 require_commands "risk-matrix.sh（nix develop '.?dir=dev#sara' から実行する）" yq || exit 1
 require_yq_go risk-matrix.sh || exit 1
 
-# level 導出マトリクス。正本は docs/agents/sara-graph.md「How a risk is scored」節の
-# `level` 表で、ここはその 9 セルを機械可読に写したもの。写しが正本とずれていないことは
-# §1 が機械的に突き合わせる（9 セル固定・共用する消費者もいないため TSV 等へ外出ししない）。
-#
-#   likelihood \ impact | high   | medium | low
-#   high                | high   | high   | medium
-#   medium              | high   | medium | low
-#   low                 | medium | low    | low
-declare -A LEVEL_MATRIX=(
-  [high:high]=high
-  [high:medium]=high
-  [high:low]=medium
-  [medium:high]=high
-  [medium:medium]=medium
-  [medium:low]=low
-  [low:high]=medium
-  [low:medium]=low
-  [low:low]=low
-)
-
 # 走査基点をリポジトリルートへ解決する。git 管理外ではカレント基準へフォールバックする
 # （checks 派生のサンドボックスは作業ツリーを持たないためこの経路を通る）。
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null || printf '.')
 
-# 読む正本 2 つの在り処は 2 経路ある（sara-id.sh §6b と同じ扱い）:
-#   1. RISK_DOCS_DIR / SARA_GRAPH_MD（checks.risk-matrix のサンドボックス。作業ツリーが
-#      無いので nix が store path を渡す）
+# 走査対象 docs/risks の在り処は 2 経路ある（sara-id.sh §6b と同じ扱い）:
+#   1. RISK_DOCS_DIR（checks.risk-matrix のサンドボックス。作業ツリーが無いので
+#      nix が store path を渡す）
 #   2. git のリポジトリルート基準（`nix develop` からの直接実行・CI の sara job）
 risks_dir="${RISK_DOCS_DIR:-}"
 [[ -d "$risks_dir" ]] || risks_dir="$repo_root/docs/risks"
-
-graph_md="${SARA_GRAPH_MD:-}"
-[[ -f "$graph_md" ]] || graph_md="$repo_root/docs/agents/sara-graph.md"
 
 if [[ ! -d "$risks_dir" ]]; then
   echo "risk-matrix.sh: risk item のディレクトリを解決できない（$risks_dir）" >&2
   exit 1
 fi
 
-# --- 1. LEVEL_MATRIX が sara-graph.md の level 表と一致する -------------------
+# --- level 導出マトリクスを正本の TSV から読む -------------------------------
 #
-# 正本の表は Markdown テーブルで、見出しが impact の列順を、以降の各行が likelihood
-# ごとのセルを持つ:
-#
-#   | `likelihood` \ `impact` | `high` | `medium` | `low` |
-#   | **`high`** | `high` | `high` | `medium` |
-#
-# 見出し行が impact の列順を宣言し、行頭が `| **` の 3 行が likelihood ごとのセルを
-# 持つ。列順は見出しから読む（決め打ちにすると、見出しとデータ行を揃えて列を入れ替えた
-# 表が素通りする）。行ラベルも読み取って、照合したセルの集合が LEVEL_MATRIX の 9 キーと
-# 過不足なく一致することまで確かめる（行の重複・欠落・列の増減はここで落ちる）。
-#
-# awk はタグ付きで出す: 見出しは `H <impact> …`、データ行は `R <likelihood> <cell> …`。
-# バッククォート・アスタリスク・パイプを落とすと語に割れる。見出しの第 1 セルは
-# `likelihood \ impact` なのでラベルではなく、`\` の後ろまで含めて捨てる。
-if [[ ! -f "$graph_md" ]]; then
-  fault "level 表の正本を解決できない（$graph_md）"
-else
-  impact_cols=()
-  matrix_rows=0
-  matrix_ok=1
-  declare -A compared=()
+# TSV はこのスクリプトと同じディレクトリに置く（checks 派生も dev/ の木ごと配置するので
+# スクリプト基準で解決できる。docs/risks のように環境変数の受け口は要らない）。
+matrix_tsv="$(dirname "$0")/risk-matrix.tsv"
 
-  while read -r kind rest; do
-    case "$kind" in
-      H)
-        # shellcheck disable=SC2206 # 語分割で列名の配列にする（値は英小文字のみ）
-        impact_cols=($rest)
-        ;;
-      R)
-        matrix_rows=$((matrix_rows + 1))
-        # shellcheck disable=SC2206
-        row=($rest)
-        row_label="${row[0]}"
-        cells=("${row[@]:1}")
-        if [[ "${#cells[@]}" -ne "${#impact_cols[@]}" ]]; then
-          fault "level 表の行 $row_label のセル数が見出しと違う（見出し ${#impact_cols[@]} 列・行 ${#cells[@]} 列）"
-          matrix_ok=0
-          continue
-        fi
-        for i in "${!impact_cols[@]}"; do
-          key="$row_label:${impact_cols[$i]}"
-          if [[ -n "${compared[$key]:-}" ]]; then
-            fault "level 表でセル $key が 2 回現れる（行ラベルか列名が重複している）"
-            matrix_ok=0
-            continue
-          fi
-          compared["$key"]=1
-          script_level="${LEVEL_MATRIX[$key]:-}"
-          if [[ "$script_level" != "${cells[$i]}" ]]; then
-            fault "マトリクスが正本とずれている（$key: sara-graph.md=${cells[$i]} スクリプト=${script_level:-（キー無し）}）"
-            matrix_ok=0
-          fi
-        done
-        ;;
-    esac
-  done < <(
-    awk '
-      /^### `level`/ { in_section = 1; next }
-      in_section && /^## / { in_section = 0 }
-      !in_section        { next }
-      # 見出し行。第 1 セルの `likelihood \ impact` を捨てて impact の列名だけ出す。
-      /^\| `likelihood`/ {
-        sub(/^[^\\]*\\/, "")
-        gsub(/[`|]/, " ")
-        line = "H"
-        for (i = 2; i <= NF; i++) { line = line " " $i }
-        print line
-        next
-      }
-      # データ行。第 1 セルが likelihood のラベル。
-      /^\| \*\*/ {
-        gsub(/[`*|]/, " ")
-        line = "R"
-        for (i = 1; i <= NF; i++) { line = line " " $i }
-        print line
-      }
-    ' "$graph_md"
-  )
-
-  # 抽出が壊れた状態で突合すると、ループが 0 周回って全て緑に見える。
-  # 「照合したセルの集合 == LEVEL_MATRIX のキー集合」を最後に確かめれば、
-  # 行数・列数・ラベルの取り違えが 1 つの判定に畳まれる。
-  if [[ "${#impact_cols[@]}" -eq 0 || "$matrix_rows" -eq 0 ]]; then
-    fault "sara-graph.md の level 表を抽出できない（見出し ${#impact_cols[@]} 列・データ $matrix_rows 行）"
-  elif [[ "${#compared[@]}" -ne "${#LEVEL_MATRIX[@]}" ]]; then
-    fault "level 表と照合したセルが LEVEL_MATRIX の全キーを覆っていない（照合 ${#compared[@]} セル・LEVEL_MATRIX ${#LEVEL_MATRIX[@]} セル）"
-  else
-    for key in "${!LEVEL_MATRIX[@]}"; do
-      if [[ -z "${compared[$key]:-}" ]]; then
-        fault "LEVEL_MATRIX の $key に対応するセルが level 表に無い"
-        matrix_ok=0
-      fi
-    done
-    if [[ "$matrix_ok" -eq 1 ]]; then
-      pass "LEVEL_MATRIX の ${#LEVEL_MATRIX[@]} セルが sara-graph.md の level 表と一致する"
-    fi
-  fi
+if [[ ! -f "$matrix_tsv" ]]; then
+  echo "risk-matrix.sh: マトリクスの正本が無い（$matrix_tsv）" >&2
+  exit 1
 fi
 
-# --- 2. 全 risk item の level が導出と一致する --------------------------------
+declare -A LEVEL_MATRIX=()
+tsv_rows=0
+tsv_ok=1
+while IFS=$'\t' read -r likelihood impact level; do
+  tsv_rows=$((tsv_rows + 1))
+  if [[ -z "$likelihood" || -z "$impact" || -z "$level" ]]; then
+    fault "risk-matrix.tsv の $tsv_rows 行目に空の列がある（likelihood='$likelihood' impact='$impact' level='$level'）"
+    tsv_ok=0
+    continue
+  fi
+  key="$likelihood:$impact"
+  if [[ -n "${LEVEL_MATRIX[$key]:-}" ]]; then
+    fault "risk-matrix.tsv で $key が 2 回現れる（既出: ${LEVEL_MATRIX[$key]}・再出: $level）"
+    tsv_ok=0
+    continue
+  fi
+  LEVEL_MATRIX["$key"]="$level"
+done < <(read_tsv "$matrix_tsv")
+
+# 9 セルが揃っていることを確かめる。TSV が空・行が削れた状態で本体の走査を回すと、
+# 該当セルを持つ risk が「セルが無い」で落ちるだけで、TSV 側の欠損だと分からないまま
+# 調査先を誤る。3 値（high / medium / low）の直積なので 9 が期待値。
+if [[ "${#LEVEL_MATRIX[@]}" -ne 9 ]]; then
+  fault "risk-matrix.tsv のセルが 9 件ではない（実際: ${#LEVEL_MATRIX[@]} 件・データ行 $tsv_rows 行）"
+  tsv_ok=0
+fi
+
+# マトリクスを引けない状態で走査を回しても全件 FAIL するだけで診断の役に立たない。
+if [[ "$tsv_ok" -eq 0 ]]; then
+  exit 1
+fi
+
+pass "risk-matrix.tsv から ${#LEVEL_MATRIX[@]} セルのマトリクスを読んだ"
+
+# --- 全 risk item の level が導出と一致する -----------------------------------
 
 # ファイル一覧は改行区切りで受ける（この corpus のファイル名は日付 + UUID8 + slug で
 # 空白・改行を含まない → CLAUDE.md の ID 規約）。

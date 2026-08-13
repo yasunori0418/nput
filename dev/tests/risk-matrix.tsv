@@ -1,0 +1,25 @@
+# risk の level 導出マトリクス（likelihood × impact → level）の正本。
+#
+# この表が「どの組み合わせがどの level になるか」の SSOT（→ Issue #303）。
+# docs/agents/sara-graph.md「How a risk is scored」節の level 表は読み物としての
+# 要約で、規範はこちら。セルを変えるときはここと sara-graph.md の表を揃える。
+#
+# 当初は 9 セルをスクリプト内へ直書きし、sara-graph.md の Markdown テーブルを awk で
+# 解析して突き合わせていた（Issue #303 の確定判断）。その突合処理がスクリプトの
+# 複雑さの大半（約 80 行）を占め、Markdown の表記ゆれ（列順・行ラベル・列数）を
+# 自前で扱う分だけテストしづらいコードが増えていたため、機械可読な正本をここへ
+# 移して解析処理ごと廃止した（判断の撤回・PR #352）。
+#
+# 形式: <likelihood>\t<impact>\t<level>
+# 行頭 # はコメント、空行は無視。列の区切りはタブ 1 個。
+# likelihood / impact の組は 9 通りを過不足なく列挙する（dev/tests/risk-matrix.sh が
+# 件数と重複を検査する）。
+high	high	high
+high	medium	high
+high	low	medium
+medium	high	high
+medium	medium	medium
+medium	low	low
+low	high	medium
+low	medium	low
+low	low	low
