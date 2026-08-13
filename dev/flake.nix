@@ -304,12 +304,43 @@
                 touch "$out"
               '';
 
+          # risk の level 導出マトリクス整合の契約テスト（dev/tests/risk-matrix.sh）。
+          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
+          #
+          # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
+          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
+          #   PR での退行検知を担保する（flake-check job はルート flake が対象なので
+          #   この派生は CI では回らない）
+          checks.risk-matrix =
+            pkgs.runCommandLocal "risk-matrix"
+              {
+                # テストが走査する risk item の正本。サンドボックスにはリポジトリの
+                # 作業ツリーが無く、テスト側の git ルート解決も効かないため nix から
+                # store path を渡す（checks.sara-id の SARA_MODEL_YAML と同じ手法）。
+                # devShell / CI 経路は cwd がリポジトリルートなのでテスト側の解決に任せる。
+                RISK_DOCS_DIR = ../docs/risks;
+                nativeBuildInputs = [
+                  pkgs.coreutils
+                  pkgs.findutils
+                  # 走査基点の解決に使う（サンドボックスでは失敗してカレントへ落ちるが、
+                  # コマンド自体が無いと診断不能な失敗になる）。
+                  pkgs.git
+                  # frontmatter の抽出に使う。stdenv 既定でも PATH に載るが、暗黙依存に
+                  # すると実行条件の違うサンドボックスで踏み抜くため明示する。
+                  pkgs.gnused
+                ];
+              }
+              ''
+                bash ${./tests/risk-matrix.sh}
+                touch "$out"
+              '';
+
           # CI の sara check 専用シェル。default devShell は nput のビルドと
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
           # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
           # yasunori0418.cachix.org から引くだけで済む。
-          # CI からは sara check・dev/tests/sara-id.sh・dev/tests/test-doc-map.sh を
-          # このシェルで実行する。
+          # CI からは sara check・dev/tests/sara-id.sh・dev/tests/test-doc-map.sh・
+          # dev/tests/risk-matrix.sh をこのシェルで実行する。
           devShells.sara = pkgs.mkShell {
             packages = [
               inputs'.nur.packages.sara
