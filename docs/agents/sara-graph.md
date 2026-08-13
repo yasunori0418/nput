@@ -233,13 +233,14 @@ supply the announcement.
 | **`medium`** | `high` | `medium` | `low` |
 | **`low`** | `medium` | `low` | `low` |
 
-Nothing mechanical checks the derivation today — `sara check` validates the enum, not the
-relation between the three fields — so it is upheld by review like the rest of this file.
-Unlike the rest of this file, though, it need not stay that way: the rule is a pure mapping
-over three frontmatter fields with no prose to interpret, so it is the one convention here
-that a script can decide outright. Reviewing it by eye is the weakest form of the check,
-and a repository-level check in the shape of `dev/tests/sara-id.sh` would replace it
-wholesale. Until such a check exists, verify the cell when touching any of the three fields.
+Unlike the rest of this file, this rule is not upheld by review: `dev/tests/risk-matrix.sh`
+checks it mechanically over every item in `docs/risks/`, wired into `checks.risk-matrix`
+for `nix flake check ./dev` and into the CI `sara` job (→ #303). `sara check` validates the
+enum of each field but never the relation between the three, which is the gap that test
+fills. It is the one convention here a script can decide outright — a pure mapping over
+three frontmatter fields with no prose to interpret. The matrix above is the source of
+truth and the test transcribes its nine cells, so a change to the table updates both in the
+same commit.
 
 A `level` that does not match the cell is a defect in the item, not a considered override:
 if the matrix feels wrong for an item, the mis-scored field is `likelihood` or `impact`.
