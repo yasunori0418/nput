@@ -329,13 +329,22 @@
                   # 実際には使われないが、`git` が無いと `git rev-parse` が
                   # command not found となり診断が濁る。
                   pkgs.git
-                  # frontmatter の抽出に使う。stdenv 既定でも PATH に載るが、暗黙依存に
-                  # すると実行条件の違うサンドボックスで踏み抜くため明示する。
-                  pkgs.gnused
+                  # frontmatter の読み取りに使う（mikefarah/yq v4）。テスト側も
+                  # require_yq_go で実装を確認して落とす。
+                  pkgs.yq-go
+                  # lib-testdoc.sh の require_yq_go が yq --version を grep する。
+                  pkgs.gnugrep
                 ];
               }
               ''
-                bash ${./tests/risk-matrix.sh}
+                # テストは dev/scripts/lib-testdoc.sh を自身からの相対パスで source する
+                # （checks.test-doc-map と同じ配置前提）。store の単体ファイルを直接
+                # 実行すると解決できないので、dev/ の木の形を作ってから走らせる。
+                mkdir -p dev
+                cp -r ${./scripts} dev/scripts
+                cp -r ${./tests} dev/tests
+                chmod -R u+w dev
+                bash dev/tests/risk-matrix.sh
                 touch "$out"
               '';
 

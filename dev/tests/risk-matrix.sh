@@ -21,6 +21,12 @@
 # その旨を FAIL として報告する（sara check の代替をするのではなく、判定不能を黙って
 # 素通りさせないための扱い）。
 #
+# frontmatter の読み取りは yq（mikefarah/yq v4）で行う。docs/ の frontmatter を読む
+# 既存スクリプト（test-doc-map.sh・test-doc-matrix.sh）と同じ手段で、devShells.sara にも
+# 既に載っているので依存は増えない。手書きのパーサだと引用符・空白・複数行スカラといった
+# YAML の表記ゆれを自前で潰すことになり、その取りこぼしが「マトリクスのセルが無い」と
+# いう誤った診断で表面化する。
+#
 # ## なぜ機械化するか
 #
 # level 導出は `docs/agents/sara-graph.md` の規約のうち唯一「散文の解釈を伴わない
@@ -37,6 +43,12 @@ fault() {
   printf 'FAIL - %s\n' "$1"
   fail=1
 }
+
+# shellcheck source=dev/scripts/lib-testdoc.sh
+. "$(dirname "$0")/../scripts/lib-testdoc.sh"
+
+require_commands "risk-matrix.sh（nix develop '.?dir=dev#sara' から実行する）" yq || exit 1
+require_yq_go risk-matrix.sh || exit 1
 
 # level 導出マトリクス。正本は docs/agents/sara-graph.md「How a risk is scored」節の
 # `level` 表で、ここはその 9 セルを機械可読に写したもの。写しが正本とずれていないことは
@@ -76,19 +88,6 @@ if [[ ! -d "$risks_dir" ]]; then
   echo "risk-matrix.sh: risk item のディレクトリを解決できない（$risks_dir）" >&2
   exit 1
 fi
-
-# frontmatter（先頭の `---` から次の `---` まで）から 1 フィールドを取り出す。
-# yq を足さず sed で済ませる。範囲を frontmatter に限るのは予防措置で、現コーパスの
-# 本文に `^likelihood:` の形で当たる行は無い（根拠記述は「likelihood を medium と
-# するのは …」の形）。本文へその形の行が現れた時点で判定が狂うのを未然に防ぐ。
-#
-# 値は引用符と前後の空白を剥がす。剥がさないと `impact: "high"` のような表記ゆれが
-# 「マトリクスのセルが無い」として報告され、enum 違反と区別が付かなくなる。
-field_of() {
-  sed -n '1{/^---$/!q}; 1,/^---$/{ /^---$/d; s/^'"$2"':[[:space:]]*//p }' "$1" |
-    head -1 |
-    sed -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/"
-}
 
 # --- 1. LEVEL_MATRIX が sara-graph.md の level 表と一致する -------------------
 #
@@ -204,23 +203,34 @@ if [[ "${#risk_files[@]}" -eq 0 ]]; then
   exit "$fail"
 fi
 
+# 1 ファイル 1 回の yq で 3 フィールドを採る（test-doc-matrix.sh と同じ形）。32 件規模なら
+# ファイルごとに yq を起こすコストは問題にならない。
+#
+# yq の失敗（YAML が壊れている）と「値が空」は区別する。畳むと、frontmatter の構文エラーが
+# 「フィールドが無い」と診断されて調査先を誤らせる（フィールドの欠損自体は model.yaml の
+# required 宣言により sara check が落とす担当）。
 checked=0
 for f in "${risk_files[@]}"; do
   name="$(basename "$f")"
-  likelihood="$(field_of "$f" likelihood)"
-  impact="$(field_of "$f" impact)"
-  level="$(field_of "$f" level)"
+
+  if ! fields="$(yq --front-matter=extract -r \
+    '[(.likelihood // ""), (.impact // ""), (.level // "")] | @tsv' "$f" 2>/dev/null)"; then
+    fault "$name: frontmatter を yq で読めなかった（YAML の構文を確認する）"
+    continue
+  fi
+
+  IFS=$'\t' read -r likelihood impact level <<<"$fields"
 
   if [[ -z "$likelihood" || -z "$impact" || -z "$level" ]]; then
-    fault "$name: frontmatter から 3 フィールドを読めない（likelihood=$likelihood impact=$impact level=$level）"
+    fault "$name: frontmatter に 3 フィールドが揃っていない（likelihood='$likelihood' impact='$impact' level='$level'）"
     continue
   fi
 
   want="${LEVEL_MATRIX[$likelihood:$impact]:-}"
   if [[ -z "$want" ]]; then
-    # 生値を引用符で囲んで出す。enum 外の値と、剥がしきれなかった表記ゆれ
-    # （全角空白・内側の引用符など）を目視で区別できるようにする。
-    fault "$name: likelihood='$likelihood' impact='$impact' に対応するマトリクスのセルが無い（enum 外の値か表記ゆれ）"
+    # 生値を引用符で囲んで出す。enum 外の値であることを目視で確かめられるようにする
+    # （引用符・空白の表記ゆれは yq が正規化するのでここには現れない）。
+    fault "$name: likelihood='$likelihood' impact='$impact' に対応するマトリクスのセルが無い（enum 外の値）"
     continue
   fi
 
