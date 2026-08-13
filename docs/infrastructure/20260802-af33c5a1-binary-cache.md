@@ -41,7 +41,14 @@ main への push 後に走るため、トリガ段の `paths` フィルタをそ
 乗っている**。この workflow は自前の nix セットアップを持たず、`.github/actions/setup-nix`
 （`install-nix-action` + cachix 認証込みの `cachix-action`）へ丸ごと委ねる。投入経路そのものが
 その composite action の中にあるため、`setup-nix` の構成が変われば投入も直接影響を受ける。
-os×system マトリクスの定義も CI パイプラインと同一のものを踏襲する。
+
+os×system マトリクスも CI パイプラインと同一の内容を踏襲するが、こちらは共有部品ではない。
+`setup-nix` と違って reusable workflow / composite action のような共有機構は挟んでおらず、
+同じ 3 組をこの workflow の `strategy.matrix` へ独立にハードコードした写しになっている。
+したがって **マトリクスを変えるときは 2 箇所を揃えて直す**。CI パイプライン側だけで環境を
+増減しても、この workflow は黙って旧構成のままビルドし続け、キャッシュに載る system が CI の
+検証対象とずれる。INF-8b97573f が ruleset 側について挙げる追従点と同じ種類のものが、
+マトリクスの定義にもある。
 
 ## 出典
 
