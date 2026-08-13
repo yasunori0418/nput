@@ -43,8 +43,10 @@ store パスへ書こうとして EEXIST / EROFS で落ちる → ADR-0046、iss
 変更（PreRemove の追加・undo journal の導入）のたびに rollback 側の配線漏れが実際に
 発生している（→ issue #173、#168）。
 
-**impact: high** — 誤収束の帰結は配置の破壊か、復旧手段だと思われている機能が壊れて
-いること自体である。
+**impact: high** — 誤収束が壊すのは、他の失敗から戻るための手段そのものである。ポインタを
+先に動かして次の apply が baseline を N-2 と読めば stale 除去が記録外の実体へ届き、途中失敗で
+祖先 symlink の migration だけが済んだ状態は元の実ディレクトリを失ったまま残る。どちらも
+rollback をもう一度回しても戻らない。
 
 ## 緩和
 

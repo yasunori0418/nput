@@ -6,8 +6,8 @@ threatens:
   - "REQ-02a33511-0941-4813-b289-a05eb8e9aa57"
   - "REQ-7a71a049-5876-4cfc-a65e-44e9a0349856"
 likelihood: medium
-impact: high
-level: high
+impact: medium
+level: medium
 ---
 # RISK-33e30498: dryrun が副作用を残す、または本番 apply と異なる結果を報告する
 
@@ -33,9 +33,10 @@ conflict / change が本番 apply の結果と一致することである。ど�
   「dryrun でも走ってしまう」形の混入が起こりうる。加えて同 TC は照合が件数までで
   「どの target が conflict になったか」の集合一致は見ていないことを自ら残余として挙げて
   おり、「想定する失敗」4 点目の終了コードは RISK-bd1e4ada 側が持つ
-- impact: high — 副作用側の破れは沈黙の不整合になる。確認だけのつもりの実行が profile を
-  作る・flock を取るといった変化は成功時に表面化せず、並行実行や read-only 環境で初めて
-  露見する
+- impact: medium — 副作用側の破れが作る変化（profile ディレクトリ・flock・pending gcroot）は
+  nput が自分で管理する範囲に閉じ、dryrun を読み取り専用へ直したうえでの再実行と、必要なら
+  `reset` で回復する。ユーザーの実データは触らない。破れが成功時に表面化せず、並行実行や
+  read-only 環境で初めて露見する沈黙性は残るが、気づいた後の回復可能性は下げない
 
 ## 張り先の判断
 

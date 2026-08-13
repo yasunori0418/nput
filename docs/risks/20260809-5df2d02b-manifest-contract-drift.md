@@ -3,8 +3,8 @@ id: "RISK-5df2d02b-e5d4-40eb-86ad-e8bc96e4c34d"
 type: risk
 name: "manifest.json の形が engine の読む契約から静かにずれる"
 likelihood: medium
-impact: high
-level: high
+impact: medium
+level: medium
 threatens:
   - "REQ-dedd2c28-bba3-4ecf-80c9-8c77347e8e1f"
   - "REQ-dd10d820-e453-4099-a47a-ffb9a7de02fb"
@@ -37,7 +37,10 @@ E2E まで落ちてこないと検出できない（REQ-2b0c2bb8 の純粋性そ
 
 - likelihood: medium — 契約は 1 箇所（`lib/manifest.nix`）に閉じているが、フィールド追加・
   既定値変更は評価層の通常の改修で起こりうる
-- impact: high — engine の全経路が読む唯一の契約で、破れは配置結果そのものを狂わせる
+- impact: medium — engine の全経路が読む唯一の契約で、破れは配置結果そのものを狂わせる。
+  ただし狂うのは nput が管理する配置であり、`lib/manifest.nix` を直したうえでの再 apply が
+  正しい形へ収束させる。破れが実行するまで観測されない（上記のとおり `mkManifest` は純粋関数で
+  E2E まで落ちないと気づけない）ことは沈黙性の問題で、回復可能性は下げない
 
 ## 対処
 

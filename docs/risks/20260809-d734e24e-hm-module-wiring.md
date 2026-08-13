@@ -9,8 +9,8 @@ threatens:
   - "REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a"
   - "REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10"
 likelihood: medium
-impact: high
-level: high
+impact: medium
+level: medium
 ---
 # RISK-d734e24e: home-manager モジュールが engine をキックする配線から外れ native 機構へ翻訳される
 
@@ -40,9 +40,13 @@ level: high
 
 ## 影響
 
-宣言的に管理しているつもりの配置が engine の保証を外れる。impact を high とするのは、
-home-manager 経路が nput の主要な利用導線の 1 つでありながら、崩れても単体では動いてしまい、
-engine 側の保証を失ったことに利用者が気づく手段が乏しく、沈黙する不整合になるため。
+宣言的に管理しているつもりの配置が engine の保証を外れる。impact を medium とするのは、
+崩れ方が配線の欠落——engine を呼ばない・root が固定されない・entry やオプションが届かない——で
+あり、配線を直したうえでの再 activation が engine 経由の配置へ戻すため。ただし配線が外れて
+いる間の配置は engine の不変条件（保守的 stale 除去・原子性）を欠くので、その状態で実データが
+失われる経路は本 item ではなく engine 層の risk（RISK-e3d42a21 等）が impact を持つ。
+home-manager 経路が主要な利用導線でありながら崩れても単体では動いてしまい、保証を失った
+ことに利用者が気づく手段が乏しい点は沈黙性として残る。
 
 likelihood を medium とするのは、モジュールが配線するオプションが増えるたびに engine の
 起動フラグへの受け渡し漏れが入りうる一方、これらは評価の時点で決まるため、評価アサートを
