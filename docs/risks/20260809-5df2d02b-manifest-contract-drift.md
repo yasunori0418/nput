@@ -3,8 +3,8 @@ id: "RISK-5df2d02b-e5d4-40eb-86ad-e8bc96e4c34d"
 type: risk
 name: "manifest.json の形が engine の読む契約から静かにずれる"
 likelihood: medium
-impact: high
-level: high
+impact: medium
+level: medium
 threatens:
   - "REQ-dedd2c28-bba3-4ecf-80c9-8c77347e8e1f"
   - "REQ-dd10d820-e453-4099-a47a-ffb9a7de02fb"
@@ -37,7 +37,16 @@ E2E まで落ちてこないと検出できない（REQ-2b0c2bb8 の純粋性そ
 
 - likelihood: medium — 契約は 1 箇所（`lib/manifest.nix`）に閉じているが、フィールド追加・
   既定値変更は評価層の通常の改修で起こりうる
-- impact: high — engine の全経路が読む唯一の契約で、破れは配置結果そのものを狂わせる
+- impact: medium — engine の全経路が読む唯一の契約で、破れは配置結果そのものを狂わせる。
+  ただし狂うのは nput が管理する配置であり、`lib/manifest.nix` を直したうえでの再 apply が
+  正しい形へ収束させる。破れが実行するまで観測されない（上記のとおり `mkManifest` は純粋関数で
+  E2E まで落ちないと気づけない）ことは沈黙性の問題で、回復可能性は下げない。
+  **root の種別を取り違えて配置先そのものが別ツリーへ移る facet は本 item の射程ではない**。
+  受理の段で止める側は RISK-7808768d が、engine の解決規則そのものは RISK-24e0805d が持ち、
+  どちらも「記録に残らない場所へ書くので回収できない」ことを理由に high を採っている。本 item が
+  持つのは生成側が出す文書の形であり、下の残余第一（`fixed` の相対パスを受理する穴）も、
+  拒否する規範が REQ 側に無いという仕様の未決事項として置いたもので、impact はその 2 item 側で
+  計上する
 
 ## 対処
 

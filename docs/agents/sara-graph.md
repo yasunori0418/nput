@@ -215,17 +215,51 @@ the test suite is `high`; stable code already covered by a mechanical check is `
 
 | Value | What is at stake |
 |---|---|
-| `high` | Destroys the user's environment or real data, or leaves a silent inconsistency. |
-| `medium` | Misbehaves, but a re-run or a rebuild recovers it. |
+| `high` | Reaches the user and destroys their environment or real data, or leaves them with something no re-run or rebuild recovers once noticed. |
+| `medium` | The shipped artifact misbehaves — silently or not — but a re-run or a rebuild recovers it once noticed. |
 | `low` | Confined to development; never reaches the shipped artifact. |
 
-Read the rows top-down and take the first that fits: a threat that stays inside development
-but passes silently — a verification gate that reports success while checking nothing — is
-`high` on the silent-inconsistency clause, not `low` on the confinement clause. What makes
-it `high` is that nothing announces the loss, and confinement to development does not
-supply the announcement.
+This axis asks one question only: **how recoverable is it once someone notices?** Whether
+anyone *would* notice is deliberately not scored (→ ADR-0052). Silence is real and worth
+recording, but nearly every threat in nput is silent — placement drifts without announcing
+itself — so scoring it saturates the scale and ranks nothing. Say it in the item's prose
+instead, where it stays legible without pretending to sort the corpus. The `medium` row
+spells out "silently or not" for the same reason: an earlier version of this scale sent
+every silent threat to `high`, and that reading must not survive by habit.
+
+Read the rows top-down and take the first that fits. The rows are disjoint by their subject:
+`high` and `medium` are about what the user meets, `low` about what never leaves the repo.
+A threat confined to development is therefore `low` and not `medium`, with one exception —
+the inheritance rule below.
+
+**A risk with several failure directions takes the heaviest one.** Judge each direction
+against the rows and score the risk by the direction that lands highest; say so in the
+prose, so a later reader does not mistake the lighter directions for the whole. Averaging
+them, or scoring by the most likely direction, loses exactly the case the risk exists to
+warn about.
+
+A direction may be left out of that judgement only when **another risk explicitly holds it
+as its own** — check the sibling item and cite it. Without that check, a heavy direction can
+be delegated to a risk whose scope does not in fact reach it, and the weight drops out of
+the corpus entirely: neither item scores it.
+
+**A verification gate that silently stops verifying inherits what it guarded.** A suite that
+reports success while checking nothing is confined to development, so the `low` row would
+take it; do not let it. What is lost is not the gate but the protection it gave, and that
+protection is worth exactly what it guarded — score the risk as the regression the gate was
+meant to catch. Name the inheritance source in the item's prose, and prefer naming the
+`risk` that holds the regression over describing it, so that a later re-scoring of the
+source is traceable to everything that inherits from it. Where the gate guards several
+regressions, the heaviest-direction rule applies to the sources too: a suite covering both
+a path-safety gate (`high`) and a document-shape contract (`medium`) inherits `high`.
 
 ### `level` — derived from the two, never judged by hand
+
+**The source of truth is `dev/tests/risk-matrix.tsv`**, which lists the nine cells in
+machine-readable form. The table below is a reading aid — the same relationship the data
+file holds, laid out for the eye. A change to the derivation edits the TSV and this table in
+the same commit (the same arrangement `dev/tests/test-categories.tsv` has with the
+eight-category table in `CLAUDE.md`).
 
 | `likelihood` \ `impact` | `high` | `medium` | `low` |
 |---|---|---|---|
@@ -233,13 +267,12 @@ supply the announcement.
 | **`medium`** | `high` | `medium` | `low` |
 | **`low`** | `medium` | `low` | `low` |
 
-Nothing mechanical checks the derivation today — `sara check` validates the enum, not the
-relation between the three fields — so it is upheld by review like the rest of this file.
-Unlike the rest of this file, though, it need not stay that way: the rule is a pure mapping
-over three frontmatter fields with no prose to interpret, so it is the one convention here
-that a script can decide outright. Reviewing it by eye is the weakest form of the check,
-and a repository-level check in the shape of `dev/tests/sara-id.sh` would replace it
-wholesale. Until such a check exists, verify the cell when touching any of the three fields.
+Unlike the rest of this file, this rule is not upheld by review: `dev/tests/risk-matrix.sh`
+reads the TSV and checks every item in `docs/risks/` against it, wired into
+`checks.risk-matrix` for `nix flake check ./dev` and into the CI `sara` job (→ #303).
+`sara check` validates the enum of each field but never the relation between the three,
+which is the gap that test fills. It is the one convention here a script can decide
+outright — a pure mapping over three frontmatter fields with no prose to interpret.
 
 A `level` that does not match the cell is a defect in the item, not a considered override:
 if the matrix feels wrong for an item, the mis-scored field is `likelihood` or `impact`.

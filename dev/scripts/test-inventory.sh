@@ -89,6 +89,7 @@ FLAKE_CHECKS=(
   checks.nix-unit
   checks.nput
   checks.treefmt
+  dev:checks.risk-matrix
   dev:checks.sara-id
   dev:checks.test-doc-map
 )

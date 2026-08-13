@@ -105,13 +105,14 @@ jobs:
 
   sara:
     # Knowledge-graph validation of docs/ (broken references, duplicate IDs,
-    # cycles) plus two contract tests: sara-id's numbering and test-doc-map's
-    # test-code ⇔ CASE mapping. Non-required check with no threshold gate, same
-    # policy as go-coverage: it is NOT registered as a required status check and
-    # is NOT part of the DoD, so a failure reports on the PR without blocking
-    # merge. The check itself runs strict (strict_mode = true in sara.toml, all
-    # warnings are errors) since the epic #203 migration completed; staying
-    # non-required is a recorded decision, not a deferral (→ ADR-0050).
+    # cycles) plus three contract tests: sara-id's numbering, test-doc-map's
+    # test-code ⇔ CASE mapping, and risk-matrix's level derivation. Non-required
+    # check with no threshold gate, same policy as go-coverage: it is NOT
+    # registered as a required status check and is NOT part of the DoD, so a
+    # failure reports on the PR without blocking merge. The check itself runs
+    # strict (strict_mode = true in sara.toml, all warnings are errors) since
+    # the epic #203 migration completed; staying non-required is a recorded
+    # decision, not a deferral (→ ADR-0050).
     #
     # The `changes` job is not reused here: its filter targets nix/Go sources
     # broadly, whereas this job needs docs plus the specific test assets
@@ -187,6 +188,16 @@ jobs:
       - name: Run test-doc-map contract test
         if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c dev/tests/test-doc-map.sh
+
+      # The level derivation contract for risk items (→ #303): `level` must equal
+      # the matrix cell of `likelihood` × `impact` from docs/agents/sara-graph.md.
+      # `sara check` validates the enum of each field but never the relation
+      # between them. Wired the same way as the two above — also exposed as
+      # `checks.risk-matrix` for local `nix flake check ./dev`, which CI's
+      # root-flake flake-check never reaches.
+      - name: Run risk-matrix contract test
+        if: steps.filter.outputs.relevant != 'false'
+        run: nix develop '.?dir=dev#sara' -c dev/tests/risk-matrix.sh
 
   e2e:
     needs: changes
