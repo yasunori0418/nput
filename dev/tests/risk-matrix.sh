@@ -92,51 +92,102 @@ field_of() {
 
 # --- 1. LEVEL_MATRIX が sara-graph.md の level 表と一致する -------------------
 #
-# 正本の表は 3 行 4 列の Markdown テーブルで、行頭が likelihood、以降が impact
-# high / medium / low の順に並ぶ:
+# 正本の表は Markdown テーブルで、見出しが impact の列順を、以降の各行が likelihood
+# ごとのセルを持つ:
 #
+#   | `likelihood` \ `impact` | `high` | `medium` | `low` |
 #   | **`high`** | `high` | `high` | `medium` |
 #
-# 行頭が `| **` で始まる行だけを拾えば、上の見出し行（`| `likelihood` \ …`）と
-# 区切り行（`|---|`）を巻き込まずに 3 行が取れる。バッククォート・アスタリスク・
-# パイプ・空白を落として 4 語にすると、そのまま likelihood + 3 セルになる。
+# 見出し行が impact の列順を宣言し、行頭が `| **` の 3 行が likelihood ごとのセルを
+# 持つ。列順は見出しから読む（決め打ちにすると、見出しとデータ行を揃えて列を入れ替えた
+# 表が素通りする）。行ラベルも読み取って、照合したセルの集合が LEVEL_MATRIX の 9 キーと
+# 過不足なく一致することまで確かめる（行の重複・欠落・列の増減はここで落ちる）。
+#
+# awk はタグ付きで出す: 見出しは `H <impact> …`、データ行は `R <likelihood> <cell> …`。
+# バッククォート・アスタリスク・パイプを落とすと語に割れる。見出しの第 1 セルは
+# `likelihood \ impact` なのでラベルではなく、`\` の後ろまで含めて捨てる。
 if [[ ! -f "$graph_md" ]]; then
   fault "level 表の正本を解決できない（$graph_md）"
 else
+  impact_cols=()
   matrix_rows=0
   matrix_ok=1
-  while read -r row_likelihood cell_high cell_medium cell_low; do
-    matrix_rows=$((matrix_rows + 1))
-    for impact_col in high medium low; do
-      case "$impact_col" in
-        high) doc_level="$cell_high" ;;
-        medium) doc_level="$cell_medium" ;;
-        low) doc_level="$cell_low" ;;
-      esac
-      script_level="${LEVEL_MATRIX[$row_likelihood:$impact_col]:-}"
-      if [[ "$script_level" != "$doc_level" ]]; then
-        fault "マトリクスが正本とずれている（likelihood=$row_likelihood impact=$impact_col: sara-graph.md=$doc_level スクリプト=$script_level）"
-        matrix_ok=0
-      fi
-    done
+  declare -A compared=()
+
+  while read -r kind rest; do
+    case "$kind" in
+      H)
+        # shellcheck disable=SC2206 # 語分割で列名の配列にする（値は英小文字のみ）
+        impact_cols=($rest)
+        ;;
+      R)
+        matrix_rows=$((matrix_rows + 1))
+        # shellcheck disable=SC2206
+        row=($rest)
+        row_label="${row[0]}"
+        cells=("${row[@]:1}")
+        if [[ "${#cells[@]}" -ne "${#impact_cols[@]}" ]]; then
+          fault "level 表の行 $row_label のセル数が見出しと違う（見出し ${#impact_cols[@]} 列・行 ${#cells[@]} 列）"
+          matrix_ok=0
+          continue
+        fi
+        for i in "${!impact_cols[@]}"; do
+          key="$row_label:${impact_cols[$i]}"
+          if [[ -n "${compared[$key]:-}" ]]; then
+            fault "level 表でセル $key が 2 回現れる（行ラベルか列名が重複している）"
+            matrix_ok=0
+            continue
+          fi
+          compared["$key"]=1
+          script_level="${LEVEL_MATRIX[$key]:-}"
+          if [[ "$script_level" != "${cells[$i]}" ]]; then
+            fault "マトリクスが正本とずれている（$key: sara-graph.md=${cells[$i]} スクリプト=${script_level:-（キー無し）}）"
+            matrix_ok=0
+          fi
+        done
+        ;;
+    esac
   done < <(
     awk '
       /^### `level`/ { in_section = 1; next }
       in_section && /^## / { in_section = 0 }
       !in_section        { next }
+      # 見出し行。第 1 セルの `likelihood \ impact` を捨てて impact の列名だけ出す。
+      /^\| `likelihood`/ {
+        sub(/^[^\\]*\\/, "")
+        gsub(/[`|]/, " ")
+        line = "H"
+        for (i = 2; i <= NF; i++) { line = line " " $i }
+        print line
+        next
+      }
+      # データ行。第 1 セルが likelihood のラベル。
       /^\| \*\*/ {
         gsub(/[`*|]/, " ")
-        print $1, $2, $3, $4
+        line = "R"
+        for (i = 1; i <= NF; i++) { line = line " " $i }
+        print line
       }
     ' "$graph_md"
   )
 
   # 抽出が壊れた状態で突合すると、ループが 0 周回って全て緑に見える。
-  # 表の形（3 行）を先に固定する。
-  if [[ "$matrix_rows" -ne 3 ]]; then
-    fault "sara-graph.md の level 表から 3 行を抽出できない（実際: $matrix_rows 行）"
-  elif [[ "$matrix_ok" -eq 1 ]]; then
-    pass "LEVEL_MATRIX の 9 セルが sara-graph.md の level 表と一致する"
+  # 「照合したセルの集合 == LEVEL_MATRIX のキー集合」を最後に確かめれば、
+  # 行数・列数・ラベルの取り違えが 1 つの判定に畳まれる。
+  if [[ "${#impact_cols[@]}" -eq 0 || "$matrix_rows" -eq 0 ]]; then
+    fault "sara-graph.md の level 表を抽出できない（見出し ${#impact_cols[@]} 列・データ $matrix_rows 行）"
+  elif [[ "${#compared[@]}" -ne "${#LEVEL_MATRIX[@]}" ]]; then
+    fault "level 表と照合したセルが LEVEL_MATRIX の全キーを覆っていない（照合 ${#compared[@]} セル・LEVEL_MATRIX ${#LEVEL_MATRIX[@]} セル）"
+  else
+    for key in "${!LEVEL_MATRIX[@]}"; do
+      if [[ -z "${compared[$key]:-}" ]]; then
+        fault "LEVEL_MATRIX の $key に対応するセルが level 表に無い"
+        matrix_ok=0
+      fi
+    done
+    if [[ "$matrix_ok" -eq 1 ]]; then
+      pass "LEVEL_MATRIX の ${#LEVEL_MATRIX[@]} セルが sara-graph.md の level 表と一致する"
+    fi
   fi
 fi
 
