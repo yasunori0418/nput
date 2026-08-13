@@ -16,9 +16,7 @@ consumer の CI / ローカルが「最新 main の `nput` を実ビルドせず
 
 - 構成は CI パイプライン（INF-d1230e1f）と同じ os×system の 3 環境マトリクス
   （`ubuntu-latest`=x86_64-linux / `ubuntu-24.04-arm`=aarch64-linux /
-  `macos-latest`=aarch64-darwin）で `nix build .#packages.<system>.nput` をネイティブ実行する。
-  ただし**同じ値を持つ別々の定義**で、この workflow 自身の `strategy.matrix` に直書きしてある
-  （下の「CI パイプラインへの依存」を参照）
+  `macos-latest`=aarch64-darwin）で `nix build .#packages.<system>.nput` をネイティブ実行する
 - 投入は `.github/actions/setup-nix` が内包する `cachix-action` が authToken 指定で生成パスを
   自動 push する経路に任せる。明示の push ステップは置かない
 - 単一パッケージのため、未キャッシュのものだけを選別する plan / collect の多段構成は採らない
@@ -46,11 +44,11 @@ main への push 後に走るため、トリガ段の `paths` フィルタをそ
 
 os×system マトリクスも CI パイプラインと同一の内容を踏襲するが、こちらは共有部品ではない。
 `setup-nix` と違って reusable workflow / composite action のような共有機構は挟んでおらず、
-**同じ 3 組をこの workflow の `strategy.matrix` へ独立にハードコードした写し**である。したがって
-**片方を変えたらもう片方の追従が要る** — CI パイプライン側で環境を増減しても、この workflow は
-黙って旧構成のままビルドし続ける（キャッシュに載る system が CI の検証対象とずれる）。
-INF-8b97573f が「ジョブ名 / matrix を変えると check 名も変わる。ruleset 側の追従が要る」と
-言うのと同じ種類の追従点で、マトリクスの変更はこの 2 箇所へ同時に波及する。
+同じ 3 組をこの workflow の `strategy.matrix` へ独立にハードコードした写しになっている。
+したがって **マトリクスを変えるときは 2 箇所を揃えて直す**。CI パイプライン側だけで環境を
+増減しても、この workflow は黙って旧構成のままビルドし続け、キャッシュに載る system が CI の
+検証対象とずれる。INF-8b97573f が ruleset 側について挙げる追従点と同じ種類のものが、
+マトリクスの定義にもある。
 
 ## 出典
 
