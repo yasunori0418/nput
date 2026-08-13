@@ -17,18 +17,29 @@ satisfies:
 
 | 部品 | 役割 |
 |---|---|
-| `docs/model.yaml` | カスタムスキーマ。10 型と relation を定義し、sara の組み込みモデルを全面置換する |
+| `docs/model.yaml` | カスタムスキーマ。11 型と relation を定義し、sara の組み込みモデルを全面置換する |
 | `sara.toml` | リポジトリ設定 |
-| `sara` ジョブ | `test.yml` 内の 1 ジョブ。`sara check` で broken reference / duplicate ID / cycles を検出し、同じジョブで `dev/tests/sara-id.sh` も実行する |
+| `sara` ジョブ | `test.yml` 内の 1 ジョブ。`sara check` で broken reference / duplicate ID / cycles を検出し、同じジョブで契約テスト 3 件を実行する |
+| `dev/tests/sara-id.sh` | 採番契約。`sara-id` の出力形式・重複時の再生成・prefix マップと `docs/model.yaml` の一致を検証する |
+| `dev/tests/test-doc-map.sh` | テスト資産 ⇔ CASE の 1:1 対応を検証する（→ Issue #304）。区分と除外の正本は `dev/tests/` のデータファイルが持つ |
+| `dev/tests/risk-matrix.sh` | risk の `level` が `likelihood` × `impact` のマトリクス導出と一致するかを検証する（→ Issue #303）。マトリクスの正本は `dev/tests/risk-matrix.tsv` |
 | `sara-id` | devShell 同梱の採番コマンド。UUIDv4 を引き、8 文字 prefix の重複を確認して再生成する |
 
-採番契約のテストを同じジョブへ載せるのは、テストが「人が思い出したときだけ動く」状態を避ける
-ため。CI の明示ステップとして固定する。
+契約テストを同じジョブへ載せるのは、テストが「人が思い出したときだけ動く」状態を避けるため。
+3 件はいずれも dev flake の `checks.*` としても露出しているが、CI の `flake-check` はルート
+flake を対象にするため到達しない。CI の明示ステップとして固定する。
 
 `sara` ジョブは `test.yml` に同居するが、CI パイプライン（INF-d1230e1f）の変更検出ジョブは
 **再利用しない**。あちらの filter は nix / Go のソースを対象にするのに対し、この検査が最も効くのは
-docs のみの PR だからで、job ローカルの filter を別に置く。対象は検査対象の文書と、この検査自身の
-実行環境を決めるもの（sara 本体と sara-id を供給する dev flake・その lock・採番テスト）に絞る。
+docs のみの PR だからで、job ローカルの filter を別に置く。
+
+filter が拾うのは 3 種類。検査対象の文書とその設定（`docs/**` / `sara.toml`）、この検査自身の
+実行環境を決めるもの（sara 本体と sara-id を供給する dev flake・その lock・契約テストの実装＝
+`dev/tests/**` とそれが依存する `dev/scripts/**`・この workflow 自身）、そして**契約テストが
+入力に取るテスト資産そのもの**（Go のテストファイル・`tests/**`・`flake.nix` の checks 定義）。
+3 つ目は `test-doc-map.sh` が「テスト資産 ⇔ CASE の 1:1」を検査する以上避けられない — テスト
+ファイルを追加・改名しても CASE を更新しなければジョブごとスキップされ、検出したいはずの
+乖離がそのままマージされてしまう（→ Issue #304）。
 CI 用の devShell も sara 専用のものへ分ける。
 
 先行して試作された grep / awk による ID 突合は、参照先 ID の実在を検証しないという穴を抱えていた
@@ -46,13 +57,17 @@ ADR のみ連番（`ADR-NNNN`）を維持する。既存 47 本の相互参照�
 
 ## 検証の強度
 
-**非必須チェック + `strict_mode = false`** から開始する。orphan は警告のみに留める — 移行中の
-item やテスト未着手の要求が正常に存在するため。マージゲート（INF-8b97573f）の required status
-check には当面載せず、DoD の残り枠も温存する。
+**`strict_mode = true` の非必須チェック**。検査自体は strict で、orphan を含む全 warning が
+error となり `sara check` は exit 1 を返す（epic #203 の移行完了・warning 0 到達を受けて有効化
+→ ADR-0050）。合格条件は「warning 0 件」に一本化されている。
+
+一方でマージゲート（INF-8b97573f）の required status check には登録せず、DoD にも入れない。
+これは移行中の暫定措置ではなく「**検出は機械・判断は人**」という分担を保つための恒久判断で、
+接続漏れの修正が自明でないケース（item 新設を伴う等）を CI が赤いままレビューで扱える余地を
+残す。再検討条件は ADR-0050 が持つ。
 
 閾値ゲートを持たない点は CI パイプライン（INF-d1230e1f）の `go-coverage` ジョブと同方針で、
 他 PR とのマージ順依存を避けるためでもある。
-strict 化・必須化は移行の完了後に判断する。
 
 ## 出典
 
