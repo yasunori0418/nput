@@ -64,12 +64,18 @@
           #   sara-id <型名 | prefix> [slug]
           #
           # 正式 ID（frontmatter の id:）・ファイル名素材・散文中の参照の 3 つを出す。
-          # sara init の自動採番（suggest_next_id）は連番前提で使えないため代替する。
           #
           # 乱数 ID は並列レーン（parallel-worktree）での採番衝突を構造的に回避する。
           # フル UUIDv4 は事実上衝突ゼロだが、人間が触る前方 8 文字は 120 item で
           # 約 10⁻⁶ の偶然重複がありうるので、採番時に docs/ を 1 回走査して
           # 既出なら生成し直す（ms オーダーで item 数が増えても実用上コスト増なし）。
+          #
+          # sara 0.10.0 以降は `sara init` も id_format から UUIDv4 を採番できるが、
+          # 8 文字 prefix の重複チェックは持たない（{seq} を含まない format では
+          # suggest_next_id がグラフを参照せず即 render する →
+          # sara-core/src/model/item.rs の has_seq 分岐）。フル ID としては正しい設計だが、
+          # 前方 8 文字を人間が触る面に使う本リポジトリの規約は sara の関知しない層にある。
+          # この重複チェックと、ファイル名素材・省略形の出力が sara-id の存在理由。
           sara-id = pkgs.writeShellApplication {
             name = "sara-id";
             runtimeInputs = with pkgs; [
