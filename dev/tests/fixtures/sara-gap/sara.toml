@@ -1,0 +1,11 @@
+# sara-gap 契約テスト用 fixture の設定。実リポジトリの sara.toml と同じく
+# strict を有効にする（sara-gap は valid なグラフに対してのみ動く契約のため、
+# fixture 側も同じ検証強度で valid であることを前提に組む）。
+
+model_schema = "model.yaml"
+
+[repositories]
+paths = ["./docs"]
+
+[validation]
+strict_mode = true
