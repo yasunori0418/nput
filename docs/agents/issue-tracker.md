@@ -13,6 +13,22 @@ Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all op
 
 Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
 
+## Epics
+
+An epic bundles sub-issues under a milestone-level tracking issue (#147). Epics are
+plain issues — there is no separate issue type — distinguished by convention:
+
+- **Title prefix** `epic:` (e.g. `epic: sara によるドキュメントのグラフ構造化`).
+- **Label** `epic`, plus a topical label (`enhancement` / `documentation`).
+- **Registered** in the tracking issue's epic table. That table is the index; the label
+  makes the same set queryable with `gh issue list --label epic --state all`.
+
+Apply `epic` when creating an issue that the tracking issue will list as an epic. Keep it
+on the issue after it closes — the label is how completed epics stay discoverable.
+
+An epic row in the tracking table may exist before its issue does (the table can name a
+planned epic with "issue は未起票"). Such a row has nothing to label until it is filed.
+
 ## When a skill says "publish to the issue tracker"
 
 Create a GitHub issue.
