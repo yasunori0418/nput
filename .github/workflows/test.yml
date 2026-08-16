@@ -105,8 +105,9 @@ jobs:
 
   sara:
     # Knowledge-graph validation of docs/ (broken references, duplicate IDs,
-    # cycles) plus three contract tests: sara-id's numbering, test-doc-map's
-    # test-code ⇔ CASE mapping, and risk-matrix's level derivation. Non-required
+    # cycles) plus four contract tests: sara-id's numbering, test-doc-map's
+    # test-code ⇔ CASE mapping, risk-matrix's level derivation, and sara-gap's
+    # gap enumeration. Non-required
     # check with no threshold gate, same policy as go-coverage: it is NOT
     # registered as a required status check and is NOT part of the DoD, so a
     # failure reports on the PR without blocking merge. The check itself runs
@@ -198,6 +199,17 @@ jobs:
       - name: Run risk-matrix contract test
         if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c dev/tests/risk-matrix.sh
+
+      # The gap enumeration contract for sara-gap (unthreatened REQ / DSG,
+      # unmitigated risks, uncovered TCs — the shift-left skills' entry-point
+      # listing). Exercises a self-contained fixture, NOT the live graph: the
+      # live graph legitimately carries gaps while items are being raised, so
+      # sara-gap itself is deliberately not a CI gate. Wired the same way as
+      # the three above — also exposed as `checks.sara-gap` for local
+      # `nix flake check ./dev`, which CI's root-flake flake-check never reaches.
+      - name: Run sara-gap contract test
+        if: steps.filter.outputs.relevant != 'false'
+        run: nix develop '.?dir=dev#sara' -c dev/tests/sara-gap.sh
 
   e2e:
     needs: changes

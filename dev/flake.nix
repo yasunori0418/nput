@@ -184,6 +184,138 @@
               printf 'ref: %s-%s\n' "$prefix" "$short"
             '';
           };
+
+          # sara ドキュメントグラフの未カバーを 3 段で列挙する決定論コマンド。
+          #
+          #   sara-gap [--json]
+          #
+          #   ① threatens されていない requirement / design（リスク識別が未着手の仕様）
+          #   ② mitigates されていない risk（テスト条件が無いリスク）
+          #   ③ covers されていない test_condition（テストケースが無いテスト条件）
+          #
+          # `sara check --format json` は宣言辺（threatens 等の primary relation）だけを
+          # 出力し逆辺を持たないため、items 配列から jq で逆引きインデックスを自前構築する。
+          # exit code は 0 = ギャップなし / 1 = ギャップあり / 2 = sara check 失敗・JSON 形状異常。
+          #
+          # CI ゲートにはしない。現グラフは threatens されていない REQ / DSG を多数残して
+          # おり（リスク識別は epic #283 の逆算で起こした範囲しか覆っていない）最初から
+          # 赤のためゲートにならず、仮に赤を許容基準にしても、実証で item を起こすたびに
+          # 件数が動いて工程の進行順序を CI が強制してしまう（ゲート化は forward 運用の
+          # 感触を得てから判断する）。
+          sara-gap = pkgs.writeShellApplication {
+            name = "sara-gap";
+            runtimeInputs = [
+              inputs'.nur.packages.sara
+              pkgs.jq
+              pkgs.coreutils
+              # sara.toml のある走査基点をリポジトリルート基準で解決するため。
+              pkgs.git
+            ];
+            text = ''
+              usage() {
+                cat >&2 <<'EOF'
+              usage: sara-gap [--json]
+
+              sara ドキュメントグラフの未カバーを 3 段で列挙する:
+                1. threatens されていない requirement / design
+                2. mitigates されていない risk
+                3. covers されていない test_condition
+
+              exit code:
+                0  ギャップなし
+                1  ギャップあり
+                2  sara check の失敗・JSON 形状の異常
+              EOF
+              }
+
+              json_out=0
+              case "''${1-}" in
+                -h | --help)
+                  usage
+                  exit 0
+                  ;;
+                --json) json_out=1 ;;
+                "") ;;
+                *)
+                  usage
+                  exit 2
+                  ;;
+              esac
+              if [ "$#" -gt 1 ]; then
+                usage
+                exit 2
+              fi
+
+              # sara.toml のあるリポジトリルートで sara を実行する（sara-id と同じ解決）。
+              # SARA_GAP_ROOT はサンドボックスの契約テストが fixture を指すための seam。
+              repo_root=''${SARA_GAP_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || printf '.')}
+              cd "$repo_root" || {
+                echo "sara-gap: リポジトリルートへ移動できない: $repo_root" >&2
+                exit 2
+              }
+
+              # sara 呼び出しの seam（テストが JSON 形状異常を決定論的に再現するため）。
+              sara_cmd=''${SARA_GAP_SARA:-sara}
+
+              # グラフが invalid の間はギャップを算出しない（壊れたグラフから作る一覧は
+              # 信用できないため。stderr は sara の診断をそのまま通す）。
+              if ! graph=$("$sara_cmd" check --format json); then
+                echo "sara-gap: sara check が失敗した（先にグラフを valid にすること）" >&2
+                exit 2
+              fi
+
+              # .items 配列と valid を確認する。sara のバージョン更新で JSON 形状が変わった
+              # とき、黙って空の結果（＝ギャップなし）を返す事故を防ぐガード。
+              if ! printf '%s' "$graph" | jq -e '(.items | type) == "array"' >/dev/null; then
+                echo "sara-gap: sara check の JSON に .items 配列が無い（sara の出力形状が変わった可能性）" >&2
+                exit 2
+              fi
+              if ! printf '%s' "$graph" | jq -e '.valid == true' >/dev/null; then
+                echo "sara-gap: sara check が invalid を報告した（先にグラフを valid にすること）" >&2
+                exit 2
+              fi
+
+              # 宣言辺から張り先（to）の集合を作り、各段の未カバーを逆引きする 1 パス。
+              # source.file_path は repositories.paths（./docs）相対なので docs/ を前置する。
+              gaps=$(printf '%s' "$graph" | jq '
+                def targets(t): [.items[].relationships[]? | select(.relationship_type == t) | .to] | unique;
+                def row: {ref: (.id | split("-") | .[0] + "-" + .[1][0:8]), name, file: ("docs/" + .source.file_path)};
+                targets("threatens") as $threatened
+                | targets("mitigates") as $mitigated
+                | targets("covers") as $covered
+                | {
+                    unthreatened: ([.items[]
+                      | select(.item_type == "requirement" or .item_type == "design")
+                      | select(.id as $i | ($threatened | index($i)) | not) | row] | sort_by(.ref)),
+                    unmitigated: ([.items[]
+                      | select(.item_type == "risk")
+                      | select(.id as $i | ($mitigated | index($i)) | not) | row] | sort_by(.ref)),
+                    uncovered: ([.items[]
+                      | select(.item_type == "test_condition")
+                      | select(.id as $i | ($covered | index($i)) | not) | row] | sort_by(.ref))
+                  }')
+
+              if [ "$json_out" -eq 1 ]; then
+                printf '%s\n' "$gaps"
+              else
+                printf '%s' "$gaps" | jq -r '
+                  def section(title; rows):
+                    ["## " + title]
+                    + (if (rows | length) == 0 then ["なし"] else [rows[] | "\(.ref)\t\(.name)\t\(.file)"] end);
+                  section("threatens されていない requirement / design"; .unthreatened)
+                  + [""]
+                  + section("mitigates されていない risk"; .unmitigated)
+                  + [""]
+                  + section("covers されていない test_condition"; .uncovered)
+                  | .[]'
+              fi
+
+              total=$(printf '%s' "$gaps" | jq '[.[] | length] | add')
+              if [ "$total" -gt 0 ]; then
+                exit 1
+              fi
+            '';
+          };
         in
         {
           devShells.default = pkgs.mkShell {
@@ -200,6 +332,9 @@
               # uuidgen -r の供給元（util-linux）は sara-id の runtimeInputs で
               # wrapper の PATH に前置されるため、devShell 側には載せない。
               sara-id
+              # グラフ未カバー 3 段の列挙。定義は上の let 束縛を参照。sara / jq は
+              # runtimeInputs で wrapper の PATH に前置される。
+              sara-gap
               # dev/tests/test-doc-map.sh・dev/scripts/test-doc-matrix.sh が CASE
               # frontmatter を読むのに使う yq-go（mikefarah/yq v4）。載せないと
               # ambient PATH の python-yq（別実装・別構文）を拾って黙って空を返す。
@@ -223,6 +358,24 @@
               # mattpocock/skills を .claude/skills/ に dogfood 配置する（project mode）。
               # 競合時は待たず skip（--no-wait）し、no-op
               nput apply skills -f "$REPO_ROOT/dev" --no-wait
+
+              # dev/skills/（このリポジトリで開発中のスキル正本）を .claude/skills/ へ
+              # 相対 symlink で配置する。上の nput 配置（store 経由）にしないのは、
+              # store コピーだと編集の即時反映が効かず、git add 前のファイルが store に
+              # 入らず不可視になり、スキルの開発ループと両立しないため（path/self とも
+              # lib/__internal.nix で store へ潰れる）。mkOutOfStoreSymlink も使えない:
+              # 引数が Nix 評価時に確定する絶対パス文字列（REQ-eb363122 / REQ-81249072）で、
+              # pure eval の flake からは自身のチェックアウト絶対パスを得られず、
+              # ハードコードは worktree 運用と、getEnv は pure eval 方針と衝突する
+              # （src 側のプロジェクトルート実行時解決マーカーの検討 → issue #362）。
+              # 相対参照なので worktree を移動しても壊れない。dev/skills から正本を
+              # 消したときの孤児 symlink の掃除は手動とする（配置は ln -sfn の冪等な
+              # 上書きのみで、削除の同期は持たない）。
+              mkdir -p "$REPO_ROOT/.claude/skills"
+              for d in "$REPO_ROOT"/dev/skills/*/; do
+                [ -d "$d" ] || continue
+                ln -sfn "../../dev/skills/$(basename "$d")" "$REPO_ROOT/.claude/skills/$(basename "$d")"
+              done
             '';
           };
 
@@ -348,16 +501,54 @@
                 touch "$out"
               '';
 
+          # sara-gap の検出契約を固定するテスト（dev/tests/sara-gap.sh）。
+          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
+          #
+          # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
+          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
+          #   PR での退行検知を担保する（flake-check job はルート flake が対象なので
+          #   この派生は CI では回らない）
+          #
+          # テストは fixture（dev/tests/fixtures/sara-gap/）を自身からの相対パスで解決する
+          # ため、checks.risk-matrix と同じく dev/ の木の形を作ってから走らせる。
+          checks.sara-gap =
+            pkgs.runCommandLocal "sara-gap-test"
+              {
+                # fixture はモデルの写しを持たず、テストが実物の docs/model.yaml を
+                # 重ねる（二重管理の回避）。サンドボックスにはリポジトリの作業ツリーが
+                # 無く、テスト側の git ルート解決も効かないため nix から store path を
+                # 渡す（checks.sara-id の SARA_MODEL_YAML と同じ手法）。
+                SARA_GAP_MODEL_YAML = ../docs/model.yaml;
+                nativeBuildInputs = [
+                  sara-gap
+                  # テスト自身のアサーション用（sara / jq は sara-gap の runtimeInputs
+                  # から wrapper 経由で解決されるが、テストは jq を直接も使う）。
+                  pkgs.jq
+                  pkgs.coreutils
+                  pkgs.gnugrep
+                  # ルート解決経路（SARA_GAP_ROOT 無し）の検証で一時 repo を git init する。
+                  pkgs.git
+                ];
+              }
+              ''
+                mkdir -p dev
+                cp -r ${./tests} dev/tests
+                chmod -R u+w dev
+                bash dev/tests/sara-gap.sh
+                touch "$out"
+              '';
+
           # CI の sara check 専用シェル。default devShell は nput のビルドと
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
           # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
           # yasunori0418.cachix.org から引くだけで済む。
           # CI からは sara check・dev/tests/sara-id.sh・dev/tests/test-doc-map.sh・
-          # dev/tests/risk-matrix.sh をこのシェルで実行する。
+          # dev/tests/risk-matrix.sh・dev/tests/sara-gap.sh をこのシェルで実行する。
           devShells.sara = pkgs.mkShell {
             packages = [
               inputs'.nur.packages.sara
               sara-id
+              sara-gap
               # 以下は dev/tests/sara-id.sh が使う。stdenv 既定や runner の system
               # PATH でも引けるが、checks.sara-id と揃えて明示する。
               pkgs.ripgrep
@@ -368,6 +559,8 @@
               # yq-go（mikefarah/yq v4）。nixpkgs の `yq` は python-yq（別実装・別構文）
               # なので取り違えないこと。テスト側も実装を確認して落とす。
               pkgs.yq-go
+              # dev/tests/sara-gap.sh が --json 出力のアサーションに使う。
+              pkgs.jq
             ];
             env.TERM = "dumb";
           };
