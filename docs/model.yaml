@@ -47,11 +47,13 @@
 # 乱数 ID により並列レーン（parallel-worktree）での採番衝突を構造的に回避する。
 # 採番は devShell 同梱の `sara-id` コマンドで行う（8 文字 prefix の重複チェック込み）。
 #
-# 下の id_format はこの規約を表記したもの。sara の ID 検証は「非空」「英数字 /
-# ハイフン / アンダースコア」のみで id_format も prefix 一致も検証しないため
-# （sara-core/src/model/item.rs 実装確認済み）、これは `sara init` の自動採番
-# （連番前提で本リポジトリでは使わない）向けの記述であり、人間向けのドキュメントを
-# 兼ねる。ADR のみ既存 47 本の相互参照・README 運用・Issue 言及を壊さないため
+# 下の id_format はこの規約を表記したもの。sara 0.10.0 以降は id_format が採番・
+# 補完・検証を駆動する SSOT で、パースできないテンプレートは schema のロード時に
+# 拒否される（拒否されると組み込みモデルへフォールバックし、本ファイルのカスタム型が
+# 全て unknown item type になる）。使えるプレースホルダは {prefix} / {id} /
+# {seq[:0N]} / {year} / {month} / {day} / {date} / {uuid4} / {uuid7}。
+# 実際の採番は devShell の sara-id が行う（連番前提の `sara init` は使わない）。
+# ADR のみ既存 47 本の相互参照・README 運用・Issue 言及を壊さないため
 # 連番（ADR-NNNN）を維持する。
 
 item_types:
@@ -61,9 +63,9 @@ item_types:
   - id: solution
     display_name: Solution
     prefix: SOL
-    # 以降の id_format は sara に検証されない人間向けの表記（冒頭「ID 形式」節を参照）。
+    # 以降の id_format は sara 0.10.0 以降で実際に検証される（冒頭「ID 形式」節を参照）。
     # 実際の採番は devShell の sara-id が行う。
-    id_format: '{prefix}-{uuid}'
+    id_format: '{prefix}-{uuid4}'
     parent_types: []
     fields: []
     allowed_targets: []
@@ -72,7 +74,7 @@ item_types:
   - id: use_case
     display_name: Use Case
     prefix: UC
-    id_format: '{prefix}-{uuid}'
+    id_format: '{prefix}-{uuid4}'
     parent_types:
       - solution
     fields: []
@@ -85,7 +87,7 @@ item_types:
   - id: requirement
     display_name: Requirement
     prefix: REQ
-    id_format: '{prefix}-{uuid}'
+    id_format: '{prefix}-{uuid4}'
     parent_types:
       - use_case
     fields:
@@ -133,7 +135,7 @@ item_types:
   - id: design
     display_name: Design
     prefix: DSG
-    id_format: '{prefix}-{uuid}'
+    id_format: '{prefix}-{uuid4}'
     parent_types:
       - requirement
       - test_plan
@@ -159,7 +161,7 @@ item_types:
   - id: quality
     display_name: Quality
     prefix: QA
-    id_format: '{prefix}-{uuid}'
+    id_format: '{prefix}-{uuid4}'
     parent_types:
       - solution
     fields:
@@ -197,7 +199,7 @@ item_types:
   - id: test_plan
     display_name: Test Plan
     prefix: TP
-    id_format: '{prefix}-{uuid}'
+    id_format: '{prefix}-{uuid4}'
     parent_types:
       - solution
     fields:
@@ -235,7 +237,7 @@ item_types:
   - id: infrastructure
     display_name: Infrastructure
     prefix: INF
-    id_format: '{prefix}-{uuid}'
+    id_format: '{prefix}-{uuid4}'
     parent_types:
       - quality
       - design
@@ -332,7 +334,7 @@ item_types:
   - id: risk
     display_name: Risk
     prefix: RISK
-    id_format: '{prefix}-{uuid}'
+    id_format: '{prefix}-{uuid4}'
     parent_types:
       - requirement
       - design
@@ -374,7 +376,7 @@ item_types:
   - id: test_condition
     display_name: Test Condition
     prefix: TC
-    id_format: '{prefix}-{uuid}'
+    id_format: '{prefix}-{uuid4}'
     parent_types:
       - risk
     fields: []
@@ -387,7 +389,7 @@ item_types:
   - id: test_case
     display_name: Test Case
     prefix: CASE
-    id_format: '{prefix}-{uuid}'
+    id_format: '{prefix}-{uuid4}'
     parent_types:
       - test_condition
     fields:

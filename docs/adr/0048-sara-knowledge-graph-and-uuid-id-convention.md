@@ -277,3 +277,18 @@ ADR の作成頻度では実害にならない（→ §4）。
 - **strict 化・必須チェック化**（§5）
 - **`model.yaml` の切り出し**（§2）
 - **`supersedes` の追加**（§3）
+
+## 後日の追記: sara 0.10.0 で `id_format` が検証されるようになった（2026-08-16）
+
+§「なぜ `id_format` を書くのか（検証されないのに）」の前提は sara 0.10.0 で失効した。
+breaking change `feat!: drive identifier generation from id_format templates` により
+`id_format` は採番・補完・検証を駆動する SSOT になり、パースできないテンプレートは
+schema のロード時に拒否される。
+
+このリポジトリでは `{prefix}-{uuid}` が未知のプレースホルダとして弾かれ、schema 全体の
+ロードが失敗 → 組み込みモデルへフォールバック → カスタム型（test_condition / test_case 等）が
+全て `unknown item type` になり 376 パスが skip される、という形で顕在化した。
+`{uuid}` → `{uuid4}` の置換で解消（ADR の `{prefix}-{seq:04}` は 0.10.0 でも有効）。
+
+本文の「検証しない」という記述は 0.9.x 時点の事実として残す。現在の規範は
+`docs/model.yaml` 冒頭の「ID 形式」節が持つ。
