@@ -358,6 +358,19 @@
               # mattpocock/skills を .claude/skills/ に dogfood 配置する（project mode）。
               # 競合時は待たず skip（--no-wait）し、no-op
               nput apply skills -f "$REPO_ROOT/dev" --no-wait
+
+              # dev/skills/（このリポジトリで開発中のスキル正本）を .claude/skills/ へ
+              # 相対 symlink で配置する。上の nput 配置（store 経由）にしないのは、
+              # store コピーだと編集の即時反映が効かず、git add 前のファイルが store に
+              # 入らず不可視になり、スキルの開発ループと両立しないため（path/self とも
+              # lib/__internal.nix で store へ潰れる）。相対参照なので worktree を移動
+              # しても壊れない。dev/skills から正本を消したときの孤児 symlink の掃除は
+              # 手動とする（配置は ln -sfn の冪等な上書きのみで、削除の同期は持たない）。
+              mkdir -p "$REPO_ROOT/.claude/skills"
+              for d in "$REPO_ROOT"/dev/skills/*/; do
+                [ -d "$d" ] || continue
+                ln -sfn "../../dev/skills/$(basename "$d")" "$REPO_ROOT/.claude/skills/$(basename "$d")"
+              done
             '';
           };
 
