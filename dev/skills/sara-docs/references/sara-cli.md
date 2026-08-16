@@ -1,8 +1,9 @@
 # sara CLI の使い方
 
-sara は devShell 経由で使う（例: `nix develop ./dev --command sara ...`。呼び出し形は
-プロジェクトの CLAUDE.md に従う）。設定はカレント（リポジトリルート）の `sara.toml` を
-読むため、**リポジトリルートで実行する**。
+sara（と `sara-id` / `sara-gap`）は **PATH に通っている前提**で `sara ...` と直接叩く
+（direnv 等で開発シェルが読み込まれた環境なら通っている）。通っていなければ環境構築を
+プロジェクトの規約に従って済ませてから使う。設定はカレント（リポジトリルート）の
+`sara.toml` を読むため、**リポジトリルートで実行する**。
 
 ## init — item の作成（frontmatter の生成）
 
