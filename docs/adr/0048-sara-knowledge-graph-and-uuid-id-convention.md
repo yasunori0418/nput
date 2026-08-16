@@ -175,6 +175,10 @@ sara の ID 検証は「非空」「英数字 / ハイフン / アンダース�
 `sara-id` コマンドがこれを代替し、`uuidgen -r`（util-linux）で生成して 8 文字 prefix の重複を `docs/` の
 1 回走査で検出し、既出なら生成し直す。
 
+> **2026-08-16 追記**: sara 0.10.0 で `sara init` も UUIDv4 を採番できるようになり、この段落の
+> 「自動採番は使えない」は失効した。ただし `sara-id` は不要にならない（8 文字 prefix の重複チェックを
+> sara が持たないため）。詳細は末尾の追記節を参照。
+
 ### 5. CI は非必須チェックから開始する
 
 `sara check` を CI に追加するが、**required status check には登録せず、DoD にも追加しない**。
@@ -292,3 +296,21 @@ schema のロード時に拒否される。
 
 本文の「検証しない」という記述は 0.9.x 時点の事実として残す。現在の規範は
 `docs/model.yaml` 冒頭の「ID 形式」節が持つ。
+
+### `sara init` の自動採番が使えるようになった（§4 の前提の失効）
+
+同じ変更により `id_format` が採番も駆動するようになり、`sara init` は `{prefix}-{uuid4}` から
+UUIDv4 を採番する。§4 の「代償として `sara init` の自動採番（`suggest_next_id`）は使えない
+（連番前提のため）」は失効した。
+
+**それでも `sara-id` は廃止しない。** sara の採番は 8 文字 prefix の重複を見ないため。
+`{seq}` を含まない format では `suggest_next_id` がグラフを参照せず即 `render` を返し
+（`sara-core/src/model/item.rs` の `has_seq` 分岐）、`render` は `Uuid::new_v4()` を素で呼ぶだけ
+（`sara-core/src/schema/id_format.rs`）。フル UUID の衝突を乱数に任せる設計自体は正しいが、
+§4 が定めた「人間が触る面は前方 8 文字」という二層構成は sara の関知しない層にあり、
+32bit での偶然重複（120 item で約 10⁻⁶）は sara では潰せない。0.10.0 が追加した
+`IdFormatRule` も format への一致を見るだけで、8 文字 prefix の一意性は検証範囲外。
+
+`sara-id` の存在理由は「連番採番の代替」から**「8 文字 prefix の重複チェックと、
+ファイル名素材・散文用省略形の出力」**へ移る。item ファイルの生成自体は `sara init` に寄せる
+運用（`docs/agents/` 参照）は不変。

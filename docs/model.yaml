@@ -52,7 +52,8 @@
 # 拒否される（拒否されると組み込みモデルへフォールバックし、本ファイルのカスタム型が
 # 全て unknown item type になる）。使えるプレースホルダは {prefix} / {id} /
 # {seq[:0N]} / {year} / {month} / {day} / {date} / {uuid4} / {uuid7}。
-# 実際の採番は devShell の sara-id が行う（連番前提の `sara init` は使わない）。
+# 実際の採番は devShell の sara-id が行う（sara 0.10.0 の `sara init` も UUIDv4 を
+# 採番できるが、8 文字 prefix の重複チェックを持たないため → ADR-0048 の追記節）。
 # ADR のみ既存 47 本の相互参照・README 運用・Issue 言及を壊さないため
 # 連番（ADR-NNNN）を維持する。
 

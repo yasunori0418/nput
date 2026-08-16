@@ -8,7 +8,7 @@ sara（と `sara-id` / `sara-gap`）は **PATH に通っている前提**で `sa
 ## init — item の作成（frontmatter の生成）
 
 frontmatter は手書き・テンプレ写経をせず `sara init` で生成する。ID は先に `sara-id` で
-採番し、`--id` で渡す（init 自身の自動採番は連番前提なので使わない）:
+採番し、`--id` で渡す（init 自身の自動採番は 8 文字 prefix の重複を見ないので使わない）:
 
 ```bash
 sara-id risk lock-ordering            # id / filename / ref の 3 行が返る

@@ -70,7 +70,7 @@ relation は**起こした側（下流）の frontmatter に宣言する**（`sa
 - 採番は **ADR を除き `sara-id` コマンド**（8 文字 prefix の重複チェック込み）。連番を手で
   振らない（並列レーンでの採番衝突を構造的に避けるため）。`sara-id <型名> [slug]` が
   `id:` / `filename:` / `ref:` の 3 行を返す。採番した正式 ID を `sara init` の `--id` へ
-  渡して item を生成する（init 自身の自動採番は連番前提なので使わない）。
+  渡して item を生成する（init 自身の自動採番は 8 文字 prefix の重複を見ないので使わない）。
 - **ADR のみ連番**（`ADR-NNNN`）を維持する。`sara-id ADR` は exit 2 で拒否する仕様なので、
   `docs/adr/` の最大値 + 1 を手で採る。
 - relation リストにはフル ID を書く。散文では省略形を使う（省略形は正式 ID の前方一致
