@@ -1,9 +1,7 @@
 ---
 name: sara-docs
-description: sara ドキュメントグラフ（docs/ 配下の 1 ファイル 1 item・frontmatter relation・sara CLI による機械検証）の基盤知識スキル。sara 管理下の docs/ で item（solution / use_case / requirement / design / quality / test_plan / infrastructure / adr / risk / test_condition / test_case）を新規作成・編集・削除する、relation を張る・張り替える、グラフを辿る・検証する、ID を採番する、といった操作の前に必ず参照する。工程スキル（/test-plan・/test-analyze 等）が前提とする型・relation・ID・specification の規約はここが正本。sara を使わないリポジトリの Markdown ドキュメント一般は対象外。
+description: sara ドキュメントグラフの基盤知識・規約スキル。次のコンテキストが現れたら作業前に必ず読み込む — ① sara.toml と docs/model.yaml を持つリポジトリで docs/ 配下の item（YAML frontmatter に id / type / relation を持つ Markdown）を作成・編集・削除しようとしている。② REQ-xxxxxxxx / DSG- / RISK- / TC- / CASE- / TP- / QA- / INF- / UC- / SOL- / ADR- 形式の ID、または threatens / mitigates / covers / derives_from / satisfies / refines / justifies といった relation が依頼・ファイル・エラーに現れた。③ sara / sara-id / sara-gap コマンドを実行しようとしている、または sara check の orphan・broken reference エラーを直そうとしている。④ 要求・設計・リスク・テスト条件・テストケース・ADR を「item として起こして」と依頼された。工程スキル（/test-plan・/test-analyze 等）が前提とする型・relation・ID・specification 規約の正本。sara を使わないリポジトリの Markdown ドキュメント一般は対象外。
 license: MIT
-disable-model-invocation: false
-user-invocable: true
 ---
 
 # sara-docs: sara ドキュメントグラフの基盤規約
