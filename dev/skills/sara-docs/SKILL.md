@@ -38,11 +38,14 @@ sara（Requirements Knowledge Graph CLI）で管理する `docs/` の読み書�
 | test_case | `CASE` | `docs/test/…` | test_condition（`covers`）|
 
 テスト系 item（TC / CASE）を `docs/test/` 配下でどう区分けするか（サブディレクトリの
-切り方）はプロジェクト規約（CLAUDE.md 等）に委ねる。
+切り方）と、CASE の `target`（テスト資産の正準表記）の規則はプロジェクト規約
+（CLAUDE.md 等）に委ねる。
 
 親を持たない根は solution と adr のみ。他の型は upstream relation を 1 本以上張る
-（張り忘れは strict check の orphan error になる）。frontmatter の書式・型別フィールドは
-[references/frontmatter.md](references/frontmatter.md)。
+（張り忘れは strict check の orphan error になる）。frontmatter は手書きせず
+**`sara init` で生成する**（relation・型別フィールドはオプションで渡す。手順は
+[references/sara-cli.md](references/sara-cli.md)）。型・フィールドの正本は各リポジトリの
+`docs/model.yaml`（`sara schema` で確認できる）。
 
 ## forward の張り方（規範）
 
@@ -68,11 +71,28 @@ relation は**起こした側（下流）の frontmatter に宣言する**（`sa
 
 - 採番は **ADR を除き `sara-id` コマンド**（8 文字 prefix の重複チェック込み）。連番を手で
   振らない（並列レーンでの採番衝突を構造的に避けるため）。`sara-id <型名> [slug]` が
-  `id:` / `filename:` / `ref:` の 3 行を返す。
+  `id:` / `filename:` / `ref:` の 3 行を返す。採番した正式 ID を `sara init` の `--id` へ
+  渡して item を生成する（init 自身の自動採番は連番前提なので使わない）。
 - **ADR のみ連番**（`ADR-NNNN`）を維持する。`sara-id ADR` は exit 2 で拒否する仕様なので、
   `docs/adr/` の最大値 + 1 を手で採る。
 - relation リストにはフル ID を書く。散文では省略形を使う（省略形は正式 ID の前方一致
   なので、8 文字で grep すれば宣言側・参照側の両方に当たる）。
+
+## risk の評価と優先度の導出
+
+- **threatens の張り先は requirement が既定**。設計を差し替えたら消える懸念（設計選択に
+  固有のリスク）だけを design へ張る。判断は risk 単位でなく edge ごとに行う。
+- **risk の `level` は likelihood × impact から導出する**（手で判断しない）:
+
+  | likelihood \ impact | high | medium | low |
+  |---|---|---|---|
+  | **high** | high | high | medium |
+  | **medium** | high | medium | low |
+  | **low** | medium | low | low |
+
+  プロジェクトが独自の導出規約・契約テストを持つ場合はそちらが正本。
+- **test_condition の優先度はフィールドにしない**。mitigates 先 risk の `level` から
+  導出する（複数なら最高 level。例外は item 本文に根拠付きで記載）。
 
 ## specification 規約
 

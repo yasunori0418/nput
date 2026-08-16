@@ -1,8 +1,8 @@
 # test-plan 工程の item 本文の節構成
 
-frontmatter の書式は sara-docs の references/frontmatter.md が正本。ここは本文
-（Markdown 部分）の節構成を定める。どちらの item も本文は
-`# <PREFIX>-<前方8>: <name>` の見出しで始める。
+frontmatter は `sara init` が生成する（手順は sara-docs の references/sara-cli.md、
+フィールドの正本は `docs/model.yaml`）。ここは本文（Markdown 部分）の節構成を定める。
+どちらの item も本文は `# <PREFIX>-<前方8>: <name>` の見出しで始める。
 
 ## test_plan item（`docs/test-plan/`）
 

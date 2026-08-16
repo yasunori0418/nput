@@ -1,7 +1,8 @@
 # test-analyze 工程の item 本文の節構成
 
-frontmatter の書式は sara-docs の references/frontmatter.md が正本。ここは
-test_condition item の本文（Markdown 部分）の節構成を定める。
+frontmatter は `sara init` が生成する（手順は sara-docs の references/sara-cli.md、
+フィールドの正本は `docs/model.yaml`）。ここは test_condition item の本文
+（Markdown 部分）の節構成を定める。
 
 ## test_condition item（`docs/test/` 配下・区分はプロジェクト規約）
 

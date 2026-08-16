@@ -108,8 +108,10 @@ test-design）。**識別した 1 条件 = test_condition item 1 件**。
 
 1. test_condition 全 item のドラフト（条件・mitigates 先・切り口・テストベース参照）を
    **本文で提示して承認を得る**（原則 2）。
-2. 承認後、`sara-id test_condition <slug>` で採番し、返ったファイル名で規約ディレクトリへ
-   書き込む。
+2. 承認後、`sara-id test_condition <slug>` で採番し、返った正式 ID とファイル名で
+   `sara init test-condition` を実行して規約ディレクトリへ生成し（frontmatter は init が
+   付与する。`--mitigates` もここで渡す）、本文を書き足す（手順は sara-docs の
+   references/sara-cli.md）。
 3. `sara check` を回して green を確認する。
 4. 末尾で `/test-design <テスト対象名>` の実行を提案する（原則 4）。自分では進めない。
 

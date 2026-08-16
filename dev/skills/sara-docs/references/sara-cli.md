@@ -4,6 +4,28 @@ sara は devShell 経由で使う（例: `nix develop ./dev --command sara ...`�
 プロジェクトの CLAUDE.md に従う）。設定はカレント（リポジトリルート）の `sara.toml` を
 読むため、**リポジトリルートで実行する**。
 
+## init — item の作成（frontmatter の生成）
+
+frontmatter は手書き・テンプレ写経をせず `sara init` で生成する。ID は先に `sara-id` で
+採番し、`--id` で渡す（init 自身の自動採番は連番前提なので使わない）:
+
+```bash
+sara-id risk lock-ordering            # id / filename / ref の 3 行が返る
+sara init risk docs/risks/<filename> \
+  --id "<sara-id が返した正式 ID>" \
+  --name "<日本語の 1 行要約>" \
+  --threatens "<REQ / DSG のフル ID>" \
+  --likelihood medium --impact high --level high
+```
+
+- 型ごとのオプション（relation・固有フィールド）は `sara init <型> --help` で確認する。
+  requirement / quality / test_plan の `--specification` / `--specification-ja`、
+  test_case の `--target` など、モデルの必須フィールドはここで渡す。
+- 生成後に本文（`# <PREFIX>-<前方8>: <name>` の見出し + 散文）を書き足し、`sara check`
+  で green を確認する。
+- 既存 item のフィールド・relation の変更は `sara edit <フル ID> --<フィールド> ...`
+  でもよい（対話モードは TTY 前提なので、非対話ではフラグを明示する）。
+
 ## check — グラフ検証
 
 ```bash

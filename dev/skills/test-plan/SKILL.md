@@ -69,7 +69,7 @@ test-plan の核。**プロダクトリスク（product risk）= 対象が期待
 - **発生可能性（likelihood）**: 複雑さ・変更頻度・新規性・過去の欠陥密度・依存の多さ等から見積もる。
 - **影響度（impact）**: 障害時のビジネス影響・安全性・データ破損・ユーザー数・回復コスト等から見積もる。
 - **リスクレベル（level）は 2 軸から導出する**（手で判断しない。導出マトリクスは
-  sara-docs の frontmatter テンプレート、プロジェクトが正本を持つならそちら）。
+  sara-docs の「risk の評価と優先度の導出」、プロジェクトが正本を持つならそちら）。
 - 見積もりの根拠（なぜその可能性/影響度か）を必ず添える。事実は手順 1 の調査から引く。
 - **リスクの実在性をコードで検証する**: 計上前に該当経路のコードを読み、発生し得ることを
   確認する。防御的プログラミングとして書かれた実際には到達しない分岐を実リスクとして
@@ -102,8 +102,10 @@ design 行き）。
 ### 手順 4: ドラフト提示 → 承認 → 採番 → 書き込み → 検証
 
 1. test_plan / risk 全 item のドラフトを**本文で提示して承認を得る**（原則 2）。
-2. 承認後、`sara-id test_plan <slug>` / `sara-id risk <slug>` で採番し、返ったファイル名で
-   型別ディレクトリへ書き込む。
+2. 承認後、`sara-id test_plan <slug>` / `sara-id risk <slug>` で採番し、返った正式 ID と
+   ファイル名で `sara init test-plan` / `sara init risk` を実行して型別ディレクトリへ
+   生成し（frontmatter は init が付与する。`--specification` / `--threatens` 等も
+   ここで渡す）、本文を書き足す（手順は sara-docs の references/sara-cli.md）。
 3. `sara check` を回して green を確認する。orphan や broken reference が出たら自分で直す。
 4. 成果物一覧・次のステップの節は**持たない**（relation と `sara query -d` が代替する）。
    末尾で `/test-analyze <テスト対象名>` の実行を提案する（原則 4）。自分では進めない。
