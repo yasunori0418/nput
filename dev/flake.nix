@@ -363,9 +363,14 @@
               # 相対 symlink で配置する。上の nput 配置（store 経由）にしないのは、
               # store コピーだと編集の即時反映が効かず、git add 前のファイルが store に
               # 入らず不可視になり、スキルの開発ループと両立しないため（path/self とも
-              # lib/__internal.nix で store へ潰れる）。相対参照なので worktree を移動
-              # しても壊れない。dev/skills から正本を消したときの孤児 symlink の掃除は
-              # 手動とする（配置は ln -sfn の冪等な上書きのみで、削除の同期は持たない）。
+              # lib/__internal.nix で store へ潰れる）。mkOutOfStoreSymlink も使えない:
+              # 引数が Nix 評価時に確定する絶対パス文字列（REQ-eb363122 / REQ-81249072）で、
+              # pure eval の flake からは自身のチェックアウト絶対パスを得られず、
+              # ハードコードは worktree 運用と、getEnv は pure eval 方針と衝突する
+              # （src 側のプロジェクトルート実行時解決マーカーの検討 → issue #362）。
+              # 相対参照なので worktree を移動しても壊れない。dev/skills から正本を
+              # 消したときの孤児 symlink の掃除は手動とする（配置は ln -sfn の冪等な
+              # 上書きのみで、削除の同期は持たない）。
               mkdir -p "$REPO_ROOT/.claude/skills"
               for d in "$REPO_ROOT"/dev/skills/*/; do
                 [ -d "$d" ] || continue
