@@ -17,8 +17,11 @@
 #   8.  引数の異常系（--help = 0 / 未知の引数・引数過多 = 2）
 #
 # 担保できる範囲: 逆引きロジック（宣言辺 → to 集合 → 未カバー）と exit code 契約、
-# 出力形式。fixture は実物の sara バイナリで検証するため、sara の JSON 形状が変われば
-# lock bump の PR でこのテストが落ちる（変わった「後」にしか現れない点で事前検知ではない）。
+# 出力形式。fixture は実物の sara バイナリ + 実物の docs/model.yaml で検証する
+# （モデルは fixture に写しを持たず、実行時に実物を重ねる — 二重管理の回避。型や
+# 必須フィールドの変更で fixture item が実モデルに合わなくなれば、このテストが落ちて
+# 追随を要求する）。sara の JSON 形状が変われば lock bump の PR でこのテストが落ちる
+# （変わった「後」にしか現れない点で事前検知ではない）。
 #
 # 担保できない範囲: 実リポジトリ docs/ との整合（実グラフのどの item がギャップかは
 # ここでは見ない。実グラフは fixture と違い件数が動き続けるため契約にできない）。
@@ -47,6 +50,28 @@ if [[ ! -d "$fixture/docs" ]]; then
   exit 1
 fi
 
+# モデルの正本は実リポジトリの docs/model.yaml（fixture は写しを持たない）。
+# 解決は 2 経路: checks.sara-gap のサンドボックスは作業ツリーが無いので nix が
+# SARA_GAP_MODEL_YAML で store path を渡す。devShell / CI 経路は git ルート基準。
+# どちらでも解決できなければ skip せず失敗させる（黙って素通りさせない）。
+model_yaml="${SARA_GAP_MODEL_YAML:-}"
+contract_root="$(git rev-parse --show-toplevel 2>/dev/null || printf '.')"
+[[ -f "$model_yaml" ]] || model_yaml="$contract_root/docs/model.yaml"
+if [[ ! -f "$model_yaml" ]]; then
+  fault "docs/model.yaml を解決できない（model.yaml=$model_yaml）"
+  exit 1
+fi
+
+# fixture の複製に実物モデルを重ねて、実行可能な sara リポジトリの形を作る。
+make_fixture() {
+  mkdir -p "$1"
+  cp -r "$fixture"/. "$1"
+  cp "$model_yaml" "$1/model.yaml"
+}
+
+base="$work/base"
+make_fixture "$base"
+
 # fixture は 3 段のギャップを 1 件ずつ持つ:
 #   unthreatened: REQ-bbbb0002（risk 無し要求）・DSG-dd000001（risk 無し設計）
 #   unmitigated:  RISK-22220002（TC 無しリスク）
@@ -59,7 +84,7 @@ run_gap() {
 
 # --- 1. 3 段の検出と exit 1 ---------------------------------------------------
 
-run_gap env SARA_GAP_ROOT="$fixture" sara-gap
+run_gap env SARA_GAP_ROOT="$base" sara-gap
 gap_out="$stdout_capture"
 
 if [[ "$status_capture" -eq 1 ]]; then
@@ -102,7 +127,7 @@ fi
 
 # --- 3. --json -----------------------------------------------------------------
 
-run_gap env SARA_GAP_ROOT="$fixture" sara-gap --json
+run_gap env SARA_GAP_ROOT="$base" sara-gap --json
 json_out="$stdout_capture"
 
 if [[ "$status_capture" -eq 1 ]]; then
@@ -138,8 +163,7 @@ fi
 # 一本鎖で、3 段とも未カバーが無い。
 
 clean="$work/clean"
-mkdir -p "$clean"
-cp -r "$fixture"/. "$clean"
+make_fixture "$clean"
 rm "$clean/docs/req-gap.md" "$clean/docs/dsg-gap.md" "$clean/docs/risk-gap.md" "$clean/docs/tc-gap.md"
 
 run_gap env SARA_GAP_ROOT="$clean" sara-gap
@@ -169,8 +193,7 @@ fi
 # ギャップ一覧を出さない契約（部分的な一覧を信用して工程を進める事故の防止）。
 
 broken="$work/broken"
-mkdir -p "$broken"
-cp -r "$fixture"/. "$broken"
+make_fixture "$broken"
 cat >"$broken/docs/broken.md" <<'MD'
 ---
 id: "TC-99990009-0000-4000-8000-00000000000b"
@@ -209,7 +232,7 @@ fake_noitems="$work/fake-sara-noitems"
 } >"$fake_noitems"
 chmod +x "$fake_noitems"
 
-run_gap env SARA_GAP_ROOT="$fixture" SARA_GAP_SARA="$fake_noitems" sara-gap
+run_gap env SARA_GAP_ROOT="$base" SARA_GAP_SARA="$fake_noitems" sara-gap
 if [[ "$status_capture" -eq 2 ]]; then
   pass ".items 配列が無い JSON では exit 2"
 else
@@ -223,7 +246,7 @@ fake_invalid="$work/fake-sara-invalid"
 } >"$fake_invalid"
 chmod +x "$fake_invalid"
 
-run_gap env SARA_GAP_ROOT="$fixture" SARA_GAP_SARA="$fake_invalid" sara-gap
+run_gap env SARA_GAP_ROOT="$base" SARA_GAP_SARA="$fake_invalid" sara-gap
 if [[ "$status_capture" -eq 2 ]]; then
   pass "exit 0 でも valid: false の JSON では exit 2"
 else
@@ -236,8 +259,7 @@ fi
 # sara.toml / docs を対象にすることを固定する（sara-id の 4b と同じ論点）。
 
 gitrepo="$work/gitrepo"
-mkdir -p "$gitrepo"
-cp -r "$fixture"/. "$gitrepo"
+make_fixture "$gitrepo"
 git -C "$gitrepo" init -q
 mkdir -p "$gitrepo/sub"
 sub_status=0

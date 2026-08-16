@@ -1,6 +1,12 @@
 # sara-gap 契約テスト用 fixture の設定。実リポジトリの sara.toml と同じく
 # strict を有効にする（sara-gap は valid なグラフに対してのみ動く契約のため、
 # fixture 側も同じ検証強度で valid であることを前提に組む）。
+#
+# model.yaml は fixture に置かない。モデルの正本は実リポジトリの docs/model.yaml で、
+# 二重管理を避けるためテスト（dev/tests/sara-gap.sh）が実行時に実物をここへ重ねる
+# （サンドボックス経路は checks.sara-gap が SARA_GAP_MODEL_YAML で store path を渡す）。
+# fixture の item は実モデルの必須フィールド（requirement の specification /
+# specification_ja・risk の likelihood / impact / level・test_case の target）を満たす。
 
 model_schema = "model.yaml"
 

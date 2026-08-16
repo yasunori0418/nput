@@ -4,6 +4,9 @@ type: risk
 name: "TC が無いリスク"
 threatens:
   - "REQ-aaaa0001-0000-4000-8000-000000000003"
+likelihood: medium
+impact: medium
+level: medium
 ---
 # RISK-22220002: TC が無いリスク
 

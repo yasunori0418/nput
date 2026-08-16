@@ -509,6 +509,11 @@
           checks.sara-gap =
             pkgs.runCommandLocal "sara-gap-test"
               {
+                # fixture はモデルの写しを持たず、テストが実物の docs/model.yaml を
+                # 重ねる（二重管理の回避）。サンドボックスにはリポジトリの作業ツリーが
+                # 無く、テスト側の git ルート解決も効かないため nix から store path を
+                # 渡す（checks.sara-id の SARA_MODEL_YAML と同じ手法）。
+                SARA_GAP_MODEL_YAML = ../docs/model.yaml;
                 nativeBuildInputs = [
                   sara-gap
                   # テスト自身のアサーション用（sara / jq は sara-gap の runtimeInputs

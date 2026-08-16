@@ -2,6 +2,7 @@
 id: "CASE-55550001-0000-4000-8000-00000000000a"
 type: test_case
 name: "TC-33330001 を覆うテストケース"
+target: "tests/fixture/dummy_test.go"
 covers:
   - "TC-33330001-0000-4000-8000-000000000008"
 ---
