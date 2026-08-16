@@ -90,6 +90,7 @@ FLAKE_CHECKS=(
   checks.nput
   checks.treefmt
   dev:checks.risk-matrix
+  dev:checks.sara-gap
   dev:checks.sara-id
   dev:checks.test-doc-map
 )
