@@ -13,3 +13,21 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
 Edit the right-hand column to match whatever vocabulary you actually use.
+
+## Structural labels (not triage roles)
+
+These are orthogonal to the triage roles above — they describe what an issue *is*, not
+what it needs next. An issue carries both (e.g. `epic` + `needs-triage`).
+
+| Label      | Color     | Meaning                                                     |
+| ---------- | --------- | ----------------------------------------------------------- |
+| `tracking` | (default) | Milestone-level issue aggregating epics (e.g. #147)         |
+| `epic`     | `#6f42c1` | Bundles sub-issues under a tracking issue                   |
+| `task`     | `#0e8a16` | A sub-issue under an epic or tracking issue — the work unit |
+
+The three are mutually exclusive: an issue is at most one of them. A standalone issue
+(a one-off bug or docs fix belonging to no epic) carries none.
+
+All three are kept on closed issues, so `--state all` queries list the project's full
+history: `label:epic` for every epic it has had, `label:task` for every work unit. See
+`issue-tracker.md` for when to apply them.

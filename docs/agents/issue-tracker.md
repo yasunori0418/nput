@@ -13,6 +13,41 @@ Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all op
 
 Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
 
+## Epics
+
+An epic bundles sub-issues under a milestone-level tracking issue (#147). Epics are
+plain issues — there is no separate issue type — distinguished by convention:
+
+- **Title prefix** `epic:` (e.g. `epic: sara によるドキュメントのグラフ構造化`).
+- **Label** `epic`, plus a topical label (`enhancement` / `documentation`).
+- **Registered** in the tracking issue's epic table. That table is the index; the label
+  makes the same set queryable with `gh issue list --label epic --state all`.
+
+Apply `epic` when creating an issue that the tracking issue will list as an epic. Keep it
+on the issue after it closes — the label is how completed epics stay discoverable.
+
+An epic row in the tracking table may exist before its issue does (the table can name a
+planned epic with "issue は未起票"). Such a row has nothing to label until it is filed.
+
+Epics may nest: an epic can be filed under another epic rather than directly under the
+tracking issue (#283 under #203, for example). Label it `epic` all the same — depth is
+expressed by which issue lists it, not by the label.
+
+## Tasks
+
+A task is a sub-issue under an epic or tracking issue — the unit actual work and PRs are
+scoped to. Label it `task`.
+
+- **Apply** `task` when decomposing an epic into sub-issues. This is required, not
+  optional: `label:task` is how the work units stay enumerable.
+- **Do not apply** it to a standalone issue that belongs to no epic (a one-off bug report
+  or docs fix). Those carry only topical and triage labels.
+- **Keep** it after the issue closes, same as `epic`.
+
+`tracking` / `epic` / `task` are mutually exclusive — an issue is at most one of them.
+
+PRs reference both levels: `Closes #<task>` + `Refs #<epic>`.
+
 ## When a skill says "publish to the issue tracker"
 
 Create a GitHub issue.
