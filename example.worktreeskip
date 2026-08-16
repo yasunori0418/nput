@@ -1,0 +1,9 @@
+# worktrunk の symlink-ignored hook にディレクトリ symlink を作らせないパターン
+# (1行1パターン / basename に対する glob / 祖先にもマッチ)
+#
+# .claude: nput が .claude/skills/<name> へ個別配置するため、.claude/skills を
+#          ディレクトリ symlink 化されると祖先 symlink 検出 (→ ADR-0015) で
+#          `nput apply skills` が conflict で停止する。
+#          配下の settings.local.json / scheduled_tasks.lock も worktree ごとに
+#          独立していて共有の必要がないので .claude ごとスキップする。
+.claude
