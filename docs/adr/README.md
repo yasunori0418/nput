@@ -231,15 +231,18 @@ references:             # 「関連:」の ADR
   作り、採番結果を見て `git mv` する**。frontmatter は同じコマンドで一度に埋まる。
 
   ```bash
-  # 1. 本文（タイトル行とメタデータ行）を仮名のファイルへ書く
+  # 1. 本文（タイトル行とメタデータ行）を仮名のファイルへ書く。
+  #    タイトル行の番号は採番前なので `# ADR-NNNN: <タイトル>` のまま置いておく
   #    → docs/adr/DRAFT-<slug>.md
   # 2. 採番と frontmatter 生成をまとめて実行する
   nix develop '.?dir=dev#sara' -c sara init adr docs/adr/DRAFT-<slug>.md \
     --name '<タイトル行から `# ADR-NNNN: ` を除いた部分>' \
     --status 採用 --issues '#<sub-issue>' --issues '#<epic>' --origin '…' \
     --justifies '<ID>' [--revises '<ADR>'] [--references '<ADR>']
-  # 3. 出力された ID（ADR-NNNN）を見て本番の名前へ改める
+  # 3. 出力された ID（ADR-NNNN）で、ファイル名と本文タイトル行の両方を確定させる
   git mv docs/adr/DRAFT-<slug>.md docs/adr/<NNNN>-<slug>.md
+  #    本文の `# ADR-NNNN: ` も採番結果へ置換する（frontmatter の id は init が埋めるが、
+  #    本文タイトル行は触られないため手で直す）
   ```
 
   `--name` は必須フィールドなので省略しない（省略するとタイトル行から推測されるが、
