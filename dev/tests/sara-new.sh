@@ -16,10 +16,12 @@
 #   4b. 型名はアンダースコア表記（model.yaml・規約文書）とハイフン表記
 #       （sara init のサブコマンド名）の両方を受ける
 #   5.  slug の検査（空・不正文字は exit 2 で、ファイルを残さない）
-#   5b. 英小文字・数字・ハイフンの slug は受理する（境界の有効側）
+#   5b. 英小文字・数字・ハイフンの slug を受理し、ファイル名へ入れる（境界の有効側）
 #   6.  ADR は連番維持のため exit 2 で拒否する
 #   7.  sara init の失敗（exit 3）をそのまま伝播し、一時ファイルを残さない（seam で再現）
 #   8.  sara init の出力から ID を読めなければ exit 1 で落ち、一時ファイルを残さない（seam）
+#   8b. 採番 ID から UUID 部を取り出せなければ exit 1 で落ちる（prefix がハイフンを
+#       含む型。正常系では踏まない経路なので seam で押さえる）
 #   9.  出力先が既存なら上書きせず exit 1（起票済み item を潰さない）
 #   10. 引数の異常系（引数不足 = 2 / -- 区切り無しの余分引数 = 2 / --help = 0）
 #
@@ -94,7 +96,10 @@ status_capture=0
 run_sara_new() {
   local root="$1"
   shift
+  # 固定パスを毎回切って使い回す。stderr_capture が保持するのは常に「直前の 1 回分」
+  # で、呼び出しは全て逐次（並列化していない）。
   local err_file="$work/stderr"
+  : >"$err_file"
   stdout_capture="$(cd "$root" && "$@" 2>"$err_file")" && status_capture=0 || status_capture=$?
   stderr_capture="$(cat "$err_file" 2>/dev/null)"
 }
@@ -258,11 +263,14 @@ for bad in "" "has space" "../escape" "a/b" "UPPER" "under_score" "dot.ted"; do
 done
 
 # 有効側（英小数字とハイフン）は通す。境界の両側を押さえる。
+# 受理するだけでなく、その slug がファイル名へ入ることまで見る（exit 0 だけだと
+# slug がファイル名から欠落・変形する退行を通してしまう）。
 run_sara_new "$repo5" sara-new requirement a1-b2 docs/requirements
-if [[ "$status_capture" -eq 0 ]]; then
-  pass "英小文字・数字・ハイフンの slug は受理する（境界の有効側）"
+valid_slug_file="$(field file)"
+if [[ "$status_capture" -eq 0 && "$valid_slug_file" == *-a1-b2.md ]]; then
+  pass "英小文字・数字・ハイフンの slug を受理し、ファイル名へ入れる（境界の有効側）"
 else
-  fault "英小文字・数字・ハイフンの slug は受理する（実際: exit=$status_capture）"
+  fault "英小文字・数字・ハイフンの slug を受理し、ファイル名へ入れる（exit=$status_capture file=$valid_slug_file）"
 fi
 
 # --- 6. ADR は連番維持のため拒否する ------------------------------------------
@@ -297,9 +305,14 @@ fake_sara="$work/fake-sara"
 # exit 126 になる（sara-id.sh の偽 uuidgen と同じ事情）。
 #
 # 偽 sara は「SUT がどう呼んだか」も検査する。ここを素通しにすると、SUT が
-# --no-color を落とす・型名の `_` → `-` 変換を壊す・仮ファイルのパス組み立てを
-# 変えるといった退行を偽 sara が吸収して緑のまま通してしまう（実 sara を使う
-# §1〜§4 は装飾なしの環境だと --no-color の欠落を検知できない）。
+# --no-color を落とす・仮ファイルの stem を slug 以外にするといった退行を偽 sara が
+# 吸収して緑のまま通してしまう（実 sara を使う §1〜§4 は、装飾を出さない環境だと
+# --no-color の欠落を検知できない）。
+#
+# 仮ファイルの stem を検査するのは、それが name の由来だから。stem == slug は
+# 「--name 未指定でも意味のある name が入る」の前提だが、§1b の name アサーションは
+# 「sara が stem から name を導出する」という sara 側の挙動に依存している。sara が
+# その導出をやめると §1b は緑のまま検知力だけ失うので、ここで stem 自体も固定する。
 #
 # 加えて、失敗する前に必ず仮ファイルを作る。作らないと「一時ファイルを残さない」の
 # アサーションは SUT の trap cleanup が壊れていても自明に成立する（空振りする）。
@@ -323,6 +336,15 @@ if [ -z "$tmp_path" ]; then
   echo "fake sara: 仮ファイルのパスが渡っていない" >&2
   exit 92
 fi
+
+# stem が slug と一致すること（name の由来なので規約の一部）。
+tmp_stem=${tmp_path##*/}
+tmp_stem=${tmp_stem%.md}
+if [ "$tmp_stem" != "$SARA_NEW_FAKE_WANT_STEM" ]; then
+  echo "fake sara: 仮ファイルの stem が想定と違う（期待 $SARA_NEW_FAKE_WANT_STEM 実際 $tmp_stem）" >&2
+  exit 94
+fi
+
 : >"$tmp_path"
 
 case "${SARA_NEW_FAKE_MODE:-}" in
@@ -352,7 +374,7 @@ chmod +x "$fake_sara"
 repo7="$work/initfail"
 make_repo "$repo7"
 run_sara_new "$repo7" env SARA_NEW_SARA="$fake_sara" SARA_NEW_FAKE_MODE=fail \
-  SARA_NEW_FAKE_WANT_TYPE=requirement \
+  SARA_NEW_FAKE_WANT_TYPE=requirement SARA_NEW_FAKE_WANT_STEM=boom \
   sara-new requirement boom docs/requirements
 initfail_status="$status_capture"
 initfail_files="$(find "$repo7/docs" -name '*.md' -type f | wc -l)"
@@ -379,7 +401,7 @@ fi
 repo8="$work/noid"
 make_repo "$repo8"
 run_sara_new "$repo8" env SARA_NEW_SARA="$fake_sara" SARA_NEW_FAKE_MODE=no-id \
-  SARA_NEW_FAKE_WANT_TYPE=requirement \
+  SARA_NEW_FAKE_WANT_TYPE=requirement SARA_NEW_FAKE_WANT_STEM=noid \
   sara-new requirement noid docs/requirements
 noid_status="$status_capture"
 noid_files="$(find "$repo8/docs" -name '*.md' -type f | wc -l)"
@@ -394,6 +416,34 @@ if [[ "$noid_files" -eq 0 && "$noid_tmp" -eq 0 ]]; then
   pass "ID 読み取り失敗時に一時ファイル・一時ディレクトリを残さない"
 else
   fault "ID 読み取り失敗時に一時ファイル・一時ディレクトリを残さない（md $noid_files 件 / tmp $noid_tmp 件）"
+fi
+
+# --- 8b. UUID 部を取り出せなければ失敗する ------------------------------------
+#
+# SUT は正式 ID の最初のハイフンで切って UUID 部を得る。prefix 自体がハイフンを
+# 含む型（横展開先で TEST-CASE のような prefix を定義した場合）では残りが
+# `CASE-<uuid>` に化けるので、UUID の形をしているか検査して落とす。この分岐が
+# 無いと規約違反のファイル名が黙って生まれる（本ラッパーの存在意義そのものが
+# 崩れる）ため、正常系では踏まない経路だが seam で押さえる。
+
+repo8b="$work/badprefix"
+make_repo "$repo8b"
+run_sara_new "$repo8b" env SARA_NEW_SARA="$fake_sara" SARA_NEW_FAKE_MODE=id \
+  SARA_NEW_FAKE_ID='TEST-CASE-11111111-2222-4333-8444-555555555555' \
+  SARA_NEW_FAKE_WANT_TYPE=requirement SARA_NEW_FAKE_WANT_STEM=badprefix \
+  sara-new requirement badprefix docs/requirements
+badprefix_status="$status_capture"
+badprefix_files="$(find "$repo8b/docs" -name '*.md' -type f | wc -l)"
+badprefix_tmp="$(find "$repo8b/docs" -name '.sara-new-*' | wc -l)"
+if [[ "$badprefix_status" -eq 1 ]]; then
+  pass "UUID 部を取り出せない ID なら exit 1 で落ちる"
+else
+  fault "UUID 部を取り出せない ID なら exit 1 で落ちる（実際: exit=$badprefix_status stderr: $stderr_capture）"
+fi
+if [[ "$badprefix_files" -eq 0 && "$badprefix_tmp" -eq 0 ]]; then
+  pass "UUID 部の検査で落ちたときにファイル・一時ディレクトリを残さない"
+else
+  fault "UUID 部の検査で落ちたときにファイル・一時ディレクトリを残さない（md $badprefix_files 件 / tmp $badprefix_tmp 件）"
 fi
 
 # --- 9. 既存ファイルを上書きしない --------------------------------------------
@@ -415,19 +465,29 @@ else
   first_id="$(sed -n 's/^id: "\(.*\)"$/\1/p' "$repo9/$first_file")"
   run_sara_new "$repo9" env SARA_NEW_SARA="$fake_sara" SARA_NEW_FAKE_MODE=id \
     SARA_NEW_FAKE_ID="$first_id" SARA_NEW_FAKE_WANT_TYPE=requirement \
+    SARA_NEW_FAKE_WANT_STEM=dup \
     sara-new requirement dup docs/requirements
   clobber_status="$status_capture"
   clobber_files="$(find "$repo9/docs/requirements" -name '*.md' -type f | wc -l)"
   clobber_tmp="$(find "$repo9/docs" -name '.sara-new-*' | wc -l)"
-  if [[ "$clobber_status" -eq 1 ]]; then
+
+  # 衝突は「日付 + UUID + slug」が揃って初めて成立する。1 件目と 2 件目の間で
+  # 日付が変わると rename 先が別名になり、衝突しないのが正しい挙動になる。
+  # §1 と同じ日付境界の配慮だが、こちらは前提が崩れるので判定自体を見送る
+  # （偽陽性で赤くするより、成立しなかったことを明示する）。
+  first_date="${first_file##*/}"
+  first_date="${first_date%%-*}"
+  if [[ "$first_date" != "$(date +%Y%m%d)" ]]; then
+    pass "§9 は日付が跨いだため判定を見送る（衝突の前提が崩れる）"
+  elif [[ "$clobber_status" -eq 1 ]]; then
     pass "rename 先が既存なら exit 1 で拒否する"
+    if [[ "$clobber_files" -eq 1 && "$clobber_tmp" -eq 0 ]]; then
+      pass "既存ファイルを上書きせず、一時ファイル・一時ディレクトリも残さない"
+    else
+      fault "既存ファイルを上書きせず、一時ファイル・一時ディレクトリも残さない（md $clobber_files 件 / tmp $clobber_tmp 件）"
+    fi
   else
-    fault "rename 先が既存なら exit 1 で拒否する（実際: exit=$clobber_status）"
-  fi
-  if [[ "$clobber_files" -eq 1 && "$clobber_tmp" -eq 0 ]]; then
-    pass "既存ファイルを上書きせず、一時ファイル・一時ディレクトリも残さない"
-  else
-    fault "既存ファイルを上書きせず、一時ファイル・一時ディレクトリも残さない（md $clobber_files 件 / tmp $clobber_tmp 件）"
+    fault "rename 先が既存なら exit 1 で拒否する（実際: exit=$clobber_status stderr: $stderr_capture）"
   fi
 fi
 
