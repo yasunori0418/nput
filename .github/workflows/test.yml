@@ -105,9 +105,9 @@ jobs:
 
   sara:
     # Knowledge-graph validation of docs/ (broken references, duplicate IDs,
-    # cycles) plus four contract tests: sara-id's numbering, test-doc-map's
-    # test-code ⇔ CASE mapping, risk-matrix's level derivation, and sara-gap's
-    # gap enumeration. Non-required
+    # cycles) plus five contract tests: sara-id's numbering, test-doc-map's
+    # test-code ⇔ CASE mapping, risk-matrix's level derivation, sara-gap's
+    # gap enumeration, and sara-new's item creation. Non-required
     # check with no threshold gate, same policy as go-coverage: it is NOT
     # registered as a required status check and is NOT part of the DoD, so a
     # failure reports on the PR without blocking merge. The check itself runs
@@ -210,6 +210,17 @@ jobs:
       - name: Run sara-gap contract test
         if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c dev/tests/sara-gap.sh
+
+      # The item-creation contract for sara-new, the wrapper around `sara init`
+      # that enforces the <YYYYMMDD>-<full UUID>-<slug>.md filename convention
+      # (→ #367, ADR-0053). The wrapper is the structural guarantee behind that
+      # convention, so a regression here silently degrades every item raised
+      # afterwards. Wired the same way as the four above — also exposed as
+      # `checks.sara-new` for local `nix flake check ./dev`, which CI's
+      # root-flake flake-check never reaches.
+      - name: Run sara-new contract test
+        if: steps.filter.outputs.relevant != 'false'
+        run: nix develop '.?dir=dev#sara' -c dev/tests/sara-new.sh
 
   e2e:
     needs: changes
