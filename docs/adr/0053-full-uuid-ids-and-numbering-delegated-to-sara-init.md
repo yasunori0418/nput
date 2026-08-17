@@ -169,10 +169,17 @@ epic #364 が前提として挙げた 4 件を調査した結果は次のとお�
   だけを先行して直した）
 - `sara-id`・`dev/tests/sara-id.sh`・`checks.sara-id` と TP-d7da4065 が撤去の対象になる（別 issue）。
   INF-659b139d 側は 2 箇所に分かれる — **構成表**（`sara-id` 行・`dev/tests/sara-id.sh` 行と、
-  `sara` ジョブ行が持つ「契約テスト 3 件」の件数）と、**「ID 規約」節**（二層構成と ADR 連番の規約）。
-  片方だけ直すともう片方が旧記述で残る
-- 起票ラッパーの契約テストを `sara` ジョブ・`checks.*` へ載せる（別 issue）。`sara-id.sh` の撤去と
-  対になる追加で、撤去だけを実施すると契約テストが CI から落ちる
+  `sara` ジョブ行が持つ契約テストの件数・内訳）と、**「ID 規約」節**（二層構成と ADR 連番の規約）。
+  片方だけ直すともう片方が旧記述で残る。なお構成表の件数は現時点で既に stale で（`sara-gap` の
+  追加が反映されず「3 件」のまま。実 CI は 4 件）、**撤去と新設で件数自体は変わらない**ため、
+  旧数値からの引き算ではなく実 CI のステップに合わせて数え直す
+- 起票ラッパーの契約テストを CI へ載せる（別 issue）。`sara-id.sh` の撤去と対になる追加で、
+  撤去だけを実施すると契約テストが CI から落ちる。対になるのは `sara` ジョブのステップと
+  `checks.*` だけではなく、**`dev/scripts/test-inventory.sh` の `FLAKE_CHECKS`（check をハード
+  コードで列挙している）と `dev/tests/test-doc-exclusions.tsv` の除外行**を含む 4 箇所。除外行を
+  差し替えないと `test-doc-map.sh` が stale な除外または CASE 無しのテスト資産として落ちる。
+  除外理由は現行の `sara-id` 行（「TP-d7da4065 のみを持ち」）を流用できない — 決定 3 で後継は
+  test_plan を起こさないと決めたため、`sara-gap` 行と同型の理由文になる
 - 起票ラッパーの新設に伴い、エージェント向けの起票手順が更新される（別 issue）。対象は
   `dev/skills/sara-docs/`（`SKILL.md` の「ID 規約」節と `references/sara-cli.md` の
   「ID は先に `sara-id` で採番し `--id` で渡す」手順）・`dev/skills/test-plan/`・
