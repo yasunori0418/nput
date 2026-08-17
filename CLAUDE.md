@@ -96,9 +96,10 @@ test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（�
 
 - 採番は **ADR を除き** devShell 同梱の `sara-id` コマンドで行う（8 文字 prefix の重複チェック
   込み）。連番を手で振らない（並列レーンでの採番衝突を構造的に避けるため）
-- **ADR のみ連番を維持する**。既存 ADR の相互参照・`docs/adr/README.md` の運用・Issue 言及を
-  壊さないため。`sara-id ADR` は採番せず exit 2 で落ちる仕様なので、`docs/adr/` の最大値 + 1 を
-  手で採る
+- **ADR のみ連番を維持する**。既存 ADR の相互参照・`docs/adr/README.md` の運用・Issue 言及・
+  編集不能なコミットメッセージの言及を壊さないため（→ ADR-0053）。**採番は `sara init adr` へ
+  委譲する**（`docs/adr/` の最大値を目で数えて + 1 しない）。手順と、並列レーンで同時採番した
+  ときの直し方は `docs/adr/README.md`
 - `specification` フィールドを持つ型（requirement / quality / test_plan）は**英語で書く**。
   sara が RFC2119 キーワード（MUST / SHALL / SHOULD …）の存在をハードコードで検証するため。
   対になる日本語の規範文は `specification_ja` に併記する。ただし検証が効くのは requirement
@@ -146,8 +147,8 @@ nix develop ./dev -c dev/scripts/test-doc-matrix.sh out.md  # 対応表の生成
 - `lib/` は nixpkgs のみに依存する。home-manager / NixOS / nix-darwin への依存を持ち込まない
 - **ドキュメントの配置ルール・ID 規約はこのプロジェクトの規約が優先する**（→「ドキュメント」節）。
   要求は `docs/requirements/`、リスクは `docs/risks/`、テスト成果物は `docs/test/<対象>/` へ
-  1 ファイル 1 item で置き、ID は `sara-id` で採番する（ADR のみ連番を手で採る）。スキル既定の
-  出力先・採番方式（散文への ID 直書き・連番）がこれと食い違う場合はプロジェクト規約に従う
+  1 ファイル 1 item で置き、ID は `sara-id` で採番する（ADR のみ連番で、`sara init adr` が採る）。
+  スキル既定の出力先・採番方式（散文への ID 直書き・連番）がこれと食い違う場合はプロジェクト規約に従う
 - ユーザーに確認・質問する際は、テキストで質問を投げず **AskUserQuestion ツールを積極的に使う**。設計判断の確認・曖昧な依頼の解釈確認・代替案の選択などで使い、各質問は推奨オプションを先頭に置く
 
 ## Agent skills
