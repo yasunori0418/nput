@@ -203,7 +203,13 @@
             name = "sara-new";
             runtimeInputs = [
               inputs'.nur.packages.sara
+              # date / mkdir / mv / rm / tr。
               pkgs.coreutils
+              # ID 行の抽出に使う。ambient PATH 任せにすると最小環境で
+              # `sed: command not found` になる。
+              pkgs.gnused
+              # 下の text が exec するインタプリタ自身。
+              pkgs.bash
             ];
             text = ''
               exec bash ${./scripts/sara-new.sh} "$@"

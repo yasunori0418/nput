@@ -29,7 +29,7 @@ usage: sara-new <type> <slug> <dir> [-- <sara init options>...]
 
   type   sara の型名（requirement / test_case / test-case …）。ADR は対象外
   slug   ファイル名に使う短い識別子（英小文字・数字・ハイフン）
-  dir    配置ディレクトリ（リポジトリルートからの相対。無ければ作る）
+  dir    配置ディレクトリ（カレントからの相対。無ければ作る）
   --     以降を sara init へそのまま渡す（--name / --specification …）
 
 例:
@@ -101,11 +101,21 @@ mkdir -p "$dir"
 # sara 呼び出しの seam（契約テストが失敗経路を決定論的に再現するため）。
 sara_cmd=${SARA_NEW_SARA:-sara}
 
-# 採番前の仮ファイル。sara init はパスを先に要求するので避けられない。プロセス ID を
-# 混ぜて並列起動でも衝突させない。以降のどの失敗経路でも残さない（trap で回収する）。
-tmp_file="$dir/.sara-new-$$.md"
-cleanup() { rm -f "$tmp_file"; }
+# 採番前の仮ファイル。sara init はパスを先に要求するので避けられない。
+#
+# 仮ファイルの stem を slug にするのは見た目の問題ではなく必須。sara init は --name を
+# 渡さないとき**ファイル名の stem から item の name を導出する**ため、`.sara-new-<pid>.md`
+# のような名前で作ると frontmatter へ name: ".sara-new-12345" が焼き付き、rename しても
+# 直らない（sara check はこの値を検証しないので機械検出にも載らない）。stem を slug に
+# しておけば、--name を渡さない既定経路でも意味のある name が入る。
+#
+# 並列起動どうしの衝突回避は stem ではなく、プロセス ID を持つ隠しディレクトリで担う。
+tmp_dir="$dir/.sara-new-$$"
+tmp_file="$tmp_dir/$slug.md"
+cleanup() { rm -rf "$tmp_dir"; }
 trap cleanup EXIT
+
+mkdir -p "$tmp_dir"
 
 # 装飾（色・絵文字）を落として ID 行を安定させる。sara は診断も stdout へ出すため
 # stderr は素通しにして、失敗時の診断を握り潰さない。
@@ -124,6 +134,19 @@ fi
 # ファイル名は正式 ID の UUID 部（prefix を除いた全体）を使う。8 文字の省略形は
 # 使わない（→ ADR-0053）。prefix は型ごとに違うので `<PREFIX>-` を前方から落とす。
 uuid=${id#*-}
+
+# 剥がした残りが UUID の形をしているか検査する。最初のハイフンで切る以上、prefix 自体が
+# ハイフンを含む（TEST-CASE 等）と UUID 部が `CASE-<uuid>` に化けるが、それを黙って
+# ファイル名にすると規約違反の item が静かに生まれる。横展開先で prefix 規約が違っても
+# 気付けるよう、ここで落とす（型ごとの prefix 一覧は持たない方針なので、形で見る）。
+case "$uuid" in
+  [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]-[0-9a-f][0-9a-f][0-9a-f][0-9a-f]-[0-9a-f][0-9a-f][0-9a-f][0-9a-f]-[0-9a-f][0-9a-f][0-9a-f][0-9a-f]-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+  *)
+    echo "sara-new: 採番 ID から UUID 部を取り出せなかった: $id" >&2
+    echo "sara-new: prefix がハイフンを含む型は本ラッパーの対象外（ID 形式を確認すること）" >&2
+    exit 1
+    ;;
+esac
 
 target="$dir/$(date +%Y%m%d)-$uuid-$slug.md"
 
