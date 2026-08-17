@@ -165,12 +165,14 @@ epic #364 が前提として挙げた 4 件を調査した結果は次のとお�
 - **ID 規約の一次所在**である `docs/model.yaml` 冒頭の「ID 形式（UUIDv4 二層構成）」節と、
   `adr` 型の `id_format` コメント（「既存 47 本」の旧記述を含む）を書き換える（別 issue）。
   ADR-0048 の 2026-08-16 追記が規範の所在をこの節へ移しているため、ここが最優先の追随対象になる
-- CLAUDE.md の「ID 規約（UUIDv4 二層構成）」表も同じ移行で書き換える（本 ADR では ADR 採番手順
-  だけを先行して直した）
+- CLAUDE.md も同じ移行で書き換える（本 ADR では ADR 採番手順だけを先行して直した）。対象は
+  「ID 規約（UUIDv4 二層構成）」表と、「規約」節に残る `sara-id` 採番の言及の 2 箇所
 - `sara-id`・`dev/tests/sara-id.sh`・`checks.sara-id` と TP-d7da4065 が撤去の対象になる（別 issue）。
-  **TP を消すときは参照元も同時に落とす** — ADR-0048 の `justifies`（残る INF-659b139d が 1 本
-  あるので削除しても orphan にはならないが、消し忘れると `Broken reference` で `sara check` が
-  落ちる）と、`docs/spec.md` の test_plan 索引行
+  **TP を消すときは参照元 3 箇所も同時に落とす** — ADR-0048 の `justifies`（残る INF-659b139d が
+  1 本あるので削除しても orphan にはならないが、消し忘れると `Broken reference` で `sara check`
+  が落ちる）、`docs/spec.md` の test_plan 索引行、CLAUDE.md の「テスト系 item の粒度」節
+  （`dev/tests/sara-id.sh` は TP-d7da4065 のみを持つ、という区分外の記述）。**最後の 1 つは
+  `sara check` も `test-doc-map.sh` も見ない**ので、取りこぼすと機械検出なしに stale で残る
 - INF-659b139d 側の追随は 2 系統に分かれる。片方だけ直すともう片方が旧記述で残る。
   - **構成節**: `sara-id` 行・`dev/tests/sara-id.sh` 行（内訳は `dev/tests/*.sh` の各行が担う）と、
     `sara` ジョブ行の件数。件数は**表の直下の散文にも同じ数字が出る**ので両方直す。なお件数は
@@ -184,7 +186,13 @@ epic #364 が前提として挙げた 4 件を調査した結果は次のとお�
   コードで列挙している）と `dev/tests/test-doc-exclusions.tsv` の除外行**を含む 4 箇所。除外行を
   差し替えないと `test-doc-map.sh` が stale な除外または CASE 無しのテスト資産として落ちる。
   除外理由は現行の `sara-id` 行（「TP-d7da4065 のみを持ち」）を流用できない — 決定 3 で後継は
-  test_plan を起こさないと決めたため、`sara-gap` 行と同型の理由文になる
+  test_plan を起こさないと決めたため、`sara-gap` 行と同型の理由文になる。その `sara-gap` 行は
+  理由文の末尾で `sara-id` を名指ししている（「sara-id と同じ扱い」）ので、参照先が消えないよう
+  併せて直す
+- **`sara-id.sh` を根拠として名指しする散文が兄弟スクリプトに残る**（`dev/tests/sara-gap.sh`・
+  `test-doc-map.sh`・`risk-matrix.sh` のコメントに「`-e` は使わない（sara-id.sh と同じ理由）」
+  「sara-id.sh §6b と同じ扱い」等が計 7 箇所）。撤去すると根拠の参照先が消える。除外行と同じく
+  機械検出に載らないので、撤去 issue が明示的に拾う
 - 起票ラッパーの新設に伴い、エージェント向けの起票手順が更新される（別 issue）。対象は
   `dev/skills/sara-docs/`（`SKILL.md` の「ID 規約」節と `references/sara-cli.md` の
   「ID は先に `sara-id` で採番し `--id` で渡す」手順）・`dev/skills/test-plan/`・
