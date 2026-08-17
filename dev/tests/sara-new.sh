@@ -8,16 +8,23 @@
 # 検証対象（→ Issue #367・epic #364）。番号は下の節見出しに対応する:
 #   1.  item を起票し `<YYYYMMDD>-<フル UUID>-<slug>.md` へ rename する。
 #       frontmatter の id と、ファイル名の UUID 部が一致する
+#   1b. --name 未指定の既定経路でも name が slug 由来になる（仮ファイル名が漏れない）
+#   1c. 一時ファイル・一時ディレクトリ（.sara-new-*）を残さない
 #   2.  採番 ID とファイルパスを機械可読な 2 行（id: / file:）で出力する
 #   3.  sara init へオプションを透過する（-- 以降）
-#   4.  配置ディレクトリを作る（無ければ mkdir -p）。型名はアンダースコア表記
-#       （model.yaml・規約文書）とハイフン表記（sara init のサブコマンド名）の両方を受ける
+#   4.  配置ディレクトリを作る（無ければ mkdir -p）
+#   4b. 型名はアンダースコア表記（model.yaml・規約文書）とハイフン表記
+#       （sara init のサブコマンド名）の両方を受ける
 #   5.  slug の検査（空・不正文字は exit 2 で、ファイルを残さない）
+#   5b. 英小文字・数字・ハイフンの slug は受理する（境界の有効側）
 #   6.  ADR は連番維持のため exit 2 で拒否する
-#   7.  sara init が失敗したら非ゼロで落ち、一時ファイルを残さない（seam で再現）
-#   8.  sara init の出力から ID を読めなければ失敗し、一時ファイルを残さない（seam）
+#   7.  sara init の失敗（exit 3）をそのまま伝播し、一時ファイルを残さない（seam で再現）
+#   8.  sara init の出力から ID を読めなければ exit 1 で落ち、一時ファイルを残さない（seam）
 #   9.  出力先が既存なら上書きせず exit 1（起票済み item を潰さない）
-#   10. 引数の異常系（引数不足 = 2 / --help = 0）
+#   10. 引数の異常系（引数不足 = 2 / -- 区切り無しの余分引数 = 2 / --help = 0）
+#
+# 偽 sara（seam）は SUT の呼び出し形（--no-color --no-emoji init <型> <仮パス>）も
+# 検査する。素通しの偽物にすると、SUT がその形を崩す退行を吸収して緑のまま通る。
 #
 # 担保できる範囲: ラッパーの責務（パス組み立て・rename・ID 読み取り・異常系の後片付け）。
 # UUID の採番そのもの・8 文字 prefix の重複可否は検証しない（sara init の領分であり、
@@ -69,14 +76,27 @@ EOF
 
 uuid_re='[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
 
+# SUT が PATH に無いまま走ると、異常系の節（§5〜§10）は「非ゼロで落ちる」「ファイルを
+# 残さない」がどちらも自明に成立して緑になる。全節の前提としてここで存在を確かめ、
+# 無ければ以降のアサーションを回さず落とす（偽の緑を構造的に防ぐ）。
+if ! command -v sara-new >/dev/null 2>&1; then
+  fault "SUT（sara-new）が PATH に無い。devShell 経由で実行すること"
+  exit 1
+fi
+
 # SUT を repo のルートで呼ぶ（sara.toml を既定パスで引かせるため）。
 # 非ゼロ終了でもここでは落とさない（判定は各アサーションが行う）。
+# stderr は捨てずに拾う（失敗時の fault メッセージに SUT の診断を載せるため。
+# 捨てると CI ログに終了コードしか残らず原因追跡がリポジトリ外から不可能になる）。
 stdout_capture=""
+stderr_capture=""
 status_capture=0
 run_sara_new() {
   local root="$1"
   shift
-  stdout_capture="$(cd "$root" && "$@" 2>/dev/null)" && status_capture=0 || status_capture=$?
+  local err_file="$work/stderr"
+  stdout_capture="$(cd "$root" && "$@" 2>"$err_file")" && status_capture=0 || status_capture=$?
+  stderr_capture="$(cat "$err_file" 2>/dev/null)"
 }
 
 field() { printf '%s\n' "$stdout_capture" | sed -n "s/^$1:[[:space:]]*//p"; }
@@ -85,7 +105,11 @@ field() { printf '%s\n' "$stdout_capture" | sed -n "s/^$1:[[:space:]]*//p"; }
 
 repo="$work/basic"
 make_repo "$repo"
+# 日付は SUT 実行の前後で採る。実行中に日付が変わる（深夜 0 時跨ぎ）と、後だけで
+# 採った期待値が実際のファイル名と食い違って偽陽性になる。
+date_before="$(date +%Y%m%d)"
 run_sara_new "$repo" sara-new requirement lock-ordering docs/requirements
+date_after="$(date +%Y%m%d)"
 
 created="$(field file)"
 created_id="$(field id)"
@@ -93,7 +117,7 @@ created_id="$(field id)"
 if [[ "$status_capture" -eq 0 ]]; then
   pass "起票に成功して exit 0"
 else
-  fault "起票に成功して exit 0（実際: exit=$status_capture 出力: $stdout_capture）"
+  fault "起票に成功して exit 0（実際: exit=$status_capture 出力: $stdout_capture stderr: $stderr_capture）"
 fi
 
 if [[ "$created_id" =~ ^REQ-${uuid_re}$ ]]; then
@@ -103,30 +127,46 @@ else
 fi
 
 uuid="${created_id#REQ-}"
-today="$(date +%Y%m%d)"
-want_name="$today-$uuid-lock-ordering.md"
+want_before="docs/requirements/$date_before-$uuid-lock-ordering.md"
+want_after="docs/requirements/$date_after-$uuid-lock-ordering.md"
 
-if [[ "$created" == "docs/requirements/$want_name" ]]; then
+if [[ "$created" == "$want_before" || "$created" == "$want_after" ]]; then
   pass "ファイル名が <YYYYMMDD>-<フル UUID>-<slug>.md で、出力の file: と一致する"
 else
-  fault "ファイル名が <YYYYMMDD>-<フル UUID>-<slug>.md（期待: docs/requirements/$want_name 実際: $created）"
+  fault "ファイル名が <YYYYMMDD>-<フル UUID>-<slug>.md（期待: $want_before 実際: $created）"
 fi
 
-if [[ -f "$repo/docs/requirements/$want_name" ]]; then
+if [[ -n "$created" && -f "$repo/$created" ]]; then
   pass "その名前のファイルが実在する"
 else
-  fault "その名前のファイルが実在する（$repo/docs/requirements/$want_name が無い）"
+  fault "その名前のファイルが実在する（$repo/$created が無い）"
 fi
 
 # frontmatter の id と、ファイル名に埋めた UUID が一致する（rename 先の組み立てに
 # 別の UUID を混ぜていないことを固定する）。
-if grep -q "id: \"$created_id\"" "$repo/docs/requirements/$want_name" 2>/dev/null; then
+if grep -q "id: \"$created_id\"" "$repo/$created" 2>/dev/null; then
   pass "frontmatter の id とファイル名の UUID が同じ item を指す"
 else
   fault "frontmatter の id とファイル名の UUID が同じ item を指す（id=$created_id）"
 fi
 
-# 一時ファイル名が残っていない（rename であって copy ではない）。
+# --name を渡さない既定経路で、item の name が意味のある値になる。
+#
+# sara init は --name 未指定のときファイル名の stem から name を導出するため、
+# ラッパーが仮ファイルを `.sara-new-<pid>.md` のような名前で作ると
+# name: ".sara-new-12345" が frontmatter へ焼き付き、rename しても直らない
+# （sara check はこの値を検証しないので機械検出にも載らない）。実運用の主経路が
+# これなので、§3 の --name 透過とは別に固定する。
+actual_name="$(sed -n 's/^name: "\(.*\)"$/\1/p' "$repo/$created" 2>/dev/null)"
+if [[ "$actual_name" == "lock-ordering" ]]; then
+  pass "--name 未指定でも name が slug 由来になる（仮ファイル名が漏れない）"
+else
+  fault "--name 未指定でも name が slug 由来になる（期待: lock-ordering 実際: $actual_name）"
+fi
+
+# 一時ファイル・一時ディレクトリが残っていない（rename であって copy ではない）。
+# 件数だけでなく名指しでも見る（件数だけだと「tmp が残る」と「rename 先が増える」を
+# 区別できず、失敗時の診断が数字しか出ない）。
 leftovers="$(find "$repo/docs/requirements" -name '*.md' -type f | wc -l)"
 if [[ "$leftovers" -eq 1 ]]; then
   pass "生成物は 1 ファイルだけ（一時ファイルを残さない）"
@@ -134,15 +174,25 @@ else
   fault "生成物は 1 ファイルだけ（実際: $leftovers 件）"
 fi
 
+tmp_left="$(find "$repo/docs" -name '.sara-new-*' | wc -l)"
+if [[ "$tmp_left" -eq 0 ]]; then
+  pass "一時ファイル・一時ディレクトリ（.sara-new-*）を残さない"
+else
+  fault "一時ファイル・一時ディレクトリ（.sara-new-*）を残さない（実際: $tmp_left 件）"
+fi
+
 # --- 2. 出力形式 --------------------------------------------------------------
 #
 # 呼び出し側（人・エージェント）が採番結果を機械的に拾えることを固定する。
 # sara init の装飾付き出力をそのまま流すと、後続の自動処理が壊れる。
 
-if [[ "$(printf '%s\n' "$stdout_capture" | grep -c '^id: \|^file: ')" -eq 2 ]]; then
-  pass "id: / file: の 2 行を出力する"
+# 2 行を合計で数えると、id: が 2 行出て file: が 0 行でも通ってしまう。個別に見る。
+id_lines="$(printf '%s\n' "$stdout_capture" | grep -c '^id: ')"
+file_lines="$(printf '%s\n' "$stdout_capture" | grep -c '^file: ')"
+if [[ "$id_lines" -eq 1 && "$file_lines" -eq 1 ]]; then
+  pass "id: / file: をそれぞれ 1 行ずつ出力する"
 else
-  fault "id: / file: の 2 行を出力する（実際: $stdout_capture）"
+  fault "id: / file: をそれぞれ 1 行ずつ出力する（id: $id_lines 行 file: $file_lines 行）"
 fi
 
 # --- 3. sara init へのオプション透過 ------------------------------------------
@@ -192,12 +242,14 @@ fi
 # slug はファイル名へそのまま入る。`../` やスペースを通すと配置先が黙ってずれる。
 # 検査は起票の前に行い、失敗時にファイルを残さない。
 
+# 無効側の同値クラスは、実装の文字集合検査のどれが効いたか切り分けられるよう分ける
+# （`../escape` は `.` と `/` を同時に含むので、単独では切り分けにならない）。
 repo5="$work/slug"
 make_repo "$repo5"
-for bad in "" "has space" "../escape" "UPPER" "under_score"; do
+for bad in "" "has space" "../escape" "a/b" "UPPER" "under_score" "dot.ted"; do
   run_sara_new "$repo5" sara-new requirement "$bad" docs/requirements
   bad_status="$status_capture"
-  bad_files="$(find "$repo5/docs" -name '*.md' -type f ! -name 'model.yaml' | wc -l)"
+  bad_files="$(find "$repo5/docs" -name '*.md' -type f | wc -l)"
   if [[ "$bad_status" -eq 2 && "$bad_files" -eq 0 ]]; then
     pass "不正な slug '$bad' を exit 2 で拒否し、ファイルを残さない"
   else
@@ -222,7 +274,7 @@ repo6="$work/adr"
 make_repo "$repo6"
 run_sara_new "$repo6" sara-new adr some-decision docs/adr
 adr_status="$status_capture"
-adr_files="$(find "$repo6/docs" -name '*.md' -type f ! -name 'model.yaml' | wc -l)"
+adr_files="$(find "$repo6/docs" -name '*.md' -type f | wc -l)"
 if [[ "$adr_status" -eq 2 ]]; then
   pass "ADR は exit 2 で拒否する（連番維持）"
 else
@@ -243,12 +295,37 @@ fake_sara="$work/fake-sara"
 # shebang は実行中の bash の絶対パスを埋め込む。`#!/usr/bin/env bash` だと
 # nix のビルドサンドボックス（checks.sara-new 経由）に /usr/bin/env が無く
 # exit 126 になる（sara-id.sh の偽 uuidgen と同じ事情）。
+#
+# 偽 sara は「SUT がどう呼んだか」も検査する。ここを素通しにすると、SUT が
+# --no-color を落とす・型名の `_` → `-` 変換を壊す・仮ファイルのパス組み立てを
+# 変えるといった退行を偽 sara が吸収して緑のまま通してしまう（実 sara を使う
+# §1〜§4 は装飾なしの環境だと --no-color の欠落を検知できない）。
+#
+# 加えて、失敗する前に必ず仮ファイルを作る。作らないと「一時ファイルを残さない」の
+# アサーションは SUT の trap cleanup が壊れていても自明に成立する（空振りする）。
 {
   printf '#!%s\n' "$BASH"
   cat <<'FAKE'
-# 引数末尾がファイルパスとは限らないので、`init` の次の次を拾わず、
-# SARA_NEW_FAKE_MODE に応じた振る舞いだけを行う。
-case "$SARA_NEW_FAKE_MODE" in
+# 引数契約: sara-new は必ず `--no-color --no-emoji init <型> <仮パス> [透過分...]`
+# の順で呼ぶ。違えば偽 sara 自身が非ゼロで落ちて、テスト側の期待コードと食い違う。
+if [ "$1" != "--no-color" ] || [ "$2" != "--no-emoji" ] || [ "$3" != "init" ]; then
+  echo "fake sara: 想定外の呼ばれ方: $*" >&2
+  exit 90
+fi
+if [ "$4" != "$SARA_NEW_FAKE_WANT_TYPE" ]; then
+  echo "fake sara: 型が想定と違う（期待 $SARA_NEW_FAKE_WANT_TYPE 実際 $4）" >&2
+  exit 91
+fi
+
+# 仮ファイル（第 5 引数）を実際に作る。SUT の後片付けを検証可能にするため。
+tmp_path=$5
+if [ -z "$tmp_path" ]; then
+  echo "fake sara: 仮ファイルのパスが渡っていない" >&2
+  exit 92
+fi
+: >"$tmp_path"
+
+case "${SARA_NEW_FAKE_MODE:-}" in
   fail)
     echo "fake sara: boom" >&2
     exit 3
@@ -256,6 +333,16 @@ case "$SARA_NEW_FAKE_MODE" in
   no-id)
     echo "[OK] Created something with Requirement template"
     exit 0
+    ;;
+  id)
+    printf '  ID:   %s\n' "$SARA_NEW_FAKE_ID"
+    exit 0
+    ;;
+  *)
+    # モード指定漏れを成功扱いにしない（この偽 sara を別の節から流用したとき、
+    # 指定漏れが黙って exit 0 になると偽の緑になる）。
+    echo "fake sara: 未知のモード: ${SARA_NEW_FAKE_MODE:-（未設定）}" >&2
+    exit 93
     ;;
 esac
 FAKE
@@ -265,18 +352,23 @@ chmod +x "$fake_sara"
 repo7="$work/initfail"
 make_repo "$repo7"
 run_sara_new "$repo7" env SARA_NEW_SARA="$fake_sara" SARA_NEW_FAKE_MODE=fail \
+  SARA_NEW_FAKE_WANT_TYPE=requirement \
   sara-new requirement boom docs/requirements
 initfail_status="$status_capture"
-initfail_files="$(find "$repo7/docs" -name '*.md' -type f ! -name 'model.yaml' | wc -l)"
-if [[ "$initfail_status" -ne 0 ]]; then
-  pass "sara init が失敗したら非ゼロで落ちる"
+initfail_files="$(find "$repo7/docs" -name '*.md' -type f | wc -l)"
+initfail_tmp="$(find "$repo7/docs" -name '.sara-new-*' | wc -l)"
+# 期待コードは具体値で押さえる。`-ne 0` だと SUT 不在（127）・偽 sara の引数契約違反
+# （90 番台）まで pass してしまう。SUT は set -e 配下で sara の非ゼロをそのまま伝播する
+# ので、偽 sara の exit 3 がそのまま出る。
+if [[ "$initfail_status" -eq 3 ]]; then
+  pass "sara init の失敗（exit 3）をそのまま伝播する"
 else
-  fault "sara init が失敗したら非ゼロで落ちる（実際: exit=$initfail_status）"
+  fault "sara init の失敗（exit 3）をそのまま伝播する（実際: exit=$initfail_status stderr: $stderr_capture）"
 fi
-if [[ "$initfail_files" -eq 0 ]]; then
-  pass "sara init 失敗時に一時ファイルを残さない"
+if [[ "$initfail_files" -eq 0 && "$initfail_tmp" -eq 0 ]]; then
+  pass "sara init 失敗時に一時ファイル・一時ディレクトリを残さない"
 else
-  fault "sara init 失敗時に一時ファイルを残さない（実際: $initfail_files 件）"
+  fault "sara init 失敗時に一時ファイル・一時ディレクトリを残さない（md $initfail_files 件 / tmp $initfail_tmp 件）"
 fi
 
 # --- 8. ID を読めなければ失敗する ---------------------------------------------
@@ -287,18 +379,21 @@ fi
 repo8="$work/noid"
 make_repo "$repo8"
 run_sara_new "$repo8" env SARA_NEW_SARA="$fake_sara" SARA_NEW_FAKE_MODE=no-id \
+  SARA_NEW_FAKE_WANT_TYPE=requirement \
   sara-new requirement noid docs/requirements
 noid_status="$status_capture"
-noid_files="$(find "$repo8/docs" -name '*.md' -type f ! -name 'model.yaml' | wc -l)"
-if [[ "$noid_status" -ne 0 ]]; then
-  pass "sara init の出力から ID を読めなければ非ゼロで落ちる"
+noid_files="$(find "$repo8/docs" -name '*.md' -type f | wc -l)"
+noid_tmp="$(find "$repo8/docs" -name '.sara-new-*' | wc -l)"
+# ID を読めない経路は SUT 自身の判断で落ちるので exit 1（具体値で押さえる）。
+if [[ "$noid_status" -eq 1 ]]; then
+  pass "sara init の出力から ID を読めなければ exit 1 で落ちる"
 else
-  fault "sara init の出力から ID を読めなければ非ゼロで落ちる（実際: exit=$noid_status）"
+  fault "sara init の出力から ID を読めなければ exit 1 で落ちる（実際: exit=$noid_status stderr: $stderr_capture）"
 fi
-if [[ "$noid_files" -eq 0 ]]; then
-  pass "ID 読み取り失敗時に一時ファイルを残さない"
+if [[ "$noid_files" -eq 0 && "$noid_tmp" -eq 0 ]]; then
+  pass "ID 読み取り失敗時に一時ファイル・一時ディレクトリを残さない"
 else
-  fault "ID 読み取り失敗時に一時ファイルを残さない（実際: $noid_files 件）"
+  fault "ID 読み取り失敗時に一時ファイル・一時ディレクトリを残さない（md $noid_files 件 / tmp $noid_tmp 件）"
 fi
 
 # --- 9. 既存ファイルを上書きしない --------------------------------------------
@@ -315,32 +410,24 @@ if [[ -z "$first_file" ]]; then
 else
   # 2 件目の rename 先を 1 件目と同じにするため、SARA_NEW_SARA で 1 件目と
   # 同じ ID を返す偽 sara を使う（実 sara は毎回別の UUID を採るため衝突を作れない）。
-  clobber_sara="$work/clobber-sara"
-  {
-    printf '#!%s\n' "$BASH"
-    cat <<'FAKE'
-# 最終引数を初期化対象のファイルとみなして空ファイルを作り、既定の ID を返す。
-for target; do :; done
-: >"$target"
-printf '  ID:   %s\n' "$SARA_NEW_FAKE_ID"
-FAKE
-  } >"$clobber_sara"
-  chmod +x "$clobber_sara"
-
+  # 引数契約を持つ共通の偽 sara を id モードで使い回す（専用の緩い偽物を別に置くと、
+  # そちらだけ SUT の呼び出し形の退行を吸収してしまう）。
   first_id="$(sed -n 's/^id: "\(.*\)"$/\1/p' "$repo9/$first_file")"
-  run_sara_new "$repo9" env SARA_NEW_SARA="$clobber_sara" SARA_NEW_FAKE_ID="$first_id" \
+  run_sara_new "$repo9" env SARA_NEW_SARA="$fake_sara" SARA_NEW_FAKE_MODE=id \
+    SARA_NEW_FAKE_ID="$first_id" SARA_NEW_FAKE_WANT_TYPE=requirement \
     sara-new requirement dup docs/requirements
   clobber_status="$status_capture"
   clobber_files="$(find "$repo9/docs/requirements" -name '*.md' -type f | wc -l)"
+  clobber_tmp="$(find "$repo9/docs" -name '.sara-new-*' | wc -l)"
   if [[ "$clobber_status" -eq 1 ]]; then
     pass "rename 先が既存なら exit 1 で拒否する"
   else
     fault "rename 先が既存なら exit 1 で拒否する（実際: exit=$clobber_status）"
   fi
-  if [[ "$clobber_files" -eq 1 ]]; then
-    pass "既存ファイルを上書きせず、一時ファイルも残さない"
+  if [[ "$clobber_files" -eq 1 && "$clobber_tmp" -eq 0 ]]; then
+    pass "既存ファイルを上書きせず、一時ファイル・一時ディレクトリも残さない"
   else
-    fault "既存ファイルを上書きせず、一時ファイルも残さない（実際: $clobber_files 件）"
+    fault "既存ファイルを上書きせず、一時ファイル・一時ディレクトリも残さない（md $clobber_files 件 / tmp $clobber_tmp 件）"
   fi
 fi
 
@@ -363,6 +450,17 @@ if [[ "$status_capture" -eq 2 ]]; then
   pass "配置ディレクトリを省くと exit 2（境界の無効側）"
 else
   fault "配置ディレクトリを省くと exit 2（実際: exit=$status_capture）"
+fi
+
+# `--` 区切り無しの余分な引数は受け付けない（タイポした引数が黙って捨てられるより、
+# 使い方を出して落とす設計）。この分岐を削っても §3 の正常系は通るので個別に押さえる。
+run_sara_new "$repo10" sara-new requirement stray-arg docs/requirements extra
+stray_status="$status_capture"
+stray_files="$(find "$repo10/docs" -name '*.md' -type f | wc -l)"
+if [[ "$stray_status" -eq 2 && "$stray_files" -eq 0 ]]; then
+  pass "-- 区切り無しの余分な引数は exit 2 で拒否し、ファイルを残さない"
+else
+  fault "-- 区切り無しの余分な引数は exit 2 で拒否し、ファイルを残さない（exit=$stray_status 残 $stray_files 件）"
 fi
 
 run_sara_new "$repo10" sara-new --help
