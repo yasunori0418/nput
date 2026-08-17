@@ -227,17 +227,25 @@ references:             # 「関連:」の ADR
   使うが、ADR だけは既存の相互参照・本ドキュメントの運用・Issue 言及・**編集不能なコミット
   メッセージ**の言及を壊さないため連番のまま（→ ADR-0053）。
 - **採番は `sara init adr` へ委譲する**。`docs/adr/` の最大値を目で数えて + 1 する運用は採らない
-  （→ ADR-0053 §4）。frontmatter は同じコマンドで一度に埋められる。
+  （→ ADR-0053 §4）。番号は実行するまで分からないので、**本文だけを書いたファイルを仮の名前で
+  作り、採番結果を見て `git mv` する**。frontmatter は同じコマンドで一度に埋まる。
 
   ```bash
-  nix develop '.?dir=dev#sara' -c sara init adr docs/adr/<NNNN>-<slug>.md \
-    --status 採用 --issues '#<N>' --origin '…' \
+  # 1. 本文（タイトル行とメタデータ行）を仮名のファイルへ書く
+  #    → docs/adr/DRAFT-<slug>.md
+  # 2. 採番と frontmatter 生成をまとめて実行する
+  nix develop '.?dir=dev#sara' -c sara init adr docs/adr/DRAFT-<slug>.md \
+    --name '<タイトル行から `# ADR-NNNN: ` を除いた部分>' \
+    --status 採用 --issues '#<sub-issue>' --issues '#<epic>' --origin '…' \
     --justifies '<ID>' [--revises '<ADR>'] [--references '<ADR>']
+  # 3. 出力された ID（ADR-NNNN）を見て本番の名前へ改める
+  git mv docs/adr/DRAFT-<slug>.md docs/adr/<NNNN>-<slug>.md
   ```
 
-  ファイル名の `<NNNN>` は先に決められないので、**本文だけを書いたファイルを仮の名前で作り、
-  採番結果を見て `git mv` する**か、採番だけ先に空ファイルで取ってから書く。`--id` を渡せば
-  番号を明示できるが、手で数えた番号を渡すのは委譲の意味を失うので使わない。
+  `--name` は必須フィールドなので省略しない（省略するとタイトル行から推測されるが、
+  `# ADR-NNNN: ` の prefix が付いたまま入る）。`--issues` は `!list text` なので複数の
+  issue を持つときはフラグを繰り返す。`--id` を渡せば番号を明示できるが、手で数えた番号を
+  渡すのは委譲の意味を失うので使わない。
 
   **並列レーンでの同時採番は防げない**。`suggest_next_id` は自分のワークツリーのグラフしか
   見ないため、2 レーンが同時に採ると同じ番号になる。検出はマージ後の `sara check`
