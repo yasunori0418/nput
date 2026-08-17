@@ -566,12 +566,49 @@
                 touch "$out"
               '';
 
+          # sara-new の起票契約を固定するテスト（dev/tests/sara-new.sh）。
+          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
+          #
+          # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
+          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
+          #   PR での退行検知を担保する（flake-check job はルート flake が対象なので
+          #   この派生は CI では回らない）
+          checks.sara-new =
+            pkgs.runCommandLocal "sara-new-test"
+              {
+                # テストが fixture リポジトリへ重ねる実物のモデル。サンドボックスには
+                # リポジトリの作業ツリーが無く、テスト側の git ルート解決も効かないため
+                # nix から store path を渡す（checks.sara-gap と同じ手法）。
+                SARA_NEW_MODEL_YAML = ../docs/model.yaml;
+                nativeBuildInputs = [
+                  sara-new
+                  # 偽 sara を作る §7 / §9 以外の経路で実 sara を使う。sara-new の
+                  # runtimeInputs で wrapper の PATH には載るが、テストは fixture の
+                  # 検証にも sara を前提とするため明示する。
+                  inputs'.nur.packages.sara
+                  pkgs.coreutils
+                  pkgs.findutils
+                  pkgs.gnugrep
+                  # テストが sara-new の出力から id / file を抜くのに使う。
+                  pkgs.gnused
+                  # 走査基点の解決に使う（SARA_NEW_MODEL_YAML が先に解決するので
+                  # 実際には使われないが、無いと `git rev-parse` が command not found
+                  # となり診断が濁る）。
+                  pkgs.git
+                ];
+              }
+              ''
+                bash ${./tests/sara-new.sh}
+                touch "$out"
+              '';
+
           # CI の sara check 専用シェル。default devShell は nput のビルドと
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
           # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
           # yasunori0418.cachix.org から引くだけで済む。
-          # CI からは sara check・dev/tests/sara-id.sh・dev/tests/test-doc-map.sh・
-          # dev/tests/risk-matrix.sh・dev/tests/sara-gap.sh をこのシェルで実行する。
+          # CI からは sara check・dev/tests/sara-id.sh・dev/tests/sara-new.sh・
+          # dev/tests/test-doc-map.sh・dev/tests/risk-matrix.sh・dev/tests/sara-gap.sh を
+          # このシェルで実行する。
           devShells.sara = pkgs.mkShell {
             packages = [
               inputs'.nur.packages.sara
@@ -584,6 +621,10 @@
               pkgs.git
               pkgs.gnused
               pkgs.coreutils
+              # dev/tests/sara-new.sh が fixture の残存ファイルを数えるのに使う
+              # （runner の system PATH でも引けるが、checks.sara-new と揃えて明示する）。
+              pkgs.findutils
+              pkgs.gnugrep
               # dev/tests/test-doc-map.sh が CASE frontmatter の target を読むのに使う。
               # yq-go（mikefarah/yq v4）。nixpkgs の `yq` は python-yq（別実装・別構文）
               # なので取り違えないこと。テスト側も実装を確認して落とす。
