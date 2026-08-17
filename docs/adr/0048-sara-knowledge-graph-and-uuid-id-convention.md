@@ -19,7 +19,7 @@ references:
 
 - ステータス: 採用
 - 日付: 2026-08-02
-- 関連: ADR-0030, ADR-0037, ADR-0049, ADR-0050, `docs/spec.md`, `docs/design.md`, `docs/concept.md`, `docs/adr/README.md`, GitHub Issue #203, #206, #207
+- 関連: ADR-0030, ADR-0037, ADR-0049, ADR-0050, ADR-0053, `docs/spec.md`, `docs/design.md`, `docs/concept.md`, `docs/adr/README.md`, GitHub Issue #203, #206, #207
 - 改訂対象: なし（新領域。「仕様とテストの全体像把握」= quality-observability（→ Issue #203）の実現手段を
   差し替えるが、既存 ADR の決定を反転しない）
 - 起点: epic #203 の grilling セッション（2026-07-31・2026-08-01）で確定
@@ -42,6 +42,16 @@ references:
 > defect 型は廃止され、発生した欠陥は GitHub Issues（`bug` label）で管理する。テスト系統のグラフは
 > `risk → test_condition → test_case` で終端し、relation `reveals` / `is_revealed_by` も削除された。
 > §2 のそれ以外の決定と §1 / §3 / §4 / §5 は不変（→ ADR-0051）。
+
+> **2026-08-17 改訂注記（ADR-0053）**: 改訂対象は本 ADR **§4 の ID 規約**。二層構成は廃止され、
+> ファイル名・散文中の参照もフル UUIDv4 を使う（§4 の 3 行表のうち正式 ID の行だけが不変。
+> ULID / UUIDv7 を採らない判断も不変だが、根拠のうち「8 文字省略形が同一秒のバッチ生成で衝突
+> する」は省略形の廃止により失効し、diff レビューでの目視比較の理由だけが残る）。これに伴い
+> 8 文字 prefix の一意性という要件が消え、それを担っていた `sara-id` は廃止されて起票ラッパー
+> へ置き換わる（§5 の CI が実行する `dev/tests/sara-id.sh` も撤去対象）。**「ADR のみ連番を維持
+> する」は不変**だが、その採番手順は `sara init adr` への委譲へ変わり、下の 2026-08-16 追記節
+> （`sara-id` は廃止しない・存在理由は 8 文字 prefix の重複チェックへ移る）も同時に失効した。
+> §1 / §2 / §3 と §5 の CI 方針そのものは不変（→ ADR-0053）。
 
 ## 背景
 
@@ -150,6 +160,10 @@ risk は requirement と design の**両方**を脅かせる。使い分けは�
 design 側。要求が満たされないこと自体への懸念は常に requirement 側」とする。
 
 ### 4. ID は UUIDv4 の二層構成とする（ADR のみ連番維持）
+
+> **2026-08-17 追記（ADR-0053）**: 本節の二層構成は廃止された。現在の規範は ADR-0053 §1 が持つ
+> （ファイル名・散文参照ともフル UUIDv4）。「ADR のみ連番を維持する」だけが生きており、その
+> 採番手順は `sara init adr` への委譲に変わった（→ ADR-0053 §4）。
 
 sara が扱う正式 ID はフル UUIDv4、人間が触る面は前方 8 文字の省略形を使う。
 
@@ -298,6 +312,10 @@ schema のロード時に拒否される。
 `docs/model.yaml` 冒頭の「ID 形式」節が持つ。
 
 ### `sara init` の自動採番が使えるようになった（§4 の前提の失効）
+
+> **2026-08-17 追記（ADR-0053）**: 本項の結論「それでも `sara-id` は廃止しない」は失効した。
+> 二層構成そのものを廃止したため、8 文字 prefix の重複チェックという存在理由が消えている。
+> `sara-id` は撤去され、後継は `sara init` を包む起票ラッパーが担う（→ ADR-0053 §1・§3）。
 
 同じ変更により `id_format` が採番も駆動するようになり、`sara init` は `{prefix}-{uuid4}` から
 UUIDv4 を採番する。§4 の「代償として `sara init` の自動採番（`suggest_next_id`）は使えない
