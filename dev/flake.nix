@@ -191,6 +191,25 @@
             '';
           };
 
+          # sara init を包む item 起票ラッパー（→ Issue #367・epic #364）。
+          #
+          #   sara-new <型> <slug> <配置ディレクトリ> [-- <sara init のオプション>...]
+          #
+          # 実体は dev/scripts/sara-new.sh。他の dev ツール（sara-id / sara-gap）と違い
+          # 本体を flake.nix へインラインしないのは、このドキュメント管理基盤を他
+          # プロジェクトへ横展開する方針で、ファイル 1 つで持ち出せる形に保つため。
+          # ここは PATH に載せるための薄い wrapper（runtimeInputs で依存を固定する）。
+          sara-new = pkgs.writeShellApplication {
+            name = "sara-new";
+            runtimeInputs = [
+              inputs'.nur.packages.sara
+              pkgs.coreutils
+            ];
+            text = ''
+              exec bash ${./scripts/sara-new.sh} "$@"
+            '';
+          };
+
           # sara ドキュメントグラフの未カバーを 3 段で列挙する決定論コマンド。
           #
           #   sara-gap [--json]
@@ -338,6 +357,9 @@
               # uuidgen -r の供給元（util-linux）は sara-id の runtimeInputs で
               # wrapper の PATH に前置されるため、devShell 側には載せない。
               sara-id
+              # item 起票ラッパー（sara init + 規約どおりの rename）。定義は上の
+              # let 束縛を参照。sara は runtimeInputs で wrapper の PATH に前置される。
+              sara-new
               # グラフ未カバー 3 段の列挙。定義は上の let 束縛を参照。sara / jq は
               # runtimeInputs で wrapper の PATH に前置される。
               sara-gap
@@ -554,6 +576,7 @@
             packages = [
               inputs'.nur.packages.sara
               sara-id
+              sara-new
               sara-gap
               # 以下は dev/tests/sara-id.sh が使う。stdenv 既定や runner の system
               # PATH でも引けるが、checks.sara-id と揃えて明示する。
