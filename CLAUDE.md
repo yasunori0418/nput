@@ -67,8 +67,7 @@ risk を `requirement` と `design` のどちらに張るかの使い分けは `
 | `cli-json` | `cmd/nput/` の全テストファイル | TP-e7c25263-6d2d-4a37-8275-26906889d912（CLI 層の判断）/ TP-d3000054-42d9-4bac-912a-dd3abc38d3e9（エンベロープ適合と payload 意味論）|
 | `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` | TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9 / TP-0734996e-aea9-4229-8075-89a64bdf9f79 / TP-e7c25263-6d2d-4a37-8275-26906889d912（`internal/` の Go テスト）|
 
-区分外: `go-vet` / `golangci-lint` / カバレッジ計測は quality の担当。`dev/tests/sara-id.sh` は
-test_plan（TP-d7da4065-ce7c-4a0b-be49-5108256e177a）のみを持ち、TC / CASE へは展開しない（理由は同 item）。**CASE を
+区分外: `go-vet` / `golangci-lint` / カバレッジ計測は quality の担当。**CASE を
 持たないテスト資産の規範は `dev/tests/test-doc-exclusions.tsv`**（除外理由付き。ここに無い
 資産が CASE 無しで現れると契約テストが落ちる）。
 

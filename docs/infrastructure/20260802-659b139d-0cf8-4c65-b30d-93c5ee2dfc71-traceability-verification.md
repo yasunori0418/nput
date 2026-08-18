@@ -19,14 +19,14 @@ satisfies:
 |---|---|
 | `docs/model.yaml` | カスタムスキーマ。11 型と relation を定義し、sara の組み込みモデルを全面置換する |
 | `sara.toml` | リポジトリ設定 |
-| `sara` ジョブ | `test.yml` 内の 1 ジョブ。`sara check` で broken reference / duplicate ID / cycles を検出し、同じジョブで契約テスト 3 件を実行する |
-| `dev/tests/sara-id.sh` | 採番契約。`sara-id` の出力形式・重複時の再生成・prefix マップと `docs/model.yaml` の一致を検証する |
+| `sara` ジョブ | `test.yml` 内の 1 ジョブ。`sara check` で broken reference / duplicate ID / cycles を検出し、同じジョブで契約テスト 4 件を実行する |
 | `dev/tests/test-doc-map.sh` | テスト資産 ⇔ CASE の 1:1 対応を検証する（→ Issue #304）。区分と除外の正本は `dev/tests/` のデータファイルが持つ |
 | `dev/tests/risk-matrix.sh` | risk の `level` が `likelihood` × `impact` のマトリクス導出と一致するかを検証する（→ Issue #303）。マトリクスの正本は `dev/tests/risk-matrix.tsv` |
-| `sara-id` | devShell 同梱の採番コマンド。UUIDv4 を引き、8 文字 prefix の重複を確認して再生成する |
+| `dev/tests/sara-gap.sh` | `sara-gap` の未カバー 3 段の列挙契約を検証する |
+| `dev/tests/sara-new.sh` | `sara-new` の起票契約（採番・ファイル名規約の適用）を検証する（→ Issue #367）|
 
 契約テストを同じジョブへ載せるのは、テストが「人が思い出したときだけ動く」状態を避けるため。
-3 件はいずれも dev flake の `checks.*` としても露出しているが、CI の `flake-check` はルート
+4 件はいずれも dev flake の `checks.*` としても露出しているが、CI の `flake-check` はルート
 flake を対象にするため到達しない。CI の明示ステップとして固定する。
 
 `sara` ジョブは `test.yml` に同居するが、CI パイプライン（INF-d1230e1f-8ba8-49d8-8386-409bfbb7dd27）の変更検出ジョブは
@@ -34,7 +34,7 @@ flake を対象にするため到達しない。CI の明示ステップとし�
 docs のみの PR だからで、job ローカルの filter を別に置く。
 
 filter が拾うのは 3 種類。検査対象の文書とその設定（`docs/**` / `sara.toml`）、この検査自身の
-実行環境を決めるもの（sara 本体と sara-id を供給する dev flake・その lock・契約テストの実装＝
+実行環境を決めるもの（sara 本体と dev ツールを供給する dev flake・その lock・契約テストの実装＝
 `dev/tests/**` とそれが依存する `dev/scripts/**`・この workflow 自身）、そして**契約テストが
 入力に取るテスト資産そのもの**（Go のテストファイル・`tests/**`・`flake.nix` の checks 定義）。
 3 つ目は `test-doc-map.sh` が「テスト資産 ⇔ CASE の 1:1」を検査する以上避けられない — テスト

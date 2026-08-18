@@ -10,7 +10,6 @@ issues:
 origin: "epic #203 の grilling セッション（2026-07-31・2026-08-01）で確定"
 justifies:
   - "INF-659b139d-0cf8-4c65-b30d-93c5ee2dfc71"
-  - "TP-d7da4065-ce7c-4a0b-be49-5108256e177a"
 references:
   - "ADR-0030"
   - "ADR-0037"
