@@ -1,0 +1,71 @@
+---
+id: "REQ-fc1118b1-b0e8-4ddf-80f6-c70956651693"
+type: requirement
+name: "同一 target を複数 config で狙うことによる振動はユーザー責任とし warning で可視化するに留める"
+derives_from:
+  - "UC-1c280dce-7c72-44c0-95ea-d06344f62a47"
+specification: |
+  Where two different configs aim at the same target, the drift repair may oscillate on
+  every re-entry of the `shellHook` — A places it, B detects it as foreign and takes it,
+  A takes it back — which is an active oscillation rather than a single instance of the
+  last writer winning. Not aiming at the same target from several configs SHALL be the
+  responsibility of the user, and nput SHALL make the situation visible through the
+  foreign symlink warning and SHALL NOT hold any mechanism that detects and stops it at
+  engine runtime. Where several configs ride on a single evaluation, as the `nput.configs`
+  of one module configuration do, a static detection at eval time is possible and SHALL
+  NOT be precluded by this; that case is stated by REQ-5923ac79-4a2d-43cd-b56c-2f1000c01b44 and is not restated here.
+  The foreign warning during an oscillation will keep appearing under the high frequency
+  at which a `shellHook` runs, and this SHALL be regarded as correct, being the signal of
+  a misconfiguration; the warning SHALL be outside the scope of silence on success and
+  SHALL therefore appear regardless of `-v`. The MVP SHALL NOT hold any mechanism for
+  suppressing or aggregating it, the situation being resolved by removing the duplicate
+  target from the configs.
+specification_ja: |
+  別 config が同一 target を狙うと、ドリフト修復が「A が置く → B が foreign 検知して奪う →
+  A が再奪取」と `shellHook` 再入のたびに振動しうる（単発の後勝ちではなく能動的オシレーション）。
+  「同一 target を複数 config で狙わない」はユーザー責任とし、nput は foreign symlink warning で
+  可視化するに留め、engine 実行時に検知して止める機構を持ってはならない。単一の eval に載る
+  複数 config（1 つのモジュール config の `nput.configs` など）については eval 時の静的検出が
+  可能であり、本 item はそれを妨げない。その場合の規範は REQ-5923ac79-4a2d-43cd-b56c-2f1000c01b44 の担当で、本 item
+  では規定しない。振動中の foreign warning は
+  `shellHook` の高頻度実行で出続けるが、これは設定ミスのシグナルとして正しいものと
+  みなさなければならない。この warning は成功時沈黙の対象外でなければならず、`-v` の有無に
+  関わらず常時出さなければならない。MVP では抑制 / 集約機構を持ってはならず、
+  config の同一 target 重複を解消して直す。
+---
+# REQ-fc1118b1-b0e8-4ddf-80f6-c70956651693: 同一 target を複数 config で狙うことによる振動はユーザー責任とし warning で可視化するに留める
+
+## 仕様
+
+- **cross-config 同一 target の振動はユーザー責任**: 別 config A / B が同一 target を狙うと、
+  lstat 修復が「A が置く → B が foreign 検知して奪う → A が再奪取」と `shellHook` 再入のたびに
+  振動しうる（単発「後勝ち」ではなく能動的オシレーション）。「同一 target を複数 config で
+  狙わない」をユーザー責任とし、foreign symlink warning で可視化する。検知して止める機構は
+  持たない
+- **振動中の foreign warning は `shellHook` 高頻度実行で出続けるが、これは設定ミスのシグナルと
+  して正しい**。warning は成功時沈黙の対象外なので `-v` の有無に関わらず常時出る。抑制 / 集約
+  機構は MVP で持たず、config の同一 target 重複を解消して直す（document-only）
+
+> **上は原文の写しで、規範は frontmatter が正**。foreign symlink warning そのものと単発の
+> 後勝ちは REQ-622787dc-4512-4ce9-9c7d-7b32bbb70557、lstat ドリフト修復そのものは REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0、warning が成功時沈黙の
+> 対象外であることの出力規律そのものは REQ-8ef34101-8150-4124-92d5-94fabe6b5d90 の担当。同一 config 内での target 衝突を
+> 評価時に検出することは REQ-5c6b07da-3d06-414d-8770-4f438234b322 の担当（本 item は config をまたぐ場合を扱う）。
+>
+> **「検知して止める機構を持たない」を engine 実行時へ限定した理由**: **ADR-0035 §4 が、
+> 1 つのモジュール config 内の `nput.configs.<A>` と `<B>` は全 config が同一のモジュール eval に
+> 載るため正規化後 target の衝突を静的に検出でき、eval 時 assertion で停止すると決定済み**で、
+> 原文の無条件な言い切りはこれを否定してしまう（原文が ADR-0035 に未追従・REQ-5c6b07da-3d06-414d-8770-4f438234b322 と
+> 同じ扱い）。本 item は静的検出が可能な場合を妨げないことまでを規範とし、その場合に実際に
+> eval 停止する規範そのものは持たない（**同 §4 の規範は REQ-5923ac79-4a2d-43cd-b56c-2f1000c01b44 が持つ**）。
+> `docs/spec.md` の追従は本 item の担当範囲外。
+
+## 出典
+
+`docs/spec.md`「世代管理仕様」→「project mode の世代」節の、世代スキップ時 FS 検査に付随する
+入れ子箇条書き 2 項。
+
+決定の実体は ADR-0023「実装前残セマンティクス第5巡」（cross-config 同一 target をユーザー責任と
+すること）と ADR-0024「実装前残セマンティクス第6巡」（振動 warning を抑制しないこと）。
+「検知して止める機構を持たない」を engine 実行時へ限定したのは ADR-0035「HM モジュールに
+`nput.configs.<name>` を導入し複数 profile（役割分離）を可能にする」§4（単一のモジュール eval に
+載る config 間は静的検出が可能）。

@@ -21,7 +21,7 @@
 #
 # ## 出力形式
 #
-# 区分ごとにセクションを切り、行 = テスト資産、列 = CASE（省略形 + name）/ covers する TC /
+# 区分ごとにセクションを切り、行 = テスト資産、列 = CASE（フル ID + name）/ covers する TC /
 # 上流 RISK。Go サブテスト・nix-unit attr の内訳は <details> で折りたたむ。
 # CASE を持たない資産（除外リスト）は末尾に別表で理由付きで載せる。
 
@@ -104,15 +104,15 @@ jq -r '
 
 # --- 部品 --------------------------------------------------------------------
 
-# フル ID → 散文用の省略形（<PREFIX>-<前方 8 文字>）。形式に合わない入力（空文字・
-# 8 文字 hex でない ID）はそのまま通すと空のコードスパンとして表に出て不整合が見えないため、
-# 目に付く形へ置き換える。
-short_id() {
+# 表へ出す ID を検証して返す。正準形（<PREFIX>-<フル UUIDv4>）はそのまま通す
+# （→ ADR-0053。省略形は使わない）。形式に合わない入力（空文字・UUID でない ID）は
+# そのまま通すと空のコードスパンとして表に出て不整合が見えないため、目に付く形へ置き換える。
+validated_id() {
   local id=$1
-  # 正準形の知識を 1 箇所に留めるため、判定と切り出しを同じ正規表現で行う
-  # （BASH_REMATCH の捕獲を使う。sed と二重に書くと片方だけ変える事故が起きる）。
-  if [[ "$id" =~ ^([A-Z]+)-([0-9a-f]{8}) ]]; then
-    printf '%s-%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+  # version / variant まで固定する（dev/tests/sara-new.sh と同じ
+  # 強度に揃える。同じ規約に対する検査の厳しさが箇所ごとに食い違わないようにする）。
+  if [[ "$id" =~ ^[A-Z]+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]]; then
+    printf '%s\n' "$id"
   else
     printf '(ID 不正: %s)\n' "${id:-空}"
   fi
@@ -121,11 +121,11 @@ short_id() {
 # セル内で使う <br> 区切りの箇条書き（Markdown の表はセル内改行を許さない）。
 join_br() { paste -sd'@' - | sed 's/@/<br>/g'; }
 
-# CASE の covers する TC を「TC-xxxxxxxx name」の <br> 区切りで返す。
+# CASE の covers する TC を「<TC フル ID> name」の <br> 区切りで返す。
 tc_cell() {
   awk -F'\t' -v id="$1" '$1 == id { print $2 "\t" $3 }' "$work/case-tc" |
     while IFS=$'\t' read -r tc_id tc_name; do
-      printf '`%s` %s\n' "$(short_id "$tc_id")" "$tc_name"
+      printf '`%s` %s\n' "$(validated_id "$tc_id")" "$tc_name"
     done | join_br
 }
 
@@ -136,7 +136,7 @@ risk_cell() {
       awk -F'\t' -v t="$tc_id" '$1 == t { print $2 "\t" $3 }' "$work/tc-risk"
     done | LC_ALL=C sort -u |
     while IFS=$'\t' read -r risk_id risk_name; do
-      printf '`%s` %s\n' "$(short_id "$risk_id")" "$risk_name"
+      printf '`%s` %s\n' "$(validated_id "$risk_id")" "$risk_name"
     done | join_br
 }
 
@@ -209,7 +209,7 @@ emit_header() {
 
 - テスト資産: ${asset_total} 件 / CASE: ${case_total} 件
 - 区分（セクション）は CASE の置き場所 \`docs/test/<区分>/\` 由来
-- ID は散文用の省略形（\`<PREFIX>-<前方 8 文字>\`）。フル ID は各 item の frontmatter を参照
+- ID は正準形のフル ID（\`<PREFIX>-<フル UUIDv4>\`）。そのまま grep / \`sara query\` に渡せる
 - CASE を持たない資産は末尾の「CASE を持たないテスト資産」を参照
 ${trailing_note}
 EOF
@@ -230,7 +230,7 @@ emit_category_table() {
   awk -F'\t' -v c="$category" -v OFS='\t' '$1 == c { print $2, $3, $4 }' "$work/asset-rows" |
     while IFS=$'\t' read -r asset case_id case_name; do
       printf '| `%s` | `%s` %s | %s | %s |\n' \
-        "$asset" "$(short_id "$case_id")" "$case_name" \
+        "$asset" "$(validated_id "$case_id")" "$case_name" \
         "$(tc_cell "$case_id")" "$(risk_cell "$case_id")"
     done
   printf '\n'

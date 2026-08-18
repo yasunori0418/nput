@@ -122,7 +122,7 @@ ID 変更 = 全参照の張り替えを伴う。違和感の主因だった品�
 
 design の `satisfies` は ADR-0048 では requirement のみを対象としていた。テスト計画系 requirement の
 移設対象 4 件のうち 3 件は design 側から `satisfies` で参照されており、参照元は design item 6 件・
-辺の総数は 6 本である。しかも DSG-2947b4a5 と DSG-901351ea は **`satisfies` がその 1 本だけ**である。
+辺の総数は 6 本である。しかも DSG-2947b4a5-ba5c-4218-8478-624cba156116 と DSG-901351ea-f01b-4bb0-a470-b890d92c980b は **`satisfies` がその 1 本だけ**である。
 対象を拡張しないまま移設すると、今度は design 側が orphan 化して epic #203 の完了条件（warning 0）が
 成立しない。
 

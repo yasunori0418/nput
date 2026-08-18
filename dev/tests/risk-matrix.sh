@@ -32,7 +32,7 @@
 # level 導出は `docs/agents/sara-graph.md` の規約のうち唯一「散文の解釈を伴わない
 # 純粋な写像」で、スクリプトが判定しきれる。目視レビューはこの検査の最も弱い形。
 
-# -e は使わない（sara-id.sh・test-doc-map.sh と同じ理由）。このテストは「1 回の実行で
+# -e は使わない（test-doc-map.sh と同じ理由）。このテストは「1 回の実行で
 # 全失敗を報告する」集計方式で、-e があると最初の非ゼロ終了で以降のアサーションが
 # 走らず、退行時の診断が先頭 1 件で切れる。
 set -uo pipefail
@@ -54,7 +54,7 @@ require_yq_go risk-matrix.sh || exit 1
 # （checks 派生のサンドボックスは作業ツリーを持たないためこの経路を通る）。
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null || printf '.')
 
-# 走査対象 docs/risks の在り処は 2 経路ある（sara-id.sh §6b と同じ扱い）:
+# 走査対象 docs/risks の在り処は 2 経路ある:
 #   1. RISK_DOCS_DIR（checks.risk-matrix のサンドボックス。作業ツリーが無いので
 #      nix が store path を渡す）
 #   2. git のリポジトリルート基準（`nix develop` からの直接実行・CI の sara job）

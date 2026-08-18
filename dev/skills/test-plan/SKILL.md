@@ -102,10 +102,10 @@ design 行き）。
 ### 手順 4: ドラフト提示 → 承認 → 採番 → 書き込み → 検証
 
 1. test_plan / risk 全 item のドラフトを**本文で提示して承認を得る**（原則 2）。
-2. 承認後、`sara-id test_plan <slug>` / `sara-id risk <slug>` で採番し、返った正式 ID と
-   ファイル名で `sara init test-plan` / `sara init risk` を実行して型別ディレクトリへ
-   生成し（frontmatter は init が付与する。`--specification` / `--threatens` 等も
-   ここで渡す）、本文を書き足す（手順は sara-docs の references/sara-cli.md）。
+2. 承認後、`sara-new test_plan <slug> docs/test-plan` / `sara-new risk <slug> docs/risks`
+   で型別ディレクトリへ生成し（採番・ファイル名規約の適用と `sara init` の呼び出しまでを
+   一手で行う。`--specification` / `--threatens` 等は `--` 以降で渡す）、本文を書き足す
+   （手順は sara-docs の references/sara-cli.md）。
 3. `sara check` を回して green を確認する。orphan や broken reference が出たら自分で直す。
 4. 成果物一覧・次のステップの節は**持たない**（relation と `sara query -d` が代替する）。
    末尾で `/test-analyze <テスト対象名>` の実行を提案する（原則 4）。自分では進めない。

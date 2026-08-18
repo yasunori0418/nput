@@ -59,135 +59,28 @@
             exec ${inputs'.niface.packages.validate}/bin/validate "$@"
           '';
 
-          # sara item の ID を採番する（UUIDv4 二層構成・→ ADR-0048、epic #203）。
+          # sara init を包む item 起票ラッパー（→ Issue #367・epic #364）。
           #
-          #   sara-id <型名 | prefix> [slug]
+          #   sara-new <型> <slug> <配置ディレクトリ> [-- <sara init のオプション>...]
           #
-          # 正式 ID（frontmatter の id:）・ファイル名素材・散文中の参照の 3 つを出す。
-          #
-          # 乱数 ID は並列レーン（parallel-worktree）での採番衝突を構造的に回避する。
-          # フル UUIDv4 は事実上衝突ゼロだが、人間が触る前方 8 文字は 120 item で
-          # 約 10⁻⁶ の偶然重複がありうるので、採番時に docs/ を 1 回走査して
-          # 既出なら生成し直す（ms オーダーで item 数が増えても実用上コスト増なし）。
-          #
-          # sara 0.10.0 以降は `sara init` も id_format から UUIDv4 を採番できるが、
-          # 8 文字 prefix の重複チェックは持たない（{seq} を含まない format では
-          # suggest_next_id がグラフを参照せず即 render する →
-          # sara-core/src/model/item.rs の has_seq 分岐）。フル ID としては正しい設計だが、
-          # 前方 8 文字を人間が触る面に使う本リポジトリの規約は sara の関知しない層にある。
-          # この重複チェックと、ファイル名素材・省略形の出力が sara-id の存在理由。
-          sara-id = pkgs.writeShellApplication {
-            name = "sara-id";
-            runtimeInputs = with pkgs; [
-              # macOS 標準の uuidgen には -r が無いため、明示的に載せて移植性を担保する。
-              util-linux
-              ripgrep
-              coreutils
-              # 既出チェックの走査先をリポジトリルート基準で解決するため。
-              git
+          # 実体は dev/scripts/sara-new.sh。他の dev ツール（sara-gap）と違い
+          # 本体を flake.nix へインラインしないのは、このドキュメント管理基盤を他
+          # プロジェクトへ横展開する方針で、ファイル 1 つで持ち出せる形に保つため。
+          # ここは PATH に載せるための薄い wrapper（runtimeInputs で依存を固定する）。
+          sara-new = pkgs.writeShellApplication {
+            name = "sara-new";
+            runtimeInputs = [
+              inputs'.nur.packages.sara
+              # date / mkdir / mv / rm / tr。
+              pkgs.coreutils
+              # ID 行の抽出に使う。ambient PATH 任せにすると最小環境で
+              # `sed: command not found` になる。
+              pkgs.gnused
+              # 下の text が exec するインタプリタ自身。
+              pkgs.bash
             ];
             text = ''
-              usage() {
-                cat >&2 <<'EOF'
-              usage: sara-id <type|prefix> [slug]
-
-                type|prefix  sara の型名（requirement / test_condition …）または
-                             prefix そのもの（REQ / TC …）
-                slug         ファイル名に使う短い識別子（省略可・英数字とハイフン）
-
-              例:
-                sara-id requirement lock-ordering
-                sara-id design
-
-              注: ADR は連番を維持するため採番しない（docs/adr/ の最大値 + 1 を手で採る）
-              EOF
-              }
-
-              # help は引数個数に先立って処理する（`sara-id --help extra` も help になる）。
-              case "''${1-}" in
-                -h | --help)
-                  usage
-                  exit 0
-                  ;;
-              esac
-
-              if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-                usage
-                exit 2
-              fi
-
-              # 型名 → prefix。docs/model.yaml の item_types と対応させる。
-              # 別名は sara init のサブコマンド別名に揃える。
-              # 未知の入力は prefix そのものを渡されたとみなして大文字化して通す。
-              case "$1" in
-                solution | sol) prefix=SOL ;;
-                use_case | use-case | uc) prefix=UC ;;
-                requirement | req) prefix=REQ ;;
-                design | dsg) prefix=DSG ;;
-                infrastructure | inf) prefix=INF ;;
-                quality | qa) prefix=QA ;;
-                test_plan | test-plan | tp) prefix=TP ;;
-                adr) prefix=ADR ;;
-                risk) prefix=RISK ;;
-                test_condition | test-condition | tc) prefix=TC ;;
-                test_case | test-case | case) prefix=CASE ;;
-                *) prefix=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]') ;;
-              esac
-
-              slug=''${2-}
-
-              # ADR は連番を維持する（既存 47 本の相互参照・docs/adr/README.md の運用・
-              # Issue 言及を壊さないため → ADR-0048）。UUID は採番しない。
-              if [ "$prefix" = "ADR" ]; then
-                echo "sara-id: ADR は連番を維持する（docs/adr/ の最大値 + 1 を手で採番する）" >&2
-                exit 2
-              fi
-
-              # UUID 生成は seam 経由で呼ぶ（テストが決定論的に差し替えるため）。
-              uuidgen_cmd=''${SARA_ID_UUIDGEN:-uuidgen}
-
-              # 既出チェックの走査先。リポジトリルート基準で解決する（カレント相対だと
-              # dev/ 等から叩いたときに docs/ を見つけられず、重複チェックが黙って
-              # 外れる）。git 管理外ならカレント基準へフォールバックする。
-              repo_root=$(git rev-parse --show-toplevel 2>/dev/null || printf '.')
-              scan_dir="$repo_root/docs"
-
-              uuid=""
-              # 8 文字 prefix の偶然重複は極めて稀なので、有限回で打ち切る。
-              # 打ち切りに達するのは乱数源が壊れているとき（同じ値を返し続ける等）で、
-              # 黙って重複 ID を返すより失敗させたほうがよい。
-              for _ in $(seq 1 16); do
-                candidate=$("$uuidgen_cmd" -r | tr -d '\n')
-                short=''${candidate:0:8}
-                if [ ! -d "$scan_dir" ]; then
-                  uuid=$candidate
-                  break
-                fi
-                # 省略形は正式 ID の前方一致なので、8 文字で引けば
-                # 宣言側（frontmatter の id:）と参照側（散文・relation）の両方に当たる。
-                if ! rg -q --fixed-strings "$short" "$scan_dir"; then
-                  uuid=$candidate
-                  break
-                fi
-              done
-
-              if [ -z "$uuid" ]; then
-                echo "sara-id: 8 文字 prefix の未使用な候補を 16 回で引けなかった" >&2
-                exit 1
-              fi
-
-              short=''${uuid:0:8}
-              date_prefix=$(date +%Y%m%d)
-
-              if [ -n "$slug" ]; then
-                filename="$date_prefix-$short-$slug.md"
-              else
-                filename="$date_prefix-$short.md"
-              fi
-
-              printf 'id: %s-%s\n' "$prefix" "$uuid"
-              printf 'filename: %s\n' "$filename"
-              printf 'ref: %s-%s\n' "$prefix" "$short"
+              exec bash ${./scripts/sara-new.sh} "$@"
             '';
           };
 
@@ -252,7 +145,7 @@
                 exit 2
               fi
 
-              # sara.toml のあるリポジトリルートで sara を実行する（sara-id と同じ解決）。
+              # sara.toml のあるリポジトリルートで sara を実行する。
               # SARA_GAP_ROOT はサンドボックスの契約テストが fixture を指すための seam。
               repo_root=''${SARA_GAP_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || printf '.')}
               cd "$repo_root" || {
@@ -334,10 +227,9 @@
               # CONTEXT.md / docs/adr の設計文書運用を補助する開発時ツールで、
               # nput のビルド・テスト経路には関与しない。
               inputs'.nur.packages.sara
-              # sara item の ID 採番（UUIDv4 二層構成）。定義は上の let 束縛を参照。
-              # uuidgen -r の供給元（util-linux）は sara-id の runtimeInputs で
-              # wrapper の PATH に前置されるため、devShell 側には載せない。
-              sara-id
+              # item 起票ラッパー（sara init + 規約どおりの rename）。定義は上の
+              # let 束縛を参照。sara は runtimeInputs で wrapper の PATH に前置される。
+              sara-new
               # グラフ未カバー 3 段の列挙。定義は上の let 束縛を参照。sara / jq は
               # runtimeInputs で wrapper の PATH に前置される。
               sara-gap
@@ -385,50 +277,17 @@
             '';
           };
 
-          # sara-id の採番契約を固定するテスト（dev/tests/sara-id.sh）。同じスクリプトを
-          # 2 経路から走らせる意図的な二重化で、役割が違う:
+          # テストコード ⇔ CASE 対応の契約テスト（dev/tests/test-doc-map.sh）。
+          # 同じスクリプトを 2 経路から走らせる意図的な二重化で、役割が違う:
           #
           # - この checks 派生: ローカルの `nix flake check ./dev`（CLAUDE.md の標準検証
           #   手順）に載せ、dev flake を触ったときに手を動かさず走るようにする。
           #   CI の flake-check job はルート flake を対象にするため、ここは CI では回らない。
-          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行する。
-          #   PR での退行検知はこちらが担保する。
+          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
+          #   PR での退行検知を担保する。
           #
           # サンドボックス（runCommandLocal）と devShell では実行条件が違うので、
           # 両経路とも緑であることを確認してから変更を入れること。
-          checks.sara-id =
-            pkgs.runCommandLocal "sara-id-test"
-              {
-                # prefix マップの突合（テスト §6b）が読む正本 2 つ。サンドボックスには
-                # リポジトリの作業ツリーが無く、テスト側の git ルート解決も効かないため
-                # nix から store path を渡す。devShell / CI 経路は cwd がリポジトリ
-                # ルートなのでテスト側の解決に任せる。
-                SARA_MODEL_YAML = ../docs/model.yaml;
-                SARA_DEV_FLAKE = ./flake.nix;
-                nativeBuildInputs = [
-                  sara-id
-                  pkgs.ripgrep
-                  pkgs.coreutils
-                  # テストがルート解決経路を検証するため一時 repo を git init する。
-                  pkgs.git
-                  # テストが sara-id の出力から id / filename / ref を抜くのに使う。
-                  # stdenv 既定でも PATH に載るが、暗黙依存にすると実行条件の違う
-                  # サンドボックスで踏み抜く（→ 0a18d87 の exit 126）ため明示する。
-                  pkgs.gnused
-                ];
-              }
-              ''
-                bash ${./tests/sara-id.sh}
-                touch "$out"
-              '';
-
-          # テストコード ⇔ CASE 対応の契約テスト（dev/tests/test-doc-map.sh）。
-          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
-          #
-          # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
-          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
-          #   PR での退行検知を担保する（flake-check job はルート flake が対象なので
-          #   この派生は CI では回らない）
           #
           # テストは docs/ と実際のテスト資産（cmd/ internal/ tests/）の両方を走査する。
           # サンドボックスに作業ツリーは無く、テスト側の git ルート解決も効かないため、
@@ -464,7 +323,7 @@
               '';
 
           # risk の level 導出マトリクス整合の契約テスト（dev/tests/risk-matrix.sh）。
-          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
+          # checks.test-doc-map と同じ二重化の意図で 2 経路から走らせる:
           #
           # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
           # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
@@ -475,7 +334,7 @@
               {
                 # テストが走査する risk item の在り処。サンドボックスにはリポジトリの
                 # 作業ツリーが無く、テスト側の git ルート解決も効かないため nix から
-                # store path を渡す（checks.sara-id の SARA_MODEL_YAML と同じ手法）。
+                # store path を渡す（下の checks.sara-gap / checks.sara-new も同じ手法）。
                 # devShell / CI 経路は cwd がリポジトリルートなのでテスト側の解決に任せる。
                 # マトリクスの正本（dev/tests/risk-matrix.tsv）は下で dev/ の木ごと
                 # 配置するので、テストがスクリプト基準で解決する。
@@ -508,7 +367,7 @@
               '';
 
           # sara-gap の検出契約を固定するテスト（dev/tests/sara-gap.sh）。
-          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
+          # checks.test-doc-map と同じ二重化の意図で 2 経路から走らせる:
           #
           # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
           # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
@@ -523,7 +382,7 @@
                 # fixture はモデルの写しを持たず、テストが実物の docs/model.yaml を
                 # 重ねる（二重管理の回避）。サンドボックスにはリポジトリの作業ツリーが
                 # 無く、テスト側の git ルート解決も効かないため nix から store path を
-                # 渡す（checks.sara-id の SARA_MODEL_YAML と同じ手法）。
+                # 渡す（checks.risk-matrix の RISK_DOCS_DIR と同じ手法）。
                 SARA_GAP_MODEL_YAML = ../docs/model.yaml;
                 nativeBuildInputs = [
                   sara-gap
@@ -544,23 +403,63 @@
                 touch "$out"
               '';
 
+          # sara-new の起票契約を固定するテスト（dev/tests/sara-new.sh）。
+          # checks.test-doc-map と同じ二重化の意図で 2 経路から走らせる:
+          #
+          # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
+          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
+          #   PR での退行検知を担保する（flake-check job はルート flake が対象なので
+          #   この派生は CI では回らない）
+          checks.sara-new =
+            pkgs.runCommandLocal "sara-new-test"
+              {
+                # テストが fixture リポジトリへ重ねる実物のモデル。サンドボックスには
+                # リポジトリの作業ツリーが無く、テスト側の git ルート解決も効かないため
+                # nix から store path を渡す（checks.sara-gap と同じ手法）。
+                SARA_NEW_MODEL_YAML = ../docs/model.yaml;
+                nativeBuildInputs = [
+                  sara-new
+                  # 偽 sara を作る §7 / §9 以外の経路で実 sara を使う。sara-new の
+                  # runtimeInputs で wrapper の PATH には載るが、テストは fixture の
+                  # 検証にも sara を前提とするため明示する。
+                  inputs'.nur.packages.sara
+                  pkgs.coreutils
+                  pkgs.findutils
+                  pkgs.gnugrep
+                  # テストが sara-new の出力から id / file を抜くのに使う。
+                  pkgs.gnused
+                  # 走査基点の解決に使う（SARA_NEW_MODEL_YAML が先に解決するので
+                  # 実際には使われないが、無いと `git rev-parse` が command not found
+                  # となり診断が濁る）。
+                  pkgs.git
+                ];
+              }
+              ''
+                bash ${./tests/sara-new.sh}
+                touch "$out"
+              '';
+
           # CI の sara check 専用シェル。default devShell は nput のビルドと
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
           # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
           # yasunori0418.cachix.org から引くだけで済む。
-          # CI からは sara check・dev/tests/sara-id.sh・dev/tests/test-doc-map.sh・
-          # dev/tests/risk-matrix.sh・dev/tests/sara-gap.sh をこのシェルで実行する。
+          # CI からは sara check・dev/tests/sara-new.sh・dev/tests/test-doc-map.sh・
+          # dev/tests/risk-matrix.sh・dev/tests/sara-gap.sh を
+          # このシェルで実行する。
           devShells.sara = pkgs.mkShell {
             packages = [
               inputs'.nur.packages.sara
-              sara-id
+              sara-new
               sara-gap
-              # 以下は dev/tests/sara-id.sh が使う。stdenv 既定や runner の system
-              # PATH でも引けるが、checks.sara-id と揃えて明示する。
-              pkgs.ripgrep
+              # 以下は dev/tests/ の各テストが使う。stdenv 既定や runner の system
+              # PATH でも引けるが、対応する checks 派生と揃えて明示する。
               pkgs.git
               pkgs.gnused
               pkgs.coreutils
+              # dev/tests/sara-new.sh が fixture の残存ファイルを数えるのに使う
+              # （runner の system PATH でも引けるが、checks.sara-new と揃えて明示する）。
+              pkgs.findutils
+              pkgs.gnugrep
               # dev/tests/test-doc-map.sh が CASE frontmatter の target を読むのに使う。
               # yq-go（mikefarah/yq v4）。nixpkgs の `yq` は python-yq（別実装・別構文）
               # なので取り違えないこと。テスト側も実装を確認して落とす。

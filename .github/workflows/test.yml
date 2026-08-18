@@ -105,9 +105,9 @@ jobs:
 
   sara:
     # Knowledge-graph validation of docs/ (broken references, duplicate IDs,
-    # cycles) plus four contract tests: sara-id's numbering, test-doc-map's
-    # test-code ⇔ CASE mapping, risk-matrix's level derivation, and sara-gap's
-    # gap enumeration. Non-required
+    # cycles) plus four contract tests: test-doc-map's test-code ⇔ CASE
+    # mapping, risk-matrix's level derivation, sara-gap's gap enumeration,
+    # and sara-new's item creation. Non-required
     # check with no threshold gate, same policy as go-coverage: it is NOT
     # registered as a required status check and is NOT part of the DoD, so a
     # failure reports on the PR without blocking merge. The check itself runs
@@ -128,7 +128,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       # Scoped to what this job actually exercises: the documents sara scans,
-      # its config, the sara-id / test-doc-map implementations, the test assets
+      # its config, the sara-new / test-doc-map implementations, the test assets
       # test-doc-map enumerates, and this workflow. On workflow_dispatch the
       # step is skipped and `relevant` stays empty, which the guards below
       # treat as "run" — the event/filter decision lives in a single expression
@@ -144,8 +144,8 @@ jobs:
               - 'sara.toml'
               - 'dev/flake.nix'
               # Pins the NUR rev that supplies sara, plus the nixpkgs behind
-              # sara-id's runtimeInputs — a lock bump swaps this job's entire
-              # execution environment.
+              # the dev wrappers' runtimeInputs — a lock bump swaps this job's
+              # entire execution environment.
               - 'dev/flake.lock'
               - 'dev/tests/**'
               - 'dev/scripts/**'
@@ -174,18 +174,11 @@ jobs:
         if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c sara check
 
-      # The numbering contract for sara-id (UUIDv4 two-tier IDs). Also exposed
-      # as `checks.sara-id` for `nix flake check ./dev`, but that never runs in
-      # CI because flake-check targets the root flake — hence this explicit step.
-      - name: Run sara-id contract test
-        if: steps.filter.outputs.relevant != 'false'
-        run: nix develop '.?dir=dev#sara' -c dev/tests/sara-id.sh
-
       # The test-code ⇔ CASE mapping contract (→ #304). Purely static: it reads
       # the file-level inventory and CASE frontmatter only, so it needs nothing
-      # beyond this devShell. Wired the same way as sara-id above — also exposed
-      # as `checks.test-doc-map` for local `nix flake check ./dev`, which CI's
-      # root-flake flake-check never reaches.
+      # beyond this devShell. Also exposed as `checks.test-doc-map` for local
+      # `nix flake check ./dev`, which CI's root-flake flake-check never reaches
+      # — hence this explicit step.
       - name: Run test-doc-map contract test
         if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c dev/tests/test-doc-map.sh
@@ -193,9 +186,9 @@ jobs:
       # The level derivation contract for risk items (→ #303): `level` must equal
       # the matrix cell of `likelihood` × `impact` from docs/agents/sara-graph.md.
       # `sara check` validates the enum of each field but never the relation
-      # between them. Wired the same way as the two above — also exposed as
-      # `checks.risk-matrix` for local `nix flake check ./dev`, which CI's
-      # root-flake flake-check never reaches.
+      # between them. Wired the same way as the test-doc-map step above — also
+      # exposed as `checks.risk-matrix` for local `nix flake check ./dev`, which
+      # CI's root-flake flake-check never reaches.
       - name: Run risk-matrix contract test
         if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c dev/tests/risk-matrix.sh
@@ -204,12 +197,23 @@ jobs:
       # unmitigated risks, uncovered TCs — the shift-left skills' entry-point
       # listing). Exercises a self-contained fixture, NOT the live graph: the
       # live graph legitimately carries gaps while items are being raised, so
-      # sara-gap itself is deliberately not a CI gate. Wired the same way as
-      # the three above — also exposed as `checks.sara-gap` for local
+      # sara-gap itself is deliberately not a CI gate. Wired like the other
+      # contract-test steps — also exposed as `checks.sara-gap` for local
       # `nix flake check ./dev`, which CI's root-flake flake-check never reaches.
       - name: Run sara-gap contract test
         if: steps.filter.outputs.relevant != 'false'
         run: nix develop '.?dir=dev#sara' -c dev/tests/sara-gap.sh
+
+      # The item-creation contract for sara-new, the wrapper around `sara init`
+      # that enforces the <YYYYMMDD>-<full UUID>-<slug>.md filename convention
+      # (→ #367, ADR-0053). The wrapper is the structural guarantee behind that
+      # convention, so a regression here silently degrades every item raised
+      # afterwards. Wired like the other contract-test steps — also exposed as
+      # `checks.sara-new` for local `nix flake check ./dev`, which CI's
+      # root-flake flake-check never reaches.
+      - name: Run sara-new contract test
+        if: steps.filter.outputs.relevant != 'false'
+        run: nix develop '.?dir=dev#sara' -c dev/tests/sara-new.sh
 
   e2e:
     needs: changes

@@ -132,7 +132,7 @@ corpus になる。PR #302 の 3 レンズが独立にこの結論を否定し�
   再採点の前後どちらでも通る。マトリクス自体を変えないため同テストの更新は不要
 - Issue #303 は本 ADR を含む PR でクローズ
 
-`justifies` に INF-659b139d を張るのは、本 ADR が決めたのが risk item の書き方の規約であり、
+`justifies` に INF-659b139d-0cf8-4c65-b30d-93c5ee2dfc71 を張るのは、本 ADR が決めたのが risk item の書き方の規約であり、
 その規約を載せる `docs/agents/sara-graph.md` と、`level` 導出を機械検証する
 `dev/tests/risk-matrix.sh` がいずれも同 item の担う検証基盤の一部だからである
 （ADR-0048 / 0049 / 0050 / 0051 と同じ張り先）。ただし同 item の部品表は `risk-matrix.sh` を

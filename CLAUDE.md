@@ -58,17 +58,16 @@ risk を `requirement` と `design` のどちらに張るかの使い分けは `
 
 | `<対象>` | 含むテスト資産 | 上位の test_plan |
 |---|---|---|
-| `manifest-eval` | `tests/nix-unit/` と `tests/namaka/` 配下の全テスト | TP-36e90d5d / TP-d3d06fe4 / TP-403c55c7 |
-| `engine-core` | `internal/engine/` の engine / dryrun / preflight、`internal/planner/` | TP-e7c25263 |
-| `copy` | copytree / copy、e2e `04-copy` | TP-e7c25263 / TP-229b69c0 |
-| `migration-stale` | preremove_generalization / staleremove、e2e `03-stale` | TP-e7c25263 / TP-229b69c0 |
-| `atomicity` | undo / undo_journal / backup、engine の lock + `internal/lock/` | TP-deb05610 / TP-e7c25263（backup の退避ポリシー）|
-| `generations` | generations / reset（engine）/ result_extensions / drift、`internal/paths/`、e2e `02-home` | TP-e7c25263（`internal/paths/` の純ロジックを含む）/ TP-229b69c0 |
-| `cli-json` | `cmd/nput/` の全テストファイル | TP-e7c25263（CLI 層の判断）/ TP-d3000054（エンベロープ適合と payload 意味論）|
-| `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` | TP-229b69c0 / TP-0734996e / TP-e7c25263（`internal/` の Go テスト）|
+| `manifest-eval` | `tests/nix-unit/` と `tests/namaka/` 配下の全テスト | TP-36e90d5d-4524-4294-bc72-ee263bb02782 / TP-d3d06fe4-6940-4df8-b111-bb4096d5444f / TP-403c55c7-d996-4951-8e6b-c3a7dddd387c |
+| `engine-core` | `internal/engine/` の engine / dryrun / preflight、`internal/planner/` | TP-e7c25263-6d2d-4a37-8275-26906889d912 |
+| `copy` | copytree / copy、e2e `04-copy` | TP-e7c25263-6d2d-4a37-8275-26906889d912 / TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9 |
+| `migration-stale` | preremove_generalization / staleremove、e2e `03-stale` | TP-e7c25263-6d2d-4a37-8275-26906889d912 / TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9 |
+| `atomicity` | undo / undo_journal / backup、engine の lock + `internal/lock/` | TP-deb05610-44bc-4962-8939-952392e5fbd0 / TP-e7c25263-6d2d-4a37-8275-26906889d912（backup の退避ポリシー）|
+| `generations` | generations / reset（engine）/ result_extensions / drift、`internal/paths/`、e2e `02-home` | TP-e7c25263-6d2d-4a37-8275-26906889d912（`internal/paths/` の純ロジックを含む）/ TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9 |
+| `cli-json` | `cmd/nput/` の全テストファイル | TP-e7c25263-6d2d-4a37-8275-26906889d912（CLI 層の判断）/ TP-d3000054-42d9-4bac-912a-dd3abc38d3e9（エンベロープ適合と payload 意味論）|
+| `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` | TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9 / TP-0734996e-aea9-4229-8075-89a64bdf9f79 / TP-e7c25263-6d2d-4a37-8275-26906889d912（`internal/` の Go テスト）|
 
-区分外: `go-vet` / `golangci-lint` / カバレッジ計測は quality の担当。`dev/tests/sara-id.sh` は
-test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（理由は同 item）。**CASE を
+区分外: `go-vet` / `golangci-lint` / カバレッジ計測は quality の担当。**CASE を
 持たないテスト資産の規範は `dev/tests/test-doc-exclusions.tsv`**（除外理由付き。ここに無い
 資産が CASE 無しで現れると契約テストが落ちる）。
 
@@ -86,19 +85,31 @@ test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（�
 **risk / TC / CASE は `docs/spec.md` へ索引しない**（`sara query` / `sara report` で辿る）。
 `docs/spec.md` のリンク集に載せるのは requirement / quality / test_plan まで。
 
-### ID 規約（UUIDv4 二層構成）
+### ID 規約（フル UUIDv4）
 
 | 用途 | 形式 | 例 |
 |---|---|---|
 | 正式 ID（frontmatter `id:`・relation リスト）| `<PREFIX>-<フル UUIDv4>` | `REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4` |
-| ファイル名 | `<YYYYMMDD>-<前方8文字>-<slug>.md` | `20260802-2b0c2bb8-mkmanifest-pure-function.md` |
-| 散文中の参照 | `<PREFIX>-<前方8文字>` | `REQ-2b0c2bb8` |
+| ファイル名 | `<YYYYMMDD>-<フル UUIDv4>-<slug>.md` | `20260802-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4-mkmanifest-pure-function.md` |
+| 散文中の参照 | `<PREFIX>-<フル UUIDv4>` | `REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4` |
 
-- 採番は **ADR を除き** devShell 同梱の `sara-id` コマンドで行う（8 文字 prefix の重複チェック
-  込み）。連番を手で振らない（並列レーンでの採番衝突を構造的に避けるため）
-- **ADR のみ連番を維持する**。既存 ADR の相互参照・`docs/adr/README.md` の運用・Issue 言及を
-  壊さないため。`sara-id ADR` は採番せず exit 2 で落ちる仕様なので、`docs/adr/` の最大値 + 1 を
-  手で採る
+**どの面でもフル ID をそのまま書く**（→ ADR-0053）。8 文字省略形は使わない。ファイル名・
+散文・relation リストの表記が一致するので、ID をそのまま grep しても `sara query` へ渡しても
+同じものに当たる（省略形と正式 ID を突き合わせる手順が要らない）。
+
+- 起票は **ADR を除き** devShell 同梱の `sara-new` コマンドで行う。採番（`sara init` が引く
+  UUIDv4）とファイル名規約の適用を一手で済ませ、`id:` と `file:` の 2 行を返す。連番を手で
+  振らない（並列レーンでの採番衝突を構造的に避けるため）
+
+  ```bash
+  sara-new <型> <slug> <配置ディレクトリ> [-- <sara init のオプション>...]
+  sara-new requirement lock-ordering docs/requirements
+  ```
+
+- **ADR のみ連番を維持する**。既存 ADR の相互参照・`docs/adr/README.md` の運用・Issue 言及・
+  編集不能なコミットメッセージの言及を壊さないため（→ ADR-0053）。**採番は `sara init adr` へ
+  委譲する**（`docs/adr/` の最大値を目で数えて + 1 しない）。手順と、並列レーンで同時採番した
+  ときの直し方は `docs/adr/README.md`
 - `specification` フィールドを持つ型（requirement / quality / test_plan）は**英語で書く**。
   sara が RFC2119 キーワード（MUST / SHALL / SHOULD …）の存在をハードコードで検証するため。
   対になる日本語の規範文は `specification_ja` に併記する。ただし検証が効くのは requirement
@@ -116,13 +127,11 @@ sara report coverage                       # カバー率
 sara report matrix                         # トレーサビリティマトリクス
 ```
 
-**`sara query` はフル ID しか受け付けない**（省略形 `REQ-2b0c2bb8` は "Item not found"）。
-散文中の省略形からフル ID を得るには 8 文字で grep する。省略形は正式 ID の前方一致なので、
-宣言側・参照側の両方がヒットする。
+**`sara query` はフル ID しか受け付けない**が、散文もファイル名もフル ID で書くので、
+目に付いた ID をそのままコピーして渡せる（変換は要らない）。同じ文字列で参照元も辿れる。
 
 ```bash
-rg -l 2b0c2bb8 docs/                       # 宣言している item ファイルと参照元を列挙
-rg -o 'REQ-2b0c2bb8[0-9a-f-]*' docs/requirements/20260802-2b0c2bb8-*.md | head -1
+rg -l REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4 docs/   # 宣言している item ファイルと参照元を列挙
 ```
 
 ## 開発コマンド
@@ -146,8 +155,8 @@ nix develop ./dev -c dev/scripts/test-doc-matrix.sh out.md  # 対応表の生成
 - `lib/` は nixpkgs のみに依存する。home-manager / NixOS / nix-darwin への依存を持ち込まない
 - **ドキュメントの配置ルール・ID 規約はこのプロジェクトの規約が優先する**（→「ドキュメント」節）。
   要求は `docs/requirements/`、リスクは `docs/risks/`、テスト成果物は `docs/test/<対象>/` へ
-  1 ファイル 1 item で置き、ID は `sara-id` で採番する（ADR のみ連番を手で採る）。スキル既定の
-  出力先・採番方式（散文への ID 直書き・連番）がこれと食い違う場合はプロジェクト規約に従う
+  1 ファイル 1 item で置き、起票は `sara-new` で行う（ADR のみ連番で、`sara init adr` が採る）。
+  スキル既定の出力先・採番方式（散文への ID 直書き・連番）がこれと食い違う場合はプロジェクト規約に従う
 - ユーザーに確認・質問する際は、テキストで質問を投げず **AskUserQuestion ツールを積極的に使う**。設計判断の確認・曖昧な依頼の解釈確認・代替案の選択などで使い、各質問は推奨オプションを先頭に置く
 
 ## Agent skills

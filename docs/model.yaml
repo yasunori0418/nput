@@ -40,22 +40,24 @@
 # 当面 nput 内に置くが、型が安定したら skills リポジトリか専用リポジトリへ切り出して
 # 他プロジェクトへ横展開する前提のため（→ #203「model.yaml の置き場所」）。
 #
-# ## ID 形式（UUIDv4 二層構成）
+# ## ID 形式（フル UUIDv4）
 #
 # 正式 ID は `<PREFIX>-<フル UUIDv4>`（例: REQ-8521e8f8-99cc-47f0-b7d0-70c24c837612）。
-# 人間が触る面（ファイル名・散文中の参照）は前方 8 文字の省略形を使う。
+# ファイル名（`<YYYYMMDD>-<フル UUIDv4>-<slug>.md`）も散文中の参照もこのフル ID を
+# そのまま書き、省略形は使わない（→ ADR-0053）。表記が全面で一致するので、ID を
+# そのまま grep しても `sara query` へ渡しても同じものに当たる。
 # 乱数 ID により並列レーン（parallel-worktree）での採番衝突を構造的に回避する。
-# 採番は devShell 同梱の `sara-id` コマンドで行う（8 文字 prefix の重複チェック込み）。
+# 起票は devShell 同梱の `sara-new` コマンドで行う（`sara init` の採番とファイル名
+# 規約の適用を一手で済ませる）。
 #
 # 下の id_format はこの規約を表記したもの。sara 0.10.0 以降は id_format が採番・
 # 補完・検証を駆動する SSOT で、パースできないテンプレートは schema のロード時に
 # 拒否される（拒否されると組み込みモデルへフォールバックし、本ファイルのカスタム型が
 # 全て unknown item type になる）。使えるプレースホルダは {prefix} / {id} /
 # {seq[:0N]} / {year} / {month} / {day} / {date} / {uuid4} / {uuid7}。
-# 実際の採番は devShell の sara-id が行う（sara 0.10.0 の `sara init` も UUIDv4 を
-# 採番できるが、8 文字 prefix の重複チェックを持たないため → ADR-0048 の追記節）。
-# ADR のみ既存 47 本の相互参照・README 運用・Issue 言及を壊さないため
-# 連番（ADR-NNNN）を維持する。
+# 実際の採番は sara-new が包む `sara init` が行う。
+# ADR のみ既存の相互参照・README 運用・Issue 言及を壊さないため
+# 連番（ADR-NNNN）を維持する（採番は `sara init adr` へ委譲する）。
 
 item_types:
   # ---- 仕様の系統（solution → use_case → requirement → design）----
@@ -65,7 +67,7 @@ item_types:
     display_name: Solution
     prefix: SOL
     # 以降の id_format は sara 0.10.0 以降で実際に検証される（冒頭「ID 形式」節を参照）。
-    # 実際の採番は devShell の sara-id が行う。
+    # 実際の採番は sara-new が包む `sara init` が行う。
     id_format: '{prefix}-{uuid4}'
     parent_types: []
     fields: []

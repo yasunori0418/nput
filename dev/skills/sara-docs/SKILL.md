@@ -1,6 +1,6 @@
 ---
 name: sara-docs
-description: sara ドキュメントグラフの基盤知識・規約スキル。次のコンテキストが現れたら作業前に必ず読み込む — ① sara.toml と docs/model.yaml を持つリポジトリで docs/ 配下の item（YAML frontmatter に id / type / relation を持つ Markdown）を作成・編集・削除しようとしている。② REQ-xxxxxxxx / DSG- / RISK- / TC- / CASE- / TP- / QA- / INF- / UC- / SOL- / ADR- 形式の ID、または threatens / mitigates / covers / derives_from / satisfies / refines / justifies といった relation が依頼・ファイル・エラーに現れた。③ sara / sara-id / sara-gap コマンドを実行しようとしている、または sara check の orphan・broken reference エラーを直そうとしている。④ 要求・設計・リスク・テスト条件・テストケース・ADR を「item として起こして」と依頼された。工程スキル（/test-plan・/test-analyze 等）が前提とする型・relation・ID・specification 規約の正本。sara を使わないリポジトリの Markdown ドキュメント一般は対象外。
+description: sara ドキュメントグラフの基盤知識・規約スキル。次のコンテキストが現れたら作業前に必ず読み込む — ① sara.toml と docs/model.yaml を持つリポジトリで docs/ 配下の item（YAML frontmatter に id / type / relation を持つ Markdown）を作成・編集・削除しようとしている。② REQ- / DSG- / RISK- / TC- / CASE- / TP- / QA- / INF- / UC- / SOL- / ADR- 形式の ID、または threatens / mitigates / covers / derives_from / satisfies / refines / justifies といった relation が依頼・ファイル・エラーに現れた。③ sara / sara-new / sara-gap コマンドを実行しようとしている、または sara check の orphan・broken reference エラーを直そうとしている。④ 要求・設計・リスク・テスト条件・テストケース・ADR を「item として起こして」と依頼された。工程スキル（/test-plan・/test-analyze 等）が前提とする型・relation・ID・specification 規約の正本。sara を使わないリポジトリの Markdown ドキュメント一般は対象外。
 license: MIT
 ---
 
@@ -41,7 +41,8 @@ sara（Requirements Knowledge Graph CLI）で管理する `docs/` の読み書�
 
 親を持たない根は solution と adr のみ。他の型は upstream relation を 1 本以上張る
 （張り忘れは strict check の orphan error になる）。frontmatter は手書きせず
-**`sara init` で生成する**（relation・型別フィールドはオプションで渡す。手順は
+**`sara-new` で生成する**（`sara init` を包んで採番とファイル名規約の適用まで行う。
+relation・型別フィールドはオプションで渡す。手順は
 [references/sara-cli.md](references/sara-cli.md)）。型・フィールドの正本は各リポジトリの
 `docs/model.yaml`（`sara schema` で確認できる）。
 
@@ -59,22 +60,24 @@ relation は**起こした側（下流）の frontmatter に宣言する**（`sa
 提案して停止するのが工程スキルの原則。既存資産から下流を先に起こす逆算は規範外の
 移行専用手順で、[references/reverse-import.md](references/reverse-import.md) に隔離する。
 
-## ID 規約（UUIDv4 二層構成）
+## ID 規約（フル UUIDv4）
 
 | 用途 | 形式 | 例 |
 |---|---|---|
 | 正式 ID（frontmatter `id:`・relation リスト）| `<PREFIX>-<フル UUIDv4>` | `REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4` |
-| ファイル名 | `<YYYYMMDD>-<前方8文字>-<slug>.md` | `20260802-2b0c2bb8-mkmanifest-pure-function.md` |
-| 散文中の参照 | `<PREFIX>-<前方8文字>` | `REQ-2b0c2bb8` |
+| ファイル名 | `<YYYYMMDD>-<フル UUIDv4>-<slug>.md` | `20260802-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4-mkmanifest-pure-function.md` |
+| 散文中の参照 | `<PREFIX>-<フル UUIDv4>` | `REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4` |
 
-- 採番は **ADR を除き `sara-id` コマンド**（8 文字 prefix の重複チェック込み）。連番を手で
-  振らない（並列レーンでの採番衝突を構造的に避けるため）。`sara-id <型名> [slug]` が
-  `id:` / `filename:` / `ref:` の 3 行を返す。採番した正式 ID を `sara init` の `--id` へ
-  渡して item を生成する（init 自身の自動採番は 8 文字 prefix の重複を見ないので使わない）。
-- **ADR のみ連番**（`ADR-NNNN`）を維持する。`sara-id ADR` は exit 2 で拒否する仕様なので、
-  `docs/adr/` の最大値 + 1 を手で採る。
-- relation リストにはフル ID を書く。散文では省略形を使う（省略形は正式 ID の前方一致
-  なので、8 文字で grep すれば宣言側・参照側の両方に当たる）。
+- **どの面でもフル ID をそのまま書く**（→ ADR-0053）。8 文字省略形は使わない。relation
+  リスト・ファイル名・散文の表記が一致するので、ID をそのまま grep しても `sara query` へ
+  渡しても同じものに当たる。
+- 起票は **ADR を除き `sara-new` コマンド**。採番とファイル名規約の適用、`sara init` の
+  呼び出しまでを一手で済ませ、`id:` / `file:` の 2 行を返す。連番を手で振らない
+  （並列レーンでの採番衝突を構造的に避けるため）。手順は
+  [references/sara-cli.md](references/sara-cli.md)。
+- **ADR のみ連番**（`ADR-NNNN`）を維持する。`sara-new` は ADR を対象外とするので、
+  `sara init adr <パス>` を直接使って採番を委譲する（`docs/adr/` の最大値を目で数えて
+  + 1 しない）。
 
 ## risk の評価と優先度の導出
 
@@ -112,5 +115,5 @@ relation は**起こした側（下流）の frontmatter に宣言する**（`sa
   （unthreatened = リスク識別の未着手、unmitigated = テスト分析の未着手、
   uncovered = テスト実装の未着手）。exit 0 = ギャップなし / 1 = あり / 2 = check 失敗。
 
-CLI の詳しい使い方（query のフル ID 制約と省略形の解決手順を含む）は
+CLI の詳しい使い方（`sara-new` による起票手順を含む）は
 [references/sara-cli.md](references/sara-cli.md)。

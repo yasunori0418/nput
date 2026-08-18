@@ -69,13 +69,13 @@ sara report coverage         # coverage
 sara report matrix           # traceability matrix
 ```
 
-**`sara query` only accepts the full ID.** Prose references use the 8-character short form
-(`REQ-2b0c2bb8`), which sara rejects with "Item not found". The short form is a prefix of the full
-ID, so grep for it to resolve both the declaring item and everything that references it:
+**`sara query` only accepts the full ID** — and that is what prose, filenames, and relation
+lists all carry (see ADR-0053; short forms are not used), so an ID you spot anywhere can be
+passed straight to sara or grepped as-is to resolve both the declaring item and every
+reference to it:
 
 ```bash
-rg -l 2b0c2bb8 docs/
-rg -o 'REQ-2b0c2bb8[0-9a-f-]*' docs/requirements/20260802-2b0c2bb8-*.md | head -1
+rg -l REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4 docs/
 ```
 
 Use this before claiming something isn't specified — a requirement you can't find in the overview

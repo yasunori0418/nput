@@ -22,6 +22,6 @@ checks.treefmt	フォーマッタ検査（treefmt-nix が自動生成）。quali
 checks.namaka	namaka アグリゲータ。leaf の tests/namaka/<name>/ を CASE が持つ
 checks.nix-unit	nix-unit アグリゲータ。leaf の tests/nix-unit/*.nix を CASE が持ち、固有ロジック（重複検査）は tests/nix-unit/aggregator-merge.nix の CASE が検証する
 dev:checks.risk-matrix	risk の level 導出マトリクス整合の契約テスト。検査対象は nput の振る舞いではなく docs のスコアリング規約なので TC / CASE へ展開しない
-dev:checks.sara-gap	sara-gap のギャップ列挙契約。検査対象は nput の振る舞いではなくドキュメントグラフ運用の道具なので TC / CASE へ展開しない（sara-id と同じ扱い）
-dev:checks.sara-id	sara-id の採番契約。TP-d7da4065 のみを持ち TC / CASE へ展開しない
+dev:checks.sara-gap	sara-gap のギャップ列挙契約。検査対象は nput の振る舞いではなくドキュメントグラフ運用の道具なので TC / CASE へ展開しない
+dev:checks.sara-new	sara-new の起票契約。他プロジェクトへ横展開する基盤ツールで nput の振る舞いを検査しないため test_plan も TC / CASE も持たない（→ Issue #367）
 dev:checks.test-doc-map	CASE ⇔ テストコード対応の契約テスト自身。自分を CASE で覆うと循環する

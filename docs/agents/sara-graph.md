@@ -104,8 +104,8 @@ is out of scope *for testing*, and securing testability are `test_plan`.
 The rule above decides most items on its own. The cases where it does not are these; the
 precedents settle them so that parallel lanes do not diverge.
 
-**An API surface opened for testing.** `TP-403c55c7` (`lib.__internal`, formerly
-`REQ-901993e9`) was settled as `test_plan` in Issue #239. It is a real attrset the product
+**An API surface opened for testing.** `TP-403c55c7-d996-4951-8e6b-c3a7dddd387c` (`lib.__internal`, formerly
+`REQ-901993e9-771c-480a-ba0d-ca4be042e206`) was settled as `test_plan` in Issue #239. It is a real attrset the product
 exposes, so it reads as a contract, but its only motive is to let evaluation tests reach
 private helpers, and its `specification` spends its SHALL NOTs *excluding* the surface from
 stability and backward compatibility. Where a surface exists solely so that something can
@@ -125,7 +125,7 @@ convention, a CI obligation) that no consumer can observe.
 product will not offer something — "no `--only` flag", "no cleanup command in the MVP",
 "aiming two configs at one target is the user's responsibility" — is a `requirement`: it
 delimits what a user can do, and a user meets the absence directly. A declaration that
-something will not be *verified* — `TP-b7f1dc79`, which puts actually activating the
+something will not be *verified* — `TP-b7f1dc79-0222-4b6e-9e91-0545046e34f2`, which puts actually activating the
 NixOS / nix-darwin module paths outside the E2E harness — is a `test_plan`: the product
 still offers the thing, only the testing stops short of it.
 
@@ -184,7 +184,7 @@ Examples:
 
 | Risk | Attaches to | Why |
 |---|---|---|
-| The semantics of root resolution and placement diverge per entrypoint form (`RISK-e916f742` → `DSG-92f54490`) | `design` | Confining the legacy branch to the attr path assembly is one design for "one implementation across entrypoint forms". Replace it — e.g. write each entrypoint's nix invocation out separately — and this particular divergence is gone. |
+| The semantics of root resolution and placement diverge per entrypoint form (`RISK-e916f742-59a3-4202-a316-603a908fd0db` → `DSG-92f54490-872a-42ac-bbd7-d06e9ee381c6`) | `design` | Confining the legacy branch to the attr path assembly is one design for "one implementation across entrypoint forms". Replace it — e.g. write each entrypoint's nix invocation out separately — and this particular divergence is gone. |
 | `apply` leaves traces on the filesystem when it fails | `requirement` | This is the requirement itself being broken. Every design has to answer for it; no change of design makes the concern go away. |
 
 Attaching a design-specific risk to the requirement loses the information that the risk is
