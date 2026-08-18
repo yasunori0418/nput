@@ -36,7 +36,7 @@
 # 型や必須フィールドが変わって fixture が実モデルに合わなくなれば、このテストが落ちて
 # 追随を要求する）。
 #
-# -e は使わない。sara-id.sh / sara-gap.sh と同じく「1 回の実行で全失敗を報告する」
+# -e は使わない。sara-gap.sh と同じく「1 回の実行で全失敗を報告する」
 # 集計方式のため（-e があると最初の非ゼロ終了で以降のアサーションが走らない）。
 set -uo pipefail
 
@@ -302,7 +302,7 @@ fi
 fake_sara="$work/fake-sara"
 # shebang は実行中の bash の絶対パスを埋め込む。`#!/usr/bin/env bash` だと
 # nix のビルドサンドボックス（checks.sara-new 経由）に /usr/bin/env が無く
-# exit 126 になる（sara-id.sh の偽 uuidgen と同じ事情）。
+# exit 126 になる（sara-gap.sh の偽 sara と同じ事情）。
 #
 # 偽 sara は「SUT がどう呼んだか」も検査する。ここを素通しにすると、SUT が
 # --no-color を落とす・仮ファイルの stem を slug 以外にするといった退行を偽 sara が

@@ -413,50 +413,17 @@
             '';
           };
 
-          # sara-id の採番契約を固定するテスト（dev/tests/sara-id.sh）。同じスクリプトを
-          # 2 経路から走らせる意図的な二重化で、役割が違う:
+          # テストコード ⇔ CASE 対応の契約テスト（dev/tests/test-doc-map.sh）。
+          # 同じスクリプトを 2 経路から走らせる意図的な二重化で、役割が違う:
           #
           # - この checks 派生: ローカルの `nix flake check ./dev`（CLAUDE.md の標準検証
           #   手順）に載せ、dev flake を触ったときに手を動かさず走るようにする。
           #   CI の flake-check job はルート flake を対象にするため、ここは CI では回らない。
-          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行する。
-          #   PR での退行検知はこちらが担保する。
+          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
+          #   PR での退行検知を担保する。
           #
           # サンドボックス（runCommandLocal）と devShell では実行条件が違うので、
           # 両経路とも緑であることを確認してから変更を入れること。
-          checks.sara-id =
-            pkgs.runCommandLocal "sara-id-test"
-              {
-                # prefix マップの突合（テスト §6b）が読む正本 2 つ。サンドボックスには
-                # リポジトリの作業ツリーが無く、テスト側の git ルート解決も効かないため
-                # nix から store path を渡す。devShell / CI 経路は cwd がリポジトリ
-                # ルートなのでテスト側の解決に任せる。
-                SARA_MODEL_YAML = ../docs/model.yaml;
-                SARA_DEV_FLAKE = ./flake.nix;
-                nativeBuildInputs = [
-                  sara-id
-                  pkgs.ripgrep
-                  pkgs.coreutils
-                  # テストがルート解決経路を検証するため一時 repo を git init する。
-                  pkgs.git
-                  # テストが sara-id の出力から id / filename / ref を抜くのに使う。
-                  # stdenv 既定でも PATH に載るが、暗黙依存にすると実行条件の違う
-                  # サンドボックスで踏み抜く（→ 0a18d87 の exit 126）ため明示する。
-                  pkgs.gnused
-                ];
-              }
-              ''
-                bash ${./tests/sara-id.sh}
-                touch "$out"
-              '';
-
-          # テストコード ⇔ CASE 対応の契約テスト（dev/tests/test-doc-map.sh）。
-          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
-          #
-          # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
-          # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
-          #   PR での退行検知を担保する（flake-check job はルート flake が対象なので
-          #   この派生は CI では回らない）
           #
           # テストは docs/ と実際のテスト資産（cmd/ internal/ tests/）の両方を走査する。
           # サンドボックスに作業ツリーは無く、テスト側の git ルート解決も効かないため、
@@ -492,7 +459,7 @@
               '';
 
           # risk の level 導出マトリクス整合の契約テスト（dev/tests/risk-matrix.sh）。
-          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
+          # checks.test-doc-map と同じ二重化の意図で 2 経路から走らせる:
           #
           # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
           # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
@@ -503,7 +470,7 @@
               {
                 # テストが走査する risk item の在り処。サンドボックスにはリポジトリの
                 # 作業ツリーが無く、テスト側の git ルート解決も効かないため nix から
-                # store path を渡す（checks.sara-id の SARA_MODEL_YAML と同じ手法）。
+                # store path を渡す（下の checks.sara-gap / checks.sara-new も同じ手法）。
                 # devShell / CI 経路は cwd がリポジトリルートなのでテスト側の解決に任せる。
                 # マトリクスの正本（dev/tests/risk-matrix.tsv）は下で dev/ の木ごと
                 # 配置するので、テストがスクリプト基準で解決する。
@@ -536,7 +503,7 @@
               '';
 
           # sara-gap の検出契約を固定するテスト（dev/tests/sara-gap.sh）。
-          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
+          # checks.test-doc-map と同じ二重化の意図で 2 経路から走らせる:
           #
           # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
           # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
@@ -551,7 +518,7 @@
                 # fixture はモデルの写しを持たず、テストが実物の docs/model.yaml を
                 # 重ねる（二重管理の回避）。サンドボックスにはリポジトリの作業ツリーが
                 # 無く、テスト側の git ルート解決も効かないため nix から store path を
-                # 渡す（checks.sara-id の SARA_MODEL_YAML と同じ手法）。
+                # 渡す（checks.risk-matrix の RISK_DOCS_DIR と同じ手法）。
                 SARA_GAP_MODEL_YAML = ../docs/model.yaml;
                 nativeBuildInputs = [
                   sara-gap
@@ -573,7 +540,7 @@
               '';
 
           # sara-new の起票契約を固定するテスト（dev/tests/sara-new.sh）。
-          # checks.sara-id と同じ二重化の意図で 2 経路から走らせる:
+          # checks.test-doc-map と同じ二重化の意図で 2 経路から走らせる:
           #
           # - この checks 派生: ローカルの `nix flake check ./dev` に載せる
           # - CI: .github/workflows/test.yml の sara job が devShells.sara 経由で実行し、
@@ -612,8 +579,8 @@
           # dogfood の shellHook（nput apply skills）を伴うため、docs 変更だけの PR で
           # それらを走らせないよう sara 単体に絞る。NUR 由来の store path を
           # yasunori0418.cachix.org から引くだけで済む。
-          # CI からは sara check・dev/tests/sara-id.sh・dev/tests/sara-new.sh・
-          # dev/tests/test-doc-map.sh・dev/tests/risk-matrix.sh・dev/tests/sara-gap.sh を
+          # CI からは sara check・dev/tests/sara-new.sh・dev/tests/test-doc-map.sh・
+          # dev/tests/risk-matrix.sh・dev/tests/sara-gap.sh を
           # このシェルで実行する。
           devShells.sara = pkgs.mkShell {
             packages = [
@@ -621,9 +588,8 @@
               sara-id
               sara-new
               sara-gap
-              # 以下は dev/tests/sara-id.sh が使う。stdenv 既定や runner の system
-              # PATH でも引けるが、checks.sara-id と揃えて明示する。
-              pkgs.ripgrep
+              # 以下は dev/tests/ の各テストが使う。stdenv 既定や runner の system
+              # PATH でも引けるが、対応する checks 派生と揃えて明示する。
               pkgs.git
               pkgs.gnused
               pkgs.coreutils

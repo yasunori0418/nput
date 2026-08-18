@@ -26,7 +26,7 @@
 # 担保できない範囲: 実リポジトリ docs/ との整合（実グラフのどの item がギャップかは
 # ここでは見ない。実グラフは fixture と違い件数が動き続けるため契約にできない）。
 #
-# -e は使わない。sara-id.sh と同じく「1 回の実行で全失敗を報告する」集計方式のため
+# -e は使わない。dev/tests/ の他のテストと同じく「1 回の実行で全失敗を報告する」集計方式のため
 # （-e があると最初の非ゼロ終了で以降のアサーションが走らない）。
 set -uo pipefail
 
@@ -222,8 +222,8 @@ fi
 # sara のバージョン更新で JSON 形状が変わったとき、黙って「ギャップなし」を返す
 # 事故を防ぐガード。実物の sara に形状を変えさせることはできないので、
 # SARA_GAP_SARA seam で偽 sara を差し込んで決定論的に検証する。
-# shebang は実行中の bash の絶対パスを埋め込む（sara-id.sh と同じ理由:
-# nix のビルドサンドボックスに /usr/bin/env が無い）。
+# shebang は実行中の bash の絶対パスを埋め込む（`#!/usr/bin/env bash` だと
+# nix のビルドサンドボックスに /usr/bin/env が無く exit 126 になる）。
 
 fake_noitems="$work/fake-sara-noitems"
 {
@@ -256,7 +256,7 @@ fi
 # --- 7. 走査先をリポジトリルート基準で解決する ---------------------------------
 #
 # SARA_GAP_ROOT 無しの通常経路。サブディレクトリから叩いても git ルートの
-# sara.toml / docs を対象にすることを固定する（sara-id の 4b と同じ論点）。
+# sara.toml / docs を対象にすることを固定する。
 
 gitrepo="$work/gitrepo"
 make_fixture "$gitrepo"

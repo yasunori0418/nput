@@ -109,7 +109,7 @@ jq -r '
 # そのまま通すと空のコードスパンとして表に出て不整合が見えないため、目に付く形へ置き換える。
 validated_id() {
   local id=$1
-  # version / variant まで固定する（dev/tests/sara-id.sh・dev/tests/sara-new.sh と同じ
+  # version / variant まで固定する（dev/tests/sara-new.sh と同じ
   # 強度に揃える。同じ規約に対する検査の厳しさが箇所ごとに食い違わないようにする）。
   if [[ "$id" =~ ^[A-Z]+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]]; then
     printf '%s\n' "$id"
