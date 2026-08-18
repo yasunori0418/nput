@@ -6,6 +6,8 @@
 #   nix flake check ./dev                         # checks.sara-new 経由
 #
 # 検証対象（→ Issue #367・epic #364）。番号は下の節見出しに対応する:
+#   0.  docs/model.yaml の型 ⟷ prefix が 1:1（SUT ではなくモデル側の不変条件。
+#       旧 sara-id 契約テストの §6b-0 からの引き継ぎ → Issue #373）
 #   1.  item を起票し `<YYYYMMDD>-<フル UUID>-<slug>.md` へ rename する。
 #       frontmatter の id と、ファイル名の UUID 部が一致する
 #   1b. --name 未指定の既定経路でも name が slug 由来になる（仮ファイル名が漏れない）
@@ -77,6 +79,55 @@ EOF
 }
 
 uuid_re='[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
+
+# --- 0. model.yaml の型 ⟷ prefix の一意性 -------------------------------------
+#
+# prefix は型を一意に指す前提で ID 体系が組まれている（`REQ-<uuid>` を見て
+# requirement だと分かる）。この前提はモデル側の性質で、`sara check` は正式 ID の
+# 重複しか見ず、sara-new は prefix 表を持たない（model.yaml との二重管理を作らない
+# 設計）ため、2 つの型が同じ prefix を持つ model.yaml を書いても他のどの機械検査
+# にも載らない。旧 sara-id 契約テスト（§6b-0）が担っていた不変条件をここへ引き継ぐ
+# （→ Issue #373）。fixture が実物の model.yaml を重ねる本テストが、モデルを読む
+# 唯一の検査なのでここに置く。
+#
+# 抽出は旧テストと同じ awk（yq を devShell に足さない）。健全性は件数突合で固定する
+# （`- id:` の行数と組の数が合わなければ、並びの崩れで抽出が黙って欠けている）。
+mapfile -t model_pairs < <(
+  awk '
+    /^item_types:/  { in_types = 1; next }
+    /^relations:/   { in_types = 0; next }
+    !in_types       { next }
+    /^  - id: /     { type = $3; next }
+    /^    prefix: / { if (type != "") { print type, $2; type = "" } }
+  ' "$model_yaml"
+)
+model_type_lines="$(awk '
+  /^item_types:/ { in_types = 1; next }
+  /^relations:/  { in_types = 0; next }
+  in_types && /^  - id: / { n++ }
+  END { print n + 0 }
+' "$model_yaml")"
+
+if [[ "${#model_pairs[@]}" -eq "$model_type_lines" && "$model_type_lines" -gt 0 ]]; then
+  pass "model.yaml の全型から prefix を抽出する（$model_type_lines 型）"
+else
+  fault "model.yaml の全型から prefix を抽出する（型 $model_type_lines 件に対し抽出 ${#model_pairs[@]} 件）"
+fi
+
+declare -A model_type_of_prefix=()
+prefix_unique=1
+for pair in "${model_pairs[@]}"; do
+  model_type="${pair%% *}"
+  model_p="${pair##* }"
+  if [[ -n "${model_type_of_prefix[$model_p]:-}" ]]; then
+    fault "model.yaml の prefix $model_p が重複している（${model_type_of_prefix[$model_p]} と $model_type）"
+    prefix_unique=0
+  fi
+  model_type_of_prefix["$model_p"]="$model_type"
+done
+if [[ "$prefix_unique" -eq 1 && "${#model_pairs[@]}" -gt 0 ]]; then
+  pass "model.yaml の prefix が型ごとに一意（型 ⟷ prefix が 1:1）"
+fi
 
 # SUT が PATH に無いまま走ると、異常系の節（§5〜§10）は「非ゼロで落ちる」「ファイルを
 # 残さない」がどちらも自明に成立して緑になる。全節の前提としてここで存在を確かめ、
