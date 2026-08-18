@@ -59,143 +59,11 @@
             exec ${inputs'.niface.packages.validate}/bin/validate "$@"
           '';
 
-          # sara item の ID を採番する（UUIDv4 二層構成・→ ADR-0048、epic #203）。
-          #
-          #   sara-id <型名 | prefix> [slug]
-          #
-          # 正式 ID（frontmatter の id:）・ファイル名素材・散文中の参照の 3 つを出す。
-          #
-          # 乱数 ID は並列レーン（parallel-worktree）での採番衝突を構造的に回避する。
-          # フル UUIDv4 は事実上衝突ゼロだが、人間が触る前方 8 文字は 120 item で
-          # 約 10⁻⁶ の偶然重複がありうるので、採番時に docs/ を 1 回走査して
-          # 既出なら生成し直す（ms オーダーで item 数が増えても実用上コスト増なし）。
-          #
-          # sara 0.10.0 以降は `sara init` も id_format から UUIDv4 を採番できるが、
-          # 8 文字 prefix の重複チェックは持たない（{seq} を含まない format では
-          # suggest_next_id がグラフを参照せず即 render する →
-          # sara-core/src/model/item.rs の has_seq 分岐）。フル ID としては正しい設計だが、
-          # 前方 8 文字を人間が触る面に使う本リポジトリの規約は sara の関知しない層にある。
-          # この重複チェックと、ファイル名素材・省略形の出力が sara-id の存在理由。
-          sara-id = pkgs.writeShellApplication {
-            name = "sara-id";
-            runtimeInputs = with pkgs; [
-              # macOS 標準の uuidgen には -r が無いため、明示的に載せて移植性を担保する。
-              util-linux
-              ripgrep
-              coreutils
-              # 既出チェックの走査先をリポジトリルート基準で解決するため。
-              git
-            ];
-            text = ''
-              usage() {
-                cat >&2 <<'EOF'
-              usage: sara-id <type|prefix> [slug]
-
-                type|prefix  sara の型名（requirement / test_condition …）または
-                             prefix そのもの（REQ / TC …）
-                slug         ファイル名に使う短い識別子（省略可・英数字とハイフン）
-
-              例:
-                sara-id requirement lock-ordering
-                sara-id design
-
-              注: ADR は連番を維持するため採番しない（docs/adr/ の最大値 + 1 を手で採る）
-              EOF
-              }
-
-              # help は引数個数に先立って処理する（`sara-id --help extra` も help になる）。
-              case "''${1-}" in
-                -h | --help)
-                  usage
-                  exit 0
-                  ;;
-              esac
-
-              if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-                usage
-                exit 2
-              fi
-
-              # 型名 → prefix。docs/model.yaml の item_types と対応させる。
-              # 別名は sara init のサブコマンド別名に揃える。
-              # 未知の入力は prefix そのものを渡されたとみなして大文字化して通す。
-              case "$1" in
-                solution | sol) prefix=SOL ;;
-                use_case | use-case | uc) prefix=UC ;;
-                requirement | req) prefix=REQ ;;
-                design | dsg) prefix=DSG ;;
-                infrastructure | inf) prefix=INF ;;
-                quality | qa) prefix=QA ;;
-                test_plan | test-plan | tp) prefix=TP ;;
-                adr) prefix=ADR ;;
-                risk) prefix=RISK ;;
-                test_condition | test-condition | tc) prefix=TC ;;
-                test_case | test-case | case) prefix=CASE ;;
-                *) prefix=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]') ;;
-              esac
-
-              slug=''${2-}
-
-              # ADR は連番を維持する（既存 47 本の相互参照・docs/adr/README.md の運用・
-              # Issue 言及を壊さないため → ADR-0048）。UUID は採番しない。
-              if [ "$prefix" = "ADR" ]; then
-                echo "sara-id: ADR は連番を維持する（docs/adr/ の最大値 + 1 を手で採番する）" >&2
-                exit 2
-              fi
-
-              # UUID 生成は seam 経由で呼ぶ（テストが決定論的に差し替えるため）。
-              uuidgen_cmd=''${SARA_ID_UUIDGEN:-uuidgen}
-
-              # 既出チェックの走査先。リポジトリルート基準で解決する（カレント相対だと
-              # dev/ 等から叩いたときに docs/ を見つけられず、重複チェックが黙って
-              # 外れる）。git 管理外ならカレント基準へフォールバックする。
-              repo_root=$(git rev-parse --show-toplevel 2>/dev/null || printf '.')
-              scan_dir="$repo_root/docs"
-
-              uuid=""
-              # 8 文字 prefix の偶然重複は極めて稀なので、有限回で打ち切る。
-              # 打ち切りに達するのは乱数源が壊れているとき（同じ値を返し続ける等）で、
-              # 黙って重複 ID を返すより失敗させたほうがよい。
-              for _ in $(seq 1 16); do
-                candidate=$("$uuidgen_cmd" -r | tr -d '\n')
-                short=''${candidate:0:8}
-                if [ ! -d "$scan_dir" ]; then
-                  uuid=$candidate
-                  break
-                fi
-                # 省略形は正式 ID の前方一致なので、8 文字で引けば
-                # 宣言側（frontmatter の id:）と参照側（散文・relation）の両方に当たる。
-                if ! rg -q --fixed-strings "$short" "$scan_dir"; then
-                  uuid=$candidate
-                  break
-                fi
-              done
-
-              if [ -z "$uuid" ]; then
-                echo "sara-id: 8 文字 prefix の未使用な候補を 16 回で引けなかった" >&2
-                exit 1
-              fi
-
-              short=''${uuid:0:8}
-              date_prefix=$(date +%Y%m%d)
-
-              if [ -n "$slug" ]; then
-                filename="$date_prefix-$short-$slug.md"
-              else
-                filename="$date_prefix-$short.md"
-              fi
-
-              printf 'id: %s-%s\n' "$prefix" "$uuid"
-              printf 'filename: %s\n' "$filename"
-              printf 'ref: %s-%s\n' "$prefix" "$short"
-            '';
-          };
-
           # sara init を包む item 起票ラッパー（→ Issue #367・epic #364）。
           #
           #   sara-new <型> <slug> <配置ディレクトリ> [-- <sara init のオプション>...]
           #
-          # 実体は dev/scripts/sara-new.sh。他の dev ツール（sara-id / sara-gap）と違い
+          # 実体は dev/scripts/sara-new.sh。他の dev ツール（sara-gap）と違い
           # 本体を flake.nix へインラインしないのは、このドキュメント管理基盤を他
           # プロジェクトへ横展開する方針で、ファイル 1 つで持ち出せる形に保つため。
           # ここは PATH に載せるための薄い wrapper（runtimeInputs で依存を固定する）。
@@ -277,7 +145,7 @@
                 exit 2
               fi
 
-              # sara.toml のあるリポジトリルートで sara を実行する（sara-id と同じ解決）。
+              # sara.toml のあるリポジトリルートで sara を実行する。
               # SARA_GAP_ROOT はサンドボックスの契約テストが fixture を指すための seam。
               repo_root=''${SARA_GAP_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || printf '.')}
               cd "$repo_root" || {
@@ -359,10 +227,6 @@
               # CONTEXT.md / docs/adr の設計文書運用を補助する開発時ツールで、
               # nput のビルド・テスト経路には関与しない。
               inputs'.nur.packages.sara
-              # sara item の ID 採番（UUIDv4 二層構成）。定義は上の let 束縛を参照。
-              # uuidgen -r の供給元（util-linux）は sara-id の runtimeInputs で
-              # wrapper の PATH に前置されるため、devShell 側には載せない。
-              sara-id
               # item 起票ラッパー（sara init + 規約どおりの rename）。定義は上の
               # let 束縛を参照。sara は runtimeInputs で wrapper の PATH に前置される。
               sara-new
@@ -585,7 +449,6 @@
           devShells.sara = pkgs.mkShell {
             packages = [
               inputs'.nur.packages.sara
-              sara-id
               sara-new
               sara-gap
               # 以下は dev/tests/ の各テストが使う。stdenv 既定や runner の system
