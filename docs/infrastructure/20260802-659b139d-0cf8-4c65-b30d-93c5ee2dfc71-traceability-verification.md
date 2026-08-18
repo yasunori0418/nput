@@ -22,8 +22,8 @@ satisfies:
 | `sara` ジョブ | `test.yml` 内の 1 ジョブ。`sara check` で broken reference / duplicate ID / cycles を検出し、同じジョブで契約テスト 4 件を実行する |
 | `dev/tests/test-doc-map.sh` | テスト資産 ⇔ CASE の 1:1 対応を検証する（→ Issue #304）。区分と除外の正本は `dev/tests/` のデータファイルが持つ |
 | `dev/tests/risk-matrix.sh` | risk の `level` が `likelihood` × `impact` のマトリクス導出と一致するかを検証する（→ Issue #303）。マトリクスの正本は `dev/tests/risk-matrix.tsv` |
-| `dev/tests/sara-gap.sh` | `sara-gap` の未カバー 3 段の列挙契約を検証する |
-| `dev/tests/sara-new.sh` | `sara-new` の起票契約（採番・ファイル名規約の適用）を検証する（→ Issue #367）|
+| `dev/tests/sara-gap.sh` | `sara-gap` の未カバー 3 段の列挙契約を検証する。判定は fixture 基準で、実グラフのどの item がギャップかは見ない（件数が動き続けるため契約にできない）|
+| `dev/tests/sara-new.sh` | `sara-new` の起票契約（採番・ファイル名規約の適用）を検証する（→ Issue #367）。fixture は実物の `docs/model.yaml` を重ねて使う |
 
 契約テストを同じジョブへ載せるのは、テストが「人が思い出したときだけ動く」状態を避けるため。
 4 件はいずれも dev flake の `checks.*` としても露出しているが、CI の `flake-check` はルート
@@ -48,12 +48,13 @@ CI 用の devShell も sara 専用のものへ分ける。
 
 ## ID 規約
 
-正式 ID は `<PREFIX>-<フル UUIDv4>`、人間が触る面（ファイル名・散文中の参照）は前方 8 文字の
-省略形を使う二層構成。乱数 ID により並列レーンでの採番衝突を構造的に回避する。省略形は正式 ID の
-前方一致なので、8 文字で grep すれば宣言側と参照側の両方にヒットする。
+正式 ID は `<PREFIX>-<フル UUIDv4>`。ファイル名・散文中の参照を含め**どの面でもフル ID を
+そのまま書く**（→ ADR-0053）。乱数 ID により並列レーンでの採番衝突を構造的に回避する。
+表記が全面で一致するので、目に付いた ID をそのまま grep しても `sara query` へ渡しても
+同じものに当たる。
 
-ADR のみ連番（`ADR-NNNN`）を維持する。既存 47 本の相互参照・`docs/adr/README.md` の運用・Issue
-言及を壊さないため。
+ADR のみ連番（`ADR-NNNN`）を維持する。既存 ADR の相互参照・`docs/adr/README.md` の運用・Issue
+言及を壊さないため。採番は `sara init adr` へ委譲する（→ ADR-0053）。
 
 ## 検証の強度
 
