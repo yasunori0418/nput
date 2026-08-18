@@ -109,7 +109,9 @@ jq -r '
 # スパンとして表に出て不整合が見えないため、目に付く形へ置き換える。
 render_id() {
   local id=$1
-  if [[ "$id" =~ ^[A-Z]+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
+  # version / variant まで固定する（dev/tests/sara-id.sh・dev/tests/sara-new.sh と同じ
+  # 強度に揃える。同じ規約に対する検査の厳しさが箇所ごとに食い違わないようにする）。
+  if [[ "$id" =~ ^[A-Z]+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]]; then
     printf '%s\n' "$id"
   else
     printf '(ID 不正: %s)\n' "${id:-空}"
