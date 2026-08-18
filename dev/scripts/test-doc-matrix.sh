@@ -104,10 +104,10 @@ jq -r '
 
 # --- 部品 --------------------------------------------------------------------
 
-# 表へ出す ID。正準形（<PREFIX>-<フル UUIDv4>）をそのまま通す（→ ADR-0053。省略形は
-# 使わない）。形式に合わない入力（空文字・UUID でない ID）はそのまま通すと空のコード
-# スパンとして表に出て不整合が見えないため、目に付く形へ置き換える。
-render_id() {
+# 表へ出す ID を検証して返す。正準形（<PREFIX>-<フル UUIDv4>）はそのまま通す
+# （→ ADR-0053。省略形は使わない）。形式に合わない入力（空文字・UUID でない ID）は
+# そのまま通すと空のコードスパンとして表に出て不整合が見えないため、目に付く形へ置き換える。
+validated_id() {
   local id=$1
   # version / variant まで固定する（dev/tests/sara-id.sh・dev/tests/sara-new.sh と同じ
   # 強度に揃える。同じ規約に対する検査の厳しさが箇所ごとに食い違わないようにする）。
@@ -125,7 +125,7 @@ join_br() { paste -sd'@' - | sed 's/@/<br>/g'; }
 tc_cell() {
   awk -F'\t' -v id="$1" '$1 == id { print $2 "\t" $3 }' "$work/case-tc" |
     while IFS=$'\t' read -r tc_id tc_name; do
-      printf '`%s` %s\n' "$(render_id "$tc_id")" "$tc_name"
+      printf '`%s` %s\n' "$(validated_id "$tc_id")" "$tc_name"
     done | join_br
 }
 
@@ -136,7 +136,7 @@ risk_cell() {
       awk -F'\t' -v t="$tc_id" '$1 == t { print $2 "\t" $3 }' "$work/tc-risk"
     done | LC_ALL=C sort -u |
     while IFS=$'\t' read -r risk_id risk_name; do
-      printf '`%s` %s\n' "$(render_id "$risk_id")" "$risk_name"
+      printf '`%s` %s\n' "$(validated_id "$risk_id")" "$risk_name"
     done | join_br
 }
 
@@ -230,7 +230,7 @@ emit_category_table() {
   awk -F'\t' -v c="$category" -v OFS='\t' '$1 == c { print $2, $3, $4 }' "$work/asset-rows" |
     while IFS=$'\t' read -r asset case_id case_name; do
       printf '| `%s` | `%s` %s | %s | %s |\n' \
-        "$asset" "$(render_id "$case_id")" "$case_name" \
+        "$asset" "$(validated_id "$case_id")" "$case_name" \
         "$(tc_cell "$case_id")" "$(risk_cell "$case_id")"
     done
   printf '\n'
