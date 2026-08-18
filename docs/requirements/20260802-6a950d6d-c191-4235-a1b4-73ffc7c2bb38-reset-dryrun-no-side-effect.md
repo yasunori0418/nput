@@ -16,7 +16,7 @@ specification_ja: |
   終了しなければならない（FS 削除・confirm・flock のいずれも行わない・`apply --dryrun` と
   対称）。終了コードは削除対象の有無に依らず 0 でなければならない。
 ---
-# REQ-6a950d6d: reset --dryrun は副作用ゼロで削除対象を表示して終了する
+# REQ-6a950d6d-c191-4235-a1b4-73ffc7c2bb38: reset --dryrun は副作用ゼロで削除対象を表示して終了する
 
 ## 仕様
 
@@ -28,7 +28,7 @@ nput reset <name> --dryrun     # 副作用ゼロで削除対象（symlink / copy
 exit する（FS 削除・confirm・flock いずれも行わない・`apply --dryrun` と対称）。
 終了コードは削除対象の有無に依らず 0。
 
-`apply --dryrun` 側の規範は REQ-02a33511 の担当（conflict 検出時に非ゼロ終了する点が
+`apply --dryrun` 側の規範は REQ-02a33511-0941-4813-b289-a05eb8e9aa57 の担当（conflict 検出時に非ゼロ終了する点が
 異なる）。
 
 ## 出典

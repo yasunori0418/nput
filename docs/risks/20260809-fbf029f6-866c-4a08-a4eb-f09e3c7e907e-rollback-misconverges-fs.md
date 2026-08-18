@@ -8,14 +8,14 @@ likelihood: high
 impact: high
 level: high
 ---
-# RISK-fbf029f6: rollback が FS を前世代へ収束させ損ね、世代表示と実配置が食い違う
+# RISK-fbf029f6-866c-4a08-a4eb-f09e3c7e907e: rollback が FS を前世代へ収束させ損ね、世代表示と実配置が食い違う
 
 ## リスク
 
 nput は profile ディレクトリ自体ではなく任意 root へ配置するため、profile ポインタを
 戻しただけでは FS は何も変わらない。`rollback` は「現世代 N の manifest を baseline、
 戻る世代 N-1 を target」として planner を回し、apply と同順（配置前除去 → 配置 / 張替え →
-stale 除去）で FS を収束させてから、最後にポインタを移す（→ REQ-0e341430）。
+stale 除去）で FS を収束させてから、最後にポインタを移す（→ REQ-0e341430-17f0-498b-9439-65491652163a）。
 
 この収束が欠けると、`list-generations` は N-1 を current と表示するのに FS には N の
 配置が残る、という嘘の状態になる。ポインタを先に動かすと更に悪く、次の apply が baseline を
@@ -35,7 +35,7 @@ store パスへ書こうとして EEXIST / EROFS で落ちる → ADR-0046、iss
 エラーで停止すべきであり、部分的に配置してから諦めるのが最悪の結果になる。
 
 同じ FS 操作系でも `reset` の teardown は脅威が別で、あちらは「消してはいけないものを
-消す」側にある（→ RISK-bb54245e）。
+消す」側にある（→ RISK-bb54245e-b284-4b4d-9896-8fec2b4e521c）。
 
 ## 実現性
 
@@ -50,5 +50,5 @@ rollback をもう一度回しても戻らない。
 
 ## 緩和
 
-TC-36ea3609（rollback の再収束と祖先 migration）・TC-fa7911c6（rollback の途中失敗・
-前提不成立・conflict 全件報告）・TC-527b5034（e2e での世代往復）が緩和する。
+TC-36ea3609-d52e-42d4-975c-40fb89b23919（rollback の再収束と祖先 migration）・TC-fa7911c6-7347-47ff-b121-bec53562c063（rollback の途中失敗・
+前提不成立・conflict 全件報告）・TC-527b5034-715a-4df1-871a-072dc9062704（e2e での世代往復）が緩和する。

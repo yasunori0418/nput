@@ -34,7 +34,7 @@ nput はフレームワークではなく **配置プリミティブ**である�
 任意パスへ symlink または copy で置く」という単一の責務を、テスト可能な純粋関数として提供し、
 設定は生成しない。
 
-- [SOL-9fcd1d6e](solution/20260802-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e-nput-placement-primitive.md) — nput は nix store の物を任意パスへ置く配置プリミティブであり、設定を生成せずユーザーが配置を明示的に握る
+- [SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e](solution/20260802-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e-nput-placement-primitive.md) — nput は nix store の物を任意パスへ置く配置プリミティブであり、設定を生成せずユーザーが配置を明示的に握る
 
 ---
 
@@ -43,13 +43,13 @@ nput はフレームワークではなく **配置プリミティブ**である�
 中心は project mode（プロジェクト内配置）。`$HOME` 配置（home mode）・system 配置は明示マーカーで
 opt-in する例外として位置づける（→ ADR-0007）。
 
-- [UC-19a90989](use-cases/20260802-19a90989-0ae3-438f-8a75-4e1e2637f81c-project-mode-in-repo-placement.md) — プロジェクト repo 内へ nix store の物を devShell 入室のたびに配置してチームで共有する
-- [UC-f2436d68](use-cases/20260802-f2436d68-91ff-4c48-b1df-47acefe4f464-home-mode-pinned-repo-placement.md) — home mode で外部リポジトリの中身をバージョン固定して $HOME 配下の任意パスへ配置する
-- [UC-1c280dce](use-cases/20260802-1c280dce-7c72-44c0-95ea-d06344f62a47-independent-update-cycles.md) — 役割ごとに config を分けて更新を独立させ、1 つの更新を他の役割へ波及させない
-- [UC-0b6f60cb](use-cases/20260802-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6-generation-rollback-standalone.md) — 配置に失敗・後悔したとき standalone で前の世代へロールバックして元の状態へ戻す
-- [UC-403fbe32](use-cases/20260802-403fbe32-b146-401b-8b53-fe67c1e169c5-copy-place-once-user-managed.md) — リポジトリの内容を copy で初回だけ配置し、その後はユーザーが手で編集して育てる
-- [UC-01b896b4](use-cases/20260802-01b896b4-04b9-40d0-bf9e-966eaf64c3d4-out-of-store-live-editing.md) — 開発中の手元 dotfiles を out-of-store symlink で参照し、編集と同時に反映しながら育てる
-- [UC-d39c1994](use-cases/20260802-d39c1994-f9a5-4860-80ba-f6e584adaf14-module-integration.md) — 既に home-manager / NixOS / nix-darwin を使っている環境へ nput をモジュールとして組み込む
+- [UC-19a90989-0ae3-438f-8a75-4e1e2637f81c](use-cases/20260802-19a90989-0ae3-438f-8a75-4e1e2637f81c-project-mode-in-repo-placement.md) — プロジェクト repo 内へ nix store の物を devShell 入室のたびに配置してチームで共有する
+- [UC-f2436d68-91ff-4c48-b1df-47acefe4f464](use-cases/20260802-f2436d68-91ff-4c48-b1df-47acefe4f464-home-mode-pinned-repo-placement.md) — home mode で外部リポジトリの中身をバージョン固定して $HOME 配下の任意パスへ配置する
+- [UC-1c280dce-7c72-44c0-95ea-d06344f62a47](use-cases/20260802-1c280dce-7c72-44c0-95ea-d06344f62a47-independent-update-cycles.md) — 役割ごとに config を分けて更新を独立させ、1 つの更新を他の役割へ波及させない
+- [UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6](use-cases/20260802-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6-generation-rollback-standalone.md) — 配置に失敗・後悔したとき standalone で前の世代へロールバックして元の状態へ戻す
+- [UC-403fbe32-b146-401b-8b53-fe67c1e169c5](use-cases/20260802-403fbe32-b146-401b-8b53-fe67c1e169c5-copy-place-once-user-managed.md) — リポジトリの内容を copy で初回だけ配置し、その後はユーザーが手で編集して育てる
+- [UC-01b896b4-04b9-40d0-bf9e-966eaf64c3d4](use-cases/20260802-01b896b4-04b9-40d0-bf9e-966eaf64c3d4-out-of-store-live-editing.md) — 開発中の手元 dotfiles を out-of-store symlink で参照し、編集と同時に反映しながら育てる
+- [UC-d39c1994-f9a5-4860-80ba-f6e584adaf14](use-cases/20260802-d39c1994-f9a5-4860-80ba-f6e584adaf14-module-integration.md) — 既に home-manager / NixOS / nix-darwin を使っている環境へ nput をモジュールとして組み込む
 
 ---
 

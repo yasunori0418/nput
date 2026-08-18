@@ -5,7 +5,7 @@ name: "開発中の手元 dotfiles を out-of-store symlink で参照し、編�
 refines:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 ---
-# UC-01b896b4: 開発中の手元 dotfiles を out-of-store symlink で参照し、編集と同時に反映しながら育てる
+# UC-01b896b4-04b9-40d0-bf9e-966eaf64c3d4: 開発中の手元 dotfiles を out-of-store symlink で参照し、編集と同時に反映しながら育てる
 
 ## 使われ方
 
@@ -28,7 +28,7 @@ symlink であり、再現性を担保する（→ ADR-0001）。out-of-store �
 
 > **上表は分割時点の `docs/concept.md`（原文）からの写し**。use_case は規範を持たないため、
 > store link が既定で out-of-store が marker による opt-in であることの規範は
-> REQ-99ca5381 にある。
+> REQ-99ca5381-6c53-426c-b145-7b4297c53868 にある。
 
 指す先の内容は設計上ライブであり、版管理されるのはリンク先のマッピングのみ。世代管理は
 リンク先のみが対象になる。

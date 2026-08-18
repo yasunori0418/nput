@@ -16,7 +16,7 @@ specification_ja: |
   ネイティブ FS 操作で行わなければならない。profile の切り替えは `nix-env --set` で
   行わなければならない。
 ---
-# REQ-6c4e174a: engine が叩く外部コマンドは nix と git のみに限る
+# REQ-6c4e174a-4d16-477a-96ff-17cb4eb5b564: engine が叩く外部コマンドは nix と git のみに限る
 
 ## 仕様
 
@@ -29,7 +29,7 @@ engine は `manifest.json` を入力に取り、外部コマンドは以下の 2
 行う。profile の切り替えは `nix-env --set`。
 
 外部コマンドの依存を 2 つに閉じることで、engine の動作が実行環境のコマンド群に左右される
-範囲を限定する。2 層構成そのものは REQ-f4d7d4ab が規定する。
+範囲を限定する。2 層構成そのものは REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645 が規定する。
 
 ## 出典
 

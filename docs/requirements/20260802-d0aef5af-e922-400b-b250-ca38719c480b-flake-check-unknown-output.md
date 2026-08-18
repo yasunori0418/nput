@@ -26,7 +26,7 @@ specification_ja: |
   output 名を変えても消えない。`nput` 成果物の主検証は
   `nix build .#nput.<system>.<name>` で行わなければならない。
 ---
-# REQ-d0aef5af: nput カスタム output は nix flake check の unknown 警告を許容し主検証は nix build で行う
+# REQ-d0aef5af-e922-400b-b250-ca38719c480b: nput カスタム output は nix flake check の unknown 警告を許容し主検証は nix build で行う
 
 ## 仕様
 
@@ -41,7 +41,7 @@ specification_ja: |
 で行う。将来 upstream の flake-schemas（PR #8892）がマージされたら `schemas.nput` で
 消す余地を残す。
 
-専用 namespace を使う判断そのものは REQ-205d744d の担当。
+専用 namespace を使う判断そのものは REQ-205d744d-5a53-4511-bc09-892ba01d4e6f の担当。
 
 ## 出典
 

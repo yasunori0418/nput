@@ -22,7 +22,7 @@ specification_ja: |
   identity）・`method`（`"symlink"` / `"copy"`。デフォルト適用後）。entry の `name`
   フィールドを持ってはならない。
 ---
-# REQ-0b0cd1e3: manifest.json の entries は attrset を配列へ正規化し 5 フィールドを記録する
+# REQ-0b0cd1e3-bfeb-45c1-978d-e2e11c568336: manifest.json の entries は attrset を配列へ正規化し 5 フィールドを記録する
 
 ## 仕様
 
@@ -39,7 +39,7 @@ attrset を**配列に正規化**して記録する（Go は配列を読む）�
 上の表は原文の写しで、規範は frontmatter が正。
 
 entry の `name` フィールドは持たない（識別子が属性キー = target であることは
-REQ-cb77ea05）。
+REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7）。
 
 ## 出典
 

@@ -5,7 +5,7 @@ name: "実行結果のインベントリ・世代観測・到達状態・構造�
 mitigates:
   - "RISK-cdcc6faf-9164-409b-b584-2921fa036d10"
 ---
-# TC-1d19aebc: 実行結果のインベントリ・世代観測・到達状態・構造化 warning が実態を表す
+# TC-1d19aebc-e1e6-4d6f-9440-3efbd69b18a8: 実行結果のインベントリ・世代観測・到達状態・構造化 warning が実態を表す
 
 ## テスト条件
 
@@ -22,7 +22,7 @@ nil であり、0 や現在値で埋めない。
 **世代観測の分解能** — 観測の下地である「profile symlink の指す先から世代番号を読む」
 層そのものも直接駆動して検証する。profile リンク不在 → nil、`profile-3-link` → 3、
 store パスなど世代リンクでない dest → nil、`profile-x-link` のような壊れた番号 → nil。
-TC-746cb5b9 が扱う `nix-env --list-generations` のテキストパースとは別層（こちらは
+TC-746cb5b9-fe27-4d09-a51d-eb03d56a93a7 が扱う `nix-env --list-generations` のテキストパースとは別層（こちらは
 symlink 名のパース）である。
 
 **失敗時の到達状態の分割** — 配置の途中で失敗した run では、完了済みの操作リストは
@@ -44,4 +44,4 @@ preview 向けの `KeptForeign` と構造化 `Warnings` の両面で露出する
 
 ## 対応する CASE
 
-CASE-2008a909（`internal/engine/result_extensions_test.go`）。
+CASE-2008a909-b45e-49e1-adf1-39191a8ddd95（`internal/engine/result_extensions_test.go`）。

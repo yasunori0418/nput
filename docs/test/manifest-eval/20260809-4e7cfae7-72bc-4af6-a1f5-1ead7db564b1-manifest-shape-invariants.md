@@ -5,7 +5,7 @@ name: "manifest 文書の形（schemaVersion / root / entry 5 フィールド）
 mitigates:
   - "RISK-5df2d02b-e5d4-40eb-86ad-e8bc96e4c34d"
 ---
-# TC-4e7cfae7: manifest 文書の形を不変条件としてアサートする
+# TC-4e7cfae7-72bc-4af6-a1f5-1ead7db564b1: manifest 文書の形を不変条件としてアサートする
 
 ## テスト条件
 
@@ -21,16 +21,16 @@ mitigates:
   変換され、判別タグ `_nputMarker` が文書に漏れないこと。こちらも exact 一致で見るので、
   余分なキーの混入は store-backed 側と同じく検出される
 
-**この条件の適用範囲は project root に限る**。fixed root での絶対パス併記は TC-f9e927d0 が
+**この条件の適用範囲は project root に限る**。fixed root での絶対パス併記は TC-f9e927d0-8e10-4b8e-9870-5b5486949af6 が
 持ち、`homeRoot` の `rootKind` を実際の HM 統合で見る分は `checks.hm-module` と E2E
 （`integration` 区分）が担当する。ここを「全 root 種別を見ている」と読ませないために
 範囲を明示する。
 
-スナップショット（TC-de6514e2）とは役割が重ならない。役割分担の規範は TP-36e90d5d が持つ。
+スナップショット（TC-de6514e2-9105-45a6-a5b9-d474911a401b）とは役割が重ならない。役割分担の規範は TP-36e90d5d-4524-4294-bc72-ee263bb02782 が持つ。
 
 ## 覆う CASE
 
-- CASE-7a6c4957（`tests/nix-unit/structure.nix`）
+- CASE-7a6c4957-9365-4490-b48f-9725f42162f2（`tests/nix-unit/structure.nix`）
 
 ## 出典
 

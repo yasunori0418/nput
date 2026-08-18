@@ -13,7 +13,7 @@ specification: |
   SHALL take `manifest.json` as its input. The boundary between the two layers SHALL be
   `manifest.json` alone, so that the engine does not depend directly on Nix evaluation
   results. Which files are discovered as entrypoints is stated by the CLI specification,
-  and how the engine carries out placement is stated by REQ-6c4e174a; neither is
+  and how the engine carries out placement is stated by REQ-6c4e174a-4d16-477a-96ff-17cb4eb5b564; neither is
   restated here.
 specification_ja: |
   nput は nput CLI（`packages.nput`・PATH 常駐の一次 UX）と engine（Go ライブラリ）の
@@ -23,9 +23,9 @@ specification_ja: |
   取らなければならない。
   2 層の境界は `manifest.json` だけとし、engine が Nix の評価結果へ直接依存しないように
   しなければならない。どのファイルを entrypoint として発見するかは CLI 仕様の担当、
-  engine がどう配置を行うかは REQ-6c4e174a の担当で、いずれも本 item では規定しない。
+  engine がどう配置を行うかは REQ-6c4e174a-4d16-477a-96ff-17cb4eb5b564 の担当で、いずれも本 item では規定しない。
 ---
-# REQ-f4d7d4ab: nput は CLI とエンジンの 2 層で構成する
+# REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645: nput は CLI とエンジンの 2 層で構成する
 
 ## 仕様
 
@@ -51,7 +51,7 @@ engine は Nix の評価結果へ直接依存しない。
 > - entrypoint として発見するファイルと発見規則（`flake.nix` / `shell.nix` /
 >   `default.nix`・CWD 既定・`-f` 上書き）→ `docs/spec.md`「CLI 仕様」→
 >   「entrypoint の発見」節の担当（後続 PR で item 化）
-> - engine が叩く外部コマンドの限定とネイティブ FS 操作・`nix-env --set` → REQ-6c4e174a
+> - engine が叩く外部コマンドの限定とネイティブ FS 操作・`nix-env --set` → REQ-6c4e174a-4d16-477a-96ff-17cb4eb5b564
 
 ## 出典
 

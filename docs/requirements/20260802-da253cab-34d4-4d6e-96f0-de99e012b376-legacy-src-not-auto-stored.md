@@ -22,7 +22,7 @@ specification_ja: |
   store-backed な `src` を得るには、`builtins.path { path = ./foo; }` や `fetchTarball` /
   `builtins.fetchGit` など明示的に store へ add する手段を使わなければならない。
 ---
-# REQ-da253cab: legacy entrypoint では相対 path の src が自動で store 化されない
+# REQ-da253cab-34d4-4d6e-96f0-de99e012b376: legacy entrypoint では相対 path の src が自動で store 化されない
 
 ## 仕様
 

@@ -6,11 +6,11 @@ target: "tests/nix-unit/escapes-base.nix"
 covers:
   - "TC-311ca3b2-d6d1-4712-9e2a-9027941d3527"
 ---
-# CASE-36b5b61a: nix-unit escapes-base.nix
+# CASE-36b5b61a-f40e-4bd5-97d9-f2b0c9284a72: nix-unit escapes-base.nix
 
 ## 対象
 
-`tests/nix-unit/escapes-base.nix`（TP-403c55c7 のテスト seam `nput.__internal` 経由で private
+`tests/nix-unit/escapes-base.nix`（TP-403c55c7-d996-4951-8e6b-c3a7dddd387c のテスト seam `nput.__internal` 経由で private
 helper `escapesBase` / `pathChecks.isUnsafe` を直接叩く）
 
 ## 検証内容

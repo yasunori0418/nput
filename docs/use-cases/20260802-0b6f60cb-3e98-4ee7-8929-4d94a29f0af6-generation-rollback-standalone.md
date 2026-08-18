@@ -5,7 +5,7 @@ name: "配置に失敗・後悔したとき standalone で前の世代へロー�
 refines:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 ---
-# UC-0b6f60cb: 配置に失敗・後悔したとき standalone で前の世代へロールバックして元の状態へ戻す
+# UC-0b6f60cb-3e98-4ee7-8929-4d94a29f0af6: 配置に失敗・後悔したとき standalone で前の世代へロールバックして元の状態へ戻す
 
 ## 使われ方
 
@@ -39,12 +39,12 @@ nput list-generations <name> # 世代一覧
 
 > **上表は分割時点の `docs/concept.md`（原文）からの写し**。use_case は規範を持たないため、
 > 配置種別ごとの世代管理の有無の規範は
-> REQ-77689c68（method と世代管理の対応）/ REQ-d2277c7a（copy が
-> 世代外であること）/ REQ-a8a923ad（out-of-store の版管理範囲）にある。
+> REQ-77689c68-953c-4cbb-ab31-1ac1e4f5f2fe（method と世代管理の対応）/ REQ-d2277c7a-7992-49af-a9dc-4cc73843a6f9（copy が
+> 世代外であること）/ REQ-a8a923ad-07fb-4582-b90a-07a6e0c41baa（out-of-store の版管理範囲）にある。
 
 この使われ方は standalone（home mode）が対象。project mode は配置物が ephemeral なため
 rollback を公開せず、モジュール経由のときはユーザー向け rollback を host に一本化する
-（→ UC-19a90989 / UC-d39c1994）。
+（→ UC-19a90989-0ae3-438f-8a75-4e1e2637f81c / UC-d39c1994-f9a5-4860-80ba-f6e584adaf14）。
 
 なお、下に挙げる要求のうち stale 除去は本 use_case に固有のものではなく、全モードの apply が
 持つ冪等性の不変条件である。この使われ方に固有なのは「戻した世代の記録が除去の基準になる」

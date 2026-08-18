@@ -6,7 +6,7 @@ target: "internal/engine/preflight_test.go"
 covers:
   - "TC-8435052a-5dcc-49e2-ac26-82f645cb6890"
 ---
-# CASE-f3a5fee2: preflight_test.go
+# CASE-f3a5fee2-1981-42c3-ba5b-81b75fd7a3ad: preflight_test.go
 
 ## 対象
 

@@ -5,7 +5,7 @@ name: "engine 公開 API から見たロックの取得モードと保持区間�
 mitigates:
   - "RISK-2b17fefb-6e92-4513-9e7c-de21897c9cfe"
 ---
-# TC-4b4709c9: engine 公開 API から見たロックの取得モードと保持区間が仕様どおりである
+# TC-4b4709c9-1b7a-42f0-8430-62a26ead4eff: engine 公開 API から見たロックの取得モードと保持区間が仕様どおりである
 
 ## テスト条件
 
@@ -30,9 +30,9 @@ mitigates:
 select で見るが、これは取りこぼしても偽陽性（block の見落とし）にしかならず、
 flaky な失敗にはならない。
 
-上位の規範は TP-deb05610 の「並行実行に対する原子性」で、競合を保持状態の模擬ではなく
+上位の規範は TP-deb05610-44bc-4962-8939-952392e5fbd0 の「並行実行に対する原子性」で、競合を保持状態の模擬ではなく
 実際にロックを保持して作ることもそこが定める。
 
 ## 対応する CASE
 
-CASE-6f6fabaa（`internal/engine/lock_test.go`）。
+CASE-6f6fabaa-ae1e-4af5-962e-087a9064f85d（`internal/engine/lock_test.go`）。

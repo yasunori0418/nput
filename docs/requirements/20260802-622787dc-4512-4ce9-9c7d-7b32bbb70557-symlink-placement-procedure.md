@@ -32,7 +32,7 @@ specification_ja: |
   target を狙うことは起きない前提として扱わなければならず、後勝ちを許容しつつ foreign
   symlink の上書きは warning で可視化しなければならない。
 ---
-# REQ-622787dc: symlink 配置は親 dir を作り配置元/subpath を指すリンクを張り、foreign symlink は警告して後勝ちする
+# REQ-622787dc-4512-4ce9-9c7d-7b32bbb70557: symlink 配置は親 dir を作り配置元/subpath を指すリンクを張り、foreign symlink は警告して後勝ちする
 
 ## 仕様
 
@@ -51,10 +51,10 @@ specification_ja: |
   foreign symlink 上書きは warning で可視化する
 
 > **上は原文の写しで、規範は frontmatter が正**。手順 0〜0.7（配置前除去・退避）は
-> REQ-c9ab91c1 / REQ-7cee95dd / REQ-2b48620a / REQ-9b0046e0、張替えを unlink + symlink の
-> 2 操作で行うことは REQ-61856da1 の担当。`shellHook` 再入で起きる cross-config の振動は
-> REQ-fc1118b1 の担当。記録済み symlink の張替えを既定 silent とし `-v` で可視化するという
-> 出力規律そのもの（→ ADR-0031）は REQ-8ef34101 / REQ-0a123b89 の担当で、本 item は
+> REQ-c9ab91c1-f778-4f87-a2ea-c66d6b3c2575 / REQ-7cee95dd-bc5a-4e86-bebc-6080ef78fe26 / REQ-2b48620a-abaa-43df-a106-954bbba3de56 / REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98、張替えを unlink + symlink の
+> 2 操作で行うことは REQ-61856da1-8883-401e-ad57-9f326b96d400 の担当。`shellHook` 再入で起きる cross-config の振動は
+> REQ-fc1118b1-b0e8-4ddf-80f6-c70956651693 の担当。記録済み symlink の張替えを既定 silent とし `-v` で可視化するという
+> 出力規律そのもの（→ ADR-0031）は REQ-8ef34101-8150-4124-92d5-94fabe6b5d90 / REQ-0a123b89-0399-4f76-b988-56a5f7e0becf の担当で、本 item は
 > 「記録済みは warning にせず配置レポート側で扱い、foreign は warning を出す」という
 > 対比だけを規範とする。
 

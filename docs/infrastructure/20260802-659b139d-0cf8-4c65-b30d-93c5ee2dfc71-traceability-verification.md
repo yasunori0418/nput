@@ -7,7 +7,7 @@ depends_on:
 satisfies:
   - "QA-6bf957d9-17d9-4660-92b7-ebd6eeb71a8c"
 ---
-# INF-659b139d: トレーサビリティ検証基盤（sara によるドキュメントグラフの機械検証）
+# INF-659b139d-0cf8-4c65-b30d-93c5ee2dfc71: トレーサビリティ検証基盤（sara によるドキュメントグラフの機械検証）
 
 ## 構成
 
@@ -29,7 +29,7 @@ satisfies:
 3 件はいずれも dev flake の `checks.*` としても露出しているが、CI の `flake-check` はルート
 flake を対象にするため到達しない。CI の明示ステップとして固定する。
 
-`sara` ジョブは `test.yml` に同居するが、CI パイプライン（INF-d1230e1f）の変更検出ジョブは
+`sara` ジョブは `test.yml` に同居するが、CI パイプライン（INF-d1230e1f-8ba8-49d8-8386-409bfbb7dd27）の変更検出ジョブは
 **再利用しない**。あちらの filter は nix / Go のソースを対象にするのに対し、この検査が最も効くのは
 docs のみの PR だからで、job ローカルの filter を別に置く。
 
@@ -61,12 +61,12 @@ ADR のみ連番（`ADR-NNNN`）を維持する。既存 47 本の相互参照�
 error となり `sara check` は exit 1 を返す（epic #203 の移行完了・warning 0 到達を受けて有効化
 → ADR-0050）。合格条件は「warning 0 件」に一本化されている。
 
-一方でマージゲート（INF-8b97573f）の required status check には登録せず、DoD にも入れない。
+一方でマージゲート（INF-8b97573f-d4d6-4abf-85e2-d859afbd96c6）の required status check には登録せず、DoD にも入れない。
 これは移行中の暫定措置ではなく「**検出は機械・判断は人**」という分担を保つための恒久判断で、
 接続漏れの修正が自明でないケース（item 新設を伴う等）を CI が赤いままレビューで扱える余地を
 残す。再検討条件は ADR-0050 が持つ。
 
-閾値ゲートを持たない点は CI パイプライン（INF-d1230e1f）の `go-coverage` ジョブと同方針で、
+閾値ゲートを持たない点は CI パイプライン（INF-d1230e1f-8ba8-49d8-8386-409bfbb7dd27）の `go-coverage` ジョブと同方針で、
 他 PR とのマージ順依存を避けるためでもある。
 
 ## 出典

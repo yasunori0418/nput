@@ -20,7 +20,7 @@ specification_ja: |
   置き場所なので先頭 `/` が正しくアンカーし、別階層の同名パスを誤って無視してはならない。
   ディレクトリ / ファイルとも末尾 `/` を付けてはならない。
 ---
-# REQ-a480c183: gitignore は配置 target を stdout へ列挙するだけでファイルを書き込まない
+# REQ-a480c183-40ce-4201-93b5-65a7a59c1b9e: gitignore は配置 target を stdout へ列挙するだけでファイルを書き込まない
 
 ## 仕様
 
@@ -34,8 +34,8 @@ nput gitignore <name>          # 配置 target を .gitignore 向けに stdout �
 root = git toplevel = `.gitignore` 置き場所なので先頭 `/` が正しくアンカーし、別階層の
 同名パスを誤って無視しない。ディレクトリ / ファイルとも末尾 `/` は付けない。
 
-project mode 限定であることは REQ-eaa8c0df、`method` を区別しない点は REQ-60787ed2、
-`--all` の集約は REQ-1f128917 の担当。
+project mode 限定であることは REQ-eaa8c0df-af44-4f52-9603-cd2bc22a67e9、`method` を区別しない点は REQ-60787ed2-4176-4bdd-800f-1600c0315551、
+`--all` の集約は REQ-1f128917-4424-4e37-8a88-e0bb23a09da7 の担当。
 
 ## 出典
 

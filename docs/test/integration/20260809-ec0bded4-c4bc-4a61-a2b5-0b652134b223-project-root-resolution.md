@@ -5,7 +5,7 @@ name: "project mode の root が git toplevel へ一意に解決し外では曖�
 mitigates:
   - "RISK-e916f742-59a3-4202-a316-603a908fd0db"
 ---
-# TC-ec0bded4: project mode の root が git toplevel へ一意に解決し外では曖昧に成功しない
+# TC-ec0bded4-c4bc-4a61-a2b5-0b652134b223: project mode の root が git toplevel へ一意に解決し外では曖昧に成功しない
 
 ## 条件
 

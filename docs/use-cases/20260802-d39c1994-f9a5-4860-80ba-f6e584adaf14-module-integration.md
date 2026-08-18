@@ -5,7 +5,7 @@ name: "既に home-manager / NixOS / nix-darwin を使っている環境へ nput
 refines:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 ---
-# UC-d39c1994: 既に home-manager / NixOS / nix-darwin を使っている環境へ nput をモジュールとして組み込む
+# UC-d39c1994-f9a5-4860-80ba-f6e584adaf14: 既に home-manager / NixOS / nix-darwin を使っている環境へ nput をモジュールとして組み込む
 
 ## 使われ方
 
@@ -50,7 +50,7 @@ profile は**内部機構**（stale 追跡）に留め、ユーザー向け roll
 
 同じ「設計の哲学」の「home-manager に依存しない」節は本 item の出典ではない。同節が述べるのは
 HM 不在の環境でも同じ設定定義で動くことであり、それを体現するのは統合ではなく standalone の
-使われ方（UC-f2436d68 / UC-19a90989）。本 item が引き受けるのは、そこから派生する
+使われ方（UC-f2436d68-91ff-4c48-b1df-47acefe4f464 / UC-19a90989-0ae3-438f-8a75-4e1e2637f81c）。本 item が引き受けるのは、そこから派生する
 「コアロジックはモジュールシステムに依存しない純粋関数で、統合層は薄いラッパーに過ぎない」
 という統合層側の含意に留まる。
 

@@ -20,7 +20,7 @@ specification_ja: |
   場合は退避物から元の内容を復元しなければならず、run が最終的に成功した場合は退避物を削除
   しなければならない。
 ---
-# REQ-b4e4b65d: recopy の上書きは削除ではなく同一親内への rename 退避で行う
+# REQ-b4e4b65d-6e35-40c3-a00e-20c14043df6f: recopy の上書きは削除ではなく同一親内への rename 退避で行う
 
 ## 仕様
 
@@ -35,10 +35,10 @@ config 内の各 copy entry について:
 退避物が壊れない）。同一 apply run 内で後続の段が失敗した場合、退避物から元の内容が復元される。
 
 > **上は原文の写しで、規範は frontmatter が正**。`--recopy` が全 copy target を無条件上書き
-> すること・レポート表示・世代を増やさないことは REQ-7cc32a2b の担当で、本 item は上書きを
+> すること・レポート表示・世代を増やさないことは REQ-7cc32a2b-eee4-4a29-8dc1-a1dc23e7a065 の担当で、本 item は上書きを
 > どう実現するか（削除ではなく rename 退避）だけを規定する。退避物の巻き戻し / 削除を担う
-> undo ジャーナルそのものは REQ-5e75aabc、コピー時の mode 規則と symlink 複製は REQ-84e3c717 /
-> REQ-0bd55dfc、place-once は REQ-d2277c7a の担当。
+> undo ジャーナルそのものは REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940、コピー時の mode 規則と symlink 複製は REQ-84e3c717-adf5-4ff3-b0db-d039b82ef19c /
+> REQ-0bd55dfc-b28c-4ad2-ad50-bb1f76b2246c、place-once は REQ-d2277c7a-7992-49af-a9dc-4cc73843a6f9 の担当。
 
 ## 出典
 

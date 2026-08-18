@@ -6,7 +6,7 @@ mitigates:
   - "RISK-d734e24e-9af9-49f1-a22d-ade92f6554eb"
   - "RISK-7808768d-bd87-429a-af42-52e8559d940c"
 ---
-# TC-5a72b00e: activation が評価時点で engine 起動へ配線され root と entry とオプションを届ける
+# TC-5a72b00e-2c03-4703-acdc-33cffb6fa994: activation が評価時点で engine 起動へ配線され root と entry とオプションを届ける
 
 ## 条件
 

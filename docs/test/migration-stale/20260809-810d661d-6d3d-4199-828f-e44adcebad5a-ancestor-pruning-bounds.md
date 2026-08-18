@@ -5,7 +5,7 @@ name: "空親ディレクトリの剪定が多階層を辿り、root・symlink�
 mitigates:
   - "RISK-e659f9dd-fbc9-48aa-8ae5-ecc4faf2a85c"
 ---
-# TC-810d661d: 空親剪定の境界
+# TC-810d661d-6d3d-4199-828f-e44adcebad5a: 空親剪定の境界
 
 target 除去後の親ディレクトリ剪定が、空である限り多階層を遡ること、および停止すべき境界で
 止まることを検証する。境界は 3 つある: root 自体（root は消さない）、symlink である祖先

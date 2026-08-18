@@ -28,7 +28,7 @@ specification_ja: |
   なければならず、`mkShell` の `inputsFrom` で manifest を合成するヘルパは持ってはならない
   （1 profile = 1 config の atomic 性と衝突するため）。
 ---
-# REQ-c890ce4a: legacy entrypoint は mkShell passthru 形を canonical とし CLI の attr path を分岐させない
+# REQ-c890ce4a-6528-4ab3-ac86-23d7aebff7da: legacy entrypoint は mkShell passthru 形を canonical とし CLI の attr path を分岐させない
 
 ## 仕様
 
@@ -58,9 +58,9 @@ manifest を合成するヘルパは持たない（1 profile = 1 config の atom
 > **上は原文の写しで、規範は frontmatter が正**。原文が併記する次の点は本 item の
 > 規範ではない。
 >
-> - legacy entrypoint の addressing がフラットな `nput.<name>` になること → REQ-496b1a07
-> - `apply --all` の一括 eval そのもの → REQ-535b811d
-> - 1 profile = 1 config の atomic 性（→ ADR-0002）→ REQ-1be4d678
+> - legacy entrypoint の addressing がフラットな `nput.<name>` になること → REQ-496b1a07-5b74-416b-9e5f-3952b4c03737
+> - `apply --all` の一括 eval そのもの → REQ-535b811d-dfc5-4eac-92db-737e70eb5415
+> - 1 profile = 1 config の atomic 性（→ ADR-0002）→ REQ-1be4d678-959c-44d7-a346-44bfd95af56e
 
 ## 出典
 

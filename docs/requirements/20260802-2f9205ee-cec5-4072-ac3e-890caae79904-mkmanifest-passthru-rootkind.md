@@ -20,7 +20,7 @@ specification_ja: |
   `nix eval <ep>#nput.<system>.<name>.rootKind` で profileDir を確定して flock → build の
   順に進められるようにする。
 ---
-# REQ-2f9205ee: mkManifest の返り値は passthru で root kind を露出する
+# REQ-2f9205ee-cec5-4072-ac3e-890caae79904: mkManifest の返り値は passthru で root kind を露出する
 
 ## 仕様
 

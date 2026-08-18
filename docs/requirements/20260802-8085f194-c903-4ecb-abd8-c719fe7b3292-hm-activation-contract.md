@@ -15,10 +15,10 @@ specification: |
   under a declarative switch. Because the pinned nput CLI (`packages.nput`) and
   `mkManifest` come of the same flake input, a schemaVersion skew SHALL NOT arise
   structurally. This states the contract of a single kick; the correspondence of one
-  config to one manifest and one profile is stated by REQ-c6891aeb, and the definition of
-  the option supplying its entries by REQ-fc1c7ce6, neither being restated here. How many
+  config to one manifest and one profile is stated by REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a, and the definition of
+  the option supplying its entries by REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10, neither being restated here. How many
   times the activation kicks the engine when several configs are present, in what order
-  and how a partial failure is aggregated (ADR-0035 §3), is stated by REQ-c847d1af and is
+  and how a partial failure is aggregated (ADR-0035 §3), is stated by REQ-c847d1af-a437-46bb-bd64-42083810d034 and is
   likewise not restated here.
 specification_ja: |
   home-manager モジュールは `home.activation.nput`（`entryAfter ["writeBoundary"]`）から
@@ -30,12 +30,12 @@ specification_ja: |
   `home.file` の clobber エラーと同型）。pin 版 nput CLI（`packages.nput`）と `mkManifest` が
   同一 flake input 由来のため、schemaVersion skew は構造的に起きてはならない。本 item が
   規定するのは 1 起動あたりの契約であり、1 config が 1 manifest = 1 profile に対応することは
-  REQ-c6891aeb、その entries を供給するオプションの定義は REQ-fc1c7ce6 の担当で、いずれも
+  REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a、その entries を供給するオプションの定義は REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10 の担当で、いずれも
   本 item では規定しない。複数 config があるとき activation が engine を何回 kick するか・
-  その順序・部分失敗の集約（ADR-0035 §3）は REQ-c847d1af の担当で、これも本 item では
+  その順序・部分失敗の集約（ADR-0035 §3）は REQ-c847d1af-a437-46bb-bd64-42083810d034 の担当で、これも本 item では
   規定しない。
 ---
-# REQ-8085f194: home-manager モジュールの engine kick 1 回は activation からビルド済み link-farm を渡し、失敗で switch を止める
+# REQ-8085f194-c903-4ecb-abd8-c719fe7b3292: home-manager モジュールの engine kick 1 回は activation からビルド済み link-farm を渡し、失敗で switch を止める
 
 ## 仕様
 
@@ -60,30 +60,30 @@ specification_ja: |
 > **上は原文の写しで、規範は frontmatter が正**。原文が参照する次の規範は本 item の担当では
 > ない。
 >
-> - method と `src` の組み合わせが選ぶ配置方法 → REQ-77689c68。表が HM でも engine が扱う
->   （HM の `mkOutOfStoreSymlink` へ委譲しない）と述べる点は REQ-eb363122 / REQ-c1b3ca5f
+> - method と `src` の組み合わせが選ぶ配置方法 → REQ-77689c68-953c-4cbb-ab31-1ac1e4f5f2fe。表が HM でも engine が扱う
+>   （HM の `mkOutOfStoreSymlink` へ委譲しない）と述べる点は REQ-eb363122-385a-499c-a074-c95efb949d07 / REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9
 > - `apply --manifest` の契約そのもの（entrypoint 発見・eval・build を行わないこと・
->   `-f` / `--all` との併用エラー）→ REQ-dec58330
-> - モジュールが root を pin し利用者が再指定しないこと → REQ-fc1c7ce6。`homeRoot` の
->   層ごとの解決 → REQ-8d965ca2
+>   `-f` / `--all` との併用エラー）→ REQ-dec58330-6dad-47f7-8f56-2402764a89c7
+> - モジュールが root を pin し利用者が再指定しないこと → REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10。`homeRoot` の
+>   層ごとの解決 → REQ-8d965ca2-f8fd-44a4-87f3-94e850e9f85b
 > - manifest を供給するオプションの定義（canonical は `nput.configs.<name>.entries`・
->   `nput.entries` はその糖衣）→ REQ-fc1c7ce6、1 config が 1 manifest = 1 profile に対応する
->   ことと profile 粒度 → REQ-c6891aeb。本 item の写しにある `nput.entries` は原文逐語であり、
+>   `nput.entries` はその糖衣）→ REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10、1 config が 1 manifest = 1 profile に対応する
+>   ことと profile 粒度 → REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a。本 item の写しにある `nput.entries` は原文逐語であり、
 >   規範文では供給元を「config の entries」と述べて ADR-0035 と衝突しない形にしている。
 >   activation が profile ごとに engine を kick する規律（ADR-0035 §3・辞書順・部分失敗の
->   集約）は原文に対応記述が無いため本 item の写しには現れないが、規範は REQ-c847d1af が
+>   集約）は原文に対応記述が無いため本 item の写しには現れないが、規範は REQ-c847d1af-a437-46bb-bd64-42083810d034 が
 >   持つ
-> - flock を既定 blocking で取ること → REQ-1c1526b1。レポートと warning を stderr へ出す
->   ストリーム規律 → REQ-fea038de。終了コードの体系 → REQ-2c5a10d8
-> - 世代が nput 自前 profile に乗ること → REQ-1be4d678。profile 名の次元 → REQ-c6891aeb、
->   profileDir のキー → REQ-d5a2e289。rollback を host へ一本化すること → REQ-844ee375
+> - flock を既定 blocking で取ること → REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461。レポートと warning を stderr へ出す
+>   ストリーム規律 → REQ-fea038de-55eb-45ac-87fc-ec3a7287592a。終了コードの体系 → REQ-2c5a10d8-112b-4f96-947a-aba7164779c4
+> - 世代が nput 自前 profile に乗ること → REQ-1be4d678-959c-44d7-a346-44bfd95af56e。profile 名の次元 → REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a、
+>   profileDir のキー → REQ-d5a2e289-40bc-45a9-9d44-21b8dc561b81。rollback を host へ一本化すること → REQ-844ee375-919f-4341-81e1-a5f89fd32840
 > - `manifest.json` が唯一の安定契約で `schemaVersion` が 1 に固定であること →
->   REQ-79ce0a09 / REQ-250d936c。本 item はそれを前提に「module 経路では skew が構造的に
+>   REQ-79ce0a09-f9bd-4e61-ba7f-45fb5643137b / REQ-250d936c-1df0-491d-a7af-708f38b61f33。本 item はそれを前提に「module 経路では skew が構造的に
 >   起きない」ことだけを規定する
 >
 > 原文が世代の箇条書きに併記する「MVP は固定名 `default` の単一 profile
 > （`<state>/nix/profiles/nput/default`）」は、**ADR-0035 が `nput.configs.<name>` の実装を
-> 決定済み**で反転しているため写しから落とした（REQ-c6891aeb / REQ-d5a2e289 と同じ扱い）。
+> 決定済み**で反転しているため写しから落とした（REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a / REQ-d5a2e289-40bc-45a9-9d44-21b8dc561b81 と同じ扱い）。
 > `docs/spec.md` の追従は本 item の担当範囲外。
 
 ## 出典

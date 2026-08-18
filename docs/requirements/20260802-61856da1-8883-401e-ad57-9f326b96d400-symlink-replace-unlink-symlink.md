@@ -23,7 +23,7 @@ specification_ja: |
   unlink 前に捕捉した張替え先を undo ジャーナルへ記録し、symlink の再作成で復元しなければ
   ならない。
 ---
-# REQ-61856da1: 既存 symlink の張替えは unlink + symlink の 2 操作で行い冪等な再実行で収束させる
+# REQ-61856da1-8883-401e-ad57-9f326b96d400: 既存 symlink の張替えは unlink + symlink の 2 操作で行い冪等な再実行で収束させる
 
 ## 仕様
 
@@ -34,9 +34,9 @@ specification_ja: |
 re-symlink で復元する。
 
 > **上は原文の写しで、規範は frontmatter が正**。undo ジャーナルそのものの規範は
-> REQ-5e75aabc の担当で、本 item は張替えを 2 操作で行うことと、その復元素材（unlink 前の
+> REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940 の担当で、本 item は張替えを 2 操作で行うことと、その復元素材（unlink 前の
 > 張替え先）を捕捉することだけを規定する。「積まれる世代は常に完全適用済み」（コミット
-> 最後）は REQ-1be4d678 の担当。
+> 最後）は REQ-1be4d678-959c-44d7-a346-44bfd95af56e の担当。
 
 ## 出典
 

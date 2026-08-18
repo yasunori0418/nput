@@ -119,7 +119,7 @@ specification_ja: |
   `reset` の changes は実際に除去したもののみでなければならない。`--backup` の退避と
   空親ディレクトリ剪定は entry の状態遷移ではないため changes / items に載せてはならない。
 ---
-# REQ-2ea19863: 変更系の JSON ペイロードは engine 結果からフルインベントリと実差分を導く
+# REQ-2ea19863-eaa2-466b-b1ed-3f56f6417c62: 変更系の JSON ペイロードは engine 結果からフルインベントリと実差分を導く
 
 ## 仕様
 
@@ -177,15 +177,15 @@ specification_ja: |
 
 > **上は原文の写しで、規範は frontmatter が正**。原文が併記する実装 issue の進捗
 > （#131 時点の非対象・`reset --dryrun` は最小形のまま followup・`--all` は #164）は
-> 要求ではなく履歴の注記で、`apply --dryrun` のペイロードは REQ-fa181aa6、`--all` は
-> REQ-059eb4d5 の担当。undo ジャーナルそのものの規範（→ ADR-0044）は REQ-5e75aabc の担当。
+> 要求ではなく履歴の注記で、`apply --dryrun` のペイロードは REQ-fa181aa6-29a2-48c3-ae07-cc1b9a3b0303、`--all` は
+> REQ-059eb4d5-63fb-4f8e-b705-11b5e2ed4ae5 の担当。undo ジャーナルそのものの規範（→ ADR-0044）は REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940 の担当。
 
 > **注記（規範ではない）— items / changes / 部分失敗 / conflict / generation / warnings を
 > 1 item に束ねる理由**: これらは「同一の payload builder が engine 結果から生成する
 > 1 つの DTO 契約」を成す規範であり、本 item は「変更系の 1 スキーマ契約」を満たすべき
 > こと 1 つと見なす。個別に切ると原文の 1 サブ項目（「#131 変更系ペイロード」）と item の
-> 対応が崩れ、出典の追跡性が落ちる。同じ理由で REQ-fa181aa6（読み取り系）・
-> REQ-059eb4d5（`--all`）も原文のサブ項目単位で切っている。
+> 対応が崩れ、出典の追跡性が落ちる。同じ理由で REQ-fa181aa6-29a2-48c3-ae07-cc1b9a3b0303（読み取り系）・
+> REQ-059eb4d5-63fb-4f8e-b705-11b5e2ed4ae5（`--all`）も原文のサブ項目単位で切っている。
 
 ## 出典
 

@@ -23,7 +23,7 @@ specification_ja: |
   ならない。ただし backref があることで、実在しない root を指す孤児系列を逆引きして削除する
   将来の `nput prune` を、消費側の要求が出た時点で実装できる seam を残さなければならない。
 ---
-# REQ-d41b1d0a: 孤児 profile は backref で逆引き可能なまま放置許容とし、MVP では cleanup コマンドを持たない
+# REQ-d41b1d0a-c6d5-41cc-93f9-e5cc7f152da4: 孤児 profile は backref で逆引き可能なまま放置許容とし、MVP では cleanup コマンドを持たない
 
 ## 仕様
 
@@ -35,9 +35,9 @@ backref ファイル（`.root`）で逆引きできる。**cleanup コマンド�
 孤児系列を逆引きして削除）を実装できる seam** を残す（消費側の要求が出た時点で追加）。
 
 > **上は原文の写しで、規範は frontmatter が正**。backref `.root` を roothash 階層へ置くこと自体と
-> `.pending` が config あたり最大 1 であることは REQ-2aa3abbc、store 解放に
-> `nix-collect-garbage` を使うことは REQ-706de717、profile を解決済み root でキーすること
-> （孤児が生じる前提）は REQ-46fccb80 の担当。
+> `.pending` が config あたり最大 1 であることは REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3、store 解放に
+> `nix-collect-garbage` を使うことは REQ-706de717-4e47-471a-a1c0-448635be159c、profile を解決済み root でキーすること
+> （孤児が生じる前提）は REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0 の担当。
 
 ## 出典
 

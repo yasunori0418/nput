@@ -28,7 +28,7 @@ specification_ja: |
   次世代にも残る自己矛盾）ときは target 全体をエラーで停止しなければならず、部分除去を
   してはならない。
 ---
-# REQ-7cee95dd: 実 dir の target は全 leaf が除去可能なときだけ全体を配置前除去して symlink 化する
+# REQ-7cee95dd-bc5a-4e86-bebc-6080ef78fe26: 実 dir の target は全 leaf が除去可能なときだけ全体を配置前除去して symlink 化する
 
 ## 仕様
 
@@ -44,11 +44,11 @@ target 自身が実 dir のとき、配下（任意深さ）の全 leaf を判�
 > **上は原文の写しで、規範は frontmatter が正**。この migration が失敗して「エラーで停止」
 > と判定された実 dir も `--backup` の退避対象に入る。退避対象を判定各段の結論
 > （エラー停止 / copy foreign スキップ）で括る規範と、退避が配置手順のどの段に入るかは
-> REQ-9b0046e0 の担当（退避そのものの契約は REQ-5dd5a4e9）。
+> REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98 の担当（退避そのものの契約は REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b）。
 
-祖先 symlink の migration は REQ-c9ab91c1、method 変更 symlink→copy の migration は
-REQ-2b48620a の担当。除去を既定 silent とし `-v` で可視化するという出力規律そのもの
-（→ ADR-0031）は REQ-8ef34101 / REQ-0a123b89 の担当で、本 item は「この除去を warning に
+祖先 symlink の migration は REQ-c9ab91c1-f778-4f87-a2ea-c66d6b3c2575、method 変更 symlink→copy の migration は
+REQ-2b48620a-abaa-43df-a106-954bbba3de56 の担当。除去を既定 silent とし `-v` で可視化するという出力規律そのもの
+（→ ADR-0031）は REQ-8ef34101-8150-4124-92d5-94fabe6b5d90 / REQ-0a123b89-0399-4f76-b988-56a5f7e0becf の担当で、本 item は「この除去を warning に
 せず配置レポート側で扱う」ことだけを規範とする。
 
 ## 出典

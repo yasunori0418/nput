@@ -25,7 +25,7 @@ specification_ja: |
   公開 API であり続けなければならず、flakeModule の option は `mkManifest` の derivation を
   格納するだけでなければならない。
 ---
-# REQ-c50df875: flake-parts 経路は直書きと同一の derivation を生み CLI のアドレッシングを変えない
+# REQ-c50df875-2cb0-4e72-8a21-858359a11cae: flake-parts 経路は直書きと同一の derivation を生み CLI のアドレッシングを変えない
 
 ## 仕様
 

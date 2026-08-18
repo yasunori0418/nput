@@ -18,7 +18,7 @@ specification_ja: |
   `--all` 自体は全体 atomic にしてはならない（project mode は rollback 非公開で
   意味論が崩れるため）。
 ---
-# REQ-4cbd9a0d: apply --all は辞書順に適用し部分失敗でも続行して最後に集約する
+# REQ-4cbd9a0d-9f94-4747-8881-56020dc6d5af: apply --all は辞書順に適用し部分失敗でも続行して最後に集約する
 
 ## 仕様
 

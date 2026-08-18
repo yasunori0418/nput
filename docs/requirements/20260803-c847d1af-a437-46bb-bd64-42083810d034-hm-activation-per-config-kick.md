@@ -14,10 +14,10 @@ specification: |
   be failed at the end, as `apply --all` does on a partial failure. No CLI extension
   passing several manifests to a single engine invocation SHALL be introduced, so that the
   unit of atomicity — one profile — is kept at the CLI boundary as well. The contract of a
-  single kick is stated by REQ-8085f194, and the correspondence of one config to one
-  manifest and one profile by REQ-c6891aeb; neither is restated here. The posture of
+  single kick is stated by REQ-8085f194-c903-4ecb-abd8-c719fe7b3292, and the correspondence of one config to one
+  manifest and one profile by REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a; neither is restated here. The posture of
   continuing past a partial failure and aggregating it is common with the `apply --all` of
-  the standalone path stated by REQ-4cbd9a0d.
+  the standalone path stated by REQ-4cbd9a0d-9f94-4747-8881-56020dc6d5af.
 specification_ja: |
   home-manager モジュールの `home.activation.nput` は `nput.configs` を走査し、config
   ごとに 1 回ずつ engine を起動しなければならない（profile ごとに独立した engine 起動を
@@ -25,12 +25,12 @@ specification_ja: |
   再現可能にするため）。1 profile の失敗は後続の profile を止めてはならず、失敗は最後に
   集約して activation を失敗させなければならない（`apply --all` の部分失敗と同じ姿勢）。
   複数 manifest を 1 回の engine 起動へ渡す CLI 拡張を導入してはならない（atomic 性の
-  単位である profile を CLI 界面にも保つため）。1 起動あたりの契約は REQ-8085f194、
-  1 config が 1 manifest = 1 profile に対応することは REQ-c6891aeb の担当で、いずれも
+  単位である profile を CLI 界面にも保つため）。1 起動あたりの契約は REQ-8085f194-c903-4ecb-abd8-c719fe7b3292、
+  1 config が 1 manifest = 1 profile に対応することは REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a の担当で、いずれも
   本 item では規定しない。部分失敗で続行し集約する姿勢は、standalone 経路の
-  `apply --all` を定める REQ-4cbd9a0d と共通である。
+  `apply --all` を定める REQ-4cbd9a0d-9f94-4747-8881-56020dc6d5af と共通である。
 ---
-# REQ-c847d1af: HM の activation は configs を辞書順に走査して profile ごとに engine を起動し、部分失敗を最後に集約する
+# REQ-c847d1af-a437-46bb-bd64-42083810d034: HM の activation は configs を辞書順に走査して profile ごとに engine を起動し、部分失敗を最後に集約する
 
 ## 仕様
 
@@ -46,26 +46,26 @@ specification_ja: |
 
 > **本 item の出典は ADR-0035 §3 であり、`docs/spec.md` に対応記述は無い**。原文が
 > ADR-0035 に未追従で、複数 config があるとき activation が engine を何回 kick するかを
-> 述べていないため、#209 の分割では item 化されず REQ-8085f194 / REQ-c6891aeb の注記に
+> 述べていないため、#209 の分割では item 化されず REQ-8085f194-c903-4ecb-abd8-c719fe7b3292 / REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a の注記に
 > 申し送りとして残っていた（epic #203 / issue #228 で回収）。
 >
 > **他 item との担当分界**: 1 起動あたりの activation 契約（`entryAfter ["writeBoundary"]`・
 > `apply --manifest` でビルド済み link-farm を渡すこと・activation が `nix eval` /
 > `build` を行わないこと・engine error が非 0 終了で switch を止めること）は
-> REQ-8085f194。1 config = 1 profile = 1 manifest の対応と `<name>` 次元そのものは
-> REQ-c6891aeb。`nput.configs` オプションの定義は REQ-fc1c7ce6。`apply --manifest` と
-> 位置引数 `name` の直交・両立は REQ-dec58330 / REQ-c2d44626。profileDir 単位の flock は
-> REQ-1c1526b1、profileDir のキーは REQ-d5a2e289。世代が nput 自前 profile に積まれる
-> ことは REQ-1be4d678、module 経路で rollback を host へ一本化することは REQ-844ee375。
+> REQ-8085f194-c903-4ecb-abd8-c719fe7b3292。1 config = 1 profile = 1 manifest の対応と `<name>` 次元そのものは
+> REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a。`nput.configs` オプションの定義は REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10。`apply --manifest` と
+> 位置引数 `name` の直交・両立は REQ-dec58330-6dad-47f7-8f56-2402764a89c7 / REQ-c2d44626-d8f4-446a-a80a-319a500129b4。profileDir 単位の flock は
+> REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461、profileDir のキーは REQ-d5a2e289-40bc-45a9-9d44-21b8dc561b81。世代が nput 自前 profile に積まれる
+> ことは REQ-1be4d678-959c-44d7-a346-44bfd95af56e、module 経路で rollback を host へ一本化することは REQ-844ee375-919f-4341-81e1-a5f89fd32840。
 > 辞書順・部分失敗続行・最後に集約という姿勢を standalone の `apply --all` について
-> 定めるのは REQ-4cbd9a0d。本 item は同じ姿勢を HM activation の configs ループについて
+> 定めるのは REQ-4cbd9a0d-9f94-4747-8881-56020dc6d5af。本 item は同じ姿勢を HM activation の configs ループについて
 > 独立に規定する。文面は重なるが、適用先（CLI の `--all` か activation の configs ループか）
 > が別経路であり、片方の規範が他方を含意しないため、規範としては別立てになる。
 >
 > **本文箇条書き第 2 項に対応する規範文を持たない理由**: 「各起動は profileDir 単位の
 > flock・前世代 diff・保守的 stale 除去・`nix-env --set` が profile ごとに独立して走る」は、
 > 本 item の「config ごとに 1 回 engine を起動する」と、profileDir 単位の flock を定める
-> REQ-1c1526b1・profileDir のキーを定める REQ-d5a2e289・世代機構を定める REQ-1be4d678 の
+> REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461・profileDir のキーを定める REQ-d5a2e289-40bc-45a9-9d44-21b8dc561b81・世代機構を定める REQ-1be4d678-959c-44d7-a346-44bfd95af56e の
 > 合成から従うため、規範として再掲しない。
 
 ## 出典

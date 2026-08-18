@@ -15,7 +15,7 @@ specification_ja: |
   プロンプトを出してはならず、`--yes` が無ければ即 `status:"error"` + 非ゼロで
   fail fast しなければならない。
 ---
-# REQ-2a613337: reset --json は --yes を必須とし無ければ fail fast する
+# REQ-2a613337-7646-4ced-8807-e43bca18acf3: reset --json は --yes を必須とし無ければ fail fast する
 
 ## 仕様
 
@@ -23,7 +23,7 @@ specification_ja: |
 TTY でもプロンプトを出さず、`--yes` が無ければ即 `status:"error"` + 非ゼロで fail fast
 する。
 
-`--json` なしの `reset` が確認プロンプトか `--yes` で同意を要求することは REQ-31f2882e の
+`--json` なしの `reset` が確認プロンプトか `--yes` で同意を要求することは REQ-31f2882e-d2e3-4e3b-b783-feb627d73ac6 の
 担当。
 
 ## 出典

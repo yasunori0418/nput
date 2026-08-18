@@ -6,11 +6,11 @@ target: "tests/nix-unit/resolve-marker.nix"
 covers:
   - "TC-81be084d-709f-481b-9b61-5d2d11c317a0"
 ---
-# CASE-0c9d41d1: nix-unit resolve-marker.nix
+# CASE-0c9d41d1-33fd-4982-aed9-fa575a56ee01: nix-unit resolve-marker.nix
 
 ## 対象
 
-`tests/nix-unit/resolve-marker.nix`（TP-403c55c7 のテスト seam `nput.__internal.resolveEntry`
+`tests/nix-unit/resolve-marker.nix`（TP-403c55c7-d996-4951-8e6b-c3a7dddd387c のテスト seam `nput.__internal.resolveEntry`
 と `lib/types.nix` の `isRootMarker` / `isOutOfStoreMarker` を直接叩く。manifest 全体を介さず
 単一 entry の src 種別判定・文字列化だけを見る最小の境界）
 
@@ -30,7 +30,7 @@ store / out-of-store それぞれに重ねて置く。どの段で落ちたか�
 - **`isRootMarker`**: projectRoot / homeRoot / systemRoot には true、out-of-store marker と
   絶対パス文字列には false
 
-配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。
+配置元は TP-d3d06fe4-6940-4df8-b111-bb4096d5444f の fake flake-input double イディオムに従う。
 
 ## 出典
 

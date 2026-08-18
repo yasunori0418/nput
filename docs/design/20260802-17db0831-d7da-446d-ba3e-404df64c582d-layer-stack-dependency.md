@@ -7,7 +7,7 @@ satisfies:
   - "REQ-d85f0cef-0f1e-4897-a841-41b61a8dae51"
   - "REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9"
 ---
-# DSG-17db0831: 層を CLI / engine / lib / common.nix / 統合層の 5 段に積み、依存を呼ぶ側から呼ばれる側への一方向に限る
+# DSG-17db0831-d7da-446d-ba3e-404df64c582d: 層を CLI / engine / lib / common.nix / 統合層の 5 段に積み、依存を呼ぶ側から呼ばれる側への一方向に限る
 
 ## 設計
 
@@ -31,16 +31,16 @@ HM   NixOS  darwin  devShell  standalone(CLI)
 `manifest.json を渡して起動` / `起動配線` は起動の関係を指す。依存の向きは図から
 読み取るものではなく、下の 3 点が定める。
 
-REQ-f4d7d4ab が規範化しているのは CLI と engine の 2 層境界（`manifest.json`）までで、
+REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645 が規範化しているのは CLI と engine の 2 層境界（`manifest.json`）までで、
 lib・`common.nix`・統合層を含めた積み方と依存の向きは設計側の判断になる。この積み方が
 実現手段として効くのは次の点。
 
 - **lib から engine への依存を持たせない**ことで、
-  REQ-d85f0cef の「lib は配置ロジックを持たず nixpkgs.lib のみに依存する」が
+  REQ-d85f0cef-0f1e-4897-a841-41b61a8dae51 の「lib は配置ロジックを持たず nixpkgs.lib のみに依存する」が
   依存の向きとして表現される。lib が engine を呼べると、配置ロジックが
   lib 側へ漏れ出す経路が開いてしまう
 - **統合層が lib・engine を呼ぶ側に立ち、逆に engine から統合層を参照しない**ことで、
-  REQ-c1b3ca5f の「モジュールは engine をキックするだけの配線」が守られる。
+  REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9 の「モジュールは engine をキックするだけの配線」が守られる。
   engine が統合層を参照すると、engine が層ごとの事情を知ることになり、
   配置の振る舞いが層ごとに分岐しうる
 - **配置の振る舞いは全層で engine が単一の源**であり、各層はネイティブ機構へ翻訳しない。

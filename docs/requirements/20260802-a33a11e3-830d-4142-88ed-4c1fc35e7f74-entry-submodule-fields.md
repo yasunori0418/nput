@@ -11,7 +11,7 @@ specification: |
   `target` (`string`, optional), and `method` (`"symlink" | "copy"`, optional). `target`
   SHALL be a path relative to the `root` selected explicitly in `mkManifest`. The
   concrete default of each optional field, and which component validates and applies
-  those defaults, are stated by REQ-b232ec98, REQ-cb77ea05 and REQ-d1b5b3f5 and are NOT
+  those defaults, are stated by REQ-b232ec98-af3b-41f3-a050-29d417322002, REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7 and REQ-d1b5b3f5-10a0-400d-9f03-ba00c63d1c34 and are NOT
   restated here.
 specification_ja: |
   `entries` の各属性値は entry submodule とし、フィールドは `src`
@@ -20,10 +20,10 @@ specification_ja: |
   ならない。`target` は `mkManifest` で明示選択した `root` からの相対パスでなければ
   ならない。
   各省略可フィールドの具体的なデフォルト値と、それを検査・適用する主体は
-  REQ-b232ec98 / REQ-cb77ea05 / REQ-d1b5b3f5 が規定しており、本 item では重ねて
+  REQ-b232ec98-af3b-41f3-a050-29d417322002 / REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7 / REQ-d1b5b3f5-10a0-400d-9f03-ba00c63d1c34 が規定しており、本 item では重ねて
   規定しない。
 ---
-# REQ-a33a11e3: entry submodule のフィールドは src / subpath / target / method の 4 つとする
+# REQ-a33a11e3-830d-4142-88ed-4c1fc35e7f74: entry submodule のフィールドは src / subpath / target / method の 4 つとする
 
 ## 仕様
 
@@ -49,18 +49,18 @@ entry :: {
 
 各フィールドは `lib/types.nix` の entry submodule（`lib.types`）として定義され、
 `mkManifest` の `evalModules` が検査・デフォルト適用する。この検査主体の規範は
-REQ-d1b5b3f5（`mkManifest` が単一の検査ゲート）と REQ-b232ec98（`normalizeManifest` が
+REQ-d1b5b3f5-10a0-400d-9f03-ba00c63d1c34（`mkManifest` が単一の検査ゲート）と REQ-b232ec98-af3b-41f3-a050-29d417322002（`normalizeManifest` が
 検査・デフォルト適用を担う）が持つ。
 
-各フィールドの値域・意味も個別 item が持つ（`src` は REQ-99ca5381、`subpath` は
-REQ-27b75fe6、`target` の識別子性とデフォルトは REQ-cb77ea05、`method` の動作は
-REQ-77689c68）。本 item はフィールドの構成そのもの（4 つで過不足なく、どれが必須で
+各フィールドの値域・意味も個別 item が持つ（`src` は REQ-99ca5381-6c53-426c-b145-7b4297c53868、`subpath` は
+REQ-27b75fe6-6c36-44a8-8cd3-5cc98043022a、`target` の識別子性とデフォルトは REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7、`method` の動作は
+REQ-77689c68-953c-4cbb-ab31-1ac1e4f5f2fe）。本 item はフィールドの構成そのもの（4 つで過不足なく、どれが必須で
 どれが省略可か）を規定する。5 つ目のフィールドが評価時エラーになること（strict）は
-REQ-3e446ad9 の規範。
+REQ-3e446ad9-a6f4-4229-b5c5-184754b0ef51 の規範。
 
 > **デフォルト値を規範に含めない理由**: `subpath` → `"."` / `method` → `"symlink"` /
-> `target` → 属性キーの 3 つは、いずれも既存 item が規範として持つ（REQ-b232ec98 が
-> `normalizeManifest` のデフォルト適用として 3 つとも、REQ-cb77ea05 が `target` の
+> `target` → 属性キーの 3 つは、いずれも既存 item が規範として持つ（REQ-b232ec98-af3b-41f3-a050-29d417322002 が
+> `normalizeManifest` のデフォルト適用として 3 つとも、REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7 が `target` の
 > 分を）。本 item で重ねて規定すると規範の所在が二箇所になるため、frontmatter からは
 > 落として委譲した。
 

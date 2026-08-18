@@ -16,7 +16,7 @@ specification_ja: |
   なければならない。配置ロジック（FS 操作・profile swap・stale 除去）を持ってはならず、
   home-manager / NixOS / nix-darwin への依存を持ち込んではならない。
 ---
-# REQ-d85f0cef: lib は nixpkgs.lib のみに依存する純データ生成器である
+# REQ-d85f0cef-0f1e-4897-a841-41b61a8dae51: lib は nixpkgs.lib のみに依存する純データ生成器である
 
 ## 仕様
 

@@ -5,7 +5,7 @@ name: "エンベロープが全形状で niface 適合を保ち subject 件数�
 mitigates:
   - "RISK-4936a47d-796b-4f1f-8ae4-eb87f6c64e71"
 ---
-# TC-1a46da17: エンベロープが全形状で niface 適合を保ち subject 件数で形が揺れない
+# TC-1a46da17-1812-431b-966f-ec8dffd315ae: エンベロープが全形状で niface 適合を保ち subject 件数で形が揺れない
 
 ## 条件
 
@@ -25,4 +25,4 @@ entry 用 identity（kind と key の形）が同じ id を再現することを
 開始して文書を公開する一方、help / completion のような成立条件を満たさない実行は文書を出さない。
 
 > 適合検証だけでは文書の**内容**は守れない（schema は形しか縛らない）。内容の正しさは
-> TC-cf8189c4 / TC-733ac4ed の担当。
+> TC-cf8189c4-d680-4d7e-bcd3-810543762c50 / TC-733ac4ed-dac3-4bb8-9bfd-fd1cbdc300c9 の担当。

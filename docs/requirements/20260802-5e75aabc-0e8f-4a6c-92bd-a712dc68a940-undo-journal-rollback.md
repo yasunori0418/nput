@@ -51,7 +51,7 @@ specification_ja: |
   ポインタの移動はこの時点で全 FS 変更が成功済みのため巻き戻し対象外とし、`rollback` には
   `--backup` 相当のフラグが無いため Backup 段は常に空でなければならない。
 ---
-# REQ-5e75aabc: 途中失敗した apply / rollback はインメモリ undo ジャーナルで全 FS 変更を巻き戻す
+# REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940: 途中失敗した apply / rollback はインメモリ undo ジャーナルで全 FS 変更を巻き戻す
 
 ## 仕様
 
@@ -83,8 +83,8 @@ undo ジャーナルへ逆操作を 1 件記録する:
   巻き戻し対象外。`rollback` に `--backup` 相当のフラグはなく、Backup ステージは常に空
 
 > **上は原文の写しで、規範は frontmatter が正**。巻き戻し自体が失敗したときの続行と報告は
-> REQ-9fca28c9、drift 修復経路で Backup 段だけが残ることは REQ-9b0046e0 の担当。
-> `rollback` の FS 収束を先・ポインタ移動を最後にする順序そのものは REQ-0e341430 の担当。
+> REQ-9fca28c9-d3b1-4ad7-8f24-13b2ec7aeab2、drift 修復経路で Backup 段だけが残ることは REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98 の担当。
+> `rollback` の FS 収束を先・ポインタ移動を最後にする順序そのものは REQ-0e341430-17f0-498b-9439-65491652163a の担当。
 
 ## 出典
 

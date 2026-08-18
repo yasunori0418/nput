@@ -22,7 +22,7 @@ specification_ja: |
   ローカルの copy 編集は破棄され src の内容に戻る（upstream 追従の意図）。symlink 部の世代
   コミット挙動は不変でなければならず、copy は世代を増やしてはならない。
 ---
-# REQ-7cc32a2b: apply --recopy は config 内の全 copy target を src から無条件に上書き再コピーする
+# REQ-7cc32a2b-eee4-4a29-8dc1-a1dc23e7a065: apply --recopy は config 内の全 copy target を src から無条件に上書き再コピーする
 
 ## 仕様
 
@@ -36,7 +36,7 @@ nput apply <name> --recopy     # 通常 apply に加え config 内の全 copy ta
 **ローカルの copy 編集は破棄され src 内容に戻る**（= upstream 追従の意図）。symlink 部の
 世代コミット挙動は不変（copy は世代を増やさない）。
 
-`--all` との合成可否は REQ-687e225f の担当。
+`--all` との合成可否は REQ-687e225f-5046-46db-88fb-f9e527a1e97a の担当。
 
 ## 出典
 

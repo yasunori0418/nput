@@ -5,7 +5,7 @@ name: "nix-env の世代一覧を番号・日時・current マーカーへ正し
 mitigates:
   - "RISK-ac5cd9b4-58f9-43d8-9fae-66f7b5940beb"
 ---
-# TC-746cb5b9: nix-env の世代一覧を番号・日時・current マーカーへ正しく分解し、壊れた行は黙認しない
+# TC-746cb5b9-fe27-4d09-a51d-eb03d56a93a7: nix-env の世代一覧を番号・日時・current マーカーへ正しく分解し、壊れた行は黙認しない
 
 ## テスト条件
 
@@ -18,9 +18,9 @@ mitigates:
 - **壊れた行** — 世代番号が数値でない行はエラーとして返す。黙って読み飛ばして「世代 0 件」
   と見なせば、前世代が無いという最も危険な結論を沈黙で作る
 
-上位の規範は TC-40b762fc と同じく TP-e7c25263 の「FS に一切触れずに判断する層」。
+上位の規範は TC-40b762fc-3b48-471c-b495-c5ffe1f584b5 と同じく TP-e7c25263-6d2d-4a37-8275-26906889d912 の「FS に一切触れずに判断する層」。
 こちらはテキスト出力の構造化であり、入力を列挙して table で覆う点は同じ。
 
 ## 対応する CASE
 
-CASE-364ebb9d（`internal/engine/generations_test.go`）。
+CASE-364ebb9d-b9f8-4c79-8509-8bbf31e73698（`internal/engine/generations_test.go`）。

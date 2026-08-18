@@ -13,11 +13,11 @@ specification: |
   be kept as a sugar renaming onto `configs.default.entries`, non-breaking and deprecated.
   These SHALL be defined jointly for every module, so that the set does not diverge per
   module. What the `<name>` dimension of `configs` means for the granularity of profiles
-  is stated by REQ-c6891aeb and is not restated here. A module SHALL pin the root by its
+  is stated by REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a and is not restated here. A module SHALL pin the root by its
   own nature — home-manager to `homeRoot`, a devShell to `projectRoot` — and SHALL NOT
   expose a `root` option, so that a user of a module never restates it. This is a
   departure from `mkManifest` and the CLI entrypoint, where `root` is required to be
-  stated explicitly (REQ-4ec3accc).
+  stated explicitly (REQ-4ec3accc-8bb6-461f-9024-dcf0027849e4).
 specification_ja: |
   全モジュール（home-manager / NixOS / nix-darwin）は共通オプションとして同一の集合を
   公開しなければならない: `nput.enable :: bool`（デフォルト false）・
@@ -28,13 +28,13 @@ specification_ja: |
   しなければならない。
   これらは全モジュール共通に定義し、モジュールごとに集合が分岐しないようにしなければ
   ならない。`configs` の `<name>` 次元が profile の粒度にとって何を意味するかは
-  REQ-c6891aeb の担当で、本 item では規定しない。モジュールは自分の性質で root を pin
+  REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a の担当で、本 item では規定しない。モジュールは自分の性質で root を pin
   しなければならず（home-manager は `homeRoot`・devShell は `projectRoot`）、`root`
   オプションを公開してはならない。モジュール利用者が root を再指定しないようにするため
   である。これは `root` を明示必須とする `mkManifest` / CLI entrypoint の層
-  （REQ-4ec3accc）との差分である。
+  （REQ-4ec3accc-8bb6-461f-9024-dcf0027849e4）との差分である。
 ---
-# REQ-fc1c7ce6: 全モジュールは共通オプションの同一集合を公開し、entries は configs 経由・root はモジュールが pin する
+# REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10: 全モジュールは共通オプションの同一集合を公開し、entries は configs 経由・root はモジュールが pin する
 
 ## 仕様
 
@@ -51,20 +51,20 @@ nput.backup.suffix :: str     # デフォルト: "nput-backup"（→ ADR-0045）
 モジュール利用者は `root` を再指定しない。
 
 > **上は原文の写しで、規範は frontmatter が正**。`entries` の属性キーが target であることと
-> entry submodule のフィールド定義は REQ-cb77ea05 / REQ-a33a11e3、`root` が
-> `mkManifest` / CLI 層で明示必須であることは REQ-4ec3accc、`--backup` の退避契約そのものは
-> REQ-5dd5a4e9 の担当。`nput.backup` が manifest ではなく engine 起動の配線に効くことは
-> REQ-e1e1114b の担当。
+> entry submodule のフィールド定義は REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7 / REQ-a33a11e3-830d-4142-88ed-4c1fc35e7f74、`root` が
+> `mkManifest` / CLI 層で明示必須であることは REQ-4ec3accc-8bb6-461f-9024-dcf0027849e4、`--backup` の退避契約そのものは
+> REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b の担当。`nput.backup` が manifest ではなく engine 起動の配線に効くことは
+> REQ-e1e1114b-ba07-4d57-8e04-6e30e39a5da3 の担当。
 >
 > **写しの `nput.entries` を canonical としない理由**: **ADR-0035 §1〜§2 は
 > `nput.configs.<name>.entries` を canonical とし、素の `nput.entries` を
 > `configs.default.entries` への deprecated 糖衣へ降格することを決定済み**で、`docs/spec.md`
 > の当該表はこれに未追従。ADR-0035 §1 は `configs` の定義先を `modules/common.nix`
 > （全モジュール共通）と定めているため、これは HM 固有ではなく共通オプション集合の一部で
-> あり、本 item の規範に含めた（REQ-37b56673 / REQ-16faf428 で ADR-0036 由来の未追従を
+> あり、本 item の規範に含めた（REQ-37b56673-6e40-4a1b-a2a7-5d3c084e3e66 / REQ-16faf428-77f3-492f-b858-222c5274cbf7 で ADR-0036 由来の未追従を
 > 扱ったのと同じ扱い）。`configs` の `<name>` 次元が profile の粒度にとって何を意味するか
-> （役割分離が可能になること・`<name>` 次元の導入が非破壊であること）は REQ-c6891aeb、
-> profile dir をどうキーするかは REQ-d5a2e289 の担当。`docs/spec.md` の追従は本 item の
+> （役割分離が可能になること・`<name>` 次元の導入が非破壊であること）は REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a、
+> profile dir をどうキーするかは REQ-d5a2e289-40bc-45a9-9d44-21b8dc561b81 の担当。`docs/spec.md` の追従は本 item の
 > 担当範囲外。
 >
 > **`nput.configs` のデフォルトを `{}` とする根拠**: ADR-0035 §1 は型

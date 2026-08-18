@@ -15,7 +15,7 @@ specification_ja: |
   `list-generations --all` は home mode の全 config の世代を一覧しなければならず、
   読み取り専用でなければならない。
 ---
-# REQ-05abce3e: rollback と list-generations は home mode 限定にする
+# REQ-05abce3e-9797-432b-b93f-37c55d09afde: rollback と list-generations は home mode 限定にする
 
 ## 仕様
 
@@ -29,11 +29,11 @@ nput list-generations --all    # home mode の全 config の世代を一覧
 留めユーザーに公開しない。`list-generations --all` は home mode の全 config の世代を
 一覧（読み取り専用）。
 
-`rollback` が名指し必須である点は REQ-89c7baf9 の担当。
+`rollback` が名指し必須である点は REQ-89c7baf9-9be0-417b-bd2d-b2e4edabe796 の担当。
 
 > **原文「standalone（CLI）」節の残る規範の所在**: 同節の第 1 文（`nput apply <name>` の
-> 明示実行と、CLI による entrypoint 発見・manifest ビルド・エンジン駆動）は REQ-f4d7d4ab /
-> REQ-1cc080f6、世代管理の機構そのものは REQ-1be4d678 の担当。
+> 明示実行と、CLI による entrypoint 発見・manifest ビルド・エンジン駆動）は REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645 /
+> REQ-1cc080f6-ae91-4c1f-973e-b7054cfc0198、世代管理の機構そのものは REQ-1be4d678-959c-44d7-a346-44bfd95af56e の担当。
 
 ## 出典
 

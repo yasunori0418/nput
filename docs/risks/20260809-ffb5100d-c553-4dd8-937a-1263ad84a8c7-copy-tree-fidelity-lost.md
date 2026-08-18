@@ -10,7 +10,7 @@ likelihood: low
 impact: medium
 level: low
 ---
-# RISK-ffb5100d: コピー結果が src と構造・属性で食い違い、配置物が使えなくなる
+# RISK-ffb5100d-c553-4dd8-937a-1263ad84a8c7: コピー結果が src と構造・属性で食い違い、配置物が使えなくなる
 
 copy の src は nix store の read-only なツリーであり、そのまま複製すると書き込めない配置物に
 なる。逆に mode を捨てて一律のパーミッションにすれば、実行ビットを持つスクリプトが実行できなく
@@ -31,8 +31,8 @@ copy の src は nix store の read-only なツリーであり、そのまま複
 
 ## 評価
 
-- likelihood: low — 忠実性の規範は copytree の 1 箇所に閉じており、TC-b1b8c163（構造・mode・
-  symlink の再現と owner-write 付与）と TC-cf1b44ec（out-of-store marker の live 性）が
+- likelihood: low — 忠実性の規範は copytree の 1 箇所に閉じており、TC-b1b8c163-9d37-47ee-9838-7168569df03a（構造・mode・
+  symlink の再現と owner-write 付与）と TC-cf1b44ec-2ec4-4ee1-9a37-378e41ccb01e（out-of-store marker の live 性）が
   機械的に覆っている
 - impact: medium — 配置物が使えない状態は目に見える形で現れ、規範どおりに直したうえでの
   再 apply で回復できる

@@ -31,7 +31,7 @@ specification_ja: |
   config が entry を残す限り次の apply がこれを再配置しなければならない。home / project の
   両モードで使用できなければならない。
 ---
-# REQ-31f2882e: reset は profile を触らない FS-only teardown で配置物を無い状態へ戻す
+# REQ-31f2882e-d2e3-4e3b-b783-feb627d73ac6: reset は profile を触らない FS-only teardown で配置物を無い状態へ戻す
 
 ## 仕様
 
@@ -52,11 +52,11 @@ home / project 両モード可。
 > **上は原文の写しで、規範は frontmatter が正**。原文が参照する次の規範は本 item の
 > 担当ではない。
 >
-> - 保守的不変条件の中身 → REQ-16aef46b、空親ディレクトリ剪定の規則 → REQ-8409db86。
+> - 保守的不変条件の中身 → REQ-16aef46b-7bb8-4ca1-b962-e9f3ed1fd1d2、空親ディレクトリ剪定の規則 → REQ-8409db86-a1ba-4053-86dc-588985cc1ca7。
 >   本 item はそれらを reset にも適用することだけを規定する
-> - project mode の lstat 検査による復帰（→ ADR-0017）→ REQ-46fccb80
+> - project mode の lstat 検査による復帰（→ ADR-0017）→ REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0
 > - 確認プロンプトを stdin が TTY のときだけ出し、非 TTY で同意が無ければ即エラー停止
->   すること（→ ADR-0025）→ REQ-31dae599
+>   すること（→ ADR-0025）→ REQ-31dae599-f3a3-4bbe-b367-c955535265da
 >
 > 逆に、上の写しには現れないが規範文が持つものが 1 つある。同意を取る手段の短縮形
 > `-y` で、原文はこの箇条書きでは `--yes` としか書かない。短縮形はグローバルフラグ表
@@ -64,7 +64,7 @@ home / project 両モード可。
 > `-f` / `--file`・`-v` / `--verbose` が短縮形込みで規範化されているのに揃えて、
 > 規範文では `-y` / `--yes` と書いた。
 
-名指し必須と flock は REQ-a8edc58f、`--dryrun` は REQ-6a950d6d の担当。
+名指し必須と flock は REQ-a8edc58f-4adc-4637-b888-ab8ccc7e73e4、`--dryrun` は REQ-6a950d6d-c191-4235-a1b4-73ffc7c2bb38 の担当。
 
 ## 出典
 

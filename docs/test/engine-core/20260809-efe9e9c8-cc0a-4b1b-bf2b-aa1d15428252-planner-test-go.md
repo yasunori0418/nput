@@ -10,7 +10,7 @@ covers:
   - "TC-d160e18b-4c0c-4531-a506-e7d00d88788a"
   - "TC-596d697f-4ba6-4ec1-b71e-8b5375806c08"
 ---
-# CASE-efe9e9c8: planner_test.go
+# CASE-efe9e9c8-cc0a-4b1b-bf2b-aa1d15428252: planner_test.go
 
 ## 対象
 

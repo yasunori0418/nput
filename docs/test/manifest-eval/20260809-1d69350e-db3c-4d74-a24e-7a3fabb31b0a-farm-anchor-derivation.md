@@ -5,12 +5,12 @@ name: "GC アンカー対象の抽出条件と farm の組み立て結果をア�
 mitigates:
   - "RISK-f67a0883-950a-4458-8b6d-1f95cb039cb1"
 ---
-# TC-1d69350e: アンカー対象の抽出と farm の組み立てをアサートする
+# TC-1d69350e-db3c-4d74-a24e-7a3fabb31b0a: アンカー対象の抽出と farm の組み立てをアサートする
 
 ## テスト条件
 
 symlink farm が GC アンカー専用であることを、対象の抽出と組み立て結果で見る。
-アンカー名そのものの形式・決定性は TC-a6a14739 の担当で、ここでは扱わない。
+アンカー名そのものの形式・決定性は TC-a6a14739-89e5-4eba-acee-3ed5be5a0b7e の担当で、ここでは扱わない。
 
 **抽出条件**: store-backed かつ `method = "symlink"` の entry だけがアンカー対象になること。
 copy（世代外・置き切り）と out-of-store（store 非依存）は対象外であること。対象が皆無なら
@@ -39,7 +39,7 @@ copy（世代外・置き切り）と out-of-store（store 非依存）は対象
 
 ## 覆う CASE
 
-- CASE-3a1f403d（`tests/nix-unit/farm-entries.nix`）
+- CASE-3a1f403d-3c7b-4221-a32a-2ddc272a58a3（`tests/nix-unit/farm-entries.nix`）
 
 ## 出典
 

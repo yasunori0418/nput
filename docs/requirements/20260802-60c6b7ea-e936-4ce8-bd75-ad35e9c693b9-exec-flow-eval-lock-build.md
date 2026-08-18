@@ -78,7 +78,7 @@ specification_ja: |
   skip した段の代わりに何を行うかは `apply --manifest` の仕様の担当で、本 item では
   規定しない。
 ---
-# REQ-60c6b7ea: 実行フローの順序は eval 先行 → flock → build とし build をロック内に閉じる
+# REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9: 実行フローの順序は eval 先行 → flock → build とし build をロック内に閉じる
 
 ## 仕様
 
@@ -127,16 +127,16 @@ rootKind は link-farm 内 `manifest.json` から engine が読む。2a（flock 
 > **上のフロー図は原文の写しで、規範は frontmatter が正**。図が触れる次の規範は本 item の
 > 担当ではなく、本 item はそれらがフロー上のどの段に位置するかだけを規定する。
 >
-> - profileDir のレイアウト（`<roothash>/<name>` 等）→ REQ-2aa3abbc、世代スキップ /
->   ドリフト修復の詳細 → REQ-46fccb80
-> - 配置前除去（PreRemove）→ REQ-c9ab91c1 / REQ-7cee95dd / REQ-2b48620a、保守的 stale
->   除去 → REQ-16aef46b、undo ジャーナル → REQ-5e75aabc
+> - profileDir のレイアウト（`<roothash>/<name>` 等）→ REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3、世代スキップ /
+>   ドリフト修復の詳細 → REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0
+> - 配置前除去（PreRemove）→ REQ-c9ab91c1-f778-4f87-a2ea-c66d6b3c2575 / REQ-7cee95dd-bc5a-4e86-bebc-6080ef78fe26 / REQ-2b48620a-abaa-43df-a106-954bbba3de56、保守的 stale
+>   除去 → REQ-16aef46b-7bb8-4ca1-b962-e9f3ed1fd1d2、undo ジャーナル → REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940
 > - root 解決の各モードの規範 → 「root の解決」節の担当（#209-PR5）
 > - `apply --manifest` の契約（引数・併用エラー・entrypoint 発見と eval / build を
->   行わないこと・rootKind を link-farm 内 `manifest.json` から読むこと）→ REQ-dec58330。
+>   行わないこと・rootKind を link-farm 内 `manifest.json` から読むこと）→ REQ-dec58330-6dad-47f7-8f56-2402764a89c7。
 >   本 item はそれがフロー上のどの段に入り・どの段を skip するかだけを規定する
 > - 2a の flock を blocking で取るか try-lock で取るか（`LOCK_EX` / `LOCK_NB`・
->   skip 時の stderr 通知）→ REQ-1c1526b1。本 item はフロー上の位置（2a）だけを規定する
+>   skip 時の stderr 通知）→ REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461。本 item はフロー上の位置（2a）だけを規定する
 
 ## 出典
 
@@ -146,5 +146,5 @@ rootKind は link-farm 内 `manifest.json` から engine が読む。2a（flock 
 決定の実体は ADR-0023「実行フロー順序」（eval 先行 → flock → build）で、out-link に
 よる indirect gcroot は ADR-0011、同一 profileDir 同時実行の後勝ちは ADR-0013、
 `apply --manifest` の skip は ADR-0026。2a の flock を blocking で取るか try-lock で取るか
-（shellHook の skip 通知を含む）は REQ-1c1526b1 の担当で、その決定元となる ADR は
+（shellHook の skip 通知を含む）は REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461 の担当で、その決定元となる ADR は
 本 item の出典には含めない。

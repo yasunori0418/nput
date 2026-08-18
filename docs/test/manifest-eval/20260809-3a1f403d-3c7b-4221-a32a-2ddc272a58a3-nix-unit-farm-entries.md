@@ -6,11 +6,11 @@ target: "tests/nix-unit/farm-entries.nix"
 covers:
   - "TC-1d69350e-db3c-4d74-a24e-7a3fabb31b0a"
 ---
-# CASE-3a1f403d: nix-unit farm-entries.nix
+# CASE-3a1f403d-3c7b-4221-a32a-2ddc272a58a3: nix-unit farm-entries.nix
 
 ## 対象
 
-`tests/nix-unit/farm-entries.nix`（TP-403c55c7 のテスト seam `nput.__internal.farmEntries` /
+`tests/nix-unit/farm-entries.nix`（TP-403c55c7-d996-4951-8e6b-c3a7dddd387c のテスト seam `nput.__internal.farmEntries` /
 `nput.__internal.anchorName` / `nput.__internal.anchorLines` を直接叩き、加えて `mkManifest` の
 ビルドスクリプトへの配線を fake pkgs 経由で見る。anchorLines は `lib/manifest.nix` が
 `mkManifest` から呼ぶ生成式そのもので、テスト側に複製は持たない → Issue #289）
@@ -22,7 +22,7 @@ covers:
 - **空になる条件**: copy と out-of-store しか無い manifest では抽出結果が空リストになること
 - **アンカー名の固定**: 対象 target の 1 つ（`.config/sym`）についてアンカー名を `anchorName`
   に単独で問い、既知の sha256 短縮 hex リテラルに一致すること。以降の生成結果の期待値を作る
-  ための足場である。アンカー名の形式・決定性・特殊文字耐性は CASE-ead15d61 の担当
+  ための足場である。アンカー名の形式・決定性・特殊文字耐性は CASE-ead15d61-8ca7-41fb-9121-a5d247ef727a の担当
 - **生成式の単体**: `anchorLines` を最小の手組みエントリ列へ適用し、リテラルの期待値で押さえる
   （manifest を経由しないので期待値を式で組まずに済む）。1 行が
   `ln -s <escapeShellArg src> "$out/<anchorName>"` の形になること、複数エントリが末尾改行なしで
@@ -39,7 +39,7 @@ covers:
   空になる」を取り違えないための 2 本立てで、空の生成結果を埋めた跡（空行）が残るか否かは
   整形の都合なので行の有無だけを見て全文一致には依存しない
 
-`src` の配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。配線検証の `pkgs` も
+`src` の配置元は TP-d3d06fe4-6940-4df8-b111-bb4096d5444f の fake flake-input double イディオムに従う。配線検証の `pkgs` も
 同じイディオムで、`mkManifest` が使う `writeText` / `runCommandLocal` を引数を持ち帰る double へ
 差し替えてビルドスクリプト本文を純評価で取り出す（derivation の実ビルドは評価テストの枠を
 超えるため採らない → Issue #289）。実 derivation の `.builder` は bash 本体のパスであって

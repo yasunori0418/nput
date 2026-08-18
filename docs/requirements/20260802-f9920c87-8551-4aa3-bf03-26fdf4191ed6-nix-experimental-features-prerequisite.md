@@ -22,7 +22,7 @@ specification_ja: |
   返したときは、前提条件と有効化方法を案内するエラーで停止しなければならず、生の nix
   エラーを握り潰してはならない。
 ---
-# REQ-f9920c87: nix experimental-features は前提条件とし、CLI は自動付与せず案内エラーで停止する
+# REQ-f9920c87-8551-4aa3-bf03-26fdf4191ed6: nix experimental-features は前提条件とし、CLI は自動付与せず案内エラーで停止する
 
 ## 仕様
 

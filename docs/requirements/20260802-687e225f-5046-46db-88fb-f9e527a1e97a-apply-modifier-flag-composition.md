@@ -16,7 +16,7 @@ specification_ja: |
   config に `--recopy` を適用しなければならない。`--all --backup[=<suffix>]` も同様に
   合成可能でなければならない（`--backup` も apply の修飾であるため）。
 ---
-# REQ-687e225f: apply 修飾フラグは --all と合成できる
+# REQ-687e225f-5046-46db-88fb-f9e527a1e97a: apply 修飾フラグは --all と合成できる
 
 ## 仕様
 
@@ -24,7 +24,7 @@ specification_ja: |
 選んだ各 config に `--recopy` を適用する（`--recopy` は apply 修飾で `--all` と直交）。
 `--all --backup[=<suffix>]` も同様に合成可（`--backup` も apply 修飾）。
 
-各フラグ自体の規範は REQ-7cc32a2b（`--recopy`）・REQ-5dd5a4e9（`--backup`）の担当で、
+各フラグ自体の規範は REQ-7cc32a2b-eee4-4a29-8dc1-a1dc23e7a065（`--recopy`）・REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b（`--backup`）の担当で、
 本 item は `--all` との直交性のみを規定する。
 
 ## 出典

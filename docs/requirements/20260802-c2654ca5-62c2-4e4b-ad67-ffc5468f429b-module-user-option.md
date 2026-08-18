@@ -14,7 +14,7 @@ specification_ja: |
   取らなければならない（配置先ユーザーの特定に使用する）。home-manager と standalone は
   `$HOME` を参照するため、`user` を必須としてはならない。
 ---
-# REQ-c2654ca5: NixOS / nix-darwin モジュールは配置先ユーザーを特定する user オプションを必須で取る
+# REQ-c2654ca5-62c2-4e4b-ad67-ffc5468f429b: NixOS / nix-darwin モジュールは配置先ユーザーを特定する user オプションを必須で取る
 
 ## 仕様
 
@@ -25,9 +25,9 @@ nput.user :: string       # 必須（配置先ユーザーの特定に使用）
 home-manager と standalone は `$HOME` を参照するため `user` は不要。
 
 > **上は原文の写しで、規範は frontmatter が正**。`user` から実際に root を解決する式
-> （`config.users.users.${cfg.user}.home`）は REQ-8d965ca2 の担当。原文の見出しが持つ
+> （`config.users.users.${cfg.user}.home`）は REQ-8d965ca2-f8fd-44a4-87f3-94e850e9f85b の担当。原文の見出しが持つ
 > 「将来拡張」の限定を規範に採らない理由（実装時期は満たすべきことではない）は
-> REQ-c1b3ca5f の注記に集約している。
+> REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9 の注記に集約している。
 
 ## 出典
 

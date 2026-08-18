@@ -22,7 +22,7 @@ specification_ja: |
   engine 実行時のエラーとして停止しなければならない。いずれの場合も停止を動作としなければ
   ならず、配置元の不在を黙って見過ごしたり dangling symlink に変えたりしてはならない。
 ---
-# REQ-9dc7dac7: 配置元の実在は判定できる層で検査し、いずれの層でも停止する
+# REQ-9dc7dac7-4e9e-494a-a17b-73853c119653: 配置元の実在は判定できる層で検査し、いずれの層でも停止する
 
 ## 仕様
 
@@ -33,9 +33,9 @@ specification_ja: |
 | `subpath` が `src` 内に存在しないパス | engine 実行時にエラーで停止 |
 
 > **上は原文の写しで、規範は frontmatter が正**。`src` が取りうる 3 種（path / set /
-> marker）と store link 既定は REQ-99ca5381、`subpath` が src 内相対で省略がリポジトリ
-> 全体を表すことは REQ-27b75fe6、out-of-store のローカルパスが評価時に確定することは
-> REQ-81249072、層分けの原則そのものは REQ-c5dfcae6 の担当。
+> marker）と store link 既定は REQ-99ca5381-6c53-426c-b145-7b4297c53868、`subpath` が src 内相対で省略がリポジトリ
+> 全体を表すことは REQ-27b75fe6-6c36-44a8-8cd3-5cc98043022a、out-of-store のローカルパスが評価時に確定することは
+> REQ-81249072-56b8-42f5-807b-ea623c1efe99、層分けの原則そのものは REQ-c5dfcae6-6094-4850-99e5-bf14530bc60a の担当。
 
 ## 出典
 
@@ -44,4 +44,4 @@ specification_ja: |
 この 3 行に対応する決定を持つ ADR は無く、`docs/spec.md` が一次記述にあたる（原文の表でも
 この 3 行は `→ ADR-00xx` の参照注記を持たない。同様に注記を持たない行は他にもある）。
 よって本 item に `justifies` は張られないが、これは張り漏れではない。層が分かれること自体の
-一般則は REQ-c5dfcae6 の担当。
+一般則は REQ-c5dfcae6-6094-4850-99e5-bf14530bc60a の担当。

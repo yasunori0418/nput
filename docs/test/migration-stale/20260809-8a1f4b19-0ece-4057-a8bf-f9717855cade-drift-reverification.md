@@ -5,7 +5,7 @@ name: "plan から unlink までの drift が除去直前に再検証され、�
 mitigates:
   - "RISK-e3d42a21-1f43-4ac6-835e-a5caf8d86363"
 ---
-# TC-8a1f4b19: 除去直前の drift 再検証
+# TC-8a1f4b19-0ece-4057-a8bf-f9717855cade: 除去直前の drift 再検証
 
 plan 時に除去対象と判定された target が、実際の unlink までの間に不変条件から外れた場合
 （リンク先が別の場所を指すようになった / symlink でなくなった / 消えた）を検出し、記録された

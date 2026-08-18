@@ -28,7 +28,7 @@ specification_ja: |
   が残る自己矛盾はエラーで停止しなければならない（配下にネストすると store 汚染 / dangling
   を招くため）。
 ---
-# REQ-c9ab91c1: 祖先 symlink は自己記録 stale のみ配置前除去し、それ以外はエラーで停止する
+# REQ-c9ab91c1-f778-4f87-a2ea-c66d6b3c2575: 祖先 symlink は自己記録 stale のみ配置前除去し、それ以外はエラーで停止する
 
 ## 仕様
 
@@ -43,14 +43,14 @@ target の各祖先 component を lstat で walk。symlink の祖先があれば
 > **上は原文の写しで、規範は frontmatter が正**。原文が参照する次の規範は本 item の
 > 担当ではない。
 >
-> - 既定 silent と `-v` による可視化の出力規律そのもの（→ ADR-0031）→ REQ-8ef34101 /
->   REQ-0a123b89。本 item は「この除去を warning にせず配置レポート側で扱う」ことだけを
+> - 既定 silent と `-v` による可視化の出力規律そのもの（→ ADR-0031）→ REQ-8ef34101-8150-4124-92d5-94fabe6b5d90 /
+>   REQ-0a123b89-0399-4f76-b988-56a5f7e0becf。本 item は「この除去を warning にせず配置レポート側で扱う」ことだけを
 >   規範とし、そのレポートを既定で出すか `-v` で出すかは委譲する
 > - `--backup` 有効時にこのエラー停止がどう変わるか → 祖先 symlink conflict は
->   `--backup` の対象外（REQ-5dd5a4e9・構造問題であり退避では解消しないため）
+>   `--backup` の対象外（REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b・構造問題であり退避では解消しないため）
 
-実 dir target の migration は REQ-7cee95dd、method 変更 symlink→copy の migration は
-REQ-2b48620a の担当。
+実 dir target の migration は REQ-7cee95dd-bc5a-4e86-bebc-6080ef78fe26、method 変更 symlink→copy の migration は
+REQ-2b48620a-abaa-43df-a106-954bbba3de56 の担当。
 
 ## 出典
 

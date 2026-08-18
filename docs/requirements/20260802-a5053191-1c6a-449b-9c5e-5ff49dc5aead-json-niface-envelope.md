@@ -33,7 +33,7 @@ specification_ja: |
   `main.version` としなければならない。nput の JSON 出力は現在も将来の機能も niface
   規約に準拠しなければならない。
 ---
-# REQ-a5053191: --json は niface 規約準拠のエンベロープを出す第 2 契約とする
+# REQ-a5053191-1c6a-449b-9c5e-5ff49dc5aead: --json は niface 規約準拠のエンベロープを出す第 2 契約とする
 
 ## 仕様
 
@@ -65,9 +65,9 @@ read-only 列挙（`list-generations` の世代・`gitignore` のパス）は
 > **上は原文の写しで、規範は frontmatter が正**。原文が併記する次の点は本 item の
 > 規範ではない。
 >
-> - エラー層の振り分け規則の詳細 → REQ-9341fa5d
-> - `--all` の `SubjectResult` の積み方・集約 `status`・順序 → REQ-059eb4d5
-> - 変更系 / 読み取り系のペイロードの中身 → REQ-2ea19863 / REQ-fa181aa6
+> - エラー層の振り分け規則の詳細 → REQ-9341fa5d-836e-4023-af53-cc7d273438d1
+> - `--all` の `SubjectResult` の積み方・集約 `status`・順序 → REQ-059eb4d5-63fb-4f8e-b705-11b5e2ed4ae5
+> - 変更系 / 読み取り系のペイロードの中身 → REQ-2ea19863-eaa2-466b-b1ed-3f56f6417c62 / REQ-fa181aa6-29a2-48c3-ae07-cc1b9a3b0303
 > - 実装 issue（#130 / #131 / #132 / #164）の進捗記述は要求ではなく履歴の注記
 
 ## 出典

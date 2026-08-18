@@ -19,7 +19,7 @@ specification_ja: |
   `root` フィールドに併記しなければならず、それ以外の kind では当該フィールドを
   省略しなければならない。
 ---
-# REQ-dd10d820: manifest.json の root は rootKind を持ち fixed のときだけ絶対パスを併記する
+# REQ-dd10d820-e453-4099-a47a-ffb9a7de02fb: manifest.json の root は rootKind を持ち fixed のときだけ絶対パスを併記する
 
 ## 仕様
 
@@ -34,7 +34,7 @@ specification_ja: |
 パスを持たない。`fixed` のみ評価時確定の絶対パスを `root` に持つ。
 
 Nix 側の `root` 引数がどの値を取るか（3 マーカー + 絶対パス文字列の union）は
-REQ-37b56673、marker が kind を運ぶ入れ物であることは REQ-3f541d39 が持つ。本 item は
+REQ-37b56673-6e40-4a1b-a2a7-5d3c084e3e66、marker が kind を運ぶ入れ物であることは REQ-3f541d39-da41-4ef8-858b-707f54cf6a29 が持つ。本 item は
 それが `manifest.json` にどう写るかを規定する。
 
 ## 出典

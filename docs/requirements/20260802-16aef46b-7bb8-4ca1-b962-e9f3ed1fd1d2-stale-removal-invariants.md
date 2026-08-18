@@ -25,7 +25,7 @@ specification_ja: |
   満たすもののみ除去しなければならず、copy は除去してはならない（ユーザー所有データの
   ため）。ただし copy が orphan になったことは警告で通知しなければならない。
 ---
-# REQ-16aef46b: stale 除去は前世代の記録通りを指す symlink のみに限り、copy は消さず orphan を警告する
+# REQ-16aef46b-7bb8-4ca1-b962-e9f3ed1fd1d2: stale 除去は前世代の記録通りを指す symlink のみに限り、copy は消さず orphan を警告する
 
 ## 仕様
 
@@ -40,8 +40,8 @@ specification_ja: |
 | copy | **除去しない**（ユーザー所有データ）。ただし orphan を警告で通知する |
 
 > **上は原文の写しで、規範は frontmatter が正**。除去後の空親ディレクトリ剪定は
-> REQ-8409db86、除去に途中失敗したときの巻き戻しは REQ-5e75aabc の担当。この保守的不変条件は
-> `reset` の symlink 除去にも適用されるが（REQ-31f2882e）、copy を明示的に消す唯一の手段が
+> REQ-8409db86-a1ba-4053-86dc-588985cc1ca7、除去に途中失敗したときの巻き戻しは REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940 の担当。この保守的不変条件は
+> `reset` の symlink 除去にも適用されるが（REQ-31f2882e-d2e3-4e3b-b783-feb627d73ac6）、copy を明示的に消す唯一の手段が
 > `reset` であることも同 item の担当。
 
 ## 出典

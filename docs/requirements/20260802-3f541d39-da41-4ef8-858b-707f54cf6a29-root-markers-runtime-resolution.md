@@ -16,7 +16,7 @@ specification_ja: |
   ならない。`mkManifest` は kind を `manifest.json` に記録しなければならず、実体パスの
   解決は engine の実行時責務としなければならない。
 ---
-# REQ-3f541d39: root マーカーは kind を運ぶ入れ物でパス解決は engine が行う
+# REQ-3f541d39-da41-4ef8-858b-707f54cf6a29: root マーカーは kind を運ぶ入れ物でパス解決は engine が行う
 
 ## 仕様
 
@@ -38,7 +38,7 @@ systemRoot  :: marker   # /（distro 構想・将来）
 
 上のシグネチャブロックは原文の写しで、規範は frontmatter が正。`systemRoot` の
 「distro 構想・将来」の限定は規範に含めない（理由は下の注記）。原文が同じ箇所で述べる
-「暗黙デフォルトは無い・`root` を省略すると評価時エラー」は REQ-4ec3accc の担当。
+「暗黙デフォルトは無い・`root` を省略すると評価時エラー」は REQ-4ec3accc-8bb6-461f-9024-dcf0027849e4 の担当。
 
 ## 出典
 
@@ -48,9 +48,9 @@ systemRoot  :: marker   # /（distro 構想・将来）
 > **`systemRoot` を「distro 構想・将来」としない理由**: system mode は **ADR-0036 が
 > 実装を決定済み**（`rootKind = "system"` を正規値として通し、engine は root = `/` へ
 > 解決する）で、`docs/spec.md` がこの改訂に追従できていない。原文の限定を規範に採らない
-> 扱いは REQ-37b56673 と同じ。ただし本 item の規範は「marker が kind を運ぶこと」に
+> 扱いは REQ-37b56673-6e40-4a1b-a2a7-5d3c084e3e66 と同じ。ただし本 item の規範は「marker が kind を運ぶこと」に
 > 留まり、`systemRoot` が実行時に `/` へ解決することまでは主張しない。そのため
-> ADR-0036 は本 item の `justifies` の対象にしない（当該規範を持つ REQ-37b56673 側で
+> ADR-0036 は本 item の `justifies` の対象にしない（当該規範を持つ REQ-37b56673-6e40-4a1b-a2a7-5d3c084e3e66 側で
 > 接続している）。
 >
 > **marker の関数適用形（`subdir`）を含めない理由**: **ADR-0040** は root マーカーを

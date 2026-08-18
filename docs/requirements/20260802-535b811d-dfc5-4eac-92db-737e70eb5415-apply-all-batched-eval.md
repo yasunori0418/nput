@@ -22,7 +22,7 @@ specification_ja: |
   atomic 性のため config ごと N 回行わなければならない。eval プロセス起動コストを
   N→1 に固定しなければならない。
 ---
-# REQ-535b811d: apply --all は rootKind を 1 回の一括 eval で取る
+# REQ-535b811d-dfc5-4eac-92db-737e70eb5415: apply --all は rootKind を 1 回の一括 eval で取る
 
 ## 仕様
 
@@ -33,7 +33,7 @@ config 名 → rootKind マップを 1 回で取得し、各 profileDir を確�
 フィルタもこの結果で振り分ける。build だけは atomic 性のため config ごと N 回。
 eval プロセス起動コストを N→1 に固定する。
 
-フィルタそのものは REQ-d95b814f の担当。
+フィルタそのものは REQ-d95b814f-aa7a-470e-9320-c14f9c14da7b の担当。
 
 ## 出典
 

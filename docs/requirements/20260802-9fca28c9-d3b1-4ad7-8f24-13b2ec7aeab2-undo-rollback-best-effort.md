@@ -21,7 +21,7 @@ specification_ja: |
   「全件列挙してから 1 本の集約エラー」の形）。この報告は失敗経路のため常時 stderr とし、
   成功時沈黙の対象にしてはならない。
 ---
-# REQ-9fca28c9: 巻き戻し自体の失敗は best-effort で続行し、全件を stderr へ報告して停止する
+# REQ-9fca28c9-d3b1-4ad7-8f24-13b2ec7aeab2: 巻き戻し自体の失敗は best-effort で続行し、全件を stderr へ報告して停止する
 
 ## 仕様
 
@@ -32,8 +32,8 @@ specification_ja: |
 - **報告は常時 stderr**（失敗経路のため沈黙対象外・既定 silent の対象にしない）
 
 > **上は原文の写しで、規範は frontmatter が正**。undo ジャーナルそのものの規範は
-> REQ-5e75aabc、成功時沈黙の出力規律そのものは REQ-8ef34101 の担当。conflict の全件報告
-> （`reportConflicts`）は REQ-95e97d01 の担当で、本 item はその形を巻き戻し失敗の報告にも
+> REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940、成功時沈黙の出力規律そのものは REQ-8ef34101-8150-4124-92d5-94fabe6b5d90 の担当。conflict の全件報告
+> （`reportConflicts`）は REQ-95e97d01-5c34-44b3-bc85-9ca53472bc3d の担当で、本 item はその形を巻き戻し失敗の報告にも
 > 用いることだけを規定する。
 
 ## 出典

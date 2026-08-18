@@ -21,7 +21,7 @@ specification_ja: |
   `--root` を付けた世代を操作するには同じ `--root` を要求しなければならない（profileDir の
   キーの引き方は apply と同一）。
 ---
-# REQ-9c111c32: 非 build コマンドも eval 先行を共通前段に持つ
+# REQ-9c111c32-8f6c-4eda-859c-dae02c0624fc: 非 build コマンドも eval 先行を共通前段に持つ
 
 ## 仕様
 
@@ -33,10 +33,10 @@ profileDir 確定（= rootKind 先取り eval → root 解決）が前提にな�
 
 **本 item が非 build コマンド一般の eval 先行を規定する**。個々のコマンドが加える固有の
 前段（`reset` が entries 読みのため entrypoint eval も行うこと）は各コマンドの item が
-規定し、本 item では扱わない（→ REQ-a8edc58f）。
+規定し、本 item では扱わない（→ REQ-a8edc58f-4adc-4637-b888-ab8ccc7e73e4）。
 
-apply を含む実行フロー全体の順序規範は REQ-60c6b7ea、`--root` が全モードの解決 root を
-上書きすることは REQ-61c05e09、上書き後の profileDir のキーイングは REQ-d5a2e289 の担当。
+apply を含む実行フロー全体の順序規範は REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9、`--root` が全モードの解決 root を
+上書きすることは REQ-61c05e09-0bde-4f74-9a96-03185f9df606、上書き後の profileDir のキーイングは REQ-d5a2e289-40bc-45a9-9d44-21b8dc561b81 の担当。
 
 ## 出典
 

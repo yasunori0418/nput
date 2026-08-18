@@ -9,7 +9,7 @@ derives_from:
 specification: |
   The manifest of what has been placed SHALL be embedded inside the store, as part of the
   link farm derivation produced by `lib.mkManifest` (what that derivation contains is
-  stated by REQ-60e6b49c and is NOT restated here); no mutable JSON SHALL be kept outside
+  stated by REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281 and is NOT restated here); no mutable JSON SHALL be kept outside
   the store, and `manifest.json` SHALL be immutable.
   At run time the engine SHALL, in this order: acquire a flock keyed on the resolved
   `profileDir`; read the store manifest of the previous generation and diff it against the
@@ -27,7 +27,7 @@ specification: |
   tracking. One profile SHALL correspond to one config, each config being atomic.
 specification_ja: |
   「配置したもの」のマニフェストは、純粋関数 `lib.mkManifest` が生成する link farm derivation の
-  一部として store 内に埋め込まなければならない（当該 derivation が何を含むかは REQ-60e6b49c が
+  一部として store 内に埋め込まなければならない（当該 derivation が何を含むかは REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281 が
   規定し、ここでは繰り返さない）。store 外の可変 JSON を持ってはならず、`manifest.json` は
   不変でなければならない。
   engine は実行時に、解決後 `profileDir` 単位の flock を取得し、前世代の store マニフェストと
@@ -41,7 +41,7 @@ specification_ja: |
   （HM / NixOS / darwin）では前世代マニフェストと stale 追跡のための内部機構に留めなければ
   ならない。1 profile は 1 config に対応しなければならず、config 単位で atomic とする。
 ---
-# REQ-1be4d678: 世代は link farm derivation を nput 自前 profile へコミットして積み、前世代 manifest から stale を除去する
+# REQ-1be4d678-959c-44d7-a346-44bfd95af56e: 世代は link farm derivation を nput 自前 profile へコミットして積み、前世代 manifest から stale を除去する
 
 ## 仕様
 
@@ -70,25 +70,25 @@ specification_ja: |
 > **上は原文の写しで、規範は frontmatter が正**。原文が参照する次の規範は本 item の
 > 担当ではない。
 >
-> - flock を blocking で取るか try-lock で取るか → REQ-1c1526b1
-> - ネイティブ FS 操作で配置すること → REQ-6c4e174a、各配置方法の手順 → REQ-622787dc /
->   REQ-d2277c7a / REQ-a8a923ad
-> - stale 除去の保守的不変条件 → REQ-16aef46b
-> - `profileDir` のオンディスクレイアウトと基底 `<state>` → REQ-2aa3abbc
-> - project mode の世代スキップと lstat ドリフト修復 → REQ-46fccb80
-> - module 時にユーザー向け rollback を host へ一本化すること → REQ-844ee375
-> - `lib.mkManifest` が純粋関数であること・その戻り値 → REQ-2b0c2bb8 / REQ-60e6b49c
+> - flock を blocking で取るか try-lock で取るか → REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461
+> - ネイティブ FS 操作で配置すること → REQ-6c4e174a-4d16-477a-96ff-17cb4eb5b564、各配置方法の手順 → REQ-622787dc-4512-4ce9-9c7d-7b32bbb70557 /
+>   REQ-d2277c7a-7992-49af-a9dc-4cc73843a6f9 / REQ-a8a923ad-07fb-4582-b90a-07a6e0c41baa
+> - stale 除去の保守的不変条件 → REQ-16aef46b-7bb8-4ca1-b962-e9f3ed1fd1d2
+> - `profileDir` のオンディスクレイアウトと基底 `<state>` → REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3
+> - project mode の世代スキップと lstat ドリフト修復 → REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0
+> - module 時にユーザー向け rollback を host へ一本化すること → REQ-844ee375-919f-4341-81e1-a5f89fd32840
+> - `lib.mkManifest` が純粋関数であること・その戻り値 → REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4 / REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281
 >
 > 原文が併記する「配置・cleanup アルゴリズムは home-manager の `linkGeneration` /
 > `cleanup` を参考に Go で再実装する（`home.file` 自体は再利用しない）」は実装方針の注記で
-> 要求ではなく、「`nix` / `git` 以外はサブプロセスを使わない」は REQ-6c4e174a の担当。
+> 要求ではなく、「`nix` / `git` 以外はサブプロセスを使わない」は REQ-6c4e174a-4d16-477a-96ff-17cb4eb5b564 の担当。
 
 逆に、上の写しには現れないが規範文が持つものが 1 つある。**1 profile = 1 config の atomic
 性**で、原文はこれを本節ではなく「CLI 仕様」→「サブコマンド体系」の `apply` の箇条書き
 （「profile は config 単位で atomic」）で述べる。atomic 性は「1 config が 1 profile を持ち、
 その世代がコミット点で丸ごと切り替わる」という profile の機構そのものの性質であり、機構を
 規定する本 item が引き受けるのが所在として自然なため、ここで規範化した（当該箇所を分割した
-REQ-c2d44626 と、これを論拠として引く REQ-c890ce4a も規範の所在を本 item に置いている）。
+REQ-c2d44626-d8f4-446a-a80a-319a500129b4 と、これを論拠として引く REQ-c890ce4a-6528-4ab3-ac86-23d7aebff7da も規範の所在を本 item に置いている）。
 
 ## 出典
 

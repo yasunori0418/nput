@@ -5,7 +5,7 @@ name: "--backup の退避が opt-in で発動し、commit 後は残り、途中�
 mitigates:
   - "RISK-3719d298-8175-4501-95d5-75f3a29568fe"
 ---
-# TC-ed4992c0: --backup の退避が opt-in で発動し、commit 後は残り、途中失敗では戻る
+# TC-ed4992c0-8513-4383-be0a-e45acbbc229f: --backup の退避が opt-in で発動し、commit 後は残り、途中失敗では戻る
 
 ## テスト条件
 
@@ -19,7 +19,7 @@ suffix が変わる。
 
 **段の位置** — 世代スキップ（drift 修復）経路でも Backup 段は到達し、通常 apply と同じく
 退避 + 配置を行う。PreRemove と違い「derivation 不変なら発火しない」という不変条件を
-持たないため（記録外実体は manifest の変化と無関係に現れる → REQ-9b0046e0）。
+持たないため（記録外実体は manifest の変化と無関係に現れる → REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98）。
 
 **`--dryrun --backup`** — 塞いでいる target を conflict ではなく「退避 + 配置予定」として
 報告し、exit 2 相当の conflict をゼロにする。FS には一切触れない。
@@ -34,10 +34,10 @@ discardJournal の掃除対象ではない。ユーザーのバックアップ�
 記録している兄弟 leaf は removeStale から「planning 後に drift した」と報告されない
 （親ごと 1 回の rename で去ったのは想定内の挙動であって drift ではない）。
 
-上位の規範は TP-e7c25263（`internal/engine/` を実 FS の tmpdir で駆動する統合レベル）。
-TP-deb05610 の射程は 4 つの不変条件に閉じており、退避ポリシーそのものはそちらの担当では
-ない（巻き戻し対象としての退避は TC-3b02ab58 側で TP-deb05610 の下に立つ）。
+上位の規範は TP-e7c25263-6d2d-4a37-8275-26906889d912（`internal/engine/` を実 FS の tmpdir で駆動する統合レベル）。
+TP-deb05610-44bc-4962-8939-952392e5fbd0 の射程は 4 つの不変条件に閉じており、退避ポリシーそのものはそちらの担当では
+ない（巻き戻し対象としての退避は TC-3b02ab58-5bfb-4ae7-9ac1-c69e2ece2722 側で TP-deb05610-44bc-4962-8939-952392e5fbd0 の下に立つ）。
 
 ## 対応する CASE
 
-CASE-ed4b32fd（`internal/engine/backup_test.go`）。
+CASE-ed4b32fd-4f2e-497c-baa4-cc91f8a34e4a（`internal/engine/backup_test.go`）。

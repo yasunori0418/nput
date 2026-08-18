@@ -5,7 +5,7 @@ name: "project mode の世代は公開されず、拒否のときは理由が利
 mitigates:
   - "RISK-cdcc6faf-9164-409b-b584-2921fa036d10"
 ---
-# TC-f304d682: project mode の世代は公開されず、拒否のときは理由が利用者へ届く
+# TC-f304d682-bc5e-4369-a427-f766fdfdd961: project mode の世代は公開されず、拒否のときは理由が利用者へ届く
 
 ## 条件
 
@@ -41,6 +41,6 @@ config の世代を公開しないことを確かめる。engine 層が観測値
 
 > **区分の所在**。この条件の中心である名指しの拒否は entrypoint の評価を通す経路でしか
 > 観測できず、その経路を持つテスト資産は e2e 01-project だけである。その CASE が属する
-> integration 区分に置く。全件列挙からの除外を覆う CASE-2e7b9ea2 は generations 区分に
+> integration 区分に置く。全件列挙からの除外を覆う CASE-2e7b9ea2-4e4d-48ca-9e1e-0bfbb6223ff2 は generations 区分に
 > 属するが、区分はテスト資産の置き場所であって条件の所属先ではないため、区分をまたいで
-> `covers` を張る（同じ TC を別区分の CASE が覆う例は TC-cf8189c4 に先例がある）。
+> `covers` を張る（同じ TC を別区分の CASE が覆う例は TC-cf8189c4-d680-4d7e-bcd3-810543762c50 に先例がある）。

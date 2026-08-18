@@ -19,7 +19,7 @@ specification_ja: |
   GC アンカー専用でアンカー名が可読である必要はなく、engine が配置に使う値は
   `manifest.json` の解決済み `src` 文字列である。
 ---
-# REQ-62eda895: symlink farm の GC アンカー名は target のハッシュとする
+# REQ-62eda895-efd4-4eaf-a58b-600e8637da75: symlink farm の GC アンカー名は target のハッシュとする
 
 ## 仕様
 
@@ -31,7 +31,7 @@ FS 安全）**を用いる。
 - farm は GC アンカー専用でアンカー名は可読である必要がなく、衝突不可能なハッシュで
   十分。engine が配置に使う値は `manifest.json` の解決済み `src` 文字列。
 
-farm が GC アンカー専用であることとアンカー対象の範囲は REQ-b12fc3c0 が持つ。
+farm が GC アンカー専用であることとアンカー対象の範囲は REQ-b12fc3c0-d7fe-4003-922c-f3ac0d969b66 が持つ。
 
 ## 出典
 

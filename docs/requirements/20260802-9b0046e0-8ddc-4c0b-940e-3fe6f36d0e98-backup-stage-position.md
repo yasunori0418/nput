@@ -10,7 +10,7 @@ specification: |
   between the pre-placement removal (PreRemove) and the placement itself, and its subjects
   SHALL be delimited not by an enumeration of kinds but by the conclusion each
   classification stage reached — those unrecorded entities it decided to stop with an error
-  or to skip as a copy foreign file — save for the exclusion that REQ-5dd5a4e9 states. On
+  or to skip as a copy foreign file — save for the exclusion that REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b states. On
   the generation-skip path, where drift repair takes place, PreRemove SHALL never be
   reached because of the invariants that govern it, whereas the Backup stage SHALL remain
   in effect and SHALL rename aside and place in the same way as an ordinary apply, because
@@ -20,12 +20,12 @@ specification_ja: |
   `apply --backup` による rename 退避は、配置前除去（PreRemove）の後・配置の前の独立した
   段として置かなければならない。その対象は種別の列挙ではなく判定各段の結論で括らなければ
   ならず、各段が「エラーで停止」または「copy foreign スキップ」と判定した記録外実体で
-  なければならない（REQ-5dd5a4e9 が定める除外を除く）。ドリフト修復を行う世代スキップ経路
+  なければならない（REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b が定める除外を除く）。ドリフト修復を行う世代スキップ経路
   では、PreRemove はその不変条件により到達しないが、Backup 段は対象であり続け、通常 apply と
   同じく退避 + 配置を行わなければならない（target への記録外実体の出現は manifest /
   derivation の変化を伴わず、shell 再入間でも起こり得るため）。
 ---
-# REQ-9b0046e0: backup 退避は配置前除去の後・配置の前に置き、drift 修復経路でも同じく実施する
+# REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98: backup 退避は配置前除去の後・配置の前に置き、drift 修復経路でも同じく実施する
 
 ## 仕様
 
@@ -48,7 +48,7 @@ manifest / derivation の変化を伴わず、shell 再入間でも起こり得�
 > - 退避対象を**種別の列挙ではなく判定各段の結論で括る**こと
 > - drift 修復経路でも退避が実施されること
 >
-> 写しに現れる次の 3 点は本 item の規範ではなく REQ-5dd5a4e9 の担当で、原文の写しの一部と
+> 写しに現れる次の 3 点は本 item の規範ではなく REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b の担当で、原文の写しの一部と
 > して残しているだけである。
 >
 > - 退避対象の種別の列挙（foreign な通常ファイル / ディレクトリ・実 dir migration 失敗・
@@ -58,14 +58,14 @@ manifest / derivation の変化を伴わず、shell 再入間でも起こり得�
 > - 退避先 `<target>.<suffix>` が既存なら conflict で停止すること
 >
 > 退避そのもののその他の契約（suffix の既定と `=` 区切り・`reset` が復元しないこと）も同じく
-> REQ-5dd5a4e9 の担当。世代スキップとドリフト修復そのものは REQ-46fccb80、undo ジャーナルは
-> REQ-5e75aabc の担当。
+> REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b の担当。世代スキップとドリフト修復そのものは REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0、undo ジャーナルは
+> REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940 の担当。
 >
-> **結論で括る理由**: 原文は退避対象を 2 箇所で非対称に書く。「CLI 仕様」節（REQ-5dd5a4e9 の
+> **結論で括る理由**: 原文は退避対象を 2 箇所で非対称に書く。「CLI 仕様」節（REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b の
 > 出典）は種別を 4 つ（実 dir migration 失敗を欠く）並べるのに対し、「配置動作仕様」§0.7 は
 > それを加えた 5 つを並べる。列挙で規範化するとどちらを採るかで外延が変わるため、本 item は
 > 判定各段の結論（「エラーで停止」または「copy foreign スキップ」）で括り、広い方（5 種）と
-> 一致させた。実 dir migration 失敗（REQ-7cee95dd）はこの括りに含まれる。
+> 一致させた。実 dir migration 失敗（REQ-7cee95dd-bc5a-4e86-bebc-6080ef78fe26）はこの括りに含まれる。
 
 ## 出典
 

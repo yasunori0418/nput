@@ -12,7 +12,7 @@ specification_ja: |
   `root` は明示必須でなければならず、暗黙デフォルト（`$HOME` 等）を持ってはならない。
   `root` を省略した場合は Nix 評価時にエラーとしなければならない。
 ---
-# REQ-4ec3accc: root は明示必須で暗黙デフォルトを持たない
+# REQ-4ec3accc-8bb6-461f-9024-dcf0027849e4: root は明示必須で暗黙デフォルトを持たない
 
 ## 仕様
 
@@ -25,11 +25,11 @@ specification_ja: |
   モジュール利用者は root を再指定しない（→ ADR-0007 §2）。
 
 > **原文「root の解決」節の導入文の残る規範の所在**: root が target を絶対パスへ変換する基準で
-> あることは target を root 相対と定める REQ-0b0cd1e3、配置の実体を全層で engine が実行する
-> ことは REQ-c1b3ca5f / REQ-6c4e174a の担当。
+> あることは target を root 相対と定める REQ-0b0cd1e3-bfeb-45c1-978d-e2e11c568336、配置の実体を全層で engine が実行する
+> ことは REQ-c1b3ca5f-d2f7-443c-bc4b-b18413ca97b9 / REQ-6c4e174a-4d16-477a-96ff-17cb4eb5b564 の担当。
 >
 > 上の第 3 項が述べるモジュール側の root pin（HM → `homeRoot` / devShell → `projectRoot`・
-> モジュール利用者は root を再指定しない）は **REQ-fc1c7ce6 の担当**で、本 item の規範には
+> モジュール利用者は root を再指定しない）は **REQ-fc1c7ce6-dc9d-4dd3-98f5-7877d9f99d10 の担当**で、本 item の規範には
 > 含めない。本 item が規定するのは `mkManifest` / CLI entrypoint の層で root が明示必須で
 > あることに限る。
 

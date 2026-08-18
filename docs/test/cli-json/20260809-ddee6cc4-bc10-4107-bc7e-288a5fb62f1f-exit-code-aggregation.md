@@ -5,7 +5,7 @@ name: "終了コードの集約が優先順位に従い skip を失敗として�
 mitigates:
   - "RISK-bd1e4ada-4a0d-4672-96cf-028f488c0540"
 ---
-# TC-ddee6cc4: 終了コードの集約が優先順位に従い skip を失敗として数えない
+# TC-ddee6cc4-bc10-4107-bc7e-288a5fb62f1f: 終了コードの集約が優先順位に従い skip を失敗として数えない
 
 ## 条件
 

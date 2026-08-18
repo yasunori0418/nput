@@ -27,7 +27,7 @@ specification_ja: |
   その事例として示すもので、個々の条件とその動作、および識別子の一意性が native に
   担保されること自体は各担当 item の規範であって、ここでは再掲しない。
 ---
-# REQ-c5dfcae6: 設定の誤りは評価時に、実体の不整合は engine 実行時に検出する層分けを守る
+# REQ-c5dfcae6-6094-4850-99e5-bf14530bc60a: 設定の誤りは評価時に、実体の不整合は engine 実行時に検出する層分けを守る
 
 ## 仕様
 
@@ -41,18 +41,18 @@ attrset のため Nix のキー重複不可で担保され、**重複 `name` と
 > **上は原文の写しで、規範は frontmatter が正**。原文が列挙する個々の条件は、それぞれの
 > 担当 item が規範を持つ。
 >
-> - `root` の明示必須 → REQ-4ec3accc
-> - 未知キー・旧名の strict 拒否 → REQ-3e446ad9
-> - `src` が素の文字列を取らないこと → REQ-99ca5381
-> - 絶対パス / `..` エスケープの拒否 → REQ-6911eab6
-> - copy + out-of-store marker の矛盾拒否 → REQ-16faf428
-> - 識別子 = 属性キーと一意性の native 担保 → REQ-cb77ea05
-> - 同一 manifest 内の正規化後 target 重複 → REQ-5c6b07da
-> - `mkManifest` が入力検査の単一ゲートであること → REQ-d1b5b3f5
+> - `root` の明示必須 → REQ-4ec3accc-8bb6-461f-9024-dcf0027849e4
+> - 未知キー・旧名の strict 拒否 → REQ-3e446ad9-a6f4-4229-b5c5-184754b0ef51
+> - `src` が素の文字列を取らないこと → REQ-99ca5381-6c53-426c-b145-7b4297c53868
+> - 絶対パス / `..` エスケープの拒否 → REQ-6911eab6-12b4-457c-9db4-d7430a9e9b3f
+> - copy + out-of-store marker の矛盾拒否 → REQ-16faf428-77f3-492f-b858-222c5274cbf7
+> - 識別子 = 属性キーと一意性の native 担保 → REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7
+> - 同一 manifest 内の正規化後 target 重複 → REQ-5c6b07da-3d06-414d-8770-4f438234b322
+> - `mkManifest` が入力検査の単一ゲートであること → REQ-d1b5b3f5-10a0-400d-9f03-ba00c63d1c34
 >
 > 原文が同じ列挙に含める「`root = systemRoot`（system mode は未実装）を評価時エラーに
 > する」は規範に採らない。この決定（ADR-0013 §5）は ADR-0036 が撤回済みで、現行は
-> `rootKind = "system"` を正規の値として通すため（REQ-16faf428 の注記と同じ理由）。
+> `rootKind = "system"` を正規の値として通すため（REQ-16faf428-77f3-492f-b858-222c5274cbf7 の注記と同じ理由）。
 
 ## 出典
 
@@ -67,4 +67,4 @@ attrset のため Nix のキー重複不可で担保され、**重複 `name` と
 実体依存の判定を engine 実行時へ回すことは、ADR-0013「engine 実行時セマンティクスの細目を
 確定する」が個別の決定（copy + marker の eval エラー等）で示す層の分かれ方を、節の導入文が
 一般則としてまとめたものである。この一般則そのものを表明した ADR は無いため、同 ADR からは
-側面の根拠として `justifies` は張らない（個別の決定の帰属は REQ-16faf428 が担当する）。
+側面の根拠として `justifies` は張らない（個別の決定の帰属は REQ-16faf428-77f3-492f-b858-222c5274cbf7 が担当する）。

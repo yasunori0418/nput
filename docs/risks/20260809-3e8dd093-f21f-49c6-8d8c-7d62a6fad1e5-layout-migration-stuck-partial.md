@@ -10,7 +10,7 @@ likelihood: medium
 impact: high
 level: high
 ---
-# RISK-3e8dd093: レイアウト移行が部分適用で止まり、再実行しても収束しない
+# RISK-3e8dd093-f21f-49c6-8d8c-7d62a6fad1e5: レイアウト移行が部分適用で止まり、再実行しても収束しない
 
 per-file 配置と dir symlink 配置の行き来、および symlink → copy の method 変更は、既存の
 配置物を配置前に除去してから新しい形を作る。この配置前除去は「除去してよいか」の判定と
@@ -35,7 +35,7 @@ method 変更の非対称性（symlink → copy は自動移行し、copy → sy
 
 ## 評価
 
-- likelihood: medium — TC-b9d4ffaf が移行の可否判定を、TC-76597b11 が部分適用と再実行の
+- likelihood: medium — TC-b9d4ffaf-ac91-4bf1-9f27-5ea3964466ad が移行の可否判定を、TC-76597b11-8199-4682-8f53-008e5208bd9c が部分適用と再実行の
   収束を覆っている。ただし配置前除去は per-file / dir symlink / method 変更の組み合わせで
   枝が多く、形を 1 つ足すたびに判定の抜けが入りうる
 - impact: high — 判定を誤れば記録に無いユーザーの実体を移行の名目で消す。部分除去が残った

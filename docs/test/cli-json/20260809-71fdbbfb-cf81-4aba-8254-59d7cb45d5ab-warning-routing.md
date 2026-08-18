@@ -5,7 +5,7 @@ name: "warning が対象の有無で item と subject へ振り分けられ全�
 mitigates:
   - "RISK-06d7375e-fecd-4a0a-9ceb-1f9e207c3308"
 ---
-# TC-71fdbbfb: warning が対象の有無で item と subject へ振り分けられ全種別がコードへ写る
+# TC-71fdbbfb-cf81-4aba-8254-59d7cb45d5ab: warning が対象の有無で item と subject へ振り分けられ全種別がコードへ写る
 
 ## 条件
 

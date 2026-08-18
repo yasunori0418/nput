@@ -15,7 +15,7 @@ specification_ja: |
   あたり最大 1 個に有界でなければならず、回収処理を持ってはならない。これは許容
   しなければならない。
 ---
-# REQ-840b3641: 失敗時に残る pending gcroot は config あたり最大 1 個に有界とし回収処理を持たない
+# REQ-840b3641-6e76-46da-82e9-680cabd65abe: 失敗時に残る pending gcroot は config あたり最大 1 個に有界とし回収処理を持たない
 
 ## 仕様
 
@@ -23,7 +23,7 @@ specification_ja: |
 残り、ビルド済み未使用 link-farm を掴み続けるが、次回 apply が**同名**（`.pending`）で
 上書きするため config あたり最大 1 個に有界。回収処理は持たず許容する。
 
-pending out-link を張る段そのものは REQ-60c6b7ea の担当。
+pending out-link を張る段そのものは REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9 の担当。
 
 ## 出典
 

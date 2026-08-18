@@ -21,7 +21,7 @@ specification_ja: |
   並行する apply / reset と直列化しなければならない。非 build コマンド共通の eval 先行
   前段に加えて、`reset` は entries 読みのため entrypoint eval も行わなければならない。
 ---
-# REQ-a8edc58f: reset は名指し必須で profileDir 単位の blocking flock を取る
+# REQ-a8edc58f-4adc-4637-b888-ab8ccc7e73e4: reset は名指し必須で profileDir 単位の blocking flock を取る
 
 ## 仕様
 
@@ -35,9 +35,9 @@ roothash キー）。`reset` はさらに entries 読みのため entrypoint eva
 > 規範化しない。
 >
 > - 非 build コマンド一般の eval 先行（build しないコマンドでも rootKind 先取り eval →
->   root 解決を先行する）→ REQ-9c111c32
-> - `--root` 時に profileDir を roothash でキーすること → REQ-d5a2e289（`--root` が全モードの
->   解決 root を上書きすること自体は REQ-61c05e09）
+>   root 解決を先行する）→ REQ-9c111c32-8f6c-4eda-859c-dae02c0624fc
+> - `--root` 時に profileDir を roothash でキーすること → REQ-d5a2e289-40bc-45a9-9d44-21b8dc561b81（`--root` が全モードの
+>   解決 root を上書きすること自体は REQ-61c05e09-0bde-4f74-9a96-03185f9df606）
 >
 > 本 item が規定するのは `reset` 固有の 3 点（名指し必須・profileDir 単位の blocking
 > flock・共通前段に加えて行う entrypoint eval）に限る。

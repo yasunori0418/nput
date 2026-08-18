@@ -10,7 +10,7 @@ likelihood: low
 impact: high
 level: medium
 ---
-# RISK-24e0805d: root 解決を誤り、意図しないディレクトリツリーへ配置する
+# RISK-24e0805d-53cd-40dd-9e7a-b5c4bbf2a298: root 解決を誤り、意図しないディレクトリツリーへ配置する
 
 全ての配置先は `<root>/<target>` として組み立てられるため、root の解決を誤ると entry 単位の
 正しさに関わらず配置全体が別のツリーへ流れ込む。project mode の root を CWD 相対や config
@@ -33,7 +33,7 @@ git から root を解決できないときに engine 実行時ではなく評�
 
 ## 評価
 
-- likelihood: low — 解決規則はモードごとに 1 箇所へ集約されており、TC-b254a5a8 が成功経路と
+- likelihood: low — 解決規則はモードごとに 1 箇所へ集約されており、TC-b254a5a8-7fbf-4f31-8486-3e373d66bfa7 が成功経路と
   失敗経路（git repo 外での停止・`fixed` でのパス無しの拒否・profile 準備の失敗）の双方を
   機械的に覆っている。ただし同 TC は「想定する失敗」4 点目に現れる root 供給元の層分けそのものを
   `integration` 区分へ明示的に委ねている（rootKind から絶対 root への解決分岐は home mode 側も

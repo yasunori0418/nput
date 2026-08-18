@@ -20,7 +20,7 @@ specification_ja: |
   実際の link 生成は engine が行わなければならない。プラットフォームのネイティブ機構
   （home-manager の `config.lib.file.mkOutOfStoreSymlink` 等）へは委譲してはならない。
 ---
-# REQ-eb363122: mkOutOfStoreSymlink は out-of-store symlink を表すマーカーを返す
+# REQ-eb363122-385a-499c-a074-c95efb949d07: mkOutOfStoreSymlink は out-of-store symlink を表すマーカーを返す
 
 ## 仕様
 

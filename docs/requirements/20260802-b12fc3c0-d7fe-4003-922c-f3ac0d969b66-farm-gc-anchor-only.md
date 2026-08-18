@@ -28,7 +28,7 @@ specification_ja: |
   `nix-collect-garbage` で解放されてよいためである。ただし copy entry も orphan 警告・
   stale 判定のため `manifest.json` には記録しなければならない。
 ---
-# REQ-b12fc3c0: symlink farm は GC アンカー専用でアンカーは store-backed な symlink entry に限る
+# REQ-b12fc3c0-d7fe-4003-922c-f3ac0d969b66: symlink farm は GC アンカー専用でアンカーは store-backed な symlink entry に限る
 
 ## 仕様
 
@@ -45,8 +45,8 @@ engine が配置に使う値は `manifest.json` の解決済み `src` 文字列�
   なく、`nix-collect-garbage` で解放されてよい。`manifest.json` には記録する
   （orphan 警告・stale 判定のため）。
 
-アンカー名の決め方は REQ-62eda895 が持つ。derivation が manifest.json と farm を含む
-こと自体は REQ-60e6b49c が持つ。
+アンカー名の決め方は REQ-62eda895-efd4-4eaf-a58b-600e8637da75 が持つ。derivation が manifest.json と farm を含む
+こと自体は REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281 が持つ。
 
 ## 出典
 

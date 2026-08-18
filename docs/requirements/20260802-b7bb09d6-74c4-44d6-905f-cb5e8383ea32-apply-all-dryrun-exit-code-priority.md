@@ -17,7 +17,7 @@ specification_ja: |
   エラーを CI で隠すため。非 dryrun の `--all` は conflict 概念が無く 0 / 1 のみでなければ
   ならない。
 ---
-# REQ-b7bb09d6: apply --all --dryrun の終了コードは error を conflict より優先する
+# REQ-b7bb09d6-74c4-44d6-905f-cb5e8383ea32: apply --all --dryrun の終了コードは error を conflict より優先する
 
 ## 仕様
 
@@ -26,7 +26,7 @@ specification_ja: |
 （2 > 1 で conflict 優先）は採らない（より深刻な eval / engine エラーを CI で隠すため）。
 非 dryrun の `--all` は conflict 概念が無く 0 / 1 のみ。
 
-終了コード表そのものは REQ-2c5a10d8 の担当。
+終了コード表そのものは REQ-2c5a10d8-112b-4f96-947a-aba7164779c4 の担当。
 
 ## 出典
 

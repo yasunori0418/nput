@@ -22,7 +22,7 @@ specification_ja: |
   Go ツールチェーンは nixpkgs の go に pin しなければならず、`toolchain` ディレクティブを
   使ってはならない（ビルドが独自にツールチェーンを取得せず Nix の下で再現可能に保つため）。
 ---
-# REQ-637599dc: CLI が持ち込む依存は許可した第三者ライブラリと pin した Go に限り、いずれも固定する
+# REQ-637599dc-a1ec-4af5-9e97-e882c7df56d0: CLI が持ち込む依存は許可した第三者ライブラリと pin した Go に限り、いずれも固定する
 
 ## 仕様
 
@@ -32,8 +32,8 @@ specification_ja: |
 
 > **上は原文の写しで、規範は frontmatter が正**。CLI が engine を import して配置を駆動
 > すること、および entrypoint 発見と `nix` のオーケストレーションを担う役割分担そのものは
-> REQ-f4d7d4ab、entrypoint の探索順は REQ-1cc080f6、実行フローにおける eval / build の
-> 順序は REQ-60c6b7ea、engine 側の stdlib-only 制約は REQ-b74a118a の担当。規範文が
+> REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645、entrypoint の探索順は REQ-1cc080f6-ae91-4c1f-973e-b7054cfc0198、実行フローにおける eval / build の
+> 順序は REQ-60c6b7ea-e936-4ce8-bd75-ad35e9c693b9、engine 側の stdlib-only 制約は REQ-b74a118a-1272-44eb-944c-7725163211c6 の担当。規範文が
 > engine の import に触れるのは、第三者依存を最小限に抑えられる前提が「配置を自前で
 > 持たず engine に委ねること」にあるためで、その役割分担自体を規範化するものではない。
 
@@ -46,4 +46,4 @@ specification_ja: |
 する位置づけは ADR-0007「汎用 nput CLI を一次 UX に昇格し、entrypoint 発見＋root 明示モデルへ
 移行する」が定めるが、同 ADR は cobra / vendorHash / Go の pin のいずれにも触れておらず、
 この item の規範を決めていないため、側面の根拠として `justifies` は張らない（位置づけそのものの
-帰属は REQ-14f0aec9 / REQ-f4d7d4ab が担当する）。
+帰属は REQ-14f0aec9-abae-4621-82f3-40536a1ad904 / REQ-f4d7d4ab-fbdb-48c6-b29f-08dd88e72645 が担当する）。

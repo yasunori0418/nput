@@ -6,7 +6,7 @@ target: "internal/engine/dryrun_test.go"
 covers:
   - "TC-a5eb7de3-a1a7-41ae-8fb9-c2aa374ac894"
 ---
-# CASE-0c2cec08: dryrun_test.go
+# CASE-0c2cec08-db65-427c-9480-ac0dcacc8d31: dryrun_test.go
 
 ## 対象
 
@@ -25,4 +25,4 @@ covers:
 - **実ディレクトリ移行の判断**: 実 dir が占有する target の移行判断を、除去なしで行うこと
 
 dryrun と本番 apply が同数の conflict を報告することの照合は `engine_test.go` にあり、
-CASE-31fdb776 が扱う。
+CASE-31fdb776-9650-4ff9-97f6-45d56b2e7177 が扱う。

@@ -9,7 +9,7 @@ specification: |
   `nput apply <name> --backup[=<suffix>]` SHALL rename an existing *unrecorded* entity
   that blocks placement — such as a foreign regular file / directory, a copy structure
   mismatch, a foreign real file under a copy, or a method change from copy to symlink, the
-  extension of the subjects being settled by REQ-9b0046e0 — aside to
+  extension of the subjects being settled by REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98 — aside to
   `<target>.<suffix>` before placing, as an escape hatch out of a conflict. Omitting the
   value SHALL mean the suffix `nput-backup`. Because of the cobra `NoOptDefVal`
   constraint, specifying a suffix SHALL require the `=` form (`--backup=bak`); the
@@ -22,7 +22,7 @@ specification: |
 specification_ja: |
   `nput apply <name> --backup[=<suffix>]` は、配置を塞ぐ既存の記録外実体（例: foreign な
   通常ファイル / ディレクトリ・copy 構造不一致・copy foreign 実ファイル・method 変更
-  copy→symlink。対象の外延は REQ-9b0046e0 が定める）を `<target>.<suffix>` へ rename 退避して
+  copy→symlink。対象の外延は REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98 が定める）を `<target>.<suffix>` へ rename 退避して
   から配置しなければならない（conflict の脱出ハッチ）。値なしは suffix `nput-backup` を
   意味しなければならない。cobra `NoOptDefVal` の制約により suffix 指定は `=` 区切り必須と
   しなければならず（`--backup=bak`）、スペース区切りは suffix として扱ってはならない。
@@ -33,7 +33,7 @@ specification_ja: |
   対象としなければならない。
   `nput reset` は退避物を復元してはならない。
 ---
-# REQ-5dd5a4e9: apply --backup は配置を塞ぐ記録外実体を rename 退避してから配置する
+# REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b: apply --backup は配置を塞ぐ記録外実体を rename 退避してから配置する
 
 ## 仕様
 
@@ -54,22 +54,22 @@ copy→symlink）を `<target>.<suffix>` へ rename 退避してから配置す�
 しない**（ユーザー所有物として残置。復元は手動 `mv`）。
 
 > **上は原文の写しで、規範は frontmatter が正**。undo ジャーナルそのものの規範
-> （→ ADR-0044）は REQ-5e75aabc の担当で、本 item は「退避もその対象である」ことだけを
+> （→ ADR-0044）は REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940 の担当で、本 item は「退避もその対象である」ことだけを
 > 規定する。退避が配置手順のどの段に入るか（PreRemove の後・配置の前）と、ドリフト修復
-> 経路でも実施されることは REQ-9b0046e0 の担当。
+> 経路でも実施されることは REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98 の担当。
 >
-> **退避対象の外延は REQ-9b0046e0 の担当**。上の写しが挙げる 4 種は原文の「CLI 仕様」節の
+> **退避対象の外延は REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98 の担当**。上の写しが挙げる 4 種は原文の「CLI 仕様」節の
 > 逐語で、原文は「配置動作仕様」§0.7 でこれに「実 dir migration 失敗」を加えた 5 種を挙げる。
-> REQ-9b0046e0 が種別の列挙ではなく判定各段の結論（「エラーで停止」または「copy foreign
+> REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98 が種別の列挙ではなく判定各段の結論（「エラーで停止」または「copy foreign
 > スキップ」）で括ることで広い方を規範としているため、本 item の規範文では 4 種を `例:` と
 > 明示して外延の確定から降ろした（写しは原文どおりのまま）。
 >
 > 一方、**祖先 symlink conflict が対象外であることは本 item の規範**として持つ。退避しない
 > 対象の指定は退避契約の一部であり、その理由（構造問題であり退避では解消しない）と同じ
-> item に置くのが所在として自然なため。REQ-9b0046e0 の規範文はこの除外を本 item へ委譲する
+> item に置くのが所在として自然なため。REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98 の規範文はこの除外を本 item へ委譲する
 > 形で括りを述べている。
 
-`--dryrun` / `--all` との合成は REQ-02a33511 / REQ-687e225f の担当。
+`--dryrun` / `--all` との合成は REQ-02a33511-0941-4813-b289-a05eb8e9aa57 / REQ-687e225f-5046-46db-88fb-f9e527a1e97a の担当。
 
 ## 出典
 

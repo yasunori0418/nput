@@ -12,7 +12,7 @@ specification_ja: |
   src ツリー内の symlink は symlink のまま複製しなければならず、deref してはならない
   （循環・サイズ膨張を避けるため）。相対 symlink はそのまま保たなければならない。
 ---
-# REQ-0bd55dfc: copy は src ツリー内の symlink を deref せず symlink のまま複製する
+# REQ-0bd55dfc-b28c-4ad2-ad50-bb1f76b2246c: copy は src ツリー内の symlink を deref せず symlink のまま複製する
 
 ## 仕様
 
@@ -24,7 +24,7 @@ specification_ja: |
 > 注記するが、これは規範ではなく利用上の帰結の注意喚起なので規範文には含めない。
 
 この複製規則は通常の place-once コピーと `apply --recopy` の再コピーの双方に適用される。
-place-once そのものは REQ-d2277c7a、recopy そのものは REQ-7cc32a2b / REQ-b4e4b65d の担当。
+place-once そのものは REQ-d2277c7a-7992-49af-a9dc-4cc73843a6f9、recopy そのものは REQ-7cc32a2b-eee4-4a29-8dc1-a1dc23e7a065 / REQ-b4e4b65d-6e35-40c3-a00e-20c14043df6f の担当。
 
 ## 出典
 

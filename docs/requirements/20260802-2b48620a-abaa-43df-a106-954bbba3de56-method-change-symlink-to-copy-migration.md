@@ -23,7 +23,7 @@ specification_ja: |
   自動移行してはならず、conflict のままとしなければならない（ユーザーが編集し得る copy
   データの保護を優先するため）。
 ---
-# REQ-2b48620a: method 変更は symlink→copy のみ配置前除去で移行し、copy→symlink は移行しない
+# REQ-2b48620a-abaa-43df-a106-954bbba3de56: method 変更は symlink→copy のみ配置前除去で移行し、copy→symlink は移行しない
 
 ## 仕様
 
@@ -37,12 +37,12 @@ method 変更 copy→symlink は**自動移行しない**（ユーザー編集�
 従来通り conflict のまま）。
 
 > **上は原文の写しで、規範は frontmatter が正**。copy→symlink の conflict は `--backup`
-> を付ければ退避 + 配置される（REQ-5dd5a4e9）。退避が配置手順のどの段に入るかは
-> REQ-9b0046e0 の担当。
+> を付ければ退避 + 配置される（REQ-5dd5a4e9-6162-4fa5-b295-66844f5a4f3b）。退避が配置手順のどの段に入るかは
+> REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98 の担当。
 
-祖先 symlink の migration は REQ-c9ab91c1、実 dir target の migration は REQ-7cee95dd の
+祖先 symlink の migration は REQ-c9ab91c1-f778-4f87-a2ea-c66d6b3c2575、実 dir target の migration は REQ-7cee95dd-bc5a-4e86-bebc-6080ef78fe26 の
 担当。除去を既定 silent とし `-v` で可視化するという出力規律そのもの（→ ADR-0031）は
-REQ-8ef34101 / REQ-0a123b89 の担当で、本 item は「この除去を warning にせず配置レポート側で
+REQ-8ef34101-8150-4124-92d5-94fabe6b5d90 / REQ-0a123b89-0399-4f76-b988-56a5f7e0becf の担当で、本 item は「この除去を warning にせず配置レポート側で
 扱う」ことだけを規範とする。
 
 ## 出典

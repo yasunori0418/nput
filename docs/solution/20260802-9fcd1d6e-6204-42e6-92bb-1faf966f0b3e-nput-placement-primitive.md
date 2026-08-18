@@ -3,7 +3,7 @@ id: "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 type: solution
 name: "nput は nix store の物を任意パスへ置く配置プリミティブであり、設定を生成せずユーザーが配置を明示的に握る"
 ---
-# SOL-9fcd1d6e: nput は nix store の物を任意パスへ置く配置プリミティブであり、設定を生成せずユーザーが配置を明示的に握る
+# SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e: nput は nix store の物を任意パスへ置く配置プリミティブであり、設定を生成せずユーザーが配置を明示的に握る
 
 ## 解決したい課題
 
@@ -64,8 +64,8 @@ nput モデル:
 > **上の 2 つの図は分割時点の `docs/concept.md`（原文）からの写し**。solution は解決策の
 > 位置づけを述べる層で規範を持たないため、独立更新の粒度が config 単位
 > （1 profile = 1 config）であることの規範は
-> REQ-1be4d678 にあり、その config をどう選ぶかは REQ-c2d44626 / REQ-496b1a07 が担う。
-> 使われ方としての整理は UC-1c280dce が担う。
+> REQ-1be4d678-959c-44d7-a346-44bfd95af56e にあり、その config をどう選ぶかは REQ-c2d44626-d8f4-446a-a80a-319a500129b4 / REQ-496b1a07-5b74-416b-9e5f-3952b4c03737 が担う。
+> 使われ方としての整理は UC-1c280dce-7c72-44c0-95ea-d06344f62a47 が担う。
 
 `home.file` 相当（root = `$HOME`）はこのプリミティブの一適用に過ぎず、root は
 `projectRoot` / `homeRoot` / `systemRoot` で明示的に選ぶ（暗黙デフォルトは持たない・
@@ -87,10 +87,10 @@ entrypoint（`flake.nix` / `shell.nix` / `default.nix`）を発見して配置�
 「設計の哲学」「既存ツールとの比較」「設計の変遷（会話の流れ）」は独立した item を立てず
 `docs/concept.md` に残す（→ Issue #211）。ただし「設計の哲学」のうちモジュール統合の
 使われ方に転化する 2 項（「配置ロジックはコアが所有し、モジュールは配線に徹する」
-「統合は『オプション』」）は UC-d39c1994 が引き受けており、節そのものは concept.md に残るが
+「統合は『オプション』」）は UC-d39c1994-f9a5-4860-80ba-f6e584adaf14 が引き受けており、節そのものは concept.md に残るが
 主張は use_case 側にも写っている。「home-manager に依存しない」節が述べるのは HM 不在の環境
 でも同じ設定定義で動くことであり、これは統合層ではなく standalone の使われ方
-（UC-f2436d68 / UC-19a90989）が体現する。
+（UC-f2436d68-91ff-4c48-b1df-47acefe4f464 / UC-19a90989-0ae3-438f-8a75-4e1e2637f81c）が体現する。
 
 north-star（配置プリミティブから組むミニマル distro 構想）も展望として `docs/concept.md` に
 残し、requirement を持たない use_case にはしない（2026-08-01 確定）。

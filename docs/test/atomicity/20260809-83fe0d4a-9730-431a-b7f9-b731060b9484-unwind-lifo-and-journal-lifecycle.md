@@ -6,11 +6,11 @@ mitigates:
   - "RISK-68e810c5-4e68-4b25-9bc0-6b2613022b49"
   - "RISK-a1622cdd-c7e2-4178-a50d-85bc2a35b29f"
 ---
-# TC-83fe0d4a: unwind が LIFO で巻き戻し、1 件の失敗でも継続して全件報告し、成功時は journal を破棄する
+# TC-83fe0d4a-9730-431a-b7f9-b731060b9484: unwind が LIFO で巻き戻し、1 件の失敗でも継続して全件報告し、成功時は journal を破棄する
 
 ## テスト条件
 
-個々の逆操作の正しさ（TC-9504e908）ではなく、journal 全体を扱う層の振る舞いを検証する。
+個々の逆操作の正しさ（TC-9504e908-a4bc-4d2d-80d3-af07264284f8）ではなく、journal 全体を扱う層の振る舞いを検証する。
 
 **LIFO 順序** — 複数エントリを積んだ journal は last-in-first-out で巻き戻される。順序が
 効くのは前方操作に依存関係があるときで、代表形は PreRemove の「子 symlink を unlink →
@@ -24,9 +24,9 @@ mitigates:
 
 **成功時の journal 破棄** — commit 成功後の discardJournal が `--recopy` の rename 退避
 ファイルを掃除する。undo は起きなかったのだから、新しい copy がそのまま生きる。
-`--backup` の退避を掃除しない側は TC-ed4992c0 が担当する。
+`--backup` の退避を掃除しない側は TC-ed4992c0-8513-4383-be0a-e45acbbc229f が担当する。
 
 ## 対応する CASE
 
-CASE-02475ac2（`internal/engine/undo_test.go`）・CASE-154af597
+CASE-02475ac2-5555-4fa1-a3e5-cda5015919c5（`internal/engine/undo_test.go`）・CASE-154af597-df3e-49fb-a96b-b4f371dfcc63
 （`internal/engine/undo_journal_test.go` の `preRemove` 直接駆動）。

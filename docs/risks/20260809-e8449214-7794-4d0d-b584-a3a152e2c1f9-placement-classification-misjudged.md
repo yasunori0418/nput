@@ -10,7 +10,7 @@ likelihood: medium
 impact: high
 level: high
 ---
-# RISK-e8449214: 配置分類を誤り、ユーザーの実体を黙って壊す
+# RISK-e8449214-7794-4d0d-b584-a3a152e2c1f9: 配置分類を誤り、ユーザーの実体を黙って壊す
 
 engine は target の現況を「不在 / 自プロファイルが前世代で記録した symlink / 記録に無い
 foreign symlink / 通常ファイル・実ディレクトリ」に分類し、それぞれ新規配置・無警告の張替え・
@@ -33,7 +33,7 @@ conflict 検出時に「最初の 1 件で止めて残りを報告しない」�
 
 ## 評価
 
-- likelihood: medium — 分類は TC-9df804ce / TC-405606f0 / TC-8435052a / TC-4da40ee8 の
+- likelihood: medium — 分類は TC-9df804ce-35ee-44a7-87b1-17935d53fab2 / TC-405606f0-3ac8-4cc2-998e-d4759a62a171 / TC-8435052a-5dcc-49e2-ac26-82f645cb6890 / TC-4da40ee8-877e-405b-98ca-6bf5de926ba4 の
   4 本が対象・停止・検査・報告の各面を覆っており密度は高い。ただし分類そのものが engine の
   中心にあり、配置の形（method・祖先 symlink・out-of-store）を足すたびに枝が増える
 - impact: high — 通常ファイルを symlink で上書きする方向の誤りは、ユーザーのファイルを消す。

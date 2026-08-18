@@ -17,7 +17,7 @@ specification_ja: |
   ならず、重複 name を検出する `lib.throwIf` を持ってはならない。`target` フィールドを
   省略した場合は属性キーを既定値としなければならない。
 ---
-# REQ-cb77ea05: entry の識別子は属性キー = target とし一意性は Nix が担保する
+# REQ-cb77ea05-bab8-4ccf-b09e-d23d8f71cdc7: entry の識別子は属性キー = target とし一意性は Nix が担保する
 
 ## 仕様
 

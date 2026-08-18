@@ -16,7 +16,7 @@ specification_ja: |
   優先順で探さなければならない。`-f` / `--file <path>` は entrypoint を明示指定し、自動探索を
   上書きしなければならない。
 ---
-# REQ-1cc080f6: entrypoint は CWD で flake.nix → shell.nix → default.nix の順に探し -f で上書きする
+# REQ-1cc080f6-ae91-4c1f-973e-b7054cfc0198: entrypoint は CWD で flake.nix → shell.nix → default.nix の順に探し -f で上書きする
 
 ## 仕様
 

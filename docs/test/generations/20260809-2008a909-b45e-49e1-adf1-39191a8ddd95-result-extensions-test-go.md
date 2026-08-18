@@ -6,7 +6,7 @@ target: "internal/engine/result_extensions_test.go"
 covers:
   - "TC-1d19aebc-e1e6-4d6f-9440-3efbd69b18a8"
 ---
-# CASE-2008a909: result_extensions_test.go — 実行結果のインベントリ・世代観測・到達状態・構造化 warning
+# CASE-2008a909-b45e-49e1-adf1-39191a8ddd95: result_extensions_test.go — 実行結果のインベントリ・世代観測・到達状態・構造化 warning
 
 ## 対象
 
@@ -17,7 +17,7 @@ issue #130 が niface envelope（#131 / #132 が共有）のために足した `
 `<profile>-<N>-link` を作って profile リンクを（`nix-env` と同じく相対で）張り替えるため、
 世代番号を読み戻せる。manifest は原則 `rootKind=fixed`（root を明示的に渡し git に依存
 しない）で、rollback 系のみ home mode + `--root` 上書き（rollback が home 限定であるため
-→ REQ-05abce3e）。
+→ REQ-05abce3e-9797-432b-b93f-37c55d09afde）。
 
 ## 検証内容
 

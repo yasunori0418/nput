@@ -5,7 +5,7 @@ name: "out-of-store marker が live symlink として配置され、src 側の�
 mitigates:
   - "RISK-ffb5100d-c553-4dd8-937a-1263ad84a8c7"
 ---
-# TC-cf1b44ec: out-of-store の live 性
+# TC-cf1b44ec-2ec4-4ee1-9a37-378e41ccb01e: out-of-store の live 性
 
 `mkOutOfStoreSymlink` で作った marker が、コピーではなく marker の絶対パスを指す symlink
 として配置されることを検証する。配置後に src 側のファイルを書き換えたとき、target 越しに

@@ -5,11 +5,11 @@ name: "rollback は途中失敗を巻き戻し、ポインタ移動の失敗は�
 mitigates:
   - "RISK-fbf029f6-866c-4a08-a4eb-f09e3c7e907e"
 ---
-# TC-fa7911c6: rollback は途中失敗を巻き戻し、ポインタ移動の失敗は巻き戻さず、前提不成立では停止する
+# TC-fa7911c6-7347-47ff-b121-bec53562c063: rollback は途中失敗を巻き戻し、ポインタ移動の失敗は巻き戻さず、前提不成立では停止する
 
 ## テスト条件
 
-TC-36ea3609 の正常系に対し、`Rollback` の失敗経路を検証する。
+TC-36ea3609-d52e-42d4-975c-40fb89b23919 の正常系に対し、`Rollback` の失敗経路を検証する。
 
 **途中失敗の巻き戻し** — 祖先 migration（PreRemove の unlink + それによって可能になった
 子の配置）が成功したあとで、同じバッチの無関係な配置が失敗したとき、migration ごと
@@ -35,5 +35,5 @@ apply と同じく全 conflict を stderr へ列挙してから、件数を持�
 
 ## 対応する CASE
 
-CASE-364ebb9d（`internal/engine/generations_test.go`）。conflict / 部分失敗時の結果
-の構造は CASE-2008a909 も隣接して検証する。
+CASE-364ebb9d-b9f8-4c79-8509-8bbf31e73698（`internal/engine/generations_test.go`）。conflict / 部分失敗時の結果
+の構造は CASE-2008a909-b45e-49e1-adf1-39191a8ddd95 も隣接して検証する。

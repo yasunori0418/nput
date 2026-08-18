@@ -6,7 +6,7 @@ target: "tests/e2e/scenarios/06-init-templates.sh"
 covers:
   - "TC-7e1e6a63-80d5-452c-bc49-81854ffac5a4"
 ---
-# CASE-474dc938: e2e 06-init-templates — テンプレを展開して展開物の評価が通ることを確かめる
+# CASE-474dc938-dec8-4aae-9d91-607cfcd6dec0: e2e 06-init-templates — テンプレを展開して展開物の評価が通ることを確かめる
 
 ## 対象
 

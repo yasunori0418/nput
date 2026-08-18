@@ -18,7 +18,7 @@ specification_ja: |
   （vendoring）にするのは nput の責務外であり、project mode の ephemeral 原則を
   崩してはならない。
 ---
-# REQ-60787ed2: gitignore は method を区別せず copy target も含めて全 target を列挙する
+# REQ-60787ed2-4176-4bdd-800f-1600c0315551: gitignore は method を区別せず copy target も含めて全 target を列挙する
 
 ## 仕様
 

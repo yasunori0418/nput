@@ -18,7 +18,7 @@ specification_ja: |
   サブコマンドではなく、標準の `nix-env` / `nix-collect-garbage` を profile パスに対して
   使って行わなければならない。
 ---
-# REQ-4ffda99a: 内部実行する nix コマンドを開示し世代の切替と GC は標準の nix コマンドへ委譲する
+# REQ-4ffda99a-7062-4c00-915f-70b525cb215b: 内部実行する nix コマンドを開示し世代の切替と GC は標準の nix コマンドへ委譲する
 
 ## 仕様
 
@@ -27,7 +27,7 @@ specification_ja: |
 - 任意世代への切替・世代の GC は標準の `nix-env` / `nix-collect-garbage` を profile パスに
   対して使う。
 
-`--debug` による nix コマンドの開示（冗長度と直交させる分離）は REQ-0a123b89 の担当。
+`--debug` による nix コマンドの開示（冗長度と直交させる分離）は REQ-0a123b89-0399-4f76-b988-56a5f7e0becf の担当。
 
 ## 出典
 

@@ -10,7 +10,7 @@ likelihood: medium
 impact: high
 level: high
 ---
-# RISK-ac5cd9b4: profile のキーイングか世代の読み取りが誤り、別 config の世代系列を取り違える
+# RISK-ac5cd9b4-58f9-43d8-9fae-66f7b5940beb: profile のキーイングか世代の読み取りが誤り、別 config の世代系列を取り違える
 
 ## リスク
 
@@ -27,7 +27,7 @@ level: high
 apply のたびに新しい世代系列が生まれ、前世代が永久に見つからず stale 除去が効かなくなる。
 
 レイアウト側では、profile リンク・`profile-N-link` 世代・`.pending` out-link を同一
-ディレクトリの兄弟として並べる規約（→ REQ-2aa3abbc）が崩れると、read-only な store パスを
+ディレクトリの兄弟として並べる規約（→ REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3）が崩れると、read-only な store パスを
 貫通して書こうとする破綻を招く。`<state>` の解決（`$XDG_STATE_HOME` 優先・無ければ
 `~/.local/state`・`$HOME` も解決できなければエラー）が誤れば、profile 一式が想定外の
 場所に作られ、既存の世代が一切見えなくなる。
@@ -51,5 +51,5 @@ apply のたびに新しい世代系列が生まれ、前世代が永久に見�
 
 ## 緩和
 
-TC-40b762fc（`<state>` 解決・profileDir キーイング・世代リンク命名）と
-TC-746cb5b9（世代一覧のパース）が緩和する。
+TC-40b762fc-3b48-471c-b495-c5ffe1f584b5（`<state>` 解決・profileDir キーイング・世代リンク命名）と
+TC-746cb5b9-fe27-4d09-a51d-eb03d56a93a7（世代一覧のパース）が緩和する。

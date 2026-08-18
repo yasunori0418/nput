@@ -9,7 +9,7 @@ covers:
   - "TC-8a1f4b19-0ece-4057-a8bf-f9717855cade"
   - "TC-810d661d-6d3d-4199-828f-e44adcebad5a"
 ---
-# CASE-39fbf9f0: preremove_generalization_test.go
+# CASE-39fbf9f0-ddd6-4d57-9c77-00b4f3eae488: preremove_generalization_test.go
 
 ## 対象
 

@@ -18,7 +18,7 @@ specification_ja: |
   Nix 評価内で完結させ、`manifest.json` へ漏らしてはならない。Go 契約へ渡すのは
   `srcKind` / `rootKind` の clean enum でなければならない。
 ---
-# REQ-1dcc9a33: marker は判別タグで識別し manifest.json には漏らさない
+# REQ-1dcc9a33-b0f2-43e0-8310-fc4b19e68fe7: marker は判別タグで識別し manifest.json には漏らさない
 
 ## 仕様
 

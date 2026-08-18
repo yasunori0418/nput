@@ -53,7 +53,7 @@ specification_ja: |
   （ユーザー編集）場合は触ってはならない（home mode の place-once と振る舞いを一致させる）。
   src 追従は `apply --recopy` 限定としなければならず、内容ハッシュ比較はしてはならない。
 ---
-# REQ-46fccb80: project mode は世代を非公開にし、derivation 同一なら世代を積まず lstat ドリフト修復だけ行う
+# REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0: project mode は世代を非公開にし、derivation 同一なら世代を積まず lstat ドリフト修復だけ行う
 
 ## 仕様
 
@@ -80,13 +80,13 @@ specification_ja: |
 > **上は原文の写しで、規範は frontmatter が正**。原文が参照する次の規範は本 item の担当ではない。
 >
 > - `<roothash>` 階層に backref `.root` を置き孤児 profile を逆引きできるようにすること →
->   REQ-2aa3abbc（レイアウト）・REQ-d41b1d0a（孤児 profile の扱い）
-> - flock のキーが解決後 profileDir であること → REQ-2aa3abbc / REQ-1c1526b1
-> - `<state>` の定義 → REQ-2aa3abbc
-> - cross-config で同一 target を狙ったときの振動がユーザー責任であること → REQ-fc1118b1
-> - ドリフト修復経路でも `--backup` の退避段が効くこと → REQ-9b0046e0
-> - `rollback` / `list-generations` が home mode 限定であること（CLI 側の規範）→ REQ-05abce3e
-> - foreign symlink の warning そのもの → REQ-622787dc、place-once そのもの → REQ-d2277c7a
+>   REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3（レイアウト）・REQ-d41b1d0a-c6d5-41cc-93f9-e5cc7f152da4（孤児 profile の扱い）
+> - flock のキーが解決後 profileDir であること → REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3 / REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461
+> - `<state>` の定義 → REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3
+> - cross-config で同一 target を狙ったときの振動がユーザー責任であること → REQ-fc1118b1-b0e8-4ddf-80f6-c70956651693
+> - ドリフト修復経路でも `--backup` の退避段が効くこと → REQ-9b0046e0-8ddc-4c0b-940e-3fe6f36d0e98
+> - `rollback` / `list-generations` が home mode 限定であること（CLI 側の規範）→ REQ-05abce3e-9797-432b-b93f-37c55d09afde
+> - foreign symlink の warning そのもの → REQ-622787dc-4512-4ce9-9c7d-7b32bbb70557、place-once そのもの → REQ-d2277c7a-7992-49af-a9dc-4cc73843a6f9
 
 ## 出典
 

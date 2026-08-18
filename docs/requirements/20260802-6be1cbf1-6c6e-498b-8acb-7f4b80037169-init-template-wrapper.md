@@ -18,7 +18,7 @@ specification_ja: |
   `nix flake init` の「既存ファイルを上書きしない」保守性を継承しなければならない。
   テンプレートは `standalone` と `project` の 2 つを提供しなければならない。
 ---
-# REQ-6be1cbf1: nput init は nix flake init -t への透明なラッパーとしファイルを生成しない
+# REQ-6be1cbf1-6c6e-498b-8acb-7f4b80037169: nput init は nix flake init -t への透明なラッパーとしファイルを生成しない
 
 ## 仕様
 
@@ -31,8 +31,8 @@ nput init project      # nix flake init -t github:yasunori0418/nput#project の�
 作るのは nix の templates 機構であり nput 自身は generate しない（「設定を生成しない」
 thesis を維持）。`nix flake init` の「既存ファイルを上書きしない」保守性を継承する。
 
-固定 flake ref は REQ-cbd61281、template の中身は REQ-196ddabf、`--json` 時の出力は
-REQ-fa181aa6 の担当。
+固定 flake ref は REQ-cbd61281-64b0-4487-a4b7-ce76e70dc4f9、template の中身は REQ-196ddabf-6569-4303-942e-050872972501、`--json` 時の出力は
+REQ-fa181aa6-29a2-48c3-ae07-cc1b9a3b0303 の担当。
 
 ## 出典
 

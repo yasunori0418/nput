@@ -20,7 +20,7 @@ specification_ja: |
   stale 除去は前世代 manifest を読む）は、最初のリリース後にフィールド追加で v2 が
   必要になった時点で改めて検討しなければならない。
 ---
-# REQ-250d936c: MVP は manifest v1 のみを発行・受理しマイグレーション機構を持たない
+# REQ-250d936c-1df0-491d-a7af-708f38b61f33: MVP は manifest v1 のみを発行・受理しマイグレーション機構を持たない
 
 ## 仕様
 
@@ -32,7 +32,7 @@ specification_ja: |
 読めること」で、アップグレード直後の stale 除去が前世代 manifest を読むという事実が
 その必要性の根拠になる。
 
-engine が自身の対応版より新しい `schemaVersion` を拒否することは REQ-79ce0a09 が持つ。
+engine が自身の対応版より新しい `schemaVersion` を拒否することは REQ-79ce0a09-f9bd-4e61-ba7f-45fb5643137b が持つ。
 本 item は「古い版を読む機構を作らない」側を規定する。
 
 ## 出典

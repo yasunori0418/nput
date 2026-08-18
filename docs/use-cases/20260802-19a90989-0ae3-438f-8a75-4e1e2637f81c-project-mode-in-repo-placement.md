@@ -5,7 +5,7 @@ name: "プロジェクト repo 内へ nix store の物を devShell 入室のた�
 refines:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 ---
-# UC-19a90989: プロジェクト repo 内へ nix store の物を devShell 入室のたびに配置してチームで共有する
+# UC-19a90989-0ae3-438f-8a75-4e1e2637f81c: プロジェクト repo 内へ nix store の物を devShell 入室のたびに配置してチームで共有する
 
 ## 使われ方
 
@@ -42,8 +42,8 @@ devShells.${system}.default = pkgs.mkShell {
 > **上は分割時点の `docs/concept.md`（原文）からの写し**（コメントの出典注記は省いた）。
 > use_case は使われ方を述べる層で規範を持たないため、この例が示す各要素の規範は
 > requirement 側にある
-> （devShell 同梱 → REQ-14f0aec9、`nput.<name>` のアドレッシング → REQ-496b1a07、
-> devShell からの engine 起動 → REQ-a0bdf6db）。
+> （devShell 同梱 → REQ-14f0aec9-abae-4621-82f3-40536a1ad904、`nput.<name>` のアドレッシング → REQ-496b1a07-5b74-416b-9e5f-3952b4c03737、
+> devShell からの engine 起動 → REQ-a0bdf6db-6c0c-476c-916a-61ee4e4510d9）。
 
 配置物は per-clone で再生成される前提の **ephemeral** であり、プロジェクトにはコミットされ
 ない。したがって activation は git 状態に干渉せず、`.gitignore` に入れるべき target は専用
@@ -65,7 +65,7 @@ devShells.${system}.default = pkgs.mkShell {
 `docs/concept.md`「プロジェクトに閉じた配置（project mode）」と「想定ユースケース」の
 project mode 節。
 
-あわせて「設計の哲学」の「home-manager に依存しない」節も、UC-f2436d68 とともに本 item が
+あわせて「設計の哲学」の「home-manager に依存しない」節も、UC-f2436d68-91ff-4c48-b1df-47acefe4f464 とともに本 item が
 引き受ける。同節が述べる「HM 不在の環境でも同じ設定定義で動く」ことを体現するのは統合ではなく
 standalone の使われ方であり、本 item では devShell の `shellHook` から engine を起動する配線が
 HM を介さずに成立することが同節に対応する。

@@ -27,7 +27,7 @@ specification_ja: |
   `lib`（`normalizeManifest`）または `pkgs`（`mkManifest`）を明示引数として要求しなければ
   ならない。
 ---
-# REQ-b232ec98: normalizeManifest が検査・デフォルト適用・marker 変換を行い mkManifest が derivation を組む
+# REQ-b232ec98-af3b-41f3-a050-29d417322002: normalizeManifest が検査・デフォルト適用・marker 変換を行い mkManifest が derivation を組む
 
 ## 仕様
 

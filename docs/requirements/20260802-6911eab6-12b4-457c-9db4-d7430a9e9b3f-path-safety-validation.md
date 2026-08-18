@@ -18,7 +18,7 @@ specification_ja: |
   静的な絶対 / `..` 判定は root の
   実体値（実行時解決）に依らず eval 時に可能でなければならない。
 ---
-# REQ-6911eab6: target / subpath のパス安全性を評価時に検査する
+# REQ-6911eab6-12b4-457c-9db4-d7430a9e9b3f: target / subpath のパス安全性を評価時に検査する
 
 ## 仕様
 

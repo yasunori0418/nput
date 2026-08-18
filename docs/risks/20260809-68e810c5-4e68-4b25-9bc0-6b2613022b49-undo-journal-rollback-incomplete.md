@@ -9,7 +9,7 @@ likelihood: high
 impact: high
 level: high
 ---
-# RISK-68e810c5: 途中失敗した run の巻き戻しが不完全で、FS に部分適用の痕跡が残る
+# RISK-68e810c5-4e68-4b25-9bc0-6b2613022b49: 途中失敗した run の巻き戻しが不完全で、FS に部分適用の痕跡が残る
 
 ## リスク
 
@@ -31,9 +31,9 @@ prevDest を復元しない・PreRemove が消した実ディレクトリを作�
 すると整合状態を壊す（→ ADR-0044 §2）。この非対称性が崩れる方向の欠陥も本リスクに含む。
 
 `design` ではなく `requirement` へ張るのは、undo ジャーナルという機構そのものが
-REQ-5e75aabc の `specification` に「インメモリ undo ジャーナルへ逆操作を 1 件記録する」と
+REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940 の `specification` に「インメモリ undo ジャーナルへ逆操作を 1 件記録する」と
 書き下ろされて要求へ昇格しており、対応する design item が `docs/design/` に存在しない
-ため（REQ-5e75aabc を satisfies するのは DSG-836aa5cb というテスト戦略の design だけ）。
+ため（REQ-5e75aabc-0e8f-4a6c-92bd-a712dc68a940 を satisfies するのは DSG-836aa5cb-0389-4adb-990b-144fe5aeffe3 というテスト戦略の design だけ）。
 
 ## 実現性
 
@@ -47,6 +47,6 @@ journal 側の対応が必要になっている。
 
 ## 緩和
 
-TC-9504e908（逆操作単体の正しさ）・TC-83fe0d4a（LIFO 順序と journal のライフサイクル）・
-TC-3b02ab58（実 FS 故障注入による end-to-end 巻き戻し）・TC-e048211f（commit 失敗は
-unwind しない非対称性）が緩和する。検証方針そのものは TP-deb05610 が定める。
+TC-9504e908-a4bc-4d2d-80d3-af07264284f8（逆操作単体の正しさ）・TC-83fe0d4a-9730-431a-b7f9-b731060b9484（LIFO 順序と journal のライフサイクル）・
+TC-3b02ab58-5bfb-4ae7-9ac1-c69e2ece2722（実 FS 故障注入による end-to-end 巻き戻し）・TC-e048211f-0844-4446-9957-fb444c1da4e5（commit 失敗は
+unwind しない非対称性）が緩和する。検証方針そのものは TP-deb05610-44bc-4962-8939-952392e5fbd0 が定める。

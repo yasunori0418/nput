@@ -6,11 +6,11 @@ target: "tests/nix-unit/anchor-name.nix"
 covers:
   - "TC-a6a14739-89e5-4eba-acee-3ed5be5a0b7e"
 ---
-# CASE-ead15d61: nix-unit anchor-name.nix
+# CASE-ead15d61-8ca7-41fb-9121-a5d247ef727a: nix-unit anchor-name.nix
 
 ## 対象
 
-`tests/nix-unit/anchor-name.nix`（TP-403c55c7 のテスト seam `nput.__internal.anchorName` を
+`tests/nix-unit/anchor-name.nix`（TP-403c55c7-d996-4951-8e6b-c3a7dddd387c のテスト seam `nput.__internal.anchorName` を
 直接叩く）
 
 ## 検証内容

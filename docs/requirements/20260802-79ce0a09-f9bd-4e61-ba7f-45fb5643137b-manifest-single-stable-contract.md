@@ -15,7 +15,7 @@ specification_ja: |
   唯一の安定契約でなければならない。`schemaVersion` は v1 では `1` に固定し、engine は
   自身の対応版より新しい `schemaVersion` を拒否しなければならない。
 ---
-# REQ-79ce0a09: manifest.json が Nix と engine の唯一の安定契約であり schemaVersion は 1 に固定する
+# REQ-79ce0a09-f9bd-4e61-ba7f-45fb5643137b: manifest.json が Nix と engine の唯一の安定契約であり schemaVersion は 1 に固定する
 
 ## 仕様
 
@@ -24,9 +24,9 @@ specification_ja: |
 - `schemaVersion` は **`1`** で固定する。
 - engine は自身の対応版より新しい `schemaVersion` を拒否する。
 
-内部タグ `_nputMarker` を manifest に漏らさず clean enum で写すことは REQ-1dcc9a33 が
-持つ。返り値としての manifest.json の位置づけは REQ-60e6b49c、スキーマの各フィールドは
-REQ-dedd2c28 / REQ-dd10d820 / REQ-0b0cd1e3 が持つ。
+内部タグ `_nputMarker` を manifest に漏らさず clean enum で写すことは REQ-1dcc9a33-b0f2-43e0-8310-fc4b19e68fe7 が
+持つ。返り値としての manifest.json の位置づけは REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281、スキーマの各フィールドは
+REQ-dedd2c28-bba3-4ecf-80c9-8c77347e8e1f / REQ-dd10d820-e453-4099-a47a-ffb9a7de02fb / REQ-0b0cd1e3-bfeb-45c1-978d-e2e11c568336 が持つ。
 
 ## 出典
 

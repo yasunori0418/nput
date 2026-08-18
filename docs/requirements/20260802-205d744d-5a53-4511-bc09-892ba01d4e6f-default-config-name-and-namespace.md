@@ -16,7 +16,7 @@ specification_ja: |
   なく専用の `nput` 名前空間に置き、manifest が通常パッケージとして `nix flake show` /
   `nix build` に混ざらないようにしなければならない。
 ---
-# REQ-205d744d: config 名 default を慣例の解決先とし専用 nput 名前空間で packages を汚さない
+# REQ-205d744d-5a53-4511-bc09-892ba01d4e6f: config 名 default を慣例の解決先とし専用 nput 名前空間で packages を汚さない
 
 ## 仕様
 
@@ -25,7 +25,7 @@ specification_ja: |
 （manifest が通常パッケージとして `nix flake show` / `nix build` に混ざらない）。
 
 name 省略時に `default` が未定義ならエラーになることは `nput apply` の config 選択の
-規範であり、REQ-c2d44626 の担当。
+規範であり、REQ-c2d44626-d8f4-446a-a80a-319a500129b4 の担当。
 
 ## 出典
 

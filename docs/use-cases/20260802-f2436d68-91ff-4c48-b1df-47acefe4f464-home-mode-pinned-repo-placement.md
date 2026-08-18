@@ -5,7 +5,7 @@ name: "home mode で外部リポジトリの中身をバージョン固定して
 refines:
   - "SOL-9fcd1d6e-6204-42e6-92bb-1faf966f0b3e"
 ---
-# UC-f2436d68: home mode で外部リポジトリの中身をバージョン固定して $HOME 配下の任意パスへ配置する
+# UC-f2436d68-91ff-4c48-b1df-47acefe4f464: home mode で外部リポジトリの中身をバージョン固定して $HOME 配下の任意パスへ配置する
 
 ## 使われ方
 
@@ -61,7 +61,7 @@ npins update 等）後に再適用すると新しい内容へ切り替わる。
 
 あわせて「設計の哲学」の「home-manager に依存しない」節も本 item が引き受ける。同節が述べる
 「HM 不在の環境でも同じ設定定義で動く」ことを体現するのは統合ではなく standalone の使われ方で、
-本 item と UC-19a90989 がそれにあたる。本 item では「config を Nix で書き `nput` CLI が
+本 item と UC-19a90989-0ae3-438f-8a75-4e1e2637f81c がそれにあたる。本 item では「config を Nix で書き `nput` CLI が
 entrypoint を発見して評価・適用すること」が同節に対応する要求になる。
 
 Issue #211 の素材リストはこの 3 例を別々に挙げるが、3 例とも紐づく requirement 群が重なる

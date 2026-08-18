@@ -17,7 +17,7 @@ specification_ja: |
   「store から切り離してユーザーが所有・編集する」用途である。したがって perm の相対構造
   （実行ビット・group / other）は保ちつつ、所有者が編集できる状態にしなければならない。
 ---
-# REQ-84e3c717: copy は元の mode を保存しつつ owner-write を付与する
+# REQ-84e3c717-adf5-4ff3-b0db-d039b82ef19c: copy は元の mode を保存しつつ owner-write を付与する
 
 ## 仕様
 
@@ -27,8 +27,8 @@ store パスは read-only（0444 / 0555）のため、そのまま保存する�
 group/other）は保ちつつ所有者が編集できる状態にする。
 
 > **上は原文の写しで、規範は frontmatter が正**。この mode 規則は通常の place-once コピーと
-> `apply --recopy` の再コピーの双方に適用される。place-once そのものは REQ-d2277c7a、
-> recopy そのものは REQ-7cc32a2b / REQ-b4e4b65d の担当。
+> `apply --recopy` の再コピーの双方に適用される。place-once そのものは REQ-d2277c7a-7992-49af-a9dc-4cc73843a6f9、
+> recopy そのものは REQ-7cc32a2b-eee4-4a29-8dc1-a1dc23e7a065 / REQ-b4e4b65d-6e35-40c3-a00e-20c14043df6f の担当。
 
 ## 出典
 

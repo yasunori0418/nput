@@ -5,7 +5,7 @@ name: "省略時の既定適用・明示上書き・target 辞書順での決定
 mitigates:
   - "RISK-5df2d02b-e5d4-40eb-86ad-e8bc96e4c34d"
 ---
-# TC-d9175bb5: 既定適用と決定的な配列化をアサートする
+# TC-d9175bb5-d7ec-41e0-8bee-71de928a71fb: 既定適用と決定的な配列化をアサートする
 
 ## テスト条件
 
@@ -21,7 +21,7 @@ attrset で宣言された entries が配列へ正規化される過程を、3 �
 
 ## 覆う CASE
 
-- CASE-59de34d4（`tests/nix-unit/defaults.nix`）
+- CASE-59de34d4-d9d5-4ae0-b1be-44d2e775f031（`tests/nix-unit/defaults.nix`）
 
 ## 出典
 

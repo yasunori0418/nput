@@ -36,7 +36,7 @@ specification_ja: |
   同一 config の apply / reset / rollback を直列化しつつ、同 roothash でも別 `<name>` dir とは
   独立させなければならない。
 ---
-# REQ-2aa3abbc: profileDir は config 専用ディレクトリとし、profile リンク・世代・pending out-link をその中に並べる
+# REQ-2aa3abbc-90b2-486e-92de-d785554bdeb3: profileDir は config 専用ディレクトリとし、profile リンク・世代・pending out-link をその中に並べる
 
 ## 仕様
 
@@ -64,14 +64,14 @@ specification_ja: |
   （孤児 profile 逆引き seam）
 
 > **上は原文の写しで、規範は frontmatter が正**。`profileDir` の**キー**そのものは、home
-> （`<name>` 直キー）・fixed・`--root` 上書き（`<roothash>/<name>`）が REQ-d5a2e289、project mode
+> （`<name>` 直キー）・fixed・`--root` 上書き（`<roothash>/<name>`）が REQ-d5a2e289-40bc-45a9-9d44-21b8dc561b81、project mode
 > （解決済み root でキーすること）とその理由・`<roothash>`（解決後の絶対 root パスの sha256
-> 短縮 hex）の定義が REQ-46fccb80、孤児 profile の扱いが REQ-d41b1d0a の担当。
+> 短縮 hex）の定義が REQ-46fccb80-4bae-4d37-bc19-dded88e9a9c0、孤児 profile の扱いが REQ-d41b1d0a-c6d5-41cc-93f9-e5cc7f152da4 の担当。
 > HM モジュール経由も home mode の `<name>` 直キーに乗る（原文が挙げる「固定名 `default`」の
-> MVP 限定は ADR-0035 が反転済み・REQ-c6891aeb）。本 item は「キーで指す先が
+> MVP 限定は ADR-0035 が反転済み・REQ-c6891aeb-13c0-4ae7-9ad1-5c343735266a）。本 item は「キーで指す先が
 > ディレクトリであり、その中に何をどう並べるか」という物理形を規定する。flock を blocking で
-> 取るか try-lock で取るかは REQ-1c1526b1、pending out-link が gcroot を持ち config あたり
-> 最大 1 に抑えられることは REQ-840b3641 の担当。
+> 取るか try-lock で取るかは REQ-1c1526b1-59e3-4264-bb7c-65a10a4aa461、pending out-link が gcroot を持ち config あたり
+> 最大 1 に抑えられることは REQ-840b3641-6e76-46da-82e9-680cabd65abe の担当。
 
 ## 出典
 

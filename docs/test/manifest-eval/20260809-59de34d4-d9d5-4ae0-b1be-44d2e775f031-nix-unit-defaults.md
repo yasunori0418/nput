@@ -6,7 +6,7 @@ target: "tests/nix-unit/defaults.nix"
 covers:
   - "TC-d9175bb5-d7ec-41e0-8bee-71de928a71fb"
 ---
-# CASE-59de34d4: nix-unit defaults.nix
+# CASE-59de34d4-d9d5-4ae0-b1be-44d2e775f031: nix-unit defaults.nix
 
 ## 対象
 
@@ -23,7 +23,7 @@ covers:
 - **決定的な配列化**: 属性キー `b` / `a` / `c` を与えたとき、出力 entries の `target` 列が
   `[a b c]` の辞書順になること
 
-配置元は TP-d3d06fe4 の fake flake-input double イディオムに従う。
+配置元は TP-d3d06fe4-6940-4df8-b111-bb4096d5444f の fake flake-input double イディオムに従う。
 
 ## 出典
 

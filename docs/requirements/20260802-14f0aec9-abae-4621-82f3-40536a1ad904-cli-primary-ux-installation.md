@@ -30,7 +30,7 @@ specification_ja: |
   skew した `schemaVersion` に engine がどう反応するかは manifest スキーマ仕様の担当で、
   本 item では規定しない。
 ---
-# REQ-14f0aec9: nput CLI は PATH 常駐の一次 UX で、project mode は devShell 同梱を canonical とする
+# REQ-14f0aec9-abae-4621-82f3-40536a1ad904: nput CLI は PATH 常駐の一次 UX で、project mode は devShell 同梱を canonical とする
 
 ## 仕様
 
@@ -52,9 +52,9 @@ specification_ja: |
 > 規範ではない。
 >
 > - engine が自身の対応版より新しい `schemaVersion` を拒否すること（→ ADR-0006）は
->   REQ-79ce0a09、MVP が v1 のみであることは REQ-250d936c の担当
+>   REQ-79ce0a09-f9bd-4e61-ba7f-45fb5643137b、MVP が v1 のみであることは REQ-250d936c-1df0-491d-a7af-708f38b61f33 の担当
 > - devShell 同梱そのものの配線（`templates/project` の内容）→
->   「`nput init`」→「テンプレートの内容」節の担当（REQ-196ddabf）
+>   「`nput init`」→「テンプレートの内容」節の担当（REQ-196ddabf-6569-4303-942e-050872972501）
 
 ## 出典
 

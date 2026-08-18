@@ -86,7 +86,7 @@ specification_ja: |
   ならない。`dryRun` は `--dryrun` フラグの反映に限定し、副作用の無さを `dryRun` で表現
   してはならない。
 ---
-# REQ-fa181aa6: 読み取り系の JSON ペイロードは dryRun パリティと info インベントリで表す
+# REQ-fa181aa6-29a2-48c3-ae07-cc1b9a3b0303: 読み取り系の JSON ペイロードは dryRun パリティと info インベントリで表す
 
 ## 仕様
 
@@ -121,7 +121,7 @@ specification_ja: |
 - **読み取り系の `dryRun` は常に `false`**（list-generations / gitignore / init）。
   `dryRun` は `--dryrun` フラグの反映に限定し、副作用の無さを `dryRun` で表現しない。
 
-変更系ペイロード（item 形・warnings 一覧・部分失敗の写像）は REQ-2ea19863 の担当。
+変更系ペイロード（item 形・warnings 一覧・部分失敗の写像）は REQ-2ea19863-eaa2-466b-b1ed-3f56f6417c62 の担当。
 
 ## 出典
 

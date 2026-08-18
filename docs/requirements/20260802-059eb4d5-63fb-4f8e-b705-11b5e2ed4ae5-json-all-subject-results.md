@@ -113,7 +113,7 @@ specification_ja: |
   `results[]` の subject 集合が対象 config 集合と一致することを前提にしてはならない
   （成功時は一致する）。
 ---
-# REQ-059eb4d5: --all は config ごとの SubjectResult を単一実行と同一形状で積む
+# REQ-059eb4d5-63fb-4f8e-b705-11b5e2ed4ae5: --all は config ごとの SubjectResult を単一実行と同一形状で積む
 
 ## 仕様
 
@@ -172,19 +172,19 @@ warnings / info）の写像規則は単一 config と同一で、`--all` 固有�
 > **上は原文の写しで、規範は frontmatter が正**。「エラーの層」項のうち、item 起因の
 > 失敗を `item.error` に埋めて `results[i].errors[]` へ重複させないこと・トップ
 > `errors[]` に載るのが主体列挙前の失敗のみであることは、単一 config 実行と共通の
-> 振り分け規則であり REQ-9341fa5d の規範。本 item が規範化するのは `--all` 固有の差分
+> 振り分け規則であり REQ-9341fa5d-836e-4023-af53-cc7d273438d1 の規範。本 item が規範化するのは `--all` 固有の差分
 > （集約エラーをトップへ重ねない）に限る。
 >
 > 同様に、次の 2 点も本 item の規範ではない。本 item が規範化するのは、それらを前提と
 > した `--all` の JSON 側の帰結（`status` が「非 0 ⇔ error」だけを厳守すること・
 > JSON では cross-config dedup をしないこと）に限る。
 >
-> - 終了コード同士の優先度（error(1) > conflict(2) > 0）→ REQ-b7bb09d6
-> - `gitignore --all` のテキスト既定出力が dedup + sort すること → REQ-1f128917
+> - 終了コード同士の優先度（error(1) > conflict(2) > 0）→ REQ-b7bb09d6-74c4-44d6-905f-cb5e8383ea32
+> - `gitignore --all` のテキスト既定出力が dedup + sort すること → REQ-1f128917-4424-4e37-8a88-e0bb23a09da7
 
-`--all` のテキスト側の挙動（辞書順・部分失敗でも続行）は REQ-4cbd9a0d、エラー層の
-振り分け規則は REQ-9341fa5d、終了コードの優先度は REQ-b7bb09d6、`gitignore --all` の
-テキスト集約は REQ-1f128917 の担当。
+`--all` のテキスト側の挙動（辞書順・部分失敗でも続行）は REQ-4cbd9a0d-9f94-4747-8881-56020dc6d5af、エラー層の
+振り分け規則は REQ-9341fa5d-836e-4023-af53-cc7d273438d1、終了コードの優先度は REQ-b7bb09d6-74c4-44d6-905f-cb5e8383ea32、`gitignore --all` の
+テキスト集約は REQ-1f128917-4424-4e37-8a88-e0bb23a09da7 の担当。
 
 ## 出典
 

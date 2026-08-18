@@ -16,14 +16,14 @@ specification_ja: |
   `init` は新規 bootstrap 用途であるため、CLI 版と template 版のズレ（常に latest main
   参照）は許容しなければならない。
 ---
-# REQ-cbd61281: init のテンプレート参照はバイナリにハードコードした固定 flake ref とする
+# REQ-cbd61281-64b0-4487-a4b7-ce76e70dc4f9: init のテンプレート参照はバイナリにハードコードした固定 flake ref とする
 
 ## 仕様
 
 **テンプレート参照はバイナリにハードコードした固定 flake ref
 `github:yasunori0418/nput`**。registry 登録に依存せず動く。`init` は新規 bootstrap 用途で、
 CLI 版と template 版のズレ（常に latest main 参照）は許容する。apply 時の
-`schemaVersion` 整合は project mode の devShell 同梱 pin が担う（REQ-14f0aec9）。
+`schemaVersion` 整合は project mode の devShell 同梱 pin が担う（REQ-14f0aec9-abae-4621-82f3-40536a1ad904）。
 
 ## 出典
 

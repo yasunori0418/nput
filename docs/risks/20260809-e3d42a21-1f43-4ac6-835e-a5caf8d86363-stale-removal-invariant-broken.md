@@ -9,7 +9,7 @@ likelihood: medium
 impact: high
 level: high
 ---
-# RISK-e3d42a21: 保守的 stale 除去の不変条件が破れ、nput が作っていない実体を消す
+# RISK-e3d42a21-1f43-4ac6-835e-a5caf8d86363: 保守的 stale 除去の不変条件が破れ、nput が作っていない実体を消す
 
 stale 除去は「前世代 manifest に記録されており、かつ実 FS 上のリンクが記録先を指したままである」
 symlink だけを対象とする。この不変条件は plan 時に一度判定されるが、plan から unlink までの
@@ -33,8 +33,8 @@ nput は manifest 記録による分類でそれを避けている。分類が�
 
 ## 評価
 
-- likelihood: medium — TC-d160e18b が除去対象の限定を、TC-8a1f4b19 が除去直前の再検証を
-  覆っている。ただし同じ保守的不変条件を reset の teardown（RISK-bb54245e）と共有しており、
+- likelihood: medium — TC-d160e18b-4c0c-4531-a506-e7d00d88788a が除去対象の限定を、TC-8a1f4b19-0ece-4057-a8bf-f9717855cade が除去直前の再検証を
+  覆っている。ただし同じ保守的不変条件を reset の teardown（RISK-bb54245e-b284-4b4d-9896-8fec2b4e521c）と共有しており、
   どちらかの経路への変更がもう一方へ波及しうる
 - impact: high — 除去はユーザーや他ツールが置いた実体に届き、unlink は不可逆。home-manager
   の readlink パターンがまさにこの取り違えを起こす方式で、記録ベースの分類から外れることが

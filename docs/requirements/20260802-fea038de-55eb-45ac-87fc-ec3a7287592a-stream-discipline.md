@@ -21,7 +21,7 @@ specification_ja: |
   対象は stderr の配置レポートのみとし、stdout 専有の機械可読出力は既定でも `-v` 下でも
   常に出さなければならない。
 ---
-# REQ-fea038de: stdout は機械可読出力を専有しレポートと warning は stderr へ出す
+# REQ-fea038de-55eb-45ac-87fc-ec3a7287592a: stdout は機械可読出力を専有しレポートと warning は stderr へ出す
 
 ## 仕様
 
@@ -37,7 +37,7 @@ stdout 専有原則を貫き、`nput apply <name> --dryrun | ...` や
 `nput gitignore <name> >> .gitignore` のパイプを壊さない。
 
 `--json` 指定時に行指向 stdout を出さない（エンベロープが stdout を専有する）ことは
-REQ-2353259f の担当。
+REQ-2353259f-5878-452a-8e11-3445de69abc2 の担当。
 
 ## 出典
 

@@ -21,7 +21,7 @@ specification_ja: |
   （`lib/types.nix` の submodule）は `modules/common.nix` の `attrsOf (submodule …)` と
   共有しなければならず、モジュール経路での二重検査は純粋・冪等であるため許容される。
 ---
-# REQ-d1b5b3f5: mkManifest 自身が evalModules で入力を検査する単一ゲートになる
+# REQ-d1b5b3f5-10a0-400d-9f03-ba00c63d1c34: mkManifest 自身が evalModules で入力を検査する単一ゲートになる
 
 ## 仕様
 

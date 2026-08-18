@@ -20,7 +20,7 @@ specification_ja: |
   解決済み配置元（store パス / out-of-store 絶対パス）・`subpath`・`target`・`method`・
   root の kind（project / home / system / 固定パス）を記録しなければならない。
 ---
-# REQ-60e6b49c: mkManifest は manifest.json と symlink farm を含む store オブジェクトを返す
+# REQ-60e6b49c-9ba1-4552-a0ec-d340421ec281: mkManifest は manifest.json と symlink farm を含む store オブジェクトを返す
 
 ## 仕様
 

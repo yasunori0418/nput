@@ -10,7 +10,7 @@ likelihood: medium
 impact: high
 level: high
 ---
-# RISK-01cf9f47: copy が place-once を破り、ユーザーのローカル編集を失わせる
+# RISK-01cf9f47-95bd-419a-863d-0d7c1f8188ba: copy が place-once を破り、ユーザーのローカル編集を失わせる
 
 copy は「target 不在のときにだけマテリアライズし、以後は触らない」という place-once の契約で
 成り立っている。ユーザーは配置後のファイルを自分で編集する前提で copy を選ぶため、再 apply が
@@ -31,9 +31,9 @@ copy は「target 不在のときにだけマテリアライズし、以後は�
 
 ## 評価
 
-- likelihood: medium — place-once の判定は TC-596d697f が、`--recopy` の無条件更新は
-  TC-d1eb1814 が覆っているが、判定の入力が target の存在と記録の双方にまたがり、drift 修復
-  経路（RISK-67e96e59）と条件を共有するため、そちら側の変更が波及しうる
+- likelihood: medium — place-once の判定は TC-596d697f-4ba6-4ec1-b71e-8b5375806c08 が、`--recopy` の無条件更新は
+  TC-d1eb1814-ac5e-4576-b092-7db4929fba43 が覆っているが、判定の入力が target の存在と記録の双方にまたがり、drift 修復
+  経路（RISK-67e96e59-005f-439d-a230-834b0228801c）と条件を共有するため、そちら側の変更が波及しうる
 - impact: high — copy は世代管理の対象外でロールバックが効かず、失われるのはユーザーが
   自分で編集した内容そのもの。上書きは警告なく起きるため気づく契機も無い
 
