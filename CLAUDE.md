@@ -58,17 +58,17 @@ risk を `requirement` と `design` のどちらに張るかの使い分けは `
 
 | `<対象>` | 含むテスト資産 | 上位の test_plan |
 |---|---|---|
-| `manifest-eval` | `tests/nix-unit/` と `tests/namaka/` 配下の全テスト | TP-36e90d5d / TP-d3d06fe4 / TP-403c55c7 |
-| `engine-core` | `internal/engine/` の engine / dryrun / preflight、`internal/planner/` | TP-e7c25263 |
-| `copy` | copytree / copy、e2e `04-copy` | TP-e7c25263 / TP-229b69c0 |
-| `migration-stale` | preremove_generalization / staleremove、e2e `03-stale` | TP-e7c25263 / TP-229b69c0 |
-| `atomicity` | undo / undo_journal / backup、engine の lock + `internal/lock/` | TP-deb05610 / TP-e7c25263（backup の退避ポリシー）|
-| `generations` | generations / reset（engine）/ result_extensions / drift、`internal/paths/`、e2e `02-home` | TP-e7c25263（`internal/paths/` の純ロジックを含む）/ TP-229b69c0 |
-| `cli-json` | `cmd/nput/` の全テストファイル | TP-e7c25263（CLI 層の判断）/ TP-d3000054（エンベロープ適合と payload 意味論）|
-| `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` | TP-229b69c0 / TP-0734996e / TP-e7c25263（`internal/` の Go テスト）|
+| `manifest-eval` | `tests/nix-unit/` と `tests/namaka/` 配下の全テスト | TP-36e90d5d-4524-4294-bc72-ee263bb02782 / TP-d3d06fe4-6940-4df8-b111-bb4096d5444f / TP-403c55c7-d996-4951-8e6b-c3a7dddd387c |
+| `engine-core` | `internal/engine/` の engine / dryrun / preflight、`internal/planner/` | TP-e7c25263-6d2d-4a37-8275-26906889d912 |
+| `copy` | copytree / copy、e2e `04-copy` | TP-e7c25263-6d2d-4a37-8275-26906889d912 / TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9 |
+| `migration-stale` | preremove_generalization / staleremove、e2e `03-stale` | TP-e7c25263-6d2d-4a37-8275-26906889d912 / TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9 |
+| `atomicity` | undo / undo_journal / backup、engine の lock + `internal/lock/` | TP-deb05610-44bc-4962-8939-952392e5fbd0 / TP-e7c25263-6d2d-4a37-8275-26906889d912（backup の退避ポリシー）|
+| `generations` | generations / reset（engine）/ result_extensions / drift、`internal/paths/`、e2e `02-home` | TP-e7c25263-6d2d-4a37-8275-26906889d912（`internal/paths/` の純ロジックを含む）/ TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9 |
+| `cli-json` | `cmd/nput/` の全テストファイル | TP-e7c25263-6d2d-4a37-8275-26906889d912（CLI 層の判断）/ TP-d3000054-42d9-4bac-912a-dd3abc38d3e9（エンベロープ適合と payload 意味論）|
+| `integration` | `checks.hm-module`、e2e `01-project` / `05-hm` / `06-init-templates` / `07-legacy`、`internal/gitutil/`、`internal/manifest/` | TP-229b69c0-cf5e-4fb6-a353-27e5064d93e9 / TP-0734996e-aea9-4229-8075-89a64bdf9f79 / TP-e7c25263-6d2d-4a37-8275-26906889d912（`internal/` の Go テスト）|
 
 区分外: `go-vet` / `golangci-lint` / カバレッジ計測は quality の担当。`dev/tests/sara-id.sh` は
-test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（理由は同 item）。**CASE を
+test_plan（TP-d7da4065-ce7c-4a0b-be49-5108256e177a）のみを持ち、TC / CASE へは展開しない（理由は同 item）。**CASE を
 持たないテスト資産の規範は `dev/tests/test-doc-exclusions.tsv`**（除外理由付き。ここに無い
 資産が CASE 無しで現れると契約テストが落ちる）。
 
