@@ -1,29 +1,32 @@
 # sara CLI の使い方
 
-sara（と `sara-id` / `sara-gap`）は **PATH に通っている前提**で `sara ...` と直接叩く
+sara（と `sara-new` / `sara-gap`）は **PATH に通っている前提**で `sara ...` と直接叩く
 （direnv 等で開発シェルが読み込まれた環境なら通っている）。通っていなければ環境構築を
 プロジェクトの規約に従って済ませてから使う。設定はカレント（リポジトリルート）の
 `sara.toml` を読むため、**リポジトリルートで実行する**。
 
-## init — item の作成（frontmatter の生成）
+## sara-new — item の起票（採番 + frontmatter の生成）
 
-frontmatter は手書き・テンプレ写経をせず `sara init` で生成する。ID は先に `sara-id` で
-採番し、`--id` で渡す（init 自身の自動採番は 8 文字 prefix の重複を見ないので使わない）:
+frontmatter は手書き・テンプレ写経をせず `sara-new` で起票する。採番・ファイル名規約の
+適用・`sara init` の呼び出しを一手で済ませる:
 
 ```bash
-sara-id risk lock-ordering            # id / filename / ref の 3 行が返る
-sara init risk docs/risks/<filename> \
-  --id "<sara-id が返した正式 ID>" \
+sara-new <型> <slug> <配置ディレクトリ> [-- <sara init のオプション>...]
+
+sara-new risk lock-ordering docs/risks -- \
   --name "<日本語の 1 行要約>" \
   --threatens "<REQ / DSG のフル ID>" \
   --likelihood medium --impact high --level high
 ```
 
-- 型ごとのオプション（relation・固有フィールド）は `sara init <型> --help` で確認する。
-  requirement / quality / test_plan の `--specification` / `--specification-ja`、
-  test_case の `--target` など、モデルの必須フィールドはここで渡す。
-- 生成後に本文（`# <PREFIX>-<前方8>: <name>` の見出し + 散文）を書き足し、`sara check`
-  で green を確認する。
+- 返るのは機械可読の 2 行（`id:` = 採番された正式 ID、`file:` = 起票したファイルのパス）。
+- `--` 以降は `sara init` へそのまま渡る。型ごとのオプション（relation・固有フィールド）は
+  `sara init <型> --help` で確認する。requirement / quality / test_plan の
+  `--specification` / `--specification-ja`、test_case の `--target` など、モデルの必須
+  フィールドはここで渡す。
+- **ADR は対象外**（連番を維持するため）。`sara init adr <パス>` を直接使う。
+- 生成後に本文（`# <フル ID>: <name>` の見出し + 散文）を書き足し、`sara check` で green
+  を確認する。
 - 既存 item のフィールド・relation の変更は `sara edit <フル ID> --<フィールド> ...`
   でもよい（対話モードは TTY 前提なので、非対話ではフラグを明示する）。
 
@@ -50,16 +53,14 @@ sara query <フル ID> -u --depth 1
 sara query <フル ID> -d --format json
 ```
 
-**`sara query` はフル ID しか受け付けない**（省略形 `REQ-2b0c2bb8` は "Item not found"）。
-散文中の省略形からフル ID を得る手順:
+**`sara query` はフル ID しか受け付けない**が、散文もファイル名も relation リストも同じ
+フル ID を書くので、目に付いた ID をそのままコピーして渡せる（省略形からの復元は要らない）。
+同じ文字列で grep すれば、宣言側（frontmatter の `id:`）と参照側（relation リスト・散文）の
+両方に当たる:
 
 ```bash
-rg -l 2b0c2bb8 docs/                                              # 宣言・参照元の列挙
-rg -o 'REQ-2b0c2bb8[0-9a-f-]*' docs/requirements/*2b0c2bb8*.md | head -1   # フル ID の復元
+rg -l REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4 docs/   # 宣言・参照元の列挙
 ```
-
-省略形は正式 ID の前方一致なので、8 文字で grep すれば宣言側（frontmatter の `id:`）と
-参照側（relation リスト・散文）の両方に当たる。
 
 ## report — 俯瞰
 

@@ -86,16 +86,27 @@ test_plan（TP-d7da4065）のみを持ち、TC / CASE へは展開しない（�
 **risk / TC / CASE は `docs/spec.md` へ索引しない**（`sara query` / `sara report` で辿る）。
 `docs/spec.md` のリンク集に載せるのは requirement / quality / test_plan まで。
 
-### ID 規約（UUIDv4 二層構成）
+### ID 規約（フル UUIDv4）
 
 | 用途 | 形式 | 例 |
 |---|---|---|
 | 正式 ID（frontmatter `id:`・relation リスト）| `<PREFIX>-<フル UUIDv4>` | `REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4` |
-| ファイル名 | `<YYYYMMDD>-<前方8文字>-<slug>.md` | `20260802-2b0c2bb8-mkmanifest-pure-function.md` |
-| 散文中の参照 | `<PREFIX>-<前方8文字>` | `REQ-2b0c2bb8` |
+| ファイル名 | `<YYYYMMDD>-<フル UUIDv4>-<slug>.md` | `20260802-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4-mkmanifest-pure-function.md` |
+| 散文中の参照 | `<PREFIX>-<フル UUIDv4>` | `REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4` |
 
-- 採番は **ADR を除き** devShell 同梱の `sara-id` コマンドで行う（8 文字 prefix の重複チェック
-  込み）。連番を手で振らない（並列レーンでの採番衝突を構造的に避けるため）
+**どの面でもフル ID をそのまま書く**（→ ADR-0053）。8 文字省略形は使わない。ファイル名・
+散文・relation リストの表記が一致するので、ID をそのまま grep しても `sara query` へ渡しても
+同じものに当たる（省略形と正式 ID を突き合わせる手順が要らない）。
+
+- 起票は **ADR を除き** devShell 同梱の `sara-new` コマンドで行う。採番（`sara init` が引く
+  UUIDv4）とファイル名規約の適用を一手で済ませ、`id:` と `file:` の 2 行を返す。連番を手で
+  振らない（並列レーンでの採番衝突を構造的に避けるため）
+
+  ```bash
+  sara-new <型> <slug> <配置ディレクトリ> [-- <sara init のオプション>...]
+  sara-new requirement lock-ordering docs/requirements
+  ```
+
 - **ADR のみ連番を維持する**。既存 ADR の相互参照・`docs/adr/README.md` の運用・Issue 言及・
   編集不能なコミットメッセージの言及を壊さないため（→ ADR-0053）。**採番は `sara init adr` へ
   委譲する**（`docs/adr/` の最大値を目で数えて + 1 しない）。手順と、並列レーンで同時採番した
@@ -117,13 +128,11 @@ sara report coverage                       # カバー率
 sara report matrix                         # トレーサビリティマトリクス
 ```
 
-**`sara query` はフル ID しか受け付けない**（省略形 `REQ-2b0c2bb8` は "Item not found"）。
-散文中の省略形からフル ID を得るには 8 文字で grep する。省略形は正式 ID の前方一致なので、
-宣言側・参照側の両方がヒットする。
+**`sara query` はフル ID しか受け付けない**が、散文もファイル名もフル ID で書くので、
+目に付いた ID をそのままコピーして渡せる（変換は要らない）。同じ文字列で参照元も辿れる。
 
 ```bash
-rg -l 2b0c2bb8 docs/                       # 宣言している item ファイルと参照元を列挙
-rg -o 'REQ-2b0c2bb8[0-9a-f-]*' docs/requirements/20260802-2b0c2bb8-*.md | head -1
+rg -l REQ-2b0c2bb8-964f-4e36-a121-c6ea0d4be1c4 docs/   # 宣言している item ファイルと参照元を列挙
 ```
 
 ## 開発コマンド
@@ -147,7 +156,7 @@ nix develop ./dev -c dev/scripts/test-doc-matrix.sh out.md  # 対応表の生成
 - `lib/` は nixpkgs のみに依存する。home-manager / NixOS / nix-darwin への依存を持ち込まない
 - **ドキュメントの配置ルール・ID 規約はこのプロジェクトの規約が優先する**（→「ドキュメント」節）。
   要求は `docs/requirements/`、リスクは `docs/risks/`、テスト成果物は `docs/test/<対象>/` へ
-  1 ファイル 1 item で置き、ID は `sara-id` で採番する（ADR のみ連番で、`sara init adr` が採る）。
+  1 ファイル 1 item で置き、起票は `sara-new` で行う（ADR のみ連番で、`sara init adr` が採る）。
   スキル既定の出力先・採番方式（散文への ID 直書き・連番）がこれと食い違う場合はプロジェクト規約に従う
 - ユーザーに確認・質問する際は、テキストで質問を投げず **AskUserQuestion ツールを積極的に使う**。設計判断の確認・曖昧な依頼の解釈確認・代替案の選択などで使い、各質問は推奨オプションを先頭に置く
 
